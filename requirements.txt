@@ -1,0 +1,8 @@
+azure-storage-blob
+confluent_kafka>=2.2.0
+fastavro
+grpcio-tools
+jsonschema
+minio
+piny
+requests
