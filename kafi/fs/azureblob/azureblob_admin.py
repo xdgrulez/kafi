@@ -12,7 +12,7 @@ class AzureBlobAdmin(FSAdmin):
 
     #
 
-    def files(self, pattern=None, size=False, **kwargs):
+    def topics(self, pattern=None, size=False, **kwargs):
         blobServiceClient = BlobServiceClient.from_connection_string(self.fs_obj.azure_blob_config_dict["connection.string"])
         containerClient = blobServiceClient.get_container_client(self.fs_obj.container_name())
         #

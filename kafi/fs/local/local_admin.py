@@ -1,4 +1,5 @@
 from fnmatch import fnmatch
+import json
 import os
 
 from kafi.fs.fs_admin import FSAdmin
@@ -11,38 +12,47 @@ class LocalAdmin(FSAdmin):
 
     #
 
-    def list_files(self, pattern=None, filesize=False):
+    def list_topics(self, pattern=None):
         pattern_str_or_str_list = pattern
         #
         dir_file_str_list = os.listdir(self.fs_obj.root_dir())
-        file_str_list = [dir_file_str for dir_file_str in dir_file_str_list if os.path.isfile(os.path.join(self.fs_obj.root_dir(), dir_file_str))]
+        topic_str_list = [dir_file_str.split(",")[1] for dir_file_str in dir_file_str_list if self.fs_obj.is_topic(dir_file_str)]
         #
         if pattern_str_or_str_list is not None:
             if isinstance(pattern_str_or_str_list, str):
                 pattern_str_or_str_list = [pattern_str_or_str_list]
             #
-            return_file_str_list = [file_str for file_str in file_str_list if any(fnmatch(file_str, pattern_str) for pattern_str in pattern_str_or_str_list)]
-            return_file_str_list.sort()
-            #
-            if filesize:
-                return_file_str_filesize_int_dict = {file_str: os.stat(os.path.join(self.fs_obj.root_dir(), file_str)).st_size for file_str in return_file_str_list}
-                return return_file_str_filesize_int_dict
-            else:
-                return_file_str_list = file_str_list
+            topic_str_list = [topic_str for topic_str in topic_str_list if any(fnmatch(topic_str, pattern_str) for pattern_str in pattern_str_or_str_list)]
         #
-        return return_file_str_list
+        return topic_str_list
 
     #
 
-    def delete(self, pattern=None):
-        pattern_str_or_str_list = [] if pattern is None else pattern
-        pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
+    def list_dir(self, path_dir_str):
+        dir_file_str_list = os.listdir(path_dir_str)
         #
-        file_str_list = os.listdir(self.fs_obj.root_dir())
+        return dir_file_str_list
+
+    def write_dict_to_file(self, path_file_str, dict):
+        os.makedirs(os.path.dirname(path_file_str), exist_ok=True)
         #
-        filtered_file_str_list = [file_str for file_str in file_str_list if any(fnmatch(file_str, pattern_str) for pattern_str in pattern_str_list)]
-        for file_str in filtered_file_str_list:
-            path_file_str = os.path.join(self.fs_obj.root_dir(), file_str)
-            os.remove(path_file_str)
+        with open(path_file_str, "w") as bufferedWriter:
+            bufferedWriter.write(json.dumps(dict))
+    
+    def read_dict_from_file(self, path_file_str):
+        with open(path_file_str, "r") as bufferedReader:
+            str = bufferedReader.read()
         #
-        return filtered_file_str_list
+        return json.loads(str)
+
+    def read_lines_from_file(self, path_file_str):
+        with open(path_file_str, "r") as bufferedReader:
+            str_list = bufferedReader.read().splitlines()
+        #
+        return str_list
+
+    def delete_file(self, path_file_str):
+        os.remove(path_file_str)
+
+    def delete_dir(self, path_dir_str):
+        os.rmdir(path_dir_str)

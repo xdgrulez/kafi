@@ -1,6 +1,7 @@
 import json
+import os
 
-from kafi.helpers import get_millis
+from kafi.helpers import get_millis, split_list_into_sublists
 
 # Constants
 
@@ -9,28 +10,16 @@ CURRENT_TIME = 0
 #
 
 class FSWriter():
-    def __init__(self, fs_obj, file, **kwargs):
+    def __init__(self, fs_obj, topic, **kwargs):
         self.fs_obj = fs_obj
         #
-        self.file_str = file
+        self.topic_str = topic
         #
         (self.key_type_str, self.value_type_str) = fs_obj.get_key_value_type_tuple(**kwargs)
 
     #
 
     def write(self, value, **kwargs):
-        key = kwargs["key"] if "key" in kwargs else None
-        timestamp = kwargs["timestamp"] if "timestamp" in kwargs and kwargs["timestamp"] is not None else CURRENT_TIME
-        headers = kwargs["headers"] if "headers" in kwargs else None
-        #
-        value_list = value if isinstance(value, list) else [value]
-        #
-        key_list = key if isinstance(key, list) else [key for _ in value_list]
-        #
-        timestamp_int_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
-        headers_list = headers if isinstance(headers, list) and len(headers) == len(value_list) else [headers for _ in value_list]
-        headers_str_bytes_tuple_list_list = [self.fs_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
-        #
         def serialize(payload, key_bool):
             type_str = self.key_type_str if key_bool else self.value_type_str
             #
@@ -43,14 +32,75 @@ class FSWriter():
                 payload_str_or_bytes = payload
             return payload_str_or_bytes
         #        
-        message_bytes = b""
-        for value, key, timestamp_int, headers_str_bytes_tuple_list in zip(value_list, key_list, timestamp_int_list, headers_str_bytes_tuple_list_list):
+
+        partitions_int = self.fs_obj.get_partitions(self.topic_str)
+        #
+        topic_dir_str = self.fs_obj.get_topic_dir_str(self.topic_str)
+        #
+        partition_int_last_offset_int_dict = self.fs_obj.get_last_offsets(self.topic_str)
+        #
+        write_batch_size_int = kwargs["write_batch_size"] if "write_batch_size" in kwargs else self.fs_obj.write_batch_size()
+        message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else self.fs_obj.message_separator()
+        #
+        keep_partitions_bool = "keep_partitions" in kwargs and kwargs["keep_partitions"]
+        keep_timestamps_bool = "keep_timestamps" in kwargs and kwargs["keep_timestamps"]
+        key = kwargs["key"] if "key" in kwargs else None
+        timestamp = kwargs["timestamp"] if "timestamp" in kwargs and kwargs["timestamp"] is not None else CURRENT_TIME
+        headers = kwargs["headers"] if "headers" in kwargs else None
+        partitions = kwargs["partitions"] if "partitions" in kwargs else None
+        #
+        value_list = value if isinstance(value, list) else [value]
+        #
+        key_list = key if isinstance(key, list) else [key for _ in value_list]
+        #
+        timestamp_int_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
+        headers_list = headers if isinstance(headers, list) and len(headers) == len(value_list) else [headers for _ in value_list]
+        headers_str_bytes_tuple_list_list = [self.fs_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
+        partition_int_list = partitions if isinstance(partitions, list) else [partitions for _ in value_list]
+        #
+        partition_int_message_bytes_list_dict = {partition_int: [] for partition_int in range(partitions_int)}
+        round_robin_counter_int = 0
+        partition_int_offset_counter_int_dict = {partition_int: last_offset_int + 1 for partition_int, last_offset_int in partition_int_last_offset_int_dict.items()}
+        for value, key, timestamp_int, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_int_list, headers_str_bytes_tuple_list_list, partition_int_list):
+            if keep_partitions_bool:
+                target_partition_int = partition_int
+            else:
+                target_partition_int = None
+            #
+            if target_partition_int is None:
+                if key is None:
+                    target_partition_int = round_robin_counter_int
+                    if round_robin_counter_int == partitions_int - 1:
+                        round_robin_counter_int = 0
+                    else:
+                        round_robin_counter_int += 1
+                else:
+                    target_partition_int = hash(key) % partitions_int
+            #
             value_bytes = serialize(value, False)
             key_bytes = serialize(key, True)
             #
             if timestamp_int == CURRENT_TIME:
-                timestamp_int = get_millis()
+                if not keep_timestamps_bool:
+                    timestamp_int = get_millis()
             #
-            message_bytes += str({"headers": headers_str_bytes_tuple_list, "timestamp": timestamp_int, "key": key_bytes, "value": value_bytes}).encode("utf-8") + b"\n"
+            message_dict = {"value": value_bytes, "key": key_bytes, "timestamp": timestamp_int, "headers": headers_str_bytes_tuple_list, "partition": target_partition_int, "offset": partition_int_offset_counter_int_dict[target_partition_int]}
+            #
+            message_bytes = json.dumps(message_dict).encode("utf-8") + message_separator_bytes
+            #
+            partition_int_message_bytes_list_dict[target_partition_int].append(message_bytes)
+            #
+            partition_int_offset_counter_int_dict[target_partition_int] += 1
         #
-        self.write_bytes(message_bytes)
+        partition_int_message_bytes_list_list_dict = {partition_int: split_list_into_sublists(message_bytes_list, write_batch_size_int) for partition_int, message_bytes_list in partition_int_message_bytes_list_dict.items()}
+        #
+        for partition_int, message_bytes_list_list in partition_int_message_bytes_list_list_dict.items():
+            batch_counter_int = 0
+            for message_bytes_list in message_bytes_list_list:
+                joined_message_bytes = b"".join(message_bytes_list)
+                #
+                start_offset_int = partition_int_last_offset_int_dict[partition_int] + batch_counter_int * write_batch_size_int
+                path_file_str = os.path.join(topic_dir_str, f"partition,{partition_int:09},{start_offset_int:021}")
+                self.write_bytes(path_file_str, joined_message_bytes)
+                #
+                batch_counter_int += 1

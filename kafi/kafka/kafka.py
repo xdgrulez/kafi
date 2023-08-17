@@ -9,11 +9,11 @@ ALL_MESSAGES = -1
 #
 
 class Kafka(Storage):
-    def __init__(self, dir_str, config_str, mandatory_section_str_list, optional_section_str_list):
-        super().__init__(dir_str, config_str, mandatory_section_str_list, optional_section_str_list)
+    def __init__(self, config_dir_str, config_name_str, mandatory_section_str_list, optional_section_str_list):
+        super().__init__(config_dir_str, config_name_str, mandatory_section_str_list, optional_section_str_list)
         #
-        self.dir_str = dir_str
-        self.config_str = config_str
+        self.config_dir_str = config_dir_str
+        self.config_name_str = config_name_str
         #
         if "kafka" in mandatory_section_str_list:
             self.kafka_config_dict = self.config_dict["kafka"]

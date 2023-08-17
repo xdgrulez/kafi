@@ -10,15 +10,15 @@ ALL_MESSAGES = -1
 #
 
 class FSReader(StorageReader):
-    def __init__(self, fs_obj, *files, **kwargs):
-        super().__init__(fs_obj, *files, **kwargs)
+    def __init__(self, fs_obj, *topics, **kwargs):
+        super().__init__(fs_obj, *topics, **kwargs)
         #
         if isinstance(self.resource_str_list, list) and len(self.resource_str_list) > 1:
-            raise Exception("Reading from multiple files is not supported.")
+            raise Exception("Reading from multiple topics is not supported.")
         #
         self.file_str = self.resource_str_list[0]
         #
-        self.offset_int = self.resource_str_offsets_dict_dict[self.file_str][0] if self.resource_str_offsets_dict_dict is not None else 0
+        self.offset_int = self.resource_str_offsets_dict_dict[self.topic_str][0] if self.resource_str_offsets_dict_dict is not None else 0
 
     #
     

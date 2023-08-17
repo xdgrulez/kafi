@@ -68,11 +68,11 @@ class Functional:
             value_list = [message_dict["value"] for message_dict in batch_message_dict_list]
             #
             key_list = [message_dict["key"] for message_dict in batch_message_dict_list]
-            if "preserve_partition" in kwargs and kwargs["preserve_partition"] == True:
+            if "keep_partitions" in kwargs and kwargs["keep_partitions"] == True:
                 partition_list = [message_dict["partition"] for message_dict in batch_message_dict_list]
             else:
                 partition_list = None
-            if "preserve_timestamp" in kwargs and kwargs["preserve_timestamp"] == True:
+            if "keep_timestamps" in kwargs and kwargs["keep_timestamps"] == True:
                 timestamp_list = [message_dict["timestamp"][1] for message_dict in batch_message_dict_list]
             else:
                 timestamp_list = None

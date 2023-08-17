@@ -202,17 +202,7 @@ def dict_to_bytes(dict):
     return bytes
 
 
-# def find_file_offset_of_message(path_file_str, message_int, message_separator="\n"):
-#     file_offset_int = 0
-#     #
-
-
-
-#         for _ in range(line_int):
-#             line_str = bufferedReader.readline()
-#             if not line_str:
-#                 break
-#             file_offset_int += len(line_str)
-#     #
-#     return file_offset_int
-
+def split_list_into_sublists(input_list, sublist_size_int):
+    output_list_list = [input_list[i:i + sublist_size_int] for i in range(0, len(input_list), sublist_size_int)]
+    #
+    return output_list_list

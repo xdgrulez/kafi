@@ -14,7 +14,7 @@ class S3Admin(FSAdmin):
 
     #
 
-    def files(self, pattern=None, size=False, **kwargs):
+    def topics(self, pattern=None, size=False, **kwargs):
         pattern_str_or_str_list = "*" if pattern is None else pattern
         pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
         size_bool = size
