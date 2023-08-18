@@ -12,9 +12,9 @@ class KafkaReader(StorageReader):
     def __init__(self, kafka_obj, *topics, **kwargs):
         super().__init__(kafka_obj, *topics, **kwargs)
         #
-        self.topic_str_list = self.resource_str_list
+        self.topic_str_list = self.topic_str_list
         #
-        self.topic_str_offsets_dict_dict = self.resource_str_offsets_dict_dict
+        self.topic_str_offsets_dict_dict = self.topic_str_offsets_dict_dict
         #
         self.group_str = self.get_group_str(**kwargs)
 

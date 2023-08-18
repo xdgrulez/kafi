@@ -116,21 +116,6 @@ class Test(unittest.TestCase):
 
     # Write/Read
 
-    def test_write(self):
-        l = self.get_local()
-        #
-        topic_str = self.create_test_topic_name()
-        l.create(topic_str, partitions=3)
-        #
-        w = l.openw(topic_str)
-        w.write(self.snack_dict_list*10, write_batch_size=2)
-        w.close()
-        #
-        w = l.openw(topic_str)
-        w.write(self.snack_dict_list*10, write_batch_size=7)
-        w.write(self.snack_dict_list*10, write_batch_size=5)
-        w.close()
-
     def test_write_read_bytes_str(self):
         l = self.get_local()
         #
@@ -207,7 +192,7 @@ class Test(unittest.TestCase):
         value_str_list1 = [message_dict["value"] for message_dict in message_dict_list1]
         self.assertEqual(value_str_list1, self.snack_str_list)
         #
-        (message_dict_list2, n_int2) = l.cat(topic_str, offset=2, n=1)
+        (message_dict_list2, n_int2) = l.cat(topic_str, offsets={0:2}, n=1)
         self.assertEqual(1, len(message_dict_list2))
         self.assertEqual(1, n_int2)
         self.assertEqual(message_dict_list2[0]["value"], self.snack_str_list[2])
@@ -228,7 +213,7 @@ class Test(unittest.TestCase):
         value_str_list1 = [message_dict["value"] for message_dict in message_dict_list1]
         self.assertEqual(value_str_list1, self.snack_str_list)
         #
-        (message_dict_list2, n_int2) = l.head(topic_str, offset=2, value_type="json", n=1)
+        (message_dict_list2, n_int2) = l.head(topic_str, offsets={0:2}, value_type="json", n=1)
         self.assertEqual(1, len(message_dict_list2))
         self.assertEqual(1, n_int2)
         self.assertEqual(message_dict_list2[0]["value"], self.snack_dict_list[2])
@@ -263,7 +248,9 @@ class Test(unittest.TestCase):
         w = l.openw(topic_str1, value_type="json")
         w.write(self.snack_bytes_list)
         w.close()
+        #
         topic_str2 = self.create_test_topic_name()
+        l.create(topic_str2)
         #
         def map_ish(message_dict):
             message_dict["value"]["colour"] += "ish"
@@ -303,7 +290,6 @@ class Test(unittest.TestCase):
         w1.close()
         #
         topic_str2 = self.create_test_topic_name()
-        l.create(topic_str2)
         w2 = l.openw(topic_str2, value_type="str")
         w2.write(self.snack_ish_dict_list)
         w2.close()
@@ -368,6 +354,7 @@ class Test(unittest.TestCase):
         w.close()
         #
         topic_str2 = self.create_test_topic_name()
+#        l.create(topic_str2)
         #
         (read_n_int, written_n_int) = l.filter_to(topic_str1, l, topic_str2, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, source_value_type="json", target_value_type="bytes")
         self.assertEqual(3, read_n_int)

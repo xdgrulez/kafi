@@ -13,6 +13,9 @@ CURRENT_TIME = 0
 class FSWriter(StorageWriter):
     def __init__(self, fs_obj, topic, **kwargs):
         super().__init__(fs_obj, topic, **kwargs)
+        #
+        if not fs_obj.exists(self.topic_str):
+            fs_obj.admin.create(self.topic_str)
 
     #
 
@@ -34,7 +37,6 @@ class FSWriter(StorageWriter):
         #
         topic_dir_str = self.storage_obj.get_topic_dir_str(self.topic_str)
         #
-        print(dir(self.storage_obj))
         partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
         partition_int_last_offset_int_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
         #
@@ -59,7 +61,7 @@ class FSWriter(StorageWriter):
         #
         partition_int_message_bytes_list_dict = {partition_int: [] for partition_int in range(partitions_int)}
         round_robin_counter_int = 0
-        partition_int_offset_counter_int_dict = {partition_int: last_offset_int + 1 if last_offset_int > 0 else 0 for partition_int, last_offset_int in partition_int_last_offset_int_dict.items()}
+        partition_int_offset_counter_int_dict = {partition_int: last_offset_int if last_offset_int > 0 else 0 for partition_int, last_offset_int in partition_int_last_offset_int_dict.items()}
         for value, key, timestamp_int, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_int_list, headers_str_bytes_tuple_list_list, partition_int_list):
             if keep_partitions_bool:
                 target_partition_int = partition_int

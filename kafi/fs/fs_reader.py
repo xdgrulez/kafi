@@ -14,12 +14,12 @@ class FSReader(StorageReader):
     def __init__(self, fs_obj, *topics, **kwargs):
         super().__init__(fs_obj, *topics, **kwargs)
         #
-        if isinstance(self.resource_str_list, list) and len(self.resource_str_list) > 1:
+        if isinstance(self.topic_str_list, list) and len(self.topic_str_list) > 1:
             raise Exception("Reading from multiple topics is not supported.")
         #
-        self.topic_str = self.resource_str_list[0]
+        self.topic_str = self.topic_str_list[0]
         #
-        self.partition_int_offset_int_dict = self.resource_str_offsets_dict_dict[self.resource_str_list] if self.resource_str_offsets_dict_dict is not None else None
+        self.partition_int_offset_int_dict = self.topic_str_offsets_dict_dict[self.topic_str] if self.topic_str_offsets_dict_dict is not None else None
 
     #
     
@@ -36,7 +36,8 @@ class FSReader(StorageReader):
         else:
             auto_offset_reset_bool = self.storage_obj.auto_offset_reset()
         if auto_offset_reset_bool == "latest":
-            partition_int_offset_int_dict = self.storage_obj.get_last_offsets(self.topic_str)
+            partition_int_offset_tuple_dict = self.watermarks(self.topic_str, **kwargs)[self.topic_str]
+            partition_int_offset_int_dict = {partition_int: offset_tuple[1] for partition_int, offset_tuple in partition_int_offset_tuple_dict.items()}
         else:
             if self.partition_int_offset_int_dict is None:
                 partition_int_offset_int_dict = {partition_int: 0 for partition_int in range(partitions_int)}
@@ -45,27 +46,11 @@ class FSReader(StorageReader):
         #
         message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else self.storage_obj.message_separator()
         #
-        def get_partition_files():
-            file_str_list = self.list_dir(topic_dir_str)
-            def sort(list):
-                list.sort()
-                return list
-            #
-
-            partition_int_file_str_list_dict = {partition_int: sort([file_str for file_str in file_str_list if file_str.startswith("partition") and int(file_str.split(",")[1]) == partition_int]) for partition_int in range(partitions_int)}
-            #
-            return partition_int_file_str_list_dict
+        partition_int_file_str_list_dict = self.storage_obj.get_partition_files(self.topic_str)
         #
-
-        partition_int_file_str_list_dict = get_partition_files()
+        partition_int_first_partition_file_str_dict = {partition_int: self.storage_obj.find_partition_file_str(self.topic_str, partition_int, offset_int) for partition_int, offset_int in partition_int_offset_int_dict.items()}
         #
-        def filter_partition_files():
-            partition_int_filtered_file_str_list_dict = {partition_int: [file_str for file_str in file_str_list if int(file_str.split(",")[2]) >= partition_int_offset_int_dict[partition_int]] for partition_int, file_str_list in partition_int_file_str_list_dict.items()}
-            #
-            return partition_int_filtered_file_str_list_dict
-        #
-        
-        partition_int_partition_file_str_list_dict = filter_partition_files()
+        partition_int_to_be_read_file_str_list_dict = {partition_int: [file_str for file_str in file_str_list if file_str >= partition_int_first_partition_file_str_dict[partition_int]] for partition_int, file_str_list in partition_int_file_str_list_dict.items()}
         #
         file_str_list_list = []
         batch_counter_int = 0
@@ -132,7 +117,7 @@ class FSReader(StorageReader):
         #
 
         for partition_int in range(partitions_int):
-            file_str_list = [partition_file_str_list[batch_counter_int] for partition_file_str_list in partition_int_partition_file_str_list_dict.values() if len(partition_file_str_list[partition_int]) > batch_counter_int]
+            file_str_list = [partition_file_str_list[batch_counter_int] for partition_file_str_list in partition_int_to_be_read_file_str_list_dict.values() if len(partition_file_str_list[partition_int]) > batch_counter_int]
             file_str_list_list.append(file_str_list)
         #
 
@@ -141,7 +126,7 @@ class FSReader(StorageReader):
             for file_str in file_str_list:
                 file_bytes = self.read_bytes_from_file(os.path.join(topic_dir_str, file_str))
                 #
-                message_bytes_list = file_bytes.split(message_separator_bytes)
+                message_bytes_list = file_bytes.split(message_separator_bytes)[:-1]
                 for message_bytes in message_bytes_list:
                     (acc, message_counter_int) = acc_bytes_to_acc(acc, message_bytes, message_counter_int)
                     #

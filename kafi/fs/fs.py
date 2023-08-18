@@ -1,5 +1,5 @@
+import ast
 import base64
-import json
 import os
 
 from kafi.storage import Storage
@@ -126,7 +126,7 @@ class FS(Storage):
         partition_file_str_list = [file_str for file_str in file_str_list if file_str.startswith("partition") and int(file_str.split(",")[1]) == partition_int]
         partition_file_str_list.sort()
         #
-        partition_file_str_offset_int_dict = {partition_file_str: partition_file_str.split(",")[2] for partition_file_str in partition_file_str_list}
+        partition_file_str_offset_int_dict = {partition_file_str: int(partition_file_str.split(",")[2]) for partition_file_str in partition_file_str_list}
         for partition_file_str, offset_int in partition_file_str_offset_int_dict.items():
             if to_find_offset_int >= offset_int:
                 break
@@ -146,6 +146,22 @@ class FS(Storage):
         #
         return message_separator_bytes
 
+    def get_partition_files(self, topic_str):
+        topic_dir_str = self.get_topic_dir_str(topic_str)
+        #
+        partitions_int = self.get_partitions(topic_str)
+        #
+        file_str_list = self.admin.list_dir(topic_dir_str)
+        #
+        def sort(list):
+            list.sort()
+            return list
+        #
+
+        partition_int_file_str_list_dict = {partition_int: sort([file_str for file_str in file_str_list if file_str.startswith("partition") and int(file_str.split(",")[1]) == partition_int]) for partition_int in range(partitions_int)}
+        #
+        return partition_int_file_str_list_dict
+
     def get_metadata(self, topic_str):
         topic_dir_str = self.get_topic_dir_str(topic_str)
         metadata_dict = self.admin.read_dict_from_file(os.path.join(topic_dir_str, "metadata.json"))
@@ -162,6 +178,18 @@ class FS(Storage):
         partition_int_filesize_int = {partition_int: sum([self.admin.stat_file(file_str) for file_str in file_str_list if file_str.startswith("partition") and int(file_str.split(",")[1]) == partition_int]) for partition_int in range(partitions_int)}
         #
         return partition_int_filesize_int
+
+    def get_offset(self, topic_str, partition_file_str, index_int):
+        topic_dir_str = self.get_topic_dir_str(topic_str)
+        message_separator_bytes = self.get_message_separator(topic_str)
+        #
+        file_bytes = self.admin.read_bytes_from_file(os.path.join(topic_dir_str, partition_file_str))
+        message_bytes_list = file_bytes.split(message_separator_bytes)[:-1]
+        if len(message_bytes_list) > 0:
+            first_message_bytes = message_bytes_list[index_int]
+            serialized_message_dict = ast.literal_eval(first_message_bytes.decode("utf-8"))
+            offset_int = serialized_message_dict["offset"]
+        return offset_int
 
     # Open
     def openr(self, topic, **kwargs):

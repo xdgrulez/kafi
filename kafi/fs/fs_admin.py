@@ -52,7 +52,6 @@ class FSAdmin(StorageAdmin):
         #
         def get_watermark_offsets(topic_str, partition_int):
             topic_dir_str = self.storage_obj.get_topic_dir_str(topic_str)
-            message_separator_bytes = self.storage_obj.get_message_separator(topic_str)
             file_str_list = self.list_dir(topic_dir_str)
             partition_file_str_list = [file_str for file_str in file_str_list if file_str.startswith("partition") and int(file_str.split(",")[1]) == partition_int]
             partition_file_str_list.sort()
@@ -62,18 +61,8 @@ class FSAdmin(StorageAdmin):
                 first_partition_file_str = partition_file_str_list[0]
                 last_partition_file_str = partition_file_str_list[-1]
                 #
-                def get_offset(partition_file_str, index_int):
-                    file_bytes = self.read_bytes_from_file(os.path.join(topic_dir_str, partition_file_str))
-                    message_bytes_list = file_bytes.split(message_separator_bytes)[:-1]
-                    if len(message_bytes_list) > 0:
-                        first_message_bytes = message_bytes_list[index_int]
-                        serialized_message_dict = ast.literal_eval(first_message_bytes.decode("utf-8"))
-                        offset_int = serialized_message_dict["offset"]
-                    return offset_int
-                #
-
-                low_offset_int = get_offset(first_partition_file_str, 0)
-                high_offset_int = get_offset(last_partition_file_str, -1) + 1
+                low_offset_int = self.storage_obj.get_offset(topic_str, first_partition_file_str, 0)
+                high_offset_int = self.storage_obj.get_offset(topic_str, last_partition_file_str, -1) + 1
             #
             return (low_offset_int, high_offset_int)
         #

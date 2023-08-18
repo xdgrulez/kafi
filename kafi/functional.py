@@ -7,11 +7,11 @@ ALL_MESSAGES = -1
 #
 
 class Functional:
-    def foldl(self, resource, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
+    def foldl(self, topic, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         verbose_int = self.verbose()
         progress_num_messages_int = self.progress_num_messages()
         #
-        reader = self.openr(resource, **kwargs)
+        reader = self.openr(topic, **kwargs)
         #
         def foldl_function1(acc_progress_message_counter_int_tuple, message_dict):
             (acc, progress_message_counter_int) = acc_progress_message_counter_int_tuple
@@ -32,35 +32,35 @@ class Functional:
 
     #
 
-    def flatmap(self, resource, flatmap_function, n=ALL_MESSAGES, **kwargs):
+    def flatmap(self, topic, flatmap_function, n=ALL_MESSAGES, **kwargs):
         def foldl_function(list, message_dict):
             list += flatmap_function(message_dict)
             #
             return list
         #
-        return self.foldl(resource, foldl_function, [], n, **kwargs)
+        return self.foldl(topic, foldl_function, [], n, **kwargs)
 
-    def map(self, resource, map_function, n=ALL_MESSAGES, **kwargs):
+    def map(self, topic, map_function, n=ALL_MESSAGES, **kwargs):
         def flatmap_function(message_dict):
             return [map_function(message_dict)]
         #
-        return self.flatmap(resource, flatmap_function, n, **kwargs)
+        return self.flatmap(topic, flatmap_function, n, **kwargs)
 
-    def filter(self, resource, filter_function, n=ALL_MESSAGES, **kwargs):
+    def filter(self, topic, filter_function, n=ALL_MESSAGES, **kwargs):
         def flatmap_function(message_dict):
             return [message_dict] if filter_function(message_dict) else []
         #
-        return self.flatmap(resource, flatmap_function, n, **kwargs)
+        return self.flatmap(topic, flatmap_function, n, **kwargs)
 
-    def foreach(self, resource, foreach_function, n=ALL_MESSAGES, **kwargs):
+    def foreach(self, topic, foreach_function, n=ALL_MESSAGES, **kwargs):
         def foldl_function(_, message_dict):
             foreach_function(message_dict)
         #
-        self.foldl(resource, foldl_function, None, n, **kwargs)
+        self.foldl(topic, foldl_function, None, n, **kwargs)
 
     #
 
-    def flatmap_to(self, resource, target_storage, target_resource, flatmap_function, n=ALL_MESSAGES, **kwargs):
+    def flatmap_to(self, topic, target_storage, target_topic, flatmap_function, n=ALL_MESSAGES, **kwargs):
         progress_num_messages_int = self.progress_num_messages()
         verbose_int = self.verbose()
         #
@@ -132,9 +132,9 @@ class Functional:
         #
         write_batch_size_int = kwargs["write_batch_size"] if "write_batch_size" in kwargs else target_storage.write_batch_size()
         #
-        target_writer = target_storage.openw(target_resource, **target_kwargs)
+        target_writer = target_storage.openw(target_topic, **target_kwargs)
         #
-        (write_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, read_message_counter_int) = self.foldl(resource, foldl_function, (write_batch_size_int, [], 0), n, **source_kwargs)
+        (write_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, read_message_counter_int) = self.foldl(topic, foldl_function, (write_batch_size_int, [], 0), n, **source_kwargs)
         (_, batch_message_dict_list, written_progress_message_counter_int) = write_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
         #
         if len(batch_message_dict_list) > 0:
@@ -145,21 +145,21 @@ class Functional:
         #
         return (read_message_counter_int, written_progress_message_counter_int)
 
-    def map_to(self, resource, target_storage, target_resource, map_function, n=ALL_MESSAGES, **kwargs):
+    def map_to(self, topic, target_storage, target_topic, map_function, n=ALL_MESSAGES, **kwargs):
         def flatmap_function(message_dict):
             return [map_function(message_dict)]
         #
-        return self.flatmap_to(resource, target_storage, target_resource, flatmap_function, n, **kwargs)
+        return self.flatmap_to(topic, target_storage, target_topic, flatmap_function, n, **kwargs)
 
-    def filter_to(self, resource, target_storage, target_resource, filter_function, n=ALL_MESSAGES, **kwargs):
+    def filter_to(self, topic, target_storage, target_topic, filter_function, n=ALL_MESSAGES, **kwargs):
         def flatmap_function(message_dict):
             return [message_dict] if filter_function(message_dict) else []
         #
-        return self.flatmap_to(resource, target_storage, target_resource, flatmap_function, n, **kwargs)
+        return self.flatmap_to(topic, target_storage, target_topic, flatmap_function, n, **kwargs)
 
     #
 
-    def zip_foldl(self, resource1, storage2, resource2, zip_foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
+    def zip_foldl(self, topic1, storage2, topic2, zip_foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         n_int = n
         #
         read_batch_size_int = kwargs["read_batch_size"] if "read_batch_size" in kwargs else self.read_batch_size()
@@ -182,8 +182,8 @@ class Functional:
         kwargs2["value_type"] = kwargs2["value_type2"] if "value_type2" in kwargs2 else "bytes"
         kwargs2["type"] = kwargs2["type2"] if "type2" in kwargs2 else "bytes"
         #
-        reader1 = self.openr(resource1, **kwargs1)
-        reader2 = storage2.openr(resource2, **kwargs2)
+        reader1 = self.openr(topic1, **kwargs1)
+        reader2 = storage2.openr(topic2, **kwargs2)
         #
         message_counter_int1 = 0
         message_counter_int2 = 0
