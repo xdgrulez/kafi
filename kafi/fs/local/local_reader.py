@@ -11,14 +11,8 @@ ALL_MESSAGES = -1
 class LocalReader(FSReader):
     def __init__(self, local_obj, file, **kwargs):
         super().__init__(local_obj, file, **kwargs)
-        #
-        self.path_file_str = os.path.join(local_obj.root_dir(), self.file_str)
-        #
-        self.bufferedReader = open(self.path_file_str, "rb")
-        #
-        self.file_size_int = local_obj.ls(self.file_str, filesize=True)[self.file_str]
-        #
-        self.file_offset_int = self.find_file_offset_by_offset(**kwargs)
+    
+    #
 
     def __del__(self):
         self.close()
@@ -26,9 +20,7 @@ class LocalReader(FSReader):
     #
 
     def close(self):
-        self.bufferedReader.close()
-        #
-        return self.file_str
+        return self.topic_str
 
     #
 

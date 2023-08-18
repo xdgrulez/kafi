@@ -76,11 +76,6 @@ class Kafka(Storage):
         #
         # both cluster and restproxy kafi section
         #
-        if "auto.offset.reset" not in self.kafi_config_dict:
-            self.auto_offset_reset("earliest")
-        else:
-            self.auto_offset_reset(str(self.kafi_config_dict["auto.offset.reset"]))
-        #
         if "consumer.group.prefix" not in self.kafi_config_dict:
             self.consumer_group_prefix("")
         else:
@@ -146,9 +141,6 @@ class Kafka(Storage):
         return self.get_set_config("block.interval", new_value)
 
     #
-
-    def auto_offset_reset(self, new_value=None): # str
-        return self.get_set_config("auto.offset.reset", new_value)
 
     def consumer_group_prefix(self, new_value=None): # str
         return self.get_set_config("consumer.group.prefix", new_value)

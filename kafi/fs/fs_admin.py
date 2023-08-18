@@ -10,7 +10,7 @@ class FSAdmin:
         pattern_str_or_str_list = "*" if pattern is None else pattern
         pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
         size_bool = size
-        partitions_bool = "partitions" in kwargs and kwargs["partitions"] # included only to keep the APIs for Kafka/FS in sync
+        partitions_bool = "partitions" in kwargs and kwargs["partitions"]
         filesize_bool = "filesize" in kwargs and kwargs["filesize"]
         #
         topic_str_list = self.list_topics(pattern_str_list, partitions=True, filesize=True)

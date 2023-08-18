@@ -13,7 +13,7 @@ class LocalWriter(FSWriter):
     #
 
     def close(self):
-        pass
+        return self.topic_str
 
     #
 

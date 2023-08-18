@@ -20,8 +20,6 @@ class StorageReader():
                 resource_str_offsets_dict_dict = {resource_str: offsets_dict for resource_str in resource_str_list}
             else:
                 resource_str_offsets_dict_dict = offsets_dict
-        elif "offset" in kwargs and kwargs["offset"] is not None:
-            resource_str_offsets_dict_dict = {resource_str: {0: kwargs["offset"]} for resource_str in resource_str_list}
         else:
             resource_str_offsets_dict_dict = None
         #

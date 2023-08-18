@@ -84,9 +84,7 @@ class FSWriter():
                 if not keep_timestamps_bool:
                     timestamp_int = get_millis()
             #
-            message_dict = {"value": value_bytes, "key": key_bytes, "timestamp": timestamp_int, "headers": headers_str_bytes_tuple_list, "partition": target_partition_int, "offset": partition_int_offset_counter_int_dict[target_partition_int]}
-            #
-            message_bytes = json.dumps(message_dict).encode("utf-8") + message_separator_bytes
+            message_bytes = str({"value": value_bytes, "key": key_bytes, "timestamp": timestamp_int, "headers": headers_str_bytes_tuple_list, "partition": target_partition_int, "offset": partition_int_offset_counter_int_dict[target_partition_int]}).encode("utf-8") + message_separator_bytes
             #
             partition_int_message_bytes_list_dict[target_partition_int].append(message_bytes)
             #

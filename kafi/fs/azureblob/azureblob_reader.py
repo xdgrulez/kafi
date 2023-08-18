@@ -12,7 +12,7 @@ class AzureBlobReader(FSReader):
     def __init__(self, azureblob_obj, file, **kwargs):
         super().__init__(azureblob_obj, file, **kwargs)
         #
-        self.blobClient = BlobClient.from_connection_string(conn_str=azureblob_obj.azure_blob_config_dict["connection.string"], container_name=azureblob_obj.azure_blob_config_dict["container.name"], blob_name=self.file_str)
+        self.blobClient = BlobClient.from_connection_string(conn_str=azureblob_obj.azure_blob_config_dict["connection.string"], container_name=azureblob_obj.azure_blob_config_dict["container.name"], blob_name=self.topic_str)
         #
         blobProperties_dict = self.blobClient.get_blob_properties()
         self.file_size_int = blobProperties_dict["size"]
@@ -22,7 +22,7 @@ class AzureBlobReader(FSReader):
     #
 
     def close(self):
-        return self.file_str
+        return self.topic_str
 
     #
 

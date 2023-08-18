@@ -38,6 +38,13 @@ class Storage(Shell):
             self.verbose(verbose_int)
         else:
             self.verbose(int(self.kafi_config_dict["verbose"]))
+        #
+        if "auto.offset.reset" not in self.kafi_config_dict:
+            self.auto_offset_reset("earliest")
+        else:
+            self.auto_offset_reset(str(self.kafi_config_dict["auto.offset.reset"]))
+        #
+
 
     #
 
@@ -52,6 +59,9 @@ class Storage(Shell):
 
     def verbose(self, new_value=None): # int
         return self.get_set_config("verbose", new_value)
+
+    def auto_offset_reset(self, new_value=None): # str
+        return self.get_set_config("auto.offset.reset", new_value)
 
     #
 

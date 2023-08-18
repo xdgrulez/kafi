@@ -51,6 +51,12 @@ class LocalAdmin(FSAdmin):
         #
         return str_list
 
+    def read_bytes_from_file(self, path_file_str):
+        with open(path_file_str, "rb") as bufferedReader:
+            bytes = bufferedReader.read()
+        #
+        return bytes
+
     def delete_file(self, path_file_str):
         os.remove(path_file_str)
 
