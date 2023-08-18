@@ -188,8 +188,8 @@ class Kafka(Storage):
     
     # Topics
 
-    def watermarks(self, pattern, timeout=-1.0):
-        return self.admin.watermarks(pattern, timeout)
+    def watermarks(self, pattern, **kwargs):
+        return self.admin.watermarks(pattern, **kwargs)
 
     def config(self, pattern):
         return self.admin.config(pattern)
@@ -207,8 +207,8 @@ class Kafka(Storage):
 
     rm = delete
 
-    def offsets_for_times(self, pattern, partitions_timestamps, timeout=-1.0):
-        return self.admin.offsets_for_times(pattern, partitions_timestamps, timeout)
+    def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
+        return self.admin.offsets_for_times(pattern, partitions_timestamps, **kwargs)
     
     def partitions(self, pattern=None, verbose=False):
         return self.admin.partitions(pattern, verbose)

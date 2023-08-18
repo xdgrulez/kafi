@@ -26,7 +26,7 @@ class RestProxyWriter(KafkaWriter):
         key = kwargs["key"] if "key" in kwargs else None
         partition_int = kwargs["partition"] if "partition" in kwargs else RD_KAFKA_PARTITION_UA
         #
-        (rest_proxy_url_str, auth_str_tuple) = self.kafka_obj.get_url_str_auth_str_tuple_tuple()
+        (rest_proxy_url_str, auth_str_tuple) = self.storage_obj.get_url_str_auth_str_tuple_tuple()
         #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{self.topic_str}/records"
         #
@@ -108,8 +108,8 @@ class RestProxyWriter(KafkaWriter):
                 yield x
         payload_dict_generator = g()
 
-        post(url_str, headers_dict, payload_dict_generator, auth_str_tuple=auth_str_tuple, retries=self.kafka_obj.requests_num_retries())
+        post(url_str, headers_dict, payload_dict_generator, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
         #
-        self.produced_counter_int += len(payload_dict_list)
+        self.written_counter_int += len(payload_dict_list)
         #
         return key_list, value_list

@@ -15,8 +15,8 @@ class LocalAdmin(FSAdmin):
     def list_topics(self, pattern=None):
         pattern_str_or_str_list = pattern
         #
-        dir_file_str_list = os.listdir(self.fs_obj.root_dir())
-        topic_str_list = [dir_file_str.split(",")[1] for dir_file_str in dir_file_str_list if self.fs_obj.is_topic(dir_file_str)]
+        dir_file_str_list = os.listdir(self.storage_obj.root_dir())
+        topic_str_list = [dir_file_str.split(",")[1] for dir_file_str in dir_file_str_list if self.storage_obj.is_topic(dir_file_str)]
         #
         if pattern_str_or_str_list is not None:
             if isinstance(pattern_str_or_str_list, str):
@@ -62,3 +62,7 @@ class LocalAdmin(FSAdmin):
 
     def delete_dir(self, path_dir_str):
         os.rmdir(path_dir_str)
+
+    def stat_file(self, path_file_str):
+        size_int = os.stat(path_file_str).st_size
+        return size_int

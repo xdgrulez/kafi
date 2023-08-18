@@ -70,59 +70,40 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         l.create(topic_str)
-#        topic_str_list = l.ls()
-        topic_str_list = l.admin.list_topics()
+        topic_str_list = l.ls()
         self.assertIn(topic_str, topic_str_list)
         l.rm(topic_str)
-#        topic_str_list = l.ls()
-        topic_str_list = l.admin.list_topics()
+        topic_str_list = l.ls()
         self.assertNotIn(topic_str, topic_str_list)
 
     def test_topics(self):
         l = self.get_local()
         #
         topic_str = self.create_test_topic_name()
-        # size=False, partitions=False, topicsize=False
+        #
         old_topic_str_list = l.ls(["test_*"])
         self.assertNotIn(topic_str, old_topic_str_list)
         l.touch(topic_str)
-        # size=False, partitions=False, topicsize=False
+        #
         new_topic_str_list = l.ls(["test_*"])
         self.assertIn(topic_str, new_topic_str_list)
         #
-        w = l.openw(topic_str, overwrite=False)
+        l.touch(topic_str)
+        w = l.openw(topic_str)
         w.write("message 1")
         w.write("message 2")
         w.write("message 3")
         w.close()
-        # size=True, partitions=False, topicsize=False
-        topic_str_total_size_int_dict_l = l.l(pattern=topic_str)
-        topic_str_total_size_int_dict_ll = l.ll(pattern=topic_str)
-        self.assertEqual(topic_str_total_size_int_dict_l, topic_str_total_size_int_dict_ll)
-        total_size_int = topic_str_total_size_int_dict_l[topic_str]
-        self.assertEqual(total_size_int, 3)
-        # size=True, partitions=False, topicsize=True
-        topic_str_size_int_topicsize_int_dict_dict = l.topics(pattern=topic_str, size=True, partitions=False, topicsize=True)
-        self.assertEqual(topic_str_size_int_topicsize_int_dict_dict[topic_str]["size"], 3)
-        self.assertEqual(topic_str_size_int_topicsize_int_dict_dict[topic_str]["topicsize"], 243)
-        # size=False, partitions=True, topicsize=True
-        topic_str_partitions_dict_topicsize_int_dict_dict = l.topics(pattern=topic_str, size=False, partitions=True, topicsize=True)
-        self.assertEqual(topic_str_partitions_dict_topicsize_int_dict_dict[topic_str]["partitions"][0], 3)
-        self.assertEqual(topic_str_partitions_dict_topicsize_int_dict_dict[topic_str]["topicsize"], 243)
-        # size=False, partitions=False, topicsize=True
-        topic_str_topicsize_int_dict = l.ls(pattern=topic_str, size=False, partitions=False, topicsize=True)
-        self.assertEqual(topic_str_topicsize_int_dict[topic_str], 243)
-        # size=True, partitions=True, topicsize=True
-        topic_str_size_int_partitions_dict_topicsize_int_dict_dict = l.ls(pattern=topic_str, size=True, partitions=True, topicsize=True)
-        self.assertEqual(topic_str_size_int_partitions_dict_topicsize_int_dict_dict[topic_str]["size"], 3)
-        self.assertEqual(topic_str_size_int_partitions_dict_topicsize_int_dict_dict[topic_str]["partitions"][0], 3)
-        self.assertEqual(topic_str_size_int_partitions_dict_topicsize_int_dict_dict[topic_str]["topicsize"], 243)
-        # size=True, partitions=True, topicsize=False
-        topic_str_size_int_partitions_dict_dict = l.ls(pattern=topic_str, size=True, partitions=True, topicsize=False)
+        #
+        topic_str_size_int_dict_l = l.l(pattern=topic_str)
+        topic_str_size_int_dict_ll = l.ll(pattern=topic_str)
+        self.assertEqual(topic_str_size_int_dict_l, topic_str_size_int_dict_ll)
+        size_int = topic_str_size_int_dict_l[topic_str]
+        self.assertEqual(size_int, 3)
+        topic_str_size_int_partitions_dict_dict = l.topics(pattern=topic_str, size=True, partitions=True)
         self.assertEqual(topic_str_size_int_partitions_dict_dict[topic_str]["size"], 3)
         self.assertEqual(topic_str_size_int_partitions_dict_dict[topic_str]["partitions"][0], 3)
-        # size=False, partitions=True, topicsize=False
-        topic_str_partitions_dict_dict = l.ls(pattern=topic_str, size=False, partitions=True, topicsize=False)
+        topic_str_partitions_dict_dict = l.l(pattern=topic_str, size=False, partitions=True)
         self.assertEqual(topic_str_partitions_dict_dict[topic_str][0], 3)
 
     def test_exists(self):

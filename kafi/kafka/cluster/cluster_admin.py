@@ -207,9 +207,9 @@ class ClusterAdmin(KafkaAdmin):
                     return True
             #
             num_retries_int += 1
-            if num_retries_int >= self.kafka_obj.block_num_retries():
+            if num_retries_int >= self.storage_obj.block_num_retries():
                 break
-            time.sleep(self.kafka_obj.block_interval())
+            time.sleep(self.storage_obj.block_interval())
         return False
 
     #
@@ -244,7 +244,7 @@ class ClusterAdmin(KafkaAdmin):
         config_dict = config
         block_bool = block
         #
-        config_dict["retention.ms"] = self.kafka_obj.retention_ms()
+        config_dict["retention.ms"] = self.storage_obj.retention_ms()
         #
         newTopic = NewTopic(topic_str, partitions_int, config=config_dict)
         self.adminClient.create_topics([newTopic])
@@ -284,9 +284,11 @@ class ClusterAdmin(KafkaAdmin):
         #
         return topic_str_list
 
-    def offsets_for_times(self, pattern, partitions_timestamps, timeout=-1.0):
+    def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
         pattern_str_or_str_list = pattern
         partition_int_timestamp_int_dict = partitions_timestamps
+        timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
+        #
         topic_str_list = self.list_topics(pattern_str_or_str_list)
         #
         topic_str_partition_int_offsets_int_dict_dict = {}
@@ -295,10 +297,10 @@ class ClusterAdmin(KafkaAdmin):
             #
             topicPartition_list = [TopicPartition(topic_str, partition_int, timestamp_int) for partition_int, timestamp_int in partition_int_timestamp_int_dict.items()]
             if topicPartition_list:
-                config_dict = self.kafka_obj.kafka_config_dict.copy()
+                config_dict = self.storage_obj.kafka_config_dict.copy()
                 config_dict["group.id"] = "dummy_group_id"
                 consumer = Consumer(config_dict)
-                topicPartition_list1 = consumer.offsets_for_times(topicPartition_list, timeout=timeout)
+                topicPartition_list1 = consumer.offsets_for_times(topicPartition_list, timeout=timeout_float)
                 #
                 for topicPartition in topicPartition_list1:
                     partition_int_offset_int_dict[topicPartition.partition] = topicPartition.offset
@@ -348,15 +350,14 @@ class ClusterAdmin(KafkaAdmin):
         topic_str_num_partitions_int_dict = {topic_str: num_partitions_int for topic_str in topic_str_list}
         return topic_str_num_partitions_int_dict
 
-    def watermarks(self, pattern, timeout=-1.0):
-        pattern_str_or_str_list = pattern
-        timeout_float = timeout
+    def watermarks(self, pattern, **kwargs):
+        timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
         #
-        config_dict = self.kafka_obj.kafka_config_dict.copy()
+        config_dict = self.storage_obj.kafka_config_dict.copy()
         config_dict["group.id"] = "dummy_group_id"
         consumer = Consumer(config_dict)
         #
-        topic_str_list = self.list_topics(pattern_str_or_str_list)
+        topic_str_list = self.list_topics(pattern)
         topic_str_partition_int_offsets_tuple_dict_dict = {}
         for topic_str in topic_str_list:
             partitions_int = self.partitions(topic_str)[topic_str]

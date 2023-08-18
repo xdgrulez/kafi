@@ -1,60 +1,12 @@
+import ast
+import base64
 import os
 
-class FSAdmin:
-    def __init__(self, fs_obj):
-        self.fs_obj = fs_obj
+from kafi.storage_admin import StorageAdmin
 
-    #
-
-    def topics(self, pattern=None, size=False, **kwargs):
-        pattern_str_or_str_list = "*" if pattern is None else pattern
-        pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
-        size_bool = size
-        partitions_bool = "partitions" in kwargs and kwargs["partitions"]
-        filesize_bool = "filesize" in kwargs and kwargs["filesize"]
-        #
-        topic_str_list = self.list_topics(pattern_str_list, partitions=True, filesize=True)
-        #
-        if size_bool:
-            topic_str_size_int_filesize_int_tuple_dict = {topic_str: (self.fs_obj.stat(topic_str), filesize_int) for topic_str, filesize_int in topic_str_filesize_int_dict.items()}
-            if partitions_bool:
-                if filesize_bool:
-                    # e.g. {"topic": {"size": 42, "partitions": {0: 42}, "filesize": 4711}}
-                    topic_str_size_int_partitions_dict_filesize_int_dict_dict = {topic_str: {"size": size_int_filesize_int_tuple[0], "partitions": {0: size_int_filesize_int_tuple[0]}, "filesize": size_int_filesize_int_tuple[1]} for topic_str, size_int_filesize_int_tuple in topic_str_size_int_filesize_int_tuple_dict.items()}
-                    return topic_str_size_int_partitions_dict_filesize_int_dict_dict
-                else:
-                    # e.g. {"topic": {"size": 42, "partitions": {0: 42}}}
-                    topic_str_size_int_partitions_dict_dict = {topic_str: {"size": size_int_filesize_int_tuple[0], "partitions": {0: size_int_filesize_int_tuple[0]}} for topic_str, size_int_filesize_int_tuple in topic_str_size_int_filesize_int_tuple_dict.items()}
-                    return topic_str_size_int_partitions_dict_dict
-            else:
-                if filesize_bool:
-                    # e.g. {"topic": {"size": 42, "filesize": 4711}}
-                    topic_str_size_int_filesize_int_dict_dict = {topic_str: {"size": size_int_filesize_int_tuple[0], "filesize": size_int_filesize_int_tuple[1]} for topic_str, size_int_filesize_int_tuple in topic_str_size_int_filesize_int_tuple_dict.items()}
-                    return topic_str_size_int_filesize_int_dict_dict
-                else:
-                    # e.g. {"topic": 42}
-                    topic_str_size_int_dict = {topic_str: size_int_filesize_int_tuple[0] for topic_str, size_int_filesize_int_tuple in topic_str_size_int_filesize_int_tuple_dict.items()}
-                    return topic_str_size_int_dict
-        else:
-            if partitions_bool:
-                topic_str_size_int_filesize_int_tuple_dict = {topic_str: (self.fs_obj.stat(topic_str), filesize_int) for topic_str, filesize_int in topic_str_filesize_int_dict.items()}
-                if filesize_bool:
-                    # e.g. {"topic": {"partitions": {0: 42}, "filesize": 4711}}
-                    topic_str_partitions_dict_filesize_int_dict_dict = {topic_str: {"partitions": {0: size_int_filesize_int_tuple[0]}, "filesize": size_int_filesize_int_tuple[1]} for topic_str, size_int_filesize_int_tuple in topic_str_size_int_filesize_int_tuple_dict.items()}
-                    return topic_str_partitions_dict_filesize_int_dict_dict
-                else:
-                    # e.g. {"topic": {0: 42}}
-                    topic_str_partitions_dict_dict = {topic_str: {0: size_int_filesize_int_tuple[0]} for topic_str, size_int_filesize_int_tuple in topic_str_size_int_filesize_int_tuple_dict.items()}
-                    return topic_str_partitions_dict_dict
-            else:
-                if filesize_bool:
-                    # e.g. {"topic": 4711}
-                    topic_str_filesize_int_dict = {topic_str: filesize_int for topic_str, filesize_int in topic_str_filesize_int_dict.items()}
-                    return topic_str_filesize_int_dict
-                else:
-                    # e.g. ["topic"]
-                    topic_str_list = [topic_str for topic_str in topic_str_filesize_int_dict]
-                    return topic_str_list
+class FSAdmin(StorageAdmin):
+    def __init__(self, fs_obj, **kwargs):
+        super().__init__(fs_obj, **kwargs)
 
     #
 
@@ -67,13 +19,16 @@ class FSAdmin:
 
     #
 
-    def create(self, topic, partitions=1, config={}, block=True):
+    def create(self, topic, partitions=1, config={}, block=True, **kwargs):
         topic_str = topic
         partitions_int = partitions
         #
-        topic_dir_str = self.fs_obj.get_topic_dir_str(topic_str)
+        topic_dir_str = self.storage_obj.get_topic_dir_str(topic_str)
         #
-        metadata_dict = {"topic": topic_str, "partitions": partitions_int}
+        message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else self.storage_obj.message_separator()
+        message_separator_str = base64.b64encode(message_separator_bytes).decode('utf-8')
+        #
+        metadata_dict = {"topic": topic_str, "partitions": partitions_int, "message_separator": message_separator_str}
         self.write_dict_to_file(os.path.join(topic_dir_str, "metadata.json"), metadata_dict)
     
     #
@@ -82,10 +37,52 @@ class FSAdmin:
         topic_str_list = self.list_topics(pattern)
         #
         for topic_str in topic_str_list:
-            topic_dir_str = self.fs_obj.get_topic_dir_str(topic_str)
+            topic_dir_str = self.storage_obj.get_topic_dir_str(topic_str)
             #
             file_str_list = self.list_dir(topic_dir_str)
             for file_str in file_str_list:
                 self.delete_file(os.path.join(topic_dir_str, file_str))
             #
             self.delete_dir(topic_dir_str)
+
+    #
+
+    def watermarks(self, pattern, **kwargs):
+        topic_str_list = self.list_topics(pattern)
+        #
+        def get_watermark_offsets(topic_str, partition_int):
+            topic_dir_str = self.storage_obj.get_topic_dir_str(topic_str)
+            message_separator_bytes = self.storage_obj.get_message_separator(topic_str)
+            file_str_list = self.list_dir(topic_dir_str)
+            partition_file_str_list = [file_str for file_str in file_str_list if file_str.startswith("partition") and int(file_str.split(",")[1]) == partition_int]
+            partition_file_str_list.sort()
+            low_offset_int = 0
+            high_offset_int = 0
+            if len(partition_file_str_list) > 0:
+                first_partition_file_str = partition_file_str_list[0]
+                last_partition_file_str = partition_file_str_list[-1]
+                #
+                def get_offset(partition_file_str, index_int):
+                    file_bytes = self.read_bytes_from_file(os.path.join(topic_dir_str, partition_file_str))
+                    message_bytes_list = file_bytes.split(message_separator_bytes)[:-1]
+                    if len(message_bytes_list) > 0:
+                        first_message_bytes = message_bytes_list[index_int]
+                        serialized_message_dict = ast.literal_eval(first_message_bytes.decode("utf-8"))
+                        offset_int = serialized_message_dict["offset"]
+                    return offset_int
+                #
+
+                low_offset_int = get_offset(first_partition_file_str, 0)
+                high_offset_int = get_offset(last_partition_file_str, -1) + 1
+            #
+            return (low_offset_int, high_offset_int)
+        #
+
+        topic_str_partition_int_offsets_tuple_dict_dict = {}
+        for topic_str in topic_str_list:
+            partitions_int = self.storage_obj.get_partitions(topic_str)
+            partitions_int = self.partitions(topic_str)[topic_str]
+            partition_int_offsets_tuple_dict = {partition_int: get_watermark_offsets(topic_str, partition_int) for partition_int in range(partitions_int)}
+            topic_str_partition_int_offsets_tuple_dict_dict[topic_str] = partition_int_offsets_tuple_dict
+        #
+        return topic_str_partition_int_offsets_tuple_dict_dict

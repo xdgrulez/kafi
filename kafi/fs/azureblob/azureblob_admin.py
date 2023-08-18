@@ -13,8 +13,8 @@ class AzureBlobAdmin(FSAdmin):
     #
 
     def topics(self, pattern=None, size=False, **kwargs):
-        blobServiceClient = BlobServiceClient.from_connection_string(self.fs_obj.azure_blob_config_dict["connection.string"])
-        containerClient = blobServiceClient.get_container_client(self.fs_obj.container_name())
+        blobServiceClient = BlobServiceClient.from_connection_string(self.storage_obj.azure_blob_config_dict["connection.string"])
+        containerClient = blobServiceClient.get_container_client(self.storage_obj.container_name())
         #
         pattern_str_or_str_list = "*" if pattern is None else pattern
         pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
@@ -39,8 +39,8 @@ class AzureBlobAdmin(FSAdmin):
     #
 
     def delete(self, pattern=None):
-        blobServiceClient = BlobServiceClient.from_connection_string(self.fs_obj.azure_blob_config_dict["connection.string"])
-        containerClient = blobServiceClient.get_container_client(self.fs_obj.container_name())
+        blobServiceClient = BlobServiceClient.from_connection_string(self.storage_obj.azure_blob_config_dict["connection.string"])
+        containerClient = blobServiceClient.get_container_client(self.storage_obj.container_name())
         #
         pattern_str_or_str_list = [] if pattern is None else pattern
         pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list

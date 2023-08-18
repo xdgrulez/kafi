@@ -1,6 +1,7 @@
 import json
 import os
 
+from kafi.storage_writer import StorageWriter
 from kafi.helpers import get_millis, split_list_into_sublists
 
 # Constants
@@ -9,13 +10,9 @@ CURRENT_TIME = 0
 
 #
 
-class FSWriter():
+class FSWriter(StorageWriter):
     def __init__(self, fs_obj, topic, **kwargs):
-        self.fs_obj = fs_obj
-        #
-        self.topic_str = topic
-        #
-        (self.key_type_str, self.value_type_str) = fs_obj.get_key_value_type_tuple(**kwargs)
+        super().__init__(fs_obj, topic, **kwargs)
 
     #
 
@@ -33,14 +30,16 @@ class FSWriter():
             return payload_str_or_bytes
         #        
 
-        partitions_int = self.fs_obj.get_partitions(self.topic_str)
+        partitions_int = self.storage_obj.get_partitions(self.topic_str)
         #
-        topic_dir_str = self.fs_obj.get_topic_dir_str(self.topic_str)
+        topic_dir_str = self.storage_obj.get_topic_dir_str(self.topic_str)
         #
-        partition_int_last_offset_int_dict = self.fs_obj.get_last_offsets(self.topic_str)
+        print(dir(self.storage_obj))
+        partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
+        partition_int_last_offset_int_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
         #
-        write_batch_size_int = kwargs["write_batch_size"] if "write_batch_size" in kwargs else self.fs_obj.write_batch_size()
-        message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else self.fs_obj.message_separator()
+        write_batch_size_int = kwargs["write_batch_size"] if "write_batch_size" in kwargs else self.storage_obj.write_batch_size()
+        message_separator_bytes = self.storage_obj.get_message_separator(self.topic_str)
         #
         keep_partitions_bool = "keep_partitions" in kwargs and kwargs["keep_partitions"]
         keep_timestamps_bool = "keep_timestamps" in kwargs and kwargs["keep_timestamps"]
@@ -55,12 +54,12 @@ class FSWriter():
         #
         timestamp_int_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
         headers_list = headers if isinstance(headers, list) and len(headers) == len(value_list) else [headers for _ in value_list]
-        headers_str_bytes_tuple_list_list = [self.fs_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
+        headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         partition_int_list = partitions if isinstance(partitions, list) else [partitions for _ in value_list]
         #
         partition_int_message_bytes_list_dict = {partition_int: [] for partition_int in range(partitions_int)}
         round_robin_counter_int = 0
-        partition_int_offset_counter_int_dict = {partition_int: last_offset_int + 1 for partition_int, last_offset_int in partition_int_last_offset_int_dict.items()}
+        partition_int_offset_counter_int_dict = {partition_int: last_offset_int + 1 if last_offset_int > 0 else 0 for partition_int, last_offset_int in partition_int_last_offset_int_dict.items()}
         for value, key, timestamp_int, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_int_list, headers_str_bytes_tuple_list_list, partition_int_list):
             if keep_partitions_bool:
                 target_partition_int = partition_int

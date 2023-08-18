@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 
@@ -133,41 +134,34 @@ class FS(Storage):
         return partition_file_str
 
     def get_partitions(self, topic_str):
-        topic_dir_str = self.get_topic_dir_str(topic_str)
-        metadata_dict = self.admin.read_dict_from_file(os.path.join(topic_dir_str, "metadata.json"))
+        metadata_dict = self.get_metadata(topic_str)
         partitions_int = metadata_dict["partitions"]
         #
         return partitions_int
 
+    def get_message_separator(self, topic_str):
+        metadata_dict = self.get_metadata(topic_str)
+        message_separator_str = metadata_dict["message_separator"]
+        message_separator_bytes = bytes(base64.b64decode(message_separator_str))
+        #
+        return message_separator_bytes
+
+    def get_metadata(self, topic_str):
+        topic_dir_str = self.get_topic_dir_str(topic_str)
+        metadata_dict = self.admin.read_dict_from_file(os.path.join(topic_dir_str, "metadata.json"))
+        #
+        return metadata_dict
+
     def is_topic(self, dir_file_str):
         return dir_file_str.startswith("topic,")
 
-    def get_last_offsets(self, topic_str):
-        topic_dir_str = self.get_topic_dir_str(topic_str)
-        metadata_dict = self.admin.read_dict_from_file(os.path.join(topic_dir_str, "metadata.json"))
-        partitions_int = metadata_dict["partitions"]
+    def get_filesize_dict(self, topic_str):
+        partitions_int = self.get_partitions(topic_str)
+        file_str_list = self.admin.list_dir(topic_str)
         #
-        def get_last_offset_of_partition(partition_int):
-            file_str_list = self.admin.list_dir(topic_dir_str)
-            partition_file_str_list = [file_str for file_str in file_str_list if file_str.startswith("partition") and int(file_str.split(",")[1]) == partition_int]
-            #
-            if partition_file_str_list == []:
-                return 0
-            #
-            partition_file_str_list.sort()
-            #
-            last_partition_file_str = partition_file_str_list[-1]
-            message_str_list = self.admin.read_lines_from_file(os.path.join(topic_dir_str, last_partition_file_str))
-            last_message_str = message_str_list[-1]
-            last_message_dict = json.loads(last_message_str)
-            last_offset_int = last_message_dict["offset"]
-            #
-            return last_offset_int
+        partition_int_filesize_int = {partition_int: sum([self.admin.stat_file(file_str) for file_str in file_str_list if file_str.startswith("partition") and int(file_str.split(",")[1]) == partition_int]) for partition_int in range(partitions_int)}
         #
-
-        partition_int_last_offset_int_dict = {partition_int: get_last_offset_of_partition(partition_int) for partition_int in range(partitions_int)}
-        #
-        return partition_int_last_offset_int_dict
+        return partition_int_filesize_int
 
     # Open
     def openr(self, topic, **kwargs):

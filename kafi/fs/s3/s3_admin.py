@@ -20,7 +20,7 @@ class S3Admin(FSAdmin):
         size_bool = size
         filesize_bool = "filesize" in kwargs and kwargs["filesize"]
         #
-        object_generator = self.minio.list_objects(self.fs_obj.bucket_name())
+        object_generator = self.minio.list_objects(self.storage_obj.bucket_name())
         file_str_file_size_int_tuple_list = [(object.object_name, object.size) for object in object_generator if any(fnmatch(object.object_name, pattern_str) for pattern_str in pattern_str_list)]
         #
         if size_bool:
@@ -45,11 +45,11 @@ class S3Admin(FSAdmin):
         pattern_str_or_str_list = [] if pattern is None else pattern
         pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
         #
-        object_generator = self.minio.list_objects(self.fs_obj.bucket_name())
+        object_generator = self.minio.list_objects(self.storage_obj.bucket_name())
         file_str_list = [object.object_name for object in object_generator if any(fnmatch(object.object_name, pattern_str) for pattern_str in pattern_str_list)]
         #
         filtered_file_str_list = [file_str for file_str in file_str_list if any(fnmatch(file_str, pattern_str) for pattern_str in pattern_str_list)]
         for file_str in filtered_file_str_list:
-            self.minio.remove_object(self.fs_obj.bucket_name(), file_str)
+            self.minio.remove_object(self.storage_obj.bucket_name(), file_str)
         #
         return filtered_file_str_list

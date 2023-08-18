@@ -30,12 +30,12 @@ class ClusterWriter(KafkaWriter):
         #
         self.on_delivery_function = kwargs["on_delivery"] if "on_delivery" in kwargs else None
         #
-        if "schema.registry.url" in self.kafka_obj.schema_registry_config_dict:
-            self.schemaRegistry = SchemaRegistry(self.kafka_obj.schema_registry_config_dict, self.kafka_obj.kafi_config_dict)
+        if "schema.registry.url" in cluster_obj.schema_registry_config_dict:
+            self.schemaRegistry = SchemaRegistry(cluster_obj.schema_registry_config_dict, cluster_obj.kafi_config_dict)
         else:
             self.schemaRegistry = None
         #
-        self.producer = Producer(self.kafka_obj.kafka_config_dict)
+        self.producer = Producer(cluster_obj.kafka_config_dict)
 
     def __del__(self):
         self.flush()
@@ -49,7 +49,7 @@ class ClusterWriter(KafkaWriter):
     #
 
     def flush(self):
-        self.producer.flush(self.kafka_obj.flush_timeout())
+        self.producer.flush(self.storage_obj.flush_timeout())
         #
         return self.topic_str
 
@@ -66,7 +66,7 @@ class ClusterWriter(KafkaWriter):
         partition_int_list = partition if isinstance(partition, list) else [partition for _ in value_list]
         timestamp_int_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
         headers_list = headers if isinstance(headers, list) and len(headers) == len(value_list) else [headers for _ in value_list]
-        headers_str_bytes_tuple_list_list = [self.kafka_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
+        headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         #
 
         def serialize(payload, key_bool, normalize_schemas=False):
@@ -127,7 +127,7 @@ class ClusterWriter(KafkaWriter):
             #
             self.producer.produce(self.topic_str, value_str_or_bytes, key_str_or_bytes, partition=partition_int, timestamp=timestamp_int, headers=headers_str_bytes_tuple_list, on_delivery=self.on_delivery_function)
             #
-            self.produced_counter_int += 1
+            self.written_counter_int += 1
             #
             key_str_or_bytes_list.append(key_str_or_bytes)
             value_str_or_bytes_list.append(value_str_or_bytes)
@@ -152,7 +152,7 @@ class ClusterWriter(KafkaWriter):
         return generalizedProtocolMessageType
 
     def schema_id_int_and_schema_str_to_generalizedProtocolMessageType(self, schema_id_int, schema_str):
-        path_str = f"/{tempfile.gettempdir()}/kafi/clusters/{self.kafka_obj.config_str}"
+        path_str = f"/{tempfile.gettempdir()}/kafi/clusters/{self.storage_obj.config_str}"
         os.makedirs(path_str, exist_ok=True)
         file_str = f"schema_{schema_id_int}.proto"
         file_path_str = f"{path_str}/{file_str}"

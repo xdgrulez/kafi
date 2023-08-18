@@ -1,14 +1,10 @@
-class KafkaWriter:
+from kafi.storage_writer import StorageWriter
+
+class KafkaWriter(StorageWriter):
     def __init__(self, kafka_obj, topic, **kwargs):
-        self.kafka_obj = kafka_obj
-        #
-        self.topic_str = topic
-        #
-        (self.key_type_str, self.value_type_str) = kafka_obj.get_key_value_type_tuple(**kwargs)
+        super().__init__(kafka_obj, topic, **kwargs)
         #
         (self.key_schema_str, self.value_schema_str, self.key_schema_id_int, self.value_schema_id_int) = self.get_key_value_schema_tuple(**kwargs)
-        #
-        self.produced_counter_int = 0
 
     #
 
