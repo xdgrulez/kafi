@@ -1,5 +1,3 @@
-import os
-
 from kafi.fs.fs_reader import FSReader
 
 # Constants
@@ -14,20 +12,13 @@ class LocalReader(FSReader):
     
     #
 
-    def __del__(self):
-        self.close()
-
-    #
-
     def close(self):
         return self.topic_str
 
     #
 
-    def read_bytes(self, n_int, file_offset_int=0, **kwargs):
-        if file_offset_int > 0:
-            self.bufferedReader.seek(file_offset_int)
+    def read_bytes(self, abs_path_file_str):
+        with open(abs_path_file_str, "rb") as bufferedReader:
+            bytes = bufferedReader.read()
         #
-        batch_bytes = self.bufferedReader.read(n_int)
-        #
-        return batch_bytes
+        return bytes

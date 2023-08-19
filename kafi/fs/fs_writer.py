@@ -35,7 +35,7 @@ class FSWriter(StorageWriter):
 
         partitions_int = self.storage_obj.admin.get_partitions(self.topic_str)
         #
-        topic_dir_str = self.storage_obj.admin.get_topic_dir_str(self.topic_str)
+        topic_abs_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(self.topic_str)
         #
         partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
         partition_int_last_offset_int_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
@@ -99,7 +99,7 @@ class FSWriter(StorageWriter):
                 joined_message_bytes = b"".join(message_bytes_list)
                 #
                 start_offset_int = partition_int_last_offset_int_dict[partition_int] + batch_counter_int * write_batch_size_int
-                path_file_str = os.path.join(topic_dir_str, f"partition,{partition_int:09},{start_offset_int:021}")
-                self.write_bytes(path_file_str, joined_message_bytes)
+                abs_path_file_str = os.path.join(topic_abs_dir_str, f"partition,{partition_int:09},{start_offset_int:021}")
+                self.write_bytes(abs_path_file_str, joined_message_bytes)
                 #
                 batch_counter_int += 1

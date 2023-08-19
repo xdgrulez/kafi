@@ -28,7 +28,7 @@ class FSReader(StorageReader):
         #
         partitions_int = self.storage_obj.admin.get_partitions(self.topic_str)
         #
-        topic_dir_str = self.storage_obj.admin.get_topic_dir_str(self.topic_str)
+        abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(self.topic_str)
         #
         config_dict = kwargs["config"] if "config" in kwargs else None
         if config_dict is not None and "auto.offset.reset" in config_dict:
@@ -46,13 +46,13 @@ class FSReader(StorageReader):
         #
         message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else self.storage_obj.message_separator()
         #
-        partition_int_file_str_list_dict = self.storage_obj.admin.get_partition_files(self.topic_str)
+        partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(self.topic_str)
         #
-        partition_int_first_partition_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str(self.topic_str, partition_int, offset_int) for partition_int, offset_int in partition_int_offset_int_dict.items()}
+        partition_int_first_partition_rel_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str(self.topic_str, partition_int, offset_int) for partition_int, offset_int in partition_int_offset_int_dict.items()}
         #
-        partition_int_to_be_read_file_str_list_dict = {partition_int: [file_str for file_str in file_str_list if file_str >= partition_int_first_partition_file_str_dict[partition_int]] for partition_int, file_str_list in partition_int_file_str_list_dict.items()}
+        partition_int_to_be_read_rel_file_str_list_dict = {partition_int: [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str >= partition_int_first_partition_rel_file_str_dict[partition_int]] for partition_int, rel_file_str_list in partition_int_rel_file_str_list_dict.items()}
         #
-        file_str_list_list = []
+        rel_file_str_list_list = []
         batch_counter_int = 0
         message_counter_int = 0
         def acc_bytes_to_acc(acc, message_bytes, message_counter_int):
@@ -117,16 +117,14 @@ class FSReader(StorageReader):
         #
 
         for partition_int in range(partitions_int):
-            file_str_list = [partition_file_str_list[batch_counter_int] for partition_file_str_list in partition_int_to_be_read_file_str_list_dict.values() if len(partition_file_str_list[partition_int]) > batch_counter_int]
-            file_str_list_list.append(file_str_list)
+            rel_file_str_list = [partition_rel_file_str_list[batch_counter_int] for partition_rel_file_str_list in partition_int_to_be_read_rel_file_str_list_dict.values() if len(partition_rel_file_str_list[partition_int]) > batch_counter_int]
+            rel_file_str_list_list.append(rel_file_str_list)
         #
 
         acc = initial_acc
-        for file_str_list in file_str_list_list:
-            for file_str in file_str_list:
-                file_bytes = self.storage_obj.admin.read_bytes_from_file(os.path.join(topic_dir_str, file_str))
-                #
-                message_bytes_list = file_bytes.split(message_separator_bytes)[:-1]
+        for rel_file_str_list in rel_file_str_list_list:
+            for rel_file_str in rel_file_str_list:
+                message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_file_str), message_separator_bytes)
                 for message_bytes in message_bytes_list:
                     (acc, message_counter_int) = acc_bytes_to_acc(acc, message_bytes, message_counter_int)
                     #
@@ -145,3 +143,27 @@ class FSReader(StorageReader):
             return message_dict_list
         #
         return self.foldl(foldl_function, [], n)
+
+    # Helpers
+
+    def get_offset_in_partition_file(self, rel_partition_file_str, index_int):
+        abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(self.topic_str)
+        #
+        message_separator_bytes = self.storage_obj.admin.get_message_separator(self.topic_str)
+        #
+        message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_partition_file_str), message_separator_bytes)
+        if len(message_bytes_list) > 0:
+            first_message_bytes = message_bytes_list[index_int]
+            serialized_message_dict = ast.literal_eval(first_message_bytes.decode("utf-8"))
+            offset_int = serialized_message_dict["offset"]
+        return offset_int
+
+    #
+
+    def read_messages_from_file(self, abs_path_file_str, message_separator_bytes):
+        messages_bytes = self.read_bytes(abs_path_file_str)
+        #
+        message_bytes_list = messages_bytes.split(message_separator_bytes)[:-1]
+        #
+        return message_bytes_list
+    

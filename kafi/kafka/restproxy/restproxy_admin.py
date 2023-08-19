@@ -7,7 +7,8 @@ from kafi.kafka.kafka_admin import *
 #
 
 class RestProxyAdmin(KafkaAdmin):
-    def __init__(self, restproxy_obj):
+    def __init__(self, restproxy_obj, **kwargs):
+        super().__init__(restproxy_obj, **kwargs)
         self.restproxy_obj = restproxy_obj
         #
         self.cluster_id_str = restproxy_obj.cluster_id_str
@@ -283,8 +284,6 @@ class RestProxyAdmin(KafkaAdmin):
     #
 
     def list_topics(self, pattern=None):
-        pattern_str_or_str_list = pattern
-        #
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics"
@@ -293,14 +292,9 @@ class RestProxyAdmin(KafkaAdmin):
         kafkaTopic_dict_list = response_dict["data"]
         topic_str_list = [kafkaTopic_dict["topic_name"] for kafkaTopic_dict in kafkaTopic_dict_list]
         #
-        if pattern_str_or_str_list is not None:
-            if isinstance(pattern_str_or_str_list, str):
-                pattern_str_or_str_list = [pattern_str_or_str_list]
-            topic_str_list = [topic_str for topic_str in topic_str_list if any(fnmatch(topic_str, pattern_str) for pattern_str in pattern_str_or_str_list)]
+        filtered_topic_str_list = self.filter_topics(topic_str_list, pattern)
         #
-        topic_str_list.sort()
-        #
-        return topic_str_list
+        return filtered_topic_str_list
 
     def partitions(self, pattern=None, verbose=False):
         pattern_str_or_str_list = pattern
@@ -318,13 +312,13 @@ class RestProxyAdmin(KafkaAdmin):
         response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
         kafkaTopic_dict_list = response_dict["data"]
         #
-        topic_str_num_partitions_int_dict = {kafkaTopic_dict["topic_name"]: kafkaTopic_dict["partitions_count"] for kafkaTopic_dict in kafkaTopic_dict_list if any(fnmatch(kafkaTopic_dict["topic_name"], pattern_str) for pattern_str in pattern_str_or_str_list)}
+        topic_str_partitions_int_dict = {kafkaTopic_dict["topic_name"]: kafkaTopic_dict["partitions_count"] for kafkaTopic_dict in kafkaTopic_dict_list if any(fnmatch(kafkaTopic_dict["topic_name"], pattern_str) for pattern_str in pattern_str_or_str_list)}
         #
         if verbose_bool:
             topic_str_partition_int_partition_dict_dict_dict = {}
-            for topic_str in topic_str_num_partitions_int_dict.keys():
+            for topic_str in topic_str_partitions_int_dict.keys():
                 partition_int_partition_dict_dict = {}
-                for partition_int in range(topic_str_num_partitions_int_dict[topic_str]):
+                for partition_int in range(topic_str_partitions_int_dict[topic_str]):
                     url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{topic_str}/partitions/{partition_int}/replicas"
                     headers_dict = {"Content-Type": "application/json"}
                     response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
@@ -365,17 +359,17 @@ class RestProxyAdmin(KafkaAdmin):
             #
             return topic_str_partition_int_partition_dict_dict_dict
         else:
-            return topic_str_num_partitions_int_dict
+            return topic_str_partitions_int_dict
 
     def watermarks(self, pattern, timeout=-1.0):
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
-        topic_str_num_partitions_int_dict = self.partitions(pattern)
+        topic_str_partitions_int_dict = self.partitions(pattern)
         #
         topic_str_partition_int_offsets_tuple_dict_dict = {}
-        for topic_str, num_partitions_int in topic_str_num_partitions_int_dict.items():
+        for topic_str, partitions_int in topic_str_partitions_int_dict.items():
             topic_str_partition_int_offsets_tuple_dict_dict[topic_str] = {}
-            for partition_int in range(num_partitions_int):
+            for partition_int in range(partitions_int):
                 url_str = f"{rest_proxy_url_str}/topics/{topic_str}/partitions/{partition_int}/offsets"
                 headers_dict = {"Content-Type": "application/vnd.kafka.v2+json"}
                 response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())

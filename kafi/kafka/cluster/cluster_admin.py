@@ -271,18 +271,11 @@ class ClusterAdmin(KafkaAdmin):
     #
 
     def list_topics(self, pattern=None):
-        pattern_str_or_str_list = pattern
-        #
         topic_str_list = list(self.adminClient.list_topics().topics.keys())
         #
-        if pattern_str_or_str_list is not None:
-            if isinstance(pattern_str_or_str_list, str):
-                pattern_str_or_str_list = [pattern_str_or_str_list]
-            topic_str_list = [topic_str for topic_str in topic_str_list if any(fnmatch(topic_str, pattern_str) for pattern_str in pattern_str_or_str_list)]
+        filtered_topic_str_list = self.filter_topics(topic_str_list, pattern)
         #
-        topic_str_list.sort()
-        #
-        return topic_str_list
+        return filtered_topic_str_list
 
     def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
         pattern_str_or_str_list = pattern
@@ -331,24 +324,24 @@ class ClusterAdmin(KafkaAdmin):
             #
             return topic_str_partition_int_partition_dict_dict_dict
         else:
-            topic_str_num_partitions_int_dict = {topic_str: len(topic_str_topicMetadata_dict[topic_str].partitions) for topic_str in topic_str_topicMetadata_dict if any(fnmatch(topic_str, pattern_str) for pattern_str in pattern_str_or_str_list)}
-            return topic_str_num_partitions_int_dict
+            topic_str_partitions_int_dict = {topic_str: len(topic_str_topicMetadata_dict[topic_str].partitions) for topic_str in topic_str_topicMetadata_dict if any(fnmatch(topic_str, pattern_str) for pattern_str in pattern_str_or_str_list)}
+            return topic_str_partitions_int_dict
 
     def set_partitions(self, pattern, num_partitions, test=False):
         pattern_str_or_str_list = pattern
-        num_partitions_int = num_partitions
+        partitions_int = num_partitions
         test_bool = test
         #
         topic_str_list = self.list_topics(pattern_str_or_str_list)
         #
-        newPartitions_list = [NewPartitions(topic_str, num_partitions_int) for topic_str in topic_str_list]
+        newPartitions_list = [NewPartitions(topic_str, partitions_int) for topic_str in topic_str_list]
         topic_str_future_dict = self.adminClient.create_partitions(newPartitions_list, validate_only=test_bool)
         #
         for future in topic_str_future_dict.values():
             future.result()
         #
-        topic_str_num_partitions_int_dict = {topic_str: num_partitions_int for topic_str in topic_str_list}
-        return topic_str_num_partitions_int_dict
+        topic_str_partitions_int_dict = {topic_str: partitions_int for topic_str in topic_str_list}
+        return topic_str_partitions_int_dict
 
     def watermarks(self, pattern, **kwargs):
         timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0

@@ -125,7 +125,7 @@ class Test(unittest.TestCase):
         w = l.openw(topic_str, key_type="bytes", value_type="str")
         w.write(self.snack_str_list, key=self.snack_str_list, headers=self.headers_str_bytes_tuple_list)
         w.close()
-#        self.assertEqual(l.l(topic_str)[topic_str], 3)
+        self.assertEqual(l.l(topic_str)[topic_str], 3)
         #
         # Upon read, the type "str" triggers conversion into a string, "bytes" into bytes.
         r = l.openr(topic_str, key_type="str", value_type="bytes")
