@@ -33,15 +33,15 @@ class FSWriter(StorageWriter):
             return payload_str_or_bytes
         #        
 
-        partitions_int = self.storage_obj.get_partitions(self.topic_str)
+        partitions_int = self.storage_obj.admin.get_partitions(self.topic_str)
         #
-        topic_dir_str = self.storage_obj.get_topic_dir_str(self.topic_str)
+        topic_dir_str = self.storage_obj.admin.get_topic_dir_str(self.topic_str)
         #
         partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
         partition_int_last_offset_int_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
         #
         write_batch_size_int = kwargs["write_batch_size"] if "write_batch_size" in kwargs else self.storage_obj.write_batch_size()
-        message_separator_bytes = self.storage_obj.get_message_separator(self.topic_str)
+        message_separator_bytes = self.storage_obj.admin.get_message_separator(self.topic_str)
         #
         keep_partitions_bool = "keep_partitions" in kwargs and kwargs["keep_partitions"]
         keep_timestamps_bool = "keep_timestamps" in kwargs and kwargs["keep_timestamps"]

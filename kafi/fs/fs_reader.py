@@ -26,9 +26,9 @@ class FSReader(StorageReader):
     def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         n_int = n
         #
-        partitions_int = self.storage_obj.get_partitions(self.topic_str)
+        partitions_int = self.storage_obj.admin.get_partitions(self.topic_str)
         #
-        topic_dir_str = self.storage_obj.get_topic_dir_str(self.topic_str)
+        topic_dir_str = self.storage_obj.admin.get_topic_dir_str(self.topic_str)
         #
         config_dict = kwargs["config"] if "config" in kwargs else None
         if config_dict is not None and "auto.offset.reset" in config_dict:
@@ -46,9 +46,9 @@ class FSReader(StorageReader):
         #
         message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else self.storage_obj.message_separator()
         #
-        partition_int_file_str_list_dict = self.storage_obj.get_partition_files(self.topic_str)
+        partition_int_file_str_list_dict = self.storage_obj.admin.get_partition_files(self.topic_str)
         #
-        partition_int_first_partition_file_str_dict = {partition_int: self.storage_obj.find_partition_file_str(self.topic_str, partition_int, offset_int) for partition_int, offset_int in partition_int_offset_int_dict.items()}
+        partition_int_first_partition_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str(self.topic_str, partition_int, offset_int) for partition_int, offset_int in partition_int_offset_int_dict.items()}
         #
         partition_int_to_be_read_file_str_list_dict = {partition_int: [file_str for file_str in file_str_list if file_str >= partition_int_first_partition_file_str_dict[partition_int]] for partition_int, file_str_list in partition_int_file_str_list_dict.items()}
         #
@@ -124,7 +124,7 @@ class FSReader(StorageReader):
         acc = initial_acc
         for file_str_list in file_str_list_list:
             for file_str in file_str_list:
-                file_bytes = self.read_bytes_from_file(os.path.join(topic_dir_str, file_str))
+                file_bytes = self.storage_obj.admin.read_bytes_from_file(os.path.join(topic_dir_str, file_str))
                 #
                 message_bytes_list = file_bytes.split(message_separator_bytes)[:-1]
                 for message_bytes in message_bytes_list:
@@ -145,18 +145,3 @@ class FSReader(StorageReader):
             return message_dict_list
         #
         return self.foldl(foldl_function, [], n)
-
-    #
-
-    def list_dir(self, path_dir_str):
-        dir_file_str_list = os.listdir(path_dir_str)
-        #
-        return dir_file_str_list
-
-    #
-
-    def read_bytes_from_file(self, path_file_str):
-        with open(path_file_str, "rb") as bufferedReader:
-            bytes = bufferedReader.read()
-        #
-        return bytes

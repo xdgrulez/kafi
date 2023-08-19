@@ -16,7 +16,7 @@ class LocalAdmin(FSAdmin):
         pattern_str_or_str_list = pattern
         #
         dir_file_str_list = os.listdir(self.storage_obj.root_dir())
-        topic_str_list = [dir_file_str.split(",")[1] for dir_file_str in dir_file_str_list if self.storage_obj.is_topic(dir_file_str)]
+        topic_str_list = [dir_file_str.split(",")[1] for dir_file_str in dir_file_str_list if self.storage_obj.admin.is_topic(dir_file_str)]
         #
         if pattern_str_or_str_list is not None:
             if isinstance(pattern_str_or_str_list, str):
