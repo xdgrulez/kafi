@@ -1,6 +1,7 @@
-from fnmatch import fnmatch
+import os
 
 from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobClient
 
 from kafi.fs.fs_admin import FSAdmin
 
@@ -9,45 +10,50 @@ from kafi.fs.fs_admin import FSAdmin
 class AzureBlobAdmin(FSAdmin):
     def __init__(self, azureblob_obj):
         super().__init__(azureblob_obj)
+        #
+        blobServiceClient = BlobServiceClient.from_connection_string(azureblob_obj.azure_blob_config_dict["connection.string"])
+        self.containerClient = blobServiceClient.get_container_client(azureblob_obj.container_name())
 
-    #
+    # Topics/Files
 
-    def topics(self, pattern=None, size=False, **kwargs):
-        blobServiceClient = BlobServiceClient.from_connection_string(self.storage_obj.azure_blob_config_dict["connection.string"])
-        containerClient = blobServiceClient.get_container_client(self.storage_obj.container_name())
+    def list_dirs(self, abs_path_dir_str):
+        blob_str_itemPaged = self.containerClient.list_blob_names(name_starts_with=abs_path_dir_str)
+        rel_dir_str_list = [os.path.basename(os.path.dirname(blob_str)) for blob_str in blob_str_itemPaged]
         #
-        pattern_str_or_str_list = "*" if pattern is None else pattern
-        pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
-        size_bool = size
+        rel_dir_str_list.sort()
         #
-        if size_bool:
-            blobProperties_dict_itemPaged = containerClient.list_blobs()
-            #
-            blob_str_size_int_tuple_list = [(blobProperties_dict["name"], blobProperties_dict["size"]) for blobProperties_dict in blobProperties_dict_itemPaged if any(fnmatch(blobProperties_dict["name"], pattern_str) for pattern_str in pattern_str_list)]
-            #
-            blob_str_size_int_tuple_list.sort()
-            #
-            return blob_str_size_int_tuple_list
-        else:
-            blob_str_itemPaged = containerClient.list_blob_names()
-            blob_str_list = [blob_str for blob_str in blob_str_itemPaged if any(fnmatch(blob_str, pattern_str) for pattern_str in pattern_str_list)]
-            #
-            blob_str_list.sort()
-            #
-            return blob_str_list
+        return rel_dir_str_list
 
-    #
+    def list_files(self, abs_path_dir_str):
+        blob_str_itemPaged = self.containerClient.list_blob_names(name_starts_with=abs_path_dir_str)
+        rel_file_str_list = [os.path.basename(blob_str) for blob_str in blob_str_itemPaged]
+        #
+        rel_file_str_list.sort()
+        #
+        return rel_file_str_list
 
-    def delete(self, pattern=None):
-        blobServiceClient = BlobServiceClient.from_connection_string(self.storage_obj.azure_blob_config_dict["connection.string"])
-        containerClient = blobServiceClient.get_container_client(self.storage_obj.container_name())
+
+    def delete_file(self, abs_path_file_str):
+        self.containerClient.delete_blob(abs_path_file_str)
+
+    def delete_dir(self, _):
+        pass
+
+    # Metadata
+    
+    def read_str(self, abs_path_file_str):
+        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
         #
-        pattern_str_or_str_list = [] if pattern is None else pattern
-        pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
+        storageStreamDownloader = blobClient.download_blob()
+        blob_bytes = storageStreamDownloader.read()
         #
-        blob_str_itemPaged = containerClient.list_blob_names()
-        blob_str_list = [blob_str for blob_str in blob_str_itemPaged if any(fnmatch(blob_str, pattern_str) for pattern_str in pattern_str_list)]
-        for blob_str in blob_str_list:
-            containerClient.delete_blob(blob_str)
+        blob_str = blob_bytes.decode("utf-8")
         #
-        return blob_str_list
+        return blob_str
+
+    def write_str(self, abs_path_file_str, data_str):
+        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
+        #
+        data_bytes = data_str.encode("utf-8")
+        #
+        blobClient.upload_blob(data_bytes)        

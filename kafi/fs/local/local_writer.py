@@ -14,8 +14,8 @@ class LocalWriter(FSWriter):
 
     #
 
-    def write_bytes(self, abs_path_file_str, bytes):
+    def write_bytes(self, abs_path_file_str, data_bytes):
         os.makedirs(os.path.dirname(abs_path_file_str), exist_ok=True)
         #
         with open(abs_path_file_str, "wb") as bufferedWriter:
-            bufferedWriter.write(bytes)
+            bufferedWriter.write(data_bytes)

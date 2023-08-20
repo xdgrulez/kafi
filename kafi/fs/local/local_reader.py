@@ -7,8 +7,8 @@ ALL_MESSAGES = -1
 #
 
 class LocalReader(FSReader):
-    def __init__(self, local_obj, file, **kwargs):
-        super().__init__(local_obj, file, **kwargs)
+    def __init__(self, local_obj, topic, **kwargs):
+        super().__init__(local_obj, topic, **kwargs)
     
     #
 

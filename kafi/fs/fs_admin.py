@@ -12,9 +12,9 @@ class FSAdmin(StorageAdmin):
 
     def list_topics(self, pattern=None):
         root_dir_str = self.storage_obj.root_dir()
-        rel_dir_file_str_list = self.list_dir(root_dir_str)
+        rel_dir_str_list = self.list_dirs(root_dir_str)
         #
-        topic_str_list = [rel_dir_file_str.split(",")[1] for rel_dir_file_str in rel_dir_file_str_list if self.is_topic(rel_dir_file_str)]
+        topic_str_list = [rel_dir_str.split(",")[1] for rel_dir_str in rel_dir_str_list if self.is_topic(rel_dir_str)]
         #
         filtered_topic_str_list = self.filter_topics(topic_str_list, pattern)
         #
@@ -59,7 +59,7 @@ class FSAdmin(StorageAdmin):
         for topic_str in topic_str_list:
             topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
             #
-            rel_file_str_list = self.list_dir(topic_abs_dir_str)
+            rel_file_str_list = self.list_files(topic_abs_dir_str)
             for rel_file_str in rel_file_str_list:
                 self.delete_file(os.path.join(topic_abs_dir_str, rel_file_str))
             #
@@ -73,7 +73,7 @@ class FSAdmin(StorageAdmin):
         #
         def get_watermark_offsets(topic_str, partition_int):
             topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
-            rel_file_str_list = self.list_dir(topic_abs_dir_str)
+            rel_file_str_list = self.list_files(topic_abs_dir_str)
             partition_rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str.startswith("partition") and int(rel_file_str.split(",")[1]) == partition_int]
             partition_rel_file_str_list.sort()
             low_offset_int = 0
@@ -116,7 +116,7 @@ class FSAdmin(StorageAdmin):
 
     def find_partition_file_str(self, topic_str, partition_int, to_find_offset_int):
         topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
-        rel_file_str_list = self.list_dir(topic_abs_dir_str)
+        rel_file_str_list = self.list_files(topic_abs_dir_str)
         rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str.startswith("partition,") and int(rel_file_str.split(",")[1]) == partition_int]
         rel_file_str_list.sort()
         #
@@ -132,7 +132,7 @@ class FSAdmin(StorageAdmin):
         #
         partitions_int = self.get_partitions(topic_str)
         #
-        rel_file_str_list = self.list_dir(topic_abs_dir_str)
+        rel_file_str_list = self.list_files(topic_abs_dir_str)
         #
         def sort(list):
             list.sort()
