@@ -83,12 +83,11 @@ class Test(unittest.TestCase):
         #
         old_topic_str_list = l.ls(["test_*"])
         self.assertNotIn(topic_str, old_topic_str_list)
-        l.touch(topic_str)
         #
+        l.touch(topic_str)
         new_topic_str_list = l.ls(["test_*"])
         self.assertIn(topic_str, new_topic_str_list)
         #
-        l.touch(topic_str)
         w = l.openw(topic_str)
         w.write("message 1")
         w.write("message 2")

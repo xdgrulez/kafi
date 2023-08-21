@@ -22,6 +22,13 @@ class FSAdmin(StorageAdmin):
 
     #
 
+    def exists(self, topic):
+        topic_str = topic
+        #
+        return self.topics(topic_str) != []
+
+    #
+
     def partitions(self, pattern=None, verbose=False):
         topic_str_list = self.list_topics(pattern)
         filtered_topic_str_list = self.filter_topics(topic_str_list, pattern)
@@ -38,6 +45,10 @@ class FSAdmin(StorageAdmin):
 
     def create(self, topic, partitions=1, config={}, block=True, **kwargs):
         topic_str = topic
+        #
+        if self.exists(topic_str):
+            raise Exception(f"Topic \"{topic_str}\" already exists.")
+        #
         partitions_int = partitions
         #
         message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else self.storage_obj.message_separator()
@@ -148,17 +159,13 @@ class FSAdmin(StorageAdmin):
 
     # Metadata
 
-    def read_metadata_dict_from_file(self, rel_path_file_str):
-        abs_path_file_str = self.get_abs_path_str(rel_path_file_str)
-        #
+    def read_metadata_dict_from_file(self, abs_path_file_str):
         metadata_str = self.read_str(abs_path_file_str)
         metadata_dict = json.loads(metadata_str)
         #
         return metadata_dict
 
-    def write_metadata_dict_to_file(self, rel_path_file_str, metadata_dict):
-        abs_path_file_str = self.get_abs_path_str(rel_path_file_str)
-        #
+    def write_metadata_dict_to_file(self, abs_path_file_str, metadata_dict):
         metadata_str = json.dumps(metadata_dict)
         #
         self.write_str(abs_path_file_str, metadata_str)

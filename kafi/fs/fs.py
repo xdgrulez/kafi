@@ -8,6 +8,16 @@ class FS(Storage):
         #
         self.config_dir_str = config_dir_str
         self.config_name_str = config_name_str
+        # local, azure_blob and s3
+        if "local" in mandatory_section_str_list:
+            self.local_config_dict = self.config_dict["local"]
+            #
+            if "root.dir" not in self.local_config_dict:
+                self.root_dir(".")
+            else:
+                self.root_dir(str(self.local_config_dict["root.dir"]))
+        else:
+            self.local_config_dict = None
         # azure_blob
         if "azure_blob" in mandatory_section_str_list:
             self.azure_blob_config_dict = self.config_dict["azure_blob"]
@@ -18,16 +28,6 @@ class FS(Storage):
                 self.container_name(str(self.azure_blob_config_dict["container.name"]))
         else:
             self.azure_blob_config_dict = None
-        # local
-        if "local" in mandatory_section_str_list:
-            self.local_config_dict = self.config_dict["local"]
-            #
-            if "root.dir" not in self.local_config_dict:
-                self.root_dir(".")
-            else:
-                self.root_dir(str(self.local_config_dict["root.dir"]))
-        else:
-            self.local_config_dict = None
         # s3
         if "s3" in mandatory_section_str_list:
             self.s3_config_dict = self.config_dict["s3"]
@@ -79,9 +79,7 @@ class FS(Storage):
     ll = l
 
     def exists(self, topic):
-        topic_str = topic
-        #
-        return self.admin.topics(topic_str) != []
+        return self.admin.exists(topic)
 
     #
 
