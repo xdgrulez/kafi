@@ -1,4 +1,5 @@
-from fnmatch import fnmatch
+import io
+import os
 
 from kafi.fs.fs_admin import FSAdmin
 
@@ -12,44 +13,41 @@ class S3Admin(FSAdmin):
         #
         self.minio = Minio(s3_obj.s3_config_dict["endpoint"], access_key=s3_obj.s3_config_dict["access.key"], secret_key=s3_obj.s3_config_dict["secret.key"], secure=False)
 
-    #
+    # Topics/Files
 
-    def topics(self, pattern=None, size=False, **kwargs):
-        pattern_str_or_str_list = "*" if pattern is None else pattern
-        pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
-        size_bool = size
-        filesize_bool = "filesize" in kwargs and kwargs["filesize"]
+    def list_dirs(self, abs_path_dir_str):
+        object_generator = self.minio.list_objects(self.storage_obj.bucket_name(), prefix=abs_path_dir_str, recursive=True)
+        rel_dir_str_list = [os.path.basename(os.path.dirname(object.object_name)) for object in object_generator]
         #
-        object_generator = self.minio.list_objects(self.storage_obj.bucket_name())
-        file_str_file_size_int_tuple_list = [(object.object_name, object.size) for object in object_generator if any(fnmatch(object.object_name, pattern_str) for pattern_str in pattern_str_list)]
+        rel_dir_str_list.sort()
         #
-        if size_bool:
-            if filesize_bool:
-                file_str_size_int_filesize_int_tuple_dict = {file_str: (self.s3_obj.cat(file_str)[1], file_size_int) for file_str, file_size_int in file_str_file_size_int_tuple_list}
-                return file_str_size_int_filesize_int_tuple_dict
-            else:
-                file_str_size_int_dict = {file_str: self.s3_obj.cat(file_str)[1] for file_str, _ in file_str_file_size_int_tuple_list}
-                return file_str_size_int_dict
-        else:
-            if filesize_bool:
-                file_str_filesize_int_dict = {file_str: file_size_int for file_str, file_size_int in file_str_file_size_int_tuple_list}
-                return file_str_filesize_int_dict
-            else:
-                file_str_list = [file_str for file_str, _ in file_str_file_size_int_tuple_list]
-                file_str_list.sort()
-                return file_str_list
+        return rel_dir_str_list
 
-    #
+    def list_files(self, abs_path_dir_str):
+        object_generator = self.minio.list_objects(self.storage_obj.bucket_name(), prefix=abs_path_dir_str, recursive=True)
+        rel_file_str_list = [os.path.basename(object.object_name) for object in object_generator]
+        #
+        rel_file_str_list.sort()
+        #
+        return rel_file_str_list
 
-    def delete(self, pattern=None):
-        pattern_str_or_str_list = [] if pattern is None else pattern
-        pattern_str_list = [pattern_str_or_str_list] if isinstance(pattern_str_or_str_list, str) else pattern_str_or_str_list
+    def delete_file(self, abs_path_file_str):
+        self.minio.remove_object(self.storage_obj.bucket_name(), abs_path_file_str)
+
+    def delete_dir(self, _):
+        pass
+
+    # Metadata
+    
+    def read_str(self, abs_path_file_str):
+        response = self.minio.get_object(self.storage_obj.bucket_name(), abs_path_file_str)
+        object_bytes = response.data
         #
-        object_generator = self.minio.list_objects(self.storage_obj.bucket_name())
-        file_str_list = [object.object_name for object in object_generator if any(fnmatch(object.object_name, pattern_str) for pattern_str in pattern_str_list)]
+        object_str = object_bytes.decode("utf-8")
         #
-        filtered_file_str_list = [file_str for file_str in file_str_list if any(fnmatch(file_str, pattern_str) for pattern_str in pattern_str_list)]
-        for file_str in filtered_file_str_list:
-            self.minio.remove_object(self.storage_obj.bucket_name(), file_str)
+        return object_str
+
+    def write_str(self, abs_path_file_str, data_str):
+        data_bytes = data_str.encode("utf-8")
         #
-        return filtered_file_str_list
+        self.minio.put_object(self.storage_obj.bucket_name(), abs_path_file_str, io.BytesIO(data_bytes), length=len(data_bytes))

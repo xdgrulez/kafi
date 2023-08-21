@@ -5,17 +5,10 @@ from minio import Minio
 #
 
 class S3Reader(FSReader):
-    def __init__(self, s3_obj, file, **kwargs):
-        super().__init__(s3_obj, file, **kwargs)
-        #
-        self.bucket_name_str = s3_obj.s3_config_dict["bucket.name"]
+    def __init__(self, s3_obj, topic, **kwargs):
+        super().__init__(s3_obj, topic, **kwargs)
         #
         self.minio = Minio(s3_obj.s3_config_dict["endpoint"], access_key=s3_obj.s3_config_dict["access.key"], secret_key=s3_obj.s3_config_dict["secret.key"], secure=False)
-        #
-        object = self.minio.stat_object(self.bucket_name_str, self.topic_str)
-        self.file_size_int = object.size
-        #
-        self.file_offset_int = self.find_file_offset_by_offset(**kwargs)
 
     #
 
@@ -24,11 +17,8 @@ class S3Reader(FSReader):
 
     #
 
-    def read_bytes(self, **kwargs):
-        offset_int = kwargs["offset"] if "offset" in kwargs else 0
-        n_int = kwargs["n"] if "n" in kwargs else 0
+    def read_bytes(self, abs_path_file_str):
+        response = self.minio.get_object(self.storage_obj.bucket_name(), abs_path_file_str)
+        object_bytes = response.data
         #
-        response = self.minio.get_object(self.bucket_name_str, self.topic_str, offset=offset_int, length=n_int)
-        batch_bytes = response.data
-        #
-        return batch_bytes
+        return object_bytes
