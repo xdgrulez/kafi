@@ -236,7 +236,7 @@ def test_cp_fs_to_fs(test_obj, fs1, fs2):
     test_obj.assertEqual(message_dict_list2[0]["value"], test_obj.snack_ish_dict_list[0])
     test_obj.assertEqual(message_dict_list2[1]["value"], test_obj.snack_ish_dict_list[1])
 
-
+# headers, keep_timestamps
 def test_cp_kafka_to_fs(test_obj, kafka, fs):
     partitions_int = 3
     topic_str1 = test_obj.create_test_topic_name(kafka)

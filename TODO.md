@@ -21,7 +21,7 @@
 * watermarks()
 * list_topics()
 * config()
-* set_config() - (TODO: allow records, not just one key/value pair)
+* set_config()
 * create()/touch() - (TOOD: support replication factor, support list of topics to be created)
 * delete()/rm()
 * offsets_for_times()
@@ -41,7 +41,7 @@
 
 * brokers()
 * broker_config()
-* set_broker_config() - (TODO: allow records, not just one key/value pair)
+* set_broker_config()
 
 ### ACLs
 
