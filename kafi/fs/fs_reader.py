@@ -168,6 +168,9 @@ class FSReader(StorageReader):
             first_message_bytes = message_bytes_list[index_int]
             serialized_message_dict = ast.literal_eval(first_message_bytes.decode("utf-8"))
             offset_int = serialized_message_dict["offset"]
+        else:
+            raise Exception("Empty partition file.")
+        #
         return offset_int
 
     #

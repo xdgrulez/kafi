@@ -46,7 +46,7 @@ class RestProxyReader(KafkaReader):
             type_str = "PROTOBUF"
         elif value_type_str.lower() in ["jsonschema", "json_sr"]:
             type_str = "JSONSCHEMA"
-        else:
+        else: # str or bytes
             type_str = "BINARY"
         #
         payload_dict1 = {"format": type_str}

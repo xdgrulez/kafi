@@ -92,10 +92,10 @@ class ClusterWriter(KafkaWriter):
                     schema = schema_str
                 return schema
             #
-            if type_str.lower() == "json":
+            if type_str.lower() in ["bytes", "str", "json"]:
                 if isinstance(payload, dict):
                     payload_str_or_bytes = json.dumps(payload)
-                else:
+                else: # str or bytes
                     payload_str_or_bytes = payload
             elif type_str.lower() in ["pb", "protobuf"]:
                 schema = get_schema(schema_str)
@@ -116,7 +116,7 @@ class ClusterWriter(KafkaWriter):
                 payload_dict = payload_to_payload_dict(payload)
                 payload_str_or_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
             else:
-                payload_str_or_bytes = payload
+                raise Exception("Only \"bytes\", \"str\", \"json\", \"avro\", \"protobuf\" (\"pb\") and \"jsonschema\" (\"json_sr\") supported.")
             return payload_str_or_bytes
         #
         key_str_or_bytes_list = []

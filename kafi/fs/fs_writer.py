@@ -2,7 +2,7 @@ import json
 import os
 
 from kafi.storage_writer import StorageWriter
-from kafi.helpers import get_millis, split_list_into_sublists, base64_encode
+from kafi.helpers import get_millis
 
 # Constants
 
@@ -97,15 +97,10 @@ class FSWriter(StorageWriter):
             #
             partition_int_offset_counter_int_dict[target_partition_int] += 1
         #
-        partition_int_message_bytes_list_list_dict = {partition_int: split_list_into_sublists(message_bytes_list, write_batch_size_int) for partition_int, message_bytes_list in partition_int_message_bytes_list_dict.items()}
-        #
-        for partition_int, message_bytes_list_list in partition_int_message_bytes_list_list_dict.items():
-            batch_counter_int = 0
-            for message_bytes_list in message_bytes_list_list:
+        for partition_int, message_bytes_list in partition_int_message_bytes_list_dict.items():
+            if len(message_bytes_list) > 0:
                 joined_message_bytes = b"".join(message_bytes_list)
                 #
-                start_offset_int = partition_int_last_offset_int_dict[partition_int] + batch_counter_int * write_batch_size_int
+                start_offset_int = partition_int_last_offset_int_dict[partition_int]
                 abs_path_file_str = os.path.join(topic_abs_dir_str, f"partition,{partition_int:09},{start_offset_int:021}")
                 self.write_bytes(abs_path_file_str, joined_message_bytes)
-                #
-                batch_counter_int += 1

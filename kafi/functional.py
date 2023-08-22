@@ -91,7 +91,7 @@ class Functional:
             #
             batch_message_dict_list += message_dict_list
             #
-            if len(batch_message_dict_list) >= write_batch_size_int:
+            if len(batch_message_dict_list) == write_batch_size_int:
                 write_batch(batch_message_dict_list, **target_kwargs)
                 #
                 progress_message_counter_int += len(batch_message_dict_list)
@@ -142,7 +142,7 @@ class Functional:
         (_, batch_message_dict_list, written_progress_message_counter_int) = write_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
         #
         if len(batch_message_dict_list) > 0:
-            write_batch(batch_message_dict_list)
+            write_batch(batch_message_dict_list, **target_kwargs)
             written_progress_message_counter_int += len(batch_message_dict_list)
         #
         target_writer.close()
