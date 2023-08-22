@@ -129,6 +129,8 @@ class FSAdmin(StorageAdmin):
         topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
         rel_file_str_list = self.list_files(topic_abs_dir_str)
         rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str.startswith("partition,") and int(rel_file_str.split(",")[1]) == partition_int]
+        if rel_file_str_list == []:
+            return None
         rel_file_str_list.sort()
         #
         rel_file_str_offset_int_dict = {rel_file_str: int(rel_file_str.split(",")[2]) for rel_file_str in rel_file_str_list}

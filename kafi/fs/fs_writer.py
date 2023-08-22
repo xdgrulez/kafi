@@ -48,7 +48,7 @@ class FSWriter(StorageWriter):
         key = kwargs["key"] if "key" in kwargs else None
         timestamp = kwargs["timestamp"] if "timestamp" in kwargs and kwargs["timestamp"] is not None else CURRENT_TIME
         headers = kwargs["headers"] if "headers" in kwargs else None
-        partitions = kwargs["partitions"] if "partitions" in kwargs else None
+        partitions = kwargs["partition"] if "partition" in kwargs else None
         #
         value_list = value if isinstance(value, list) else [value]
         #
@@ -63,6 +63,9 @@ class FSWriter(StorageWriter):
         round_robin_counter_int = 0
         partition_int_offset_counter_int_dict = {partition_int: last_offset_int if last_offset_int > 0 else 0 for partition_int, last_offset_int in partition_int_last_offset_int_dict.items()}
         for value, key, timestamp_int, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_int_list, headers_str_bytes_tuple_list_list, partition_int_list):
+            value_bytes = serialize(value, False)
+            key_bytes = serialize(key, True)
+            #
             if keep_partitions_bool:
                 target_partition_int = partition_int
             else:
@@ -76,10 +79,7 @@ class FSWriter(StorageWriter):
                     else:
                         round_robin_counter_int += 1
                 else:
-                    target_partition_int = hash(key) % partitions_int
-            #
-            value_bytes = serialize(value, False)
-            key_bytes = serialize(key, True)
+                    target_partition_int = hash(key_bytes) % partitions_int
             #
             if timestamp_int == CURRENT_TIME:
                 if not keep_timestamps_bool:

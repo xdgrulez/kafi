@@ -46,15 +46,17 @@ class FSReader(StorageReader):
         #
         message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else self.storage_obj.message_separator()
         #
+        # Get partition files for all partitions
         partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(self.topic_str)
         #
-        partition_int_first_partition_rel_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str(self.topic_str, partition_int, offset_int) for partition_int, offset_int in partition_int_offset_int_dict.items()}
+        # Get first partition files for all partitions
+        partition_int_first_partition_rel_file_str_dict1 = {partition_int: self.storage_obj.admin.find_partition_file_str(self.topic_str, partition_int, offset_int) for partition_int, offset_int in partition_int_offset_int_dict.items()}
+        # Filter out file-less partitions
+        partition_int_first_partition_rel_file_str_dict = {partition_int: first_partition_rel_file_str for partition_int, first_partition_rel_file_str in partition_int_first_partition_rel_file_str_dict1.items() if first_partition_rel_file_str is not None}
         #
+        # Get all partition files to be read for all partitions
         partition_int_to_be_read_rel_file_str_list_dict = {partition_int: [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str >= partition_int_first_partition_rel_file_str_dict[partition_int]] for partition_int, rel_file_str_list in partition_int_rel_file_str_list_dict.items()}
         #
-        rel_file_str_list_list = []
-        batch_counter_int = 0
-        message_counter_int = 0
         def acc_bytes_to_acc(acc, message_bytes, message_counter_int):
             serialized_message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
             #
@@ -116,21 +118,27 @@ class FSReader(StorageReader):
             return return_message_dict
         #
 
-        for partition_int in range(partitions_int):
-            rel_file_str_list = [partition_rel_file_str_list[batch_counter_int] for partition_rel_file_str_list in partition_int_to_be_read_rel_file_str_list_dict.values() if len(partition_rel_file_str_list[partition_int]) > batch_counter_int]
-            rel_file_str_list_list.append(rel_file_str_list)
+        file_counter_int = 0
+        max_num_files_int = max([len(to_be_read_rel_file_str_list) for to_be_read_rel_file_str_list in partition_int_to_be_read_rel_file_str_list_dict.values()])
+        rel_file_str_list = []
+        #
+        for file_counter_int in range(max_num_files_int):
+            for partition_int in range(partitions_int):
+                if partition_int in partition_int_to_be_read_rel_file_str_list_dict:
+                    if len(partition_int_to_be_read_rel_file_str_list_dict[partition_int]) > file_counter_int:
+                        rel_file_str_list.append(partition_int_to_be_read_rel_file_str_list_dict[partition_int][file_counter_int])
         #
 
+        message_counter_int = 0
         acc = initial_acc
-        for rel_file_str_list in rel_file_str_list_list:
-            for rel_file_str in rel_file_str_list:
-                message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_file_str), message_separator_bytes)
-                for message_bytes in message_bytes_list:
-                    (acc, message_counter_int) = acc_bytes_to_acc(acc, message_bytes, message_counter_int)
-                    #
-                    if n_int != ALL_MESSAGES:
-                        if message_counter_int >= n_int:
-                            return acc
+        for rel_file_str in rel_file_str_list:
+            message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_file_str), message_separator_bytes)
+            for message_bytes in message_bytes_list:
+                (acc, message_counter_int) = acc_bytes_to_acc(acc, message_bytes, message_counter_int)
+                #
+                if n_int != ALL_MESSAGES:
+                    if message_counter_int >= n_int:
+                        return acc
         #
         return acc
 

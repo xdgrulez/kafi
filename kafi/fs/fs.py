@@ -83,6 +83,9 @@ class FS(Storage):
 
     #
 
+    def watermarks(self, pattern, **kwargs):
+        return self.admin.watermarks(pattern, **kwargs)
+
     def create(self, topic, partitions=1, **kwargs):
         topic_str = topic
         #

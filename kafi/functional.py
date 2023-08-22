@@ -64,20 +64,20 @@ class Functional:
         progress_num_messages_int = self.progress_num_messages()
         verbose_int = self.verbose()
         #
-        def write_batch(batch_message_dict_list):
+        def write_batch(batch_message_dict_list, **target_kwargs):
             value_list = [message_dict["value"] for message_dict in batch_message_dict_list]
             #
             key_list = [message_dict["key"] for message_dict in batch_message_dict_list]
-            if "keep_partitions" in kwargs and kwargs["keep_partitions"] == True:
+            if "keep_partitions" in target_kwargs and target_kwargs["keep_partitions"] == True:
                 partition_list = [message_dict["partition"] for message_dict in batch_message_dict_list]
             else:
                 partition_list = None
-            if "keep_timestamps" in kwargs and kwargs["keep_timestamps"] == True:
+            if "keep_timestamps" in target_kwargs and target_kwargs["keep_timestamps"] == True:
                 timestamp_list = [message_dict["timestamp"][1] for message_dict in batch_message_dict_list]
             else:
                 timestamp_list = None
             headers_list = [message_dict["headers"] for message_dict in batch_message_dict_list]
-            target_writer.write(value_list, key=key_list, partition=partition_list, timestamp=timestamp_list, headers=headers_list)
+            target_writer.write(value_list, key=key_list, partition=partition_list, timestamp=timestamp_list, headers=headers_list, **target_kwargs)
         #
 
         def foldl_function(write_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, message_dict):
@@ -88,7 +88,7 @@ class Functional:
             batch_message_dict_list += message_dict_list
             #
             if len(batch_message_dict_list) >= write_batch_size_int:
-                write_batch(batch_message_dict_list)
+                write_batch(batch_message_dict_list, **target_kwargs)
                 #
                 progress_message_counter_int += len(batch_message_dict_list)
                 if verbose_int > 0 and progress_message_counter_int % progress_num_messages_int == 0:
