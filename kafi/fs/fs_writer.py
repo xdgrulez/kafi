@@ -2,11 +2,12 @@ import json
 import os
 
 from kafi.storage_writer import StorageWriter
-from kafi.helpers import get_millis, split_list_into_sublists
+from kafi.helpers import get_millis, split_list_into_sublists, base64_encode
 
 # Constants
 
 CURRENT_TIME = 0
+TIMESTAMP_CREATE_TIME=1
 
 #
 
@@ -23,14 +24,17 @@ class FSWriter(StorageWriter):
         def serialize(payload, key_bool):
             type_str = self.key_type_str if key_bool else self.value_type_str
             #
-            if type_str.lower() == "json":
-                if isinstance(payload, dict):
-                    payload_str_or_bytes = json.dumps(payload)
-                else:
-                    payload_str_or_bytes = payload
+            if not type_str.lower() in ["json", "str", "bytes"]:
+                raise Exception("Only json, str or bytes supported.")
+            #
+            if isinstance(payload, dict):
+                payload_bytes = json.dumps(payload).encode("utf-8")
+            elif isinstance(payload, str):
+                payload_bytes = payload.encode("utf-8")
             else:
-                payload_str_or_bytes = payload
-            return payload_str_or_bytes
+                payload_bytes = payload
+            #
+            return payload_bytes
         #        
 
         partitions_int = self.storage_obj.admin.get_partitions(self.topic_str)
@@ -54,7 +58,7 @@ class FSWriter(StorageWriter):
         #
         key_list = key if isinstance(key, list) else [key for _ in value_list]
         #
-        timestamp_int_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
+        timestamp_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
         headers_list = headers if isinstance(headers, list) and len(headers) == len(value_list) else [headers for _ in value_list]
         headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         partition_int_list = partitions if isinstance(partitions, list) else [partitions for _ in value_list]
@@ -62,7 +66,7 @@ class FSWriter(StorageWriter):
         partition_int_message_bytes_list_dict = {partition_int: [] for partition_int in range(partitions_int)}
         round_robin_counter_int = 0
         partition_int_offset_counter_int_dict = {partition_int: last_offset_int if last_offset_int > 0 else 0 for partition_int, last_offset_int in partition_int_last_offset_int_dict.items()}
-        for value, key, timestamp_int, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_int_list, headers_str_bytes_tuple_list_list, partition_int_list):
+        for value, key, timestamp, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_list, headers_str_bytes_tuple_list_list, partition_int_list):
             value_bytes = serialize(value, False)
             key_bytes = serialize(key, True)
             #
@@ -81,11 +85,13 @@ class FSWriter(StorageWriter):
                 else:
                     target_partition_int = hash(key_bytes) % partitions_int
             #
-            if timestamp_int == CURRENT_TIME:
+            if timestamp == CURRENT_TIME:
                 if not keep_timestamps_bool:
-                    timestamp_int = get_millis()
+                    timestamp = (TIMESTAMP_CREATE_TIME, get_millis())
+            if not isinstance(timestamp, tuple):
+                timestamp = (TIMESTAMP_CREATE_TIME, timestamp)
             #
-            message_bytes = str({"value": value_bytes, "key": key_bytes, "timestamp": timestamp_int, "headers": headers_str_bytes_tuple_list, "partition": target_partition_int, "offset": partition_int_offset_counter_int_dict[target_partition_int]}).encode("utf-8") + message_separator_bytes
+            message_bytes = str({"value": value_bytes, "key": key_bytes, "timestamp": timestamp, "headers": headers_str_bytes_tuple_list, "partition": target_partition_int, "offset": partition_int_offset_counter_int_dict[target_partition_int]}).encode("utf-8") + message_separator_bytes
             #
             partition_int_message_bytes_list_dict[target_partition_int].append(message_bytes)
             #

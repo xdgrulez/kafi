@@ -39,7 +39,8 @@ class Test(unittest.TestCase):
         self.avro_key_schema_str = '{ "type": "record", "name": "mykeyrecord", "fields": [{"name": "key",  "type": "string" }] }'
         #
         self.avro_value_schema_str = '{ "type": "record", "name": "myvaluerecord", "fields": [{"name": "name",  "type": "string" }, {"name": "calories", "type": "float" }, {"name": "colour", "type": "string" }] }'
-        self.protobuf_schema_str = 'message Snack { required string name = 1; required float calories = 2; optional string colour = 3; }'
+        self.protobuf_key_schema_str = 'message SnackKey { required string key = 1; }'
+        self.protobuf_value_schema_str = 'message SnackValue { required string name = 1; required float calories = 2; optional string colour = 3; }'
         self.jsonschema_schema_str = '{ "title": "abc", "definitions" : { "record:myrecord" : { "type" : "object", "required" : [ "name", "calories" ], "additionalProperties" : false, "properties" : { "name" : {"type" : "string"}, "calories" : {"type" : "number"}, "colour" : {"type" : "string"} } } }, "$ref" : "#/definitions/record:myrecord" }'
         #
         self.storage_str_topic_str_list_dict = {"Cluster": [], "RestProxy": [], "AzureBlob": [], "Local": [], "S3": []}
@@ -55,12 +56,12 @@ class Test(unittest.TestCase):
         c = Cluster("local")
         for group_str in self.storage_str_group_str_list_dict["Cluster"]:
             c.delete_groups(group_str)
+        for group_str in self.storage_str_group_str_list_dict["RestProxy"]:
+            c.delete_groups(group_str)
         for topic_str in self.storage_str_topic_str_list_dict["Cluster"]:
             c.delete(topic_str)
         #
         r = RestProxy("local")
-        for group_str in self.storage_str_group_str_list_dict["RestProxy"]:
-            c.delete_groups(group_str)
         for topic_str in self.storage_str_topic_str_list_dict["RestProxy"]:
             c.delete(topic_str)
         #
@@ -189,8 +190,53 @@ class Test(unittest.TestCase):
         #
         test_cp_kafka_to_fs(self, r, s)
 
-    #
+    # Cp from fs storage to kafka storage
 
+    def test_cp_azureblob_to_cluster(self):
+        a = self.get_azureblob()
+        c = Cluster("local")
+        #
+        test_cp_fs_to_kafka(self, a, c)
+
+    def test_cp_local_to_cluster(self):
+        l = self.get_local()
+        c = Cluster("local")
+        #
+        test_cp_fs_to_kafka(self, l, c)
+
+    def test_cp_s3_to_cluster(self):
+        s = self.get_s3()
+        c = Cluster("local")
+        #
+        test_cp_fs_to_kafka(self, s, c)
+
+    def test_cp_azureblob_to_restproxy(self):
+        a = self.get_azureblob()
+        r = RestProxy("local")
+        #
+        test_cp_fs_to_kafka(self, a, r)
+
+    def test_cp_local_to_restproxy(self):
+        l = self.get_local()
+        r = RestProxy("local")
+        #
+        test_cp_fs_to_kafka(self, l, r)
+
+    def test_cp_s3_to_restproxy(self):
+        s = self.get_s3()
+        r = RestProxy("local")
+        #
+        test_cp_fs_to_kafka(self, s, r)
+
+    # TODO: Cp from kafka storage to kafka storage
+
+    def test_cp_cluster_to_restproxy(self):
+        pass
+
+    def test_cp_restproxy_to_cluster(self):
+        pass
+
+    # TODO
     # def test_diff(self):
     #     a = self.get_azureblob()
     #     #
@@ -213,30 +259,72 @@ class Test(unittest.TestCase):
     #
 
 def test_cp_fs_to_fs(test_obj, fs1, fs2):
+    partitions_int = 3
     topic_str1 = test_obj.create_test_topic_name(fs1)
-    fs1.create(topic_str1, partitions=4)
-    w = fs1.openw(topic_str1, value_type="json")
-    w.write(test_obj.snack_bytes_list*3)
+    fs1.create(topic_str1, partitions=partitions_int)
+    w = fs1.openw(topic_str1, key_type="str", value_type="bytes")
+    snack_dict_list = []
+    for snack_dict in test_obj.snack_dict_list:
+        snack_dict1 = snack_dict.copy()
+        snack_dict1["name"] += "1"
+        snack_dict2 = snack_dict.copy()
+        snack_dict2["name"] += "2"
+        snack_dict3 = snack_dict.copy()
+        snack_dict3["name"] += "3"
+        snack_dict_list += [snack_dict1, snack_dict2, snack_dict3]
+    w.write(snack_dict_list, key=[{"key": "1"}, {"key": "1"}, {"key": "1"}, {"key": "2"}, {"key": "2"}, {"key": "2"}, {"key": "3"}, {"key": "3"}, {"key": "3"}], headers=test_obj.headers_str_bytes_tuple_list)
     w.close()
     #
     topic_str2 = test_obj.create_test_topic_name(fs2)
-    fs2.create(topic_str2, partitions=4)
+    fs2.create(topic_str2, partitions=partitions_int)
     #
     def map_ish(message_dict):
         message_dict["value"]["colour"] += "ish"
         return message_dict
     #
-    (read_n_int, written_n_int) = fs1.cp(topic_str1, fs2, topic_str2, source_value_type="json", target_value_type="json", write_batch_size=2, map_function=map_ish, n=3*3)
+    (read_n_int, written_n_int) = fs1.cp(topic_str1, fs2, topic_str2, source_key_type="bytes", source_value_type="json", target_key_type="json", target_value_type="json", write_batch_size=2, map_function=map_ish, n=3*3)
     test_obj.assertEqual(3*3, read_n_int)
     test_obj.assertEqual(3*3, written_n_int)
     #
-    (message_dict_list2, n_int2) = fs2.cat(topic_str2, value_type="json", n=2)
-    test_obj.assertEqual(2, len(message_dict_list2))
-    test_obj.assertEqual(2, n_int2)
-    test_obj.assertEqual(message_dict_list2[0]["value"], test_obj.snack_ish_dict_list[0])
-    test_obj.assertEqual(message_dict_list2[1]["value"], test_obj.snack_ish_dict_list[1])
+    (message_dict_list, n_int) = fs2.cat(topic_str2, value_type="json", n=3*3)
+    test_obj.assertEqual(3*3, len(message_dict_list))
+    test_obj.assertEqual(3*3, n_int)
+    headers_list = [message_dict["headers"] for message_dict in message_dict_list]
+    test_obj.assertEqual(headers_list[0], test_obj.headers_str_bytes_tuple_list)
+    #
+    # Has the mapping been done?
+    for message_dict in message_dict_list:
+        test_obj.assertTrue(message_dict["value"]["colour"].endswith("ish"))
+    #
+    # Has the order of the snacks been kept intact?
+    for i in range(3):
+        j0 = next(j for j, message_dict in enumerate(message_dict_list) if message_dict["value"]["name"] == snack_dict_list[3*i]["name"])
+        j1 = next(j for j, message_dict in enumerate(message_dict_list) if message_dict["value"]["name"] == snack_dict_list[3*i+1]["name"])
+        j2 = next(j for j, message_dict in enumerate(message_dict_list) if message_dict["value"]["name"] == snack_dict_list[3*i+2]["name"])
+        #
+        test_obj.assertEqual(message_dict_list[j0]["partition"], message_dict_list[j1]["partition"])
+        test_obj.assertEqual(message_dict_list[j1]["partition"], message_dict_list[j2]["partition"])
+        #
+        test_obj.assertLess(message_dict_list[j0]["offset"], message_dict_list[j1]["offset"])
+        test_obj.assertLess(message_dict_list[j1]["offset"], message_dict_list[j2]["offset"])
+    #
+    topic_str3 = test_obj.create_test_topic_name(fs2)
+    fs2.create(topic_str3, partitions=partitions_int)
+    #
+    (read_n_int2, written_n_int2) = fs1.cp(topic_str1, fs2, topic_str3, source_key_type="json", source_value_type="str", target_key_type="json", target_value_type="json", write_batch_size=3, n=3*3, keep_partitions=True, keep_timestamps=True)
+    test_obj.assertEqual(3*3, read_n_int2)
+    test_obj.assertEqual(3*3, written_n_int2)
+    #
+    fs1_watermarks_dict = fs1.watermarks(topic_str1)
+    fs2_watermarks_dict = fs2.watermarks(topic_str3)
+    test_obj.assertEqual(list(fs1_watermarks_dict.values()), list(fs2_watermarks_dict.values()))
+    #
+    (message_dict_list2, n_int) = fs1.cat(topic_str1, value_type="json", n=3*3)
+    (message_dict_list3, n_int) = fs2.cat(topic_str3, value_type="json", n=3*3)
+    fs1_timestamp_set = set([message_dict["timestamp"] for message_dict in message_dict_list2])
+    fs2_timestamp_set = set([message_dict["timestamp"] for message_dict in message_dict_list3])
+    test_obj.assertEqual(fs1_timestamp_set, fs2_timestamp_set)
 
-# headers, keep_timestamps
 def test_cp_kafka_to_fs(test_obj, kafka, fs):
     partitions_int = 3
     topic_str1 = test_obj.create_test_topic_name(kafka)
@@ -251,7 +339,7 @@ def test_cp_kafka_to_fs(test_obj, kafka, fs):
         snack_dict3 = snack_dict.copy()
         snack_dict3["name"] += "3"
         snack_dict_list += [snack_dict1, snack_dict2, snack_dict3]
-    w.write(snack_dict_list, key=[{"key": "1"}, {"key": "1"}, {"key": "1"}, {"key": "2"}, {"key": "2"}, {"key": "2"}, {"key": "3"}, {"key": "3"}, {"key": "3"}])
+    w.write(snack_dict_list, key=[{"key": "1"}, {"key": "1"}, {"key": "1"}, {"key": "2"}, {"key": "2"}, {"key": "2"}, {"key": "3"}, {"key": "3"}, {"key": "3"}], headers=test_obj.headers_str_bytes_tuple_list)
     w.close()
     #
     topic_str2 = test_obj.create_test_topic_name(fs)
@@ -288,12 +376,109 @@ def test_cp_kafka_to_fs(test_obj, kafka, fs):
     #
     topic_str3 = test_obj.create_test_topic_name(fs)
     fs.create(topic_str3, partitions=partitions_int)
-    #
+    # Test keep_partitions and keep_timestamps
     group_str2 = test_obj.create_test_group_name(kafka)
-    (read_n_int2, written_n_int2) = kafka.cp(topic_str1, fs, topic_str3, group=group_str2, source_key_type="avro", source_value_type="avro", target_key_type="json", target_value_type="json", write_batch_size=3, n=3*3, keep_partitions=True)
+    (read_n_int2, written_n_int2) = kafka.cp(topic_str1, fs, topic_str3, group=group_str2, source_key_type="avro", source_value_type="avro", target_key_type="json", target_value_type="json", write_batch_size=3, n=3*3, keep_partitions=True, keep_timestamps=True)
     test_obj.assertEqual(3*3, read_n_int2)
     test_obj.assertEqual(3*3, written_n_int2)
     #
     kafka_watermarks_dict = kafka.watermarks(topic_str1)
     fs_watermarks_dict = fs.watermarks(topic_str3)
     test_obj.assertEqual(list(kafka_watermarks_dict.values()), list(fs_watermarks_dict.values()))
+    #
+    group_str3 = test_obj.create_test_group_name(kafka)
+    if kafka.__class__.__name__ == "Cluster":
+        (message_dict_list2, n_int) = kafka.cat(topic_str1, group=group_str3, value_type="avro", n=3*3)
+        (message_dict_list3, n_int) = fs.cat(topic_str3, value_type="json", n=3*3)
+    elif kafka.__class__.__name__ == "RestProxy":
+        c = Cluster("local")
+        topic_str31 = test_obj.create_test_topic_name(fs)
+        fs.create(topic_str31, partitions=partitions_int)
+        group_str21 = test_obj.create_test_group_name(kafka)
+        c.cp(topic_str1, fs, topic_str31, group=group_str21, source_key_type="avro", source_value_type="avro", target_key_type="json", target_value_type="json", write_batch_size=3, n=3*3, keep_partitions=True, keep_timestamps=True)
+        (message_dict_list2, n_int) = c.cat(topic_str1, group=group_str3, value_type="avro", n=3*3)
+        (message_dict_list3, n_int) = fs.cat(topic_str31, value_type="json", n=3*3)
+    #
+    kafka_timestamp_set = set([message_dict["timestamp"] for message_dict in message_dict_list2])
+    fs_timestamp_set = set([message_dict["timestamp"] for message_dict in message_dict_list3])
+    test_obj.assertEqual(kafka_timestamp_set, fs_timestamp_set)
+
+
+def test_cp_fs_to_kafka(test_obj, fs, kafka):
+    partitions_int = 3
+    topic_str1 = test_obj.create_test_topic_name(fs)
+    fs.create(topic_str1, partitions=partitions_int)
+    w = fs.openw(topic_str1, key_type="json", value_type="json")
+    snack_dict_list = []
+    for snack_dict in test_obj.snack_dict_list:
+        snack_dict1 = snack_dict.copy()
+        snack_dict1["name"] += "1"
+        snack_dict2 = snack_dict.copy()
+        snack_dict2["name"] += "2"
+        snack_dict3 = snack_dict.copy()
+        snack_dict3["name"] += "3"
+        snack_dict_list += [snack_dict1, snack_dict2, snack_dict3]
+    w.write(snack_dict_list, key=[{"key": "1"}, {"key": "1"}, {"key": "1"}, {"key": "2"}, {"key": "2"}, {"key": "2"}, {"key": "3"}, {"key": "3"}, {"key": "3"}], headers=test_obj.headers_str_bytes_tuple_list)
+    w.close()
+    #
+    topic_str2 = test_obj.create_test_topic_name(kafka)
+    kafka.create(topic_str2, partitions=partitions_int)
+    #
+    def map_ish(message_dict):
+        message_dict["value"]["colour"] += "ish"
+        return message_dict
+    #
+    (read_n_int, written_n_int) = fs.cp(topic_str1, kafka, topic_str2, source_key_type="json", source_value_type="json", target_key_type="protobuf", target_value_type="protobuf", target_key_schema=test_obj.protobuf_key_schema_str, target_value_schema=test_obj.protobuf_value_schema_str, write_batch_size=2, map_function=map_ish, n=3*3)
+    test_obj.assertEqual(3*3, read_n_int)
+    test_obj.assertEqual(3*3, written_n_int)
+    #
+    group_str1 = test_obj.create_test_group_name(kafka)
+    (message_dict_list, n_int) = kafka.cat(topic_str2, group=group_str1, key_type="protobuf", value_type="protobuf", n=3*3)
+    test_obj.assertEqual(3*3, len(message_dict_list))
+    test_obj.assertEqual(3*3, n_int)
+    #
+    if kafka.__class__.__name__ == "RestProxy":
+        c = Cluster("local")
+        group_str11 = test_obj.create_test_group_name(kafka)
+        (message_dict_list, n_int) = c.cat(topic_str2, group=group_str11, key_type="protobuf", value_type="protobuf", n=3*3)
+    #
+    headers_list = [message_dict["headers"] for message_dict in message_dict_list]
+    test_obj.assertEqual(headers_list[0], test_obj.headers_str_bytes_tuple_list)
+    #
+    # Has the mapping been done?
+    for message_dict in message_dict_list:
+        test_obj.assertTrue(message_dict["value"]["colour"].endswith("ish"))
+    #
+    # Has the order of the snacks been kept intact?
+    for i in range(3):
+        j0 = next(j for j, message_dict in enumerate(message_dict_list) if message_dict["value"]["name"] == snack_dict_list[3*i]["name"])
+        j1 = next(j for j, message_dict in enumerate(message_dict_list) if message_dict["value"]["name"] == snack_dict_list[3*i+1]["name"])
+        j2 = next(j for j, message_dict in enumerate(message_dict_list) if message_dict["value"]["name"] == snack_dict_list[3*i+2]["name"])
+        #
+        test_obj.assertEqual(message_dict_list[j0]["partition"], message_dict_list[j1]["partition"])
+        test_obj.assertEqual(message_dict_list[j1]["partition"], message_dict_list[j2]["partition"])
+        #
+        test_obj.assertLess(message_dict_list[j0]["offset"], message_dict_list[j1]["offset"])
+        test_obj.assertLess(message_dict_list[j1]["offset"], message_dict_list[j2]["offset"])
+    #
+    topic_str3 = test_obj.create_test_topic_name(kafka)
+    kafka.create(topic_str3, partitions=partitions_int)
+    # Test keep_partitions and keep_timestamps
+    (read_n_int2, written_n_int2) = fs.cp(topic_str1, kafka, topic_str3, source_key_type="json", source_value_type="json", target_key_type="protobuf", target_value_type="protobuf", target_key_schema=test_obj.protobuf_key_schema_str, target_value_schema=test_obj.protobuf_value_schema_str, write_batch_size=3, n=3*3, keep_partitions=True, keep_timestamps=True)
+    test_obj.assertEqual(3*3, read_n_int2)
+    test_obj.assertEqual(3*3, written_n_int2)
+    #
+    fs_watermarks_dict = fs.watermarks(topic_str1)
+    kafka_watermarks_dict = kafka.watermarks(topic_str3)
+    test_obj.assertEqual(list(fs_watermarks_dict.values()), list(kafka_watermarks_dict.values()))
+    #
+    (message_dict_list2, n_int) = fs.cat(topic_str1, value_type="json", n=3*3)
+    group_str3 = test_obj.create_test_group_name(kafka)
+    if kafka.__class__.__name__ == "Cluster":
+        (message_dict_list3, n_int) = kafka.cat(topic_str3, group=group_str3, value_type="protobuf", n=3*3)
+    elif kafka.__class__.__name__ == "RestProxy":
+        c = Cluster("local")
+        (message_dict_list3, n_int) = c.cat(topic_str3, group=group_str3, value_type="protobuf", n=3*3)
+    fs_timestamp_set = set([message_dict["timestamp"] for message_dict in message_dict_list2])
+    kafka_timestamp_set = set([message_dict["timestamp"] for message_dict in message_dict_list3])
+    test_obj.assertEqual(fs_timestamp_set, kafka_timestamp_set)

@@ -1,11 +1,13 @@
 from kafi.kafka.kafka_writer import KafkaWriter
 from kafi.helpers import post, is_base64_encoded, base64_encode
 
+import datetime
 import json
 
 # Constants
 
-RD_KAFKA_PARTITION_UA = -1
+CURRENT_TIME = 0
+TIMESTAMP_CREATE_TIME=1
 
 #
 
@@ -23,19 +25,27 @@ class RestProxyWriter(KafkaWriter):
     #
 
     def produce(self, value, **kwargs):
-        key = kwargs["key"] if "key" in kwargs else None
-        partition_int = kwargs["partition"] if "partition" in kwargs else RD_KAFKA_PARTITION_UA
-        #
         (rest_proxy_url_str, auth_str_tuple) = self.storage_obj.get_url_str_auth_str_tuple_tuple()
-        #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{self.topic_str}/records"
+        #
+        keep_partitions_bool = "keep_partitions" in kwargs and kwargs["keep_partitions"]
+        keep_timestamps_bool = "keep_timestamps" in kwargs and kwargs["keep_timestamps"]
+        key = kwargs["key"] if "key" in kwargs else None
+        timestamp = kwargs["timestamp"] if "timestamp" in kwargs and kwargs["timestamp"] is not None else CURRENT_TIME
+        headers = kwargs["headers"] if "headers" in kwargs else None
+        partitions = kwargs["partition"] if "partition" in kwargs else None
         #
         value_list = value if isinstance(value, list) else [value]
         #
         key_list = key if isinstance(key, list) else [key for _ in value_list]
         #
+        timestamp_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
+        headers_list = headers if isinstance(headers, list) and len(headers) == len(value_list) else [headers for _ in value_list]
+        headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
+        partition_int_list = partitions if isinstance(partitions, list) else [partitions for _ in value_list]
+        #
         payload_dict_list = []
-        for key, value in zip(key_list, value_list):
+        for value, key, timestamp, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_list, headers_str_bytes_tuple_list_list, partition_int_list):
             headers_dict = {"Content-Type": "application/json", "Transfer-Encoding": "chunked"}
             #
             if self.value_type_str.lower() == "json":
@@ -97,7 +107,15 @@ class RestProxyWriter(KafkaWriter):
                 else:
                     payload_dict["key"] = {"type": type_str, "data": key}
             #
-            if partition_int != RD_KAFKA_PARTITION_UA:
+            if keep_timestamps_bool:
+                if isinstance(timestamp, tuple):
+                    timestamp_str = datetime.datetime.fromtimestamp(timestamp[1]/1000.0, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                    payload_dict["timestamp"] = timestamp_str
+            #
+            if headers_str_bytes_tuple_list is not None:
+                payload_dict["headers"] = [{"name": headers_str_bytes_tuple[0], "value": base64_encode(headers_str_bytes_tuple[1]).decode("utf-8")} for headers_str_bytes_tuple in headers_str_bytes_tuple_list]
+            #
+            if keep_partitions_bool or partition_int is not None:
                 payload_dict["partition_id"] = partition_int
             #
             payload_dict_list.append(bytes(json.dumps(payload_dict), "utf-8"))

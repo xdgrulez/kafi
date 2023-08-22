@@ -106,6 +106,8 @@ class FSReader(StorageReader):
                 decode_key = to_bytes
             elif key_type_str.lower() == "json":
                 decode_key = to_dict
+            else:
+                raise Exception("Only json, str or bytes supported.")
             #
             if value_type_str.lower() == "str":
                 decode_value = to_str
@@ -113,6 +115,8 @@ class FSReader(StorageReader):
                 decode_value = to_bytes
             elif value_type_str.lower() == "json":
                 decode_value = to_dict
+            else:
+                raise Exception("Only json, str or bytes supported.")
             #
             return_message_dict = {"headers": message_dict["headers"], "timestamp": message_dict["timestamp"], "key": decode_key(message_dict["key"]), "value": decode_value(message_dict["value"]), "offset": message_dict["offset"], "partition": message_dict["partition"]}
             return return_message_dict

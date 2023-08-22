@@ -64,7 +64,7 @@ class ClusterWriter(KafkaWriter):
         key_list = key if isinstance(key, list) else [key for _ in value_list]
         #
         partition_int_list = partition if isinstance(partition, list) else [partition for _ in value_list]
-        timestamp_int_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
+        timestamp_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
         headers_list = headers if isinstance(headers, list) and len(headers) == len(value_list) else [headers for _ in value_list]
         headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         #
@@ -121,9 +121,11 @@ class ClusterWriter(KafkaWriter):
         #
         key_str_or_bytes_list = []
         value_str_or_bytes_list = []
-        for value, key, partition_int, timestamp_int, headers_str_bytes_tuple_list in zip(value_list, key_list, partition_int_list, timestamp_int_list, headers_str_bytes_tuple_list_list):
+        for value, key, partition_int, timestamp, headers_str_bytes_tuple_list in zip(value_list, key_list, partition_int_list, timestamp_list, headers_str_bytes_tuple_list_list):
             key_str_or_bytes = serialize(key, key_bool=True)
             value_str_or_bytes = serialize(value, key_bool=False)
+            #
+            timestamp_int = timestamp[1] if isinstance(timestamp, tuple) else timestamp
             #
             self.producer.produce(self.topic_str, value_str_or_bytes, key_str_or_bytes, partition=partition_int, timestamp=timestamp_int, headers=headers_str_bytes_tuple_list, on_delivery=self.on_delivery_function)
             #

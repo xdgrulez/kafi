@@ -68,15 +68,19 @@ class Functional:
             value_list = [message_dict["value"] for message_dict in batch_message_dict_list]
             #
             key_list = [message_dict["key"] for message_dict in batch_message_dict_list]
+            #
             if "keep_partitions" in target_kwargs and target_kwargs["keep_partitions"] == True:
                 partition_list = [message_dict["partition"] for message_dict in batch_message_dict_list]
             else:
                 partition_list = None
-            if "keep_timestamps" in target_kwargs and target_kwargs["keep_timestamps"] == True:
-                timestamp_list = [message_dict["timestamp"][1] for message_dict in batch_message_dict_list]
+            #
+            if "keep_timestamps" in target_kwargs and target_kwargs["keep_timestamps"] == True and batch_message_dict_list[0]["timestamp"] is not None:
+                timestamp_list = [message_dict["timestamp"] for message_dict in batch_message_dict_list]
             else:
                 timestamp_list = None
+            #
             headers_list = [message_dict["headers"] for message_dict in batch_message_dict_list]
+            #
             target_writer.write(value_list, key=key_list, partition=partition_list, timestamp=timestamp_list, headers=headers_list, **target_kwargs)
         #
 

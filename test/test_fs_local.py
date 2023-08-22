@@ -120,7 +120,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         l.create(topic_str)
-        # Upon write, the type "bytes" triggers conversion into bytes, "str" into a string.
+        # Upon write, the types "bytes"/"str"/"json" all trigger conversion into bytes.
         w = l.openw(topic_str, key_type="bytes", value_type="str")
         w.write(self.snack_str_list, key=self.snack_str_list, headers=self.headers_str_bytes_tuple_list)
         w.close()
@@ -142,7 +142,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         l.create(topic_str)
-        # Upon write, the type "str" triggers conversion into a string, "json" into a dictionary.
+        # Upon write, the types "bytes"/"str"/"json" all trigger conversion into bytes.
         w = l.openw(topic_str, key_type="str", value_type="json")
         w.write(self.snack_dict_list, key=self.snack_str_list, headers=self.headers_str_bytes_dict)
         w.close()
