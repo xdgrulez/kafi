@@ -92,8 +92,8 @@ class Test(unittest.TestCase):
             s.delete(topic_str)
 
     def create_test_topic_name(self, storage_obj):
+        topic_str = f"test_topic_{get_millis()}"
         while True:
-            topic_str = f"test_topic_{get_millis()}"
             #
             storage_str = storage_obj.__class__.__name__
             if topic_str not in self.storage_str_topic_str_list_dict[storage_str]:
@@ -134,37 +134,37 @@ class Test(unittest.TestCase):
         a = self.get_azureblob()
         l = self.get_local()
         #
-        test_cp_storage_to_storage(self, a, l)
+        test_cp(self, a, l)
 
     def test_cp_azureblob_to_s3(self):
         a = self.get_azureblob()
         s = self.get_s3()
         #
-        test_cp_storage_to_storage(self, a, s)
+        test_cp(self, a, s)
 
     def test_cp_local_to_azureblob(self):
         l = self.get_local()
         a = self.get_azureblob()
         #
-        test_cp_storage_to_storage(self, l, a)
+        test_cp(self, l, a)
 
     def test_cp_local_to_s3(self):
         l = self.get_local()
         s = self.get_s3()
         #
-        test_cp_storage_to_storage(self, l, s)
+        test_cp(self, l, s)
 
     def test_cp_s3_to_azureblob(self):
         s = self.get_s3()
         a = self.get_azureblob()
         #
-        test_cp_storage_to_storage(self, s, a)
+        test_cp(self, s, a)
 
     def test_cp_s3_to_local(self):
         s = self.get_s3()
         l = self.get_local()
         #
-        test_cp_storage_to_storage(self, s, l)
+        test_cp(self, s, l)
 
     # Cp from kafka storage to fs storage
 
@@ -172,37 +172,37 @@ class Test(unittest.TestCase):
         c = Cluster("local")
         a = self.get_azureblob()
         #
-        test_cp_storage_to_storage(self, c, a)
+        test_cp(self, c, a)
 
     def test_cp_cluster_to_local(self):
         c = Cluster("local")
         l = self.get_local()
         #
-        test_cp_storage_to_storage(self, c, l)
+        test_cp(self, c, l)
 
     def test_cp_cluster_to_s3(self):
         c = Cluster("local")
         s = self.get_s3()
         #
-        test_cp_storage_to_storage(self, c, s)
+        test_cp(self, c, s)
 
     def test_cp_restproxy_to_azureblob(self):
         r = RestProxy("local")
         a = self.get_azureblob()
         #
-        test_cp_storage_to_storage(self, r, a)
+        test_cp(self, r, a)
 
     def test_cp_restproxy_to_local(self):
         r = RestProxy("local")
         l = self.get_local()
         #
-        test_cp_storage_to_storage(self, r, l)
+        test_cp(self, r, l)
 
     def test_cp_restproxy_to_s3(self):
         r = RestProxy("local")
         s = self.get_s3()
         #
-        test_cp_storage_to_storage(self, r, s)
+        test_cp(self, r, s)
 
     # Cp from fs storage to kafka storage
 
@@ -210,37 +210,37 @@ class Test(unittest.TestCase):
         a = self.get_azureblob()
         c = Cluster("local")
         #
-        test_cp_storage_to_storage(self, a, c)
+        test_cp(self, a, c)
 
     def test_cp_local_to_cluster(self):
         l = self.get_local()
         c = Cluster("local")
         #
-        test_cp_storage_to_storage(self, l, c)
+        test_cp(self, l, c)
 
     def test_cp_s3_to_cluster(self):
         s = self.get_s3()
         c = Cluster("local")
         #
-        test_cp_storage_to_storage(self, s, c)
+        test_cp(self, s, c)
 
     def test_cp_azureblob_to_restproxy(self):
         a = self.get_azureblob()
         r = RestProxy("local")
         #
-        test_cp_storage_to_storage(self, a, r)
+        test_cp(self, a, r)
 
     def test_cp_local_to_restproxy(self):
         l = self.get_local()
         r = RestProxy("local")
         #
-        test_cp_storage_to_storage(self, l, r)
+        test_cp(self, l, r)
 
     def test_cp_s3_to_restproxy(self):
         s = self.get_s3()
         r = RestProxy("local")
         #
-        test_cp_storage_to_storage(self, s, r)
+        test_cp(self, s, r)
 
     #
 
@@ -248,36 +248,146 @@ class Test(unittest.TestCase):
         c = Cluster("local")
         r = RestProxy("local")
         #
-        test_cp_storage_to_storage(self, c, r)
+        test_cp(self, c, r)
 
     def test_cp_restproxy_to_cluster(self):
         r = RestProxy("local")
         c = Cluster("local")
-        test_cp_storage_to_storage(self, r, c)
+        test_cp(self, r, c)
 
-    # TODO
-    # def test_diff(self):
-    #     a = self.get_azureblob()
-    #     #
-    #     topic_str1 = self.create_test_topic_name()
-    #     a.create(topic_str1)
-    #     w1 = a.openw(topic_str1, value_type="str")
-    #     w1.write(self.snack_str_list)
-    #     w1.close()
-    #     #
-    #     topic_str2 = self.create_test_topic_name()
-    #     w2 = a.openw(topic_str2, value_type="str")
-    #     w2.write(self.snack_ish_dict_list)
-    #     w2.close()
-    #     #
-    #     (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = a.diff(topic_str1, a, topic_str2, value_type1="json", value_type2="json", n=3)
-    #     self.assertEqual(3, len(message_dict_message_dict_tuple_list))
-    #     self.assertEqual(3, message_counter_int1)
-    #     self.assertEqual(3, message_counter_int2)
+    # Diff AzureBlob and X
 
-    #
+    def test_diff_azureblob_local(self):
+        a = self.get_azureblob()
+        l = self.get_local()
+        #        
+        test_diff(self, a, l)
 
-def test_cp_storage_to_storage(test_obj, storage1, storage2):
+    def test_diff_azureblob_s3(self):
+        a = self.get_azureblob()
+        s = self.get_s3()
+        #        
+        test_diff(self, a, s)
+
+    def test_diff_azureblob_cluster(self):
+        a = self.get_azureblob()
+        c = Cluster("local")
+        #        
+        test_diff(self, a, c)
+
+    def test_diff_azureblob_restproxy(self):
+        a = self.get_azureblob()
+        r = RestProxy("local")
+        #        
+        test_diff(self, a, r)
+
+    # Diff Local and X
+
+    def test_diff_local_azureblob(self):
+        l = self.get_local()
+        a = self.get_azureblob()
+        #        
+        test_diff(self, l, a)
+
+    def test_diff_local_s3(self):
+        l = self.get_local()
+        s = self.get_s3()
+        #        
+        test_diff(self, l, s)
+
+    def test_diff_local_cluster(self):
+        l = self.get_local()
+        c = Cluster("local")
+        #        
+        test_diff(self, l, c)
+
+    def test_diff_local_restproxy(self):
+        l = self.get_local()
+        r = RestProxy("local")
+        #        
+        test_diff(self, l, r)
+
+    # Diff S3 and X
+
+    def test_diff_s3_azureblob(self):
+        s = self.get_s3()
+        a = self.get_azureblob()
+        #        
+        test_diff(self, s, s)
+
+    def test_diff_s3_local(self):
+        s = self.get_s3()
+        l = self.get_local()
+        #        
+        test_diff(self, s, l)
+
+    def test_diff_s3_cluster(self):
+        s = self.get_s3()
+        c = Cluster("local")
+        #        
+        test_diff(self, s, c)
+
+    def test_diff_s3_restproxy(self):
+        s = self.get_s3()
+        r = RestProxy("local")
+        #        
+        test_diff(self, s, r)
+
+    # Diff Cluster and X
+
+    def test_diff_cluster_azureblob(self):
+        c = Cluster("local")
+        a = self.get_azureblob()
+        #        
+        test_diff(self, c, a)
+
+    def test_diff_cluster_local(self):
+        c = Cluster("local")
+        l = self.get_local()
+        #        
+        test_diff(self, c, l)
+
+    def test_diff_cluster_s3(self):
+        c = Cluster("local")
+        s = self.get_s3()
+        #        
+        test_diff(self, c, s)
+
+    def test_diff_cluster_restproxy(self):
+        c = Cluster("local")
+        r = RestProxy("local")
+        #        
+        test_diff(self, c, r)
+
+    # Diff RestProxy and X
+
+    def test_diff_restproxy_azureblob(self):
+        r = RestProxy("local")
+        a = self.get_azureblob()
+        #        
+        test_diff(self, r, a)
+
+    def test_diff_restproxy_local(self):
+        r = RestProxy("local")
+        l = self.get_local()
+        #        
+        test_diff(self, r, l)
+
+    def test_diff_restproxy_s3(self):
+        r = RestProxy("local")
+        s = self.get_s3()
+        #        
+        test_diff(self, r, s)
+
+    def test_diff_restproxy_cluster(self):
+        r = RestProxy("local")
+        c = Cluster("local")
+        #        
+        test_diff(self, r, c)
+
+#
+
+def test_cp(test_obj, storage1, storage2):
     partitions_int = 3
     # Create topic1 on storage1
     topic_str1 = test_obj.create_test_topic_name(storage1)
@@ -402,3 +512,27 @@ def test_cp_storage_to_storage(test_obj, storage1, storage2):
         #
         test_obj.assertLess(message_dict_list3[j0]["offset"], message_dict_list3[j1]["offset"])
         test_obj.assertLess(message_dict_list3[j1]["offset"], message_dict_list3[j2]["offset"])
+
+#
+
+def test_diff(test_obj, storage1, storage2):
+    topic_str1 = test_obj.create_test_topic_name(storage1)
+    storage1.create(topic_str1)
+    w1 = storage1.openw(topic_str1, value_type="str")
+    w1.write(test_obj.snack_str_list)
+    w1.close()
+    #
+    topic_str2 = test_obj.create_test_topic_name(storage2)
+    w2 = storage2.openw(topic_str2, value_type="str")
+    w2.write(test_obj.snack_ish_dict_list)
+    w2.close()
+    #
+    group_str1 = test_obj.create_test_group_name(storage1)
+    time.sleep(0.1)
+    group_str2 = test_obj.create_test_group_name(storage2)
+    #
+    time.sleep(5)
+    (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = storage1.diff(topic_str1, storage2, topic_str2, group1=group_str1, group2=group_str2, type1="json", type2="json", n=3)
+    test_obj.assertEqual(3, len(message_dict_message_dict_tuple_list))
+    test_obj.assertEqual(3, message_counter_int1)
+    test_obj.assertEqual(3, message_counter_int2)
