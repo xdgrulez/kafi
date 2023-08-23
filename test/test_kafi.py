@@ -1,4 +1,3 @@
-import ast
 import os
 import random
 import sys
@@ -418,7 +417,7 @@ def test_cp(test_obj, storage1, storage2):
     storage2.create(topic_str2, partitions=partitions_int)
     #
     group_str1 = test_obj.create_test_group_name(storage1)
-    write_batch_size_int1 = random.randint(0, 3*3)
+    write_batch_size_int1 = random.randint(1, 3*3)
     if storage1.__class__.__name__ == "RestProxy":
         # Need to use the native Kafka API here since the RestProxy V2 consumer does not support timestamps.
         c = Cluster("local")
@@ -434,7 +433,7 @@ def test_cp(test_obj, storage1, storage2):
     storage1.create(topic_str3, partitions=partitions_int)
     #
     group_str2 = test_obj.create_test_group_name(storage2)
-    write_batch_size_int2 = random.randint(0, 3*3)
+    write_batch_size_int2 = random.randint(1, 3*3)
     if storage2.__class__.__name__ == "RestProxy":
         # Need to use the native Kafka API here since the RestProxy V2 consumer does not support timestamps.
         c = Cluster("local")
@@ -483,17 +482,21 @@ def test_cp(test_obj, storage1, storage2):
     #
     def map_ish(message_dict):
         message_dict["value"]["colour"] += "ish"
+        if storage1.__class__.__name__ == "RestProxy" or storage2.__class__.__name__ == "RestProxy":
+            # Could go to fast for the REST Proxy
+            time.sleep(0.5)
         return message_dict
     #
 
     group_str5 = test_obj.create_test_group_name(storage1)
-    write_batch_size_int3 = random.randint(0, 3*3)
+    write_batch_size_int3 = random.randint(1, 3*3)
     (read_n_int3, written_n_int3) = storage1.cp(topic_str3, storage2, topic_str5, group=group_str5, source_type=type_str, target_type="json", write_batch_size=write_batch_size_int3, map_function=map_ish, n=3*3)
     #
     test_obj.assertEqual(3*3, read_n_int3)
     test_obj.assertEqual(3*3, written_n_int3)
     #
-    (message_dict_list3, n_int3) = storage2.cat(topic_str5, type="json", n=3*3)
+    group_str6 = test_obj.create_test_group_name(storage1)
+    (message_dict_list3, n_int3) = storage2.cat(topic_str5, group=group_str6, type="json", n=3*3)
     test_obj.assertEqual(3*3, len(message_dict_list3))
     test_obj.assertEqual(3*3, n_int3)
     #
@@ -531,7 +534,6 @@ def test_diff(test_obj, storage1, storage2):
     time.sleep(0.1)
     group_str2 = test_obj.create_test_group_name(storage2)
     #
-    time.sleep(5)
     (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = storage1.diff(topic_str1, storage2, topic_str2, group1=group_str1, group2=group_str2, type1="json", type2="json", n=3)
     test_obj.assertEqual(3, len(message_dict_message_dict_tuple_list))
     test_obj.assertEqual(3, message_counter_int1)

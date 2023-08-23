@@ -1,7 +1,7 @@
 import base64
 import binascii
 import json
-import logging
+# import logging
 import requests
 from requests.adapters import HTTPAdapter, Retry
 import sys
@@ -28,7 +28,7 @@ def ppretty(dict):
 #
 
 def create_session(retries_int):
-    logging.basicConfig(level=logging.DEBUG)
+    # logging.basicConfig(level=logging.DEBUG)
     session = requests.Session()
     retry = Retry(total=retries_int, backoff_factor=1, status_forcelist=[500, 502, 503, 504, 404], allowed_methods=None)
     adapter = HTTPAdapter(max_retries=retry)

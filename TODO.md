@@ -1,12 +1,13 @@
-* type = (key_type, value_type) for topics where both is the same
+* fs groups, commit
+* foldl + Co: offset erst nach erfolgreichem Durchlauf committen
+* file() (read/write-Abzweig)
+
 * Disclaimer for r.l() if cleanup.policy = compacted
-* offsets with REST Proxy?
+* offsets with REST Proxy? Geht es vielleicht doch?
 * set default value for key_type/value_type etc. in kash-section
-* set prefix for generated consumer group names (kash-section)
 * bring back recreate
 * next talk: keywords on slides, no (almost) full sentences, use Jupyter notebook instead of shell
 * Pretty print JSON etc. (as default output?), easily accessible ppretty in kash.py 0.1
-* tests: create consumer groups explicitly and clean them up
 
 # Methods
 

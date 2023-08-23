@@ -9,6 +9,7 @@ else:
     sys.path.insert(1, ".")
 
 from kafi.kafka.restproxy.restproxy import *
+from kafi.kafka.cluster.cluster import *
 from kafi.helpers import *
 
 config_str = "local"
@@ -464,6 +465,7 @@ class Test(unittest.TestCase):
 
     # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> RestProxyReader.openw/Functional.foldl/RestProxyReader.close -> RestProxyReader.openr/KafkaReader.foldl/RestProxyReader.close -> RestProxyReader.consume
     def test_cp(self):
+        print(self.topic_str_list)
         r = RestProxy(config_str)
         #
         topic_str1 = self.create_test_topic_name()
