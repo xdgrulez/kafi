@@ -1,7 +1,7 @@
 from kafi.fs.fs import FS
 from kafi.fs.azureblob.azureblob_admin import AzureBlobAdmin
-from kafi.fs.azureblob.azureblob_reader import AzureBlobReader
-from kafi.fs.azureblob.azureblob_writer import AzureBlobWriter
+from kafi.fs.azureblob.azureblob_consumer import AzureBlobConsumer
+from kafi.fs.azureblob.azureblob_producer import AzureBlobProducer
 
 #
 
@@ -18,14 +18,14 @@ class AzureBlob(FS):
 
     #
 
-    def get_reader(self, file, **kwargs):
-        reader = AzureBlobReader(self, file, **kwargs)
+    def get_consumer(self, file, **kwargs):
+        consumer = AzureBlobConsumer(self, file, **kwargs)
         #
-        return reader
+        return consumer
 
     #
 
-    def get_writer(self, file, **kwargs):
-        writer = AzureBlobWriter(self, file, **kwargs)
+    def get_producer(self, file, **kwargs):
+        producer = AzureBlobProducer(self, file, **kwargs)
         #
-        return writer
+        return producer

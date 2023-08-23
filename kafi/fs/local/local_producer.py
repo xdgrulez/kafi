@@ -1,9 +1,9 @@
 import os
 
-from kafi.fs.fs_writer import FSWriter
+from kafi.fs.fs_producer import FSProducer
 
 
-class LocalWriter(FSWriter):
+class LocalProducer(FSProducer):
     def __init__(self, local_obj, topic, **kwargs):
         super().__init__(local_obj, topic, **kwargs)
 
@@ -14,8 +14,8 @@ class LocalWriter(FSWriter):
 
     #
 
-    def write_bytes(self, abs_path_file_str, data_bytes):
+    def produce_bytes(self, abs_path_file_str, data_bytes):
         os.makedirs(os.path.dirname(abs_path_file_str), exist_ok=True)
         #
-        with open(abs_path_file_str, "wb") as bufferedWriter:
-            bufferedWriter.write(data_bytes)
+        with open(abs_path_file_str, "wb") as bufferedProducer:
+            bufferedProducer.write(data_bytes)

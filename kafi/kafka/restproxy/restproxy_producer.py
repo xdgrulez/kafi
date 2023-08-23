@@ -1,4 +1,4 @@
-from kafi.kafka.kafka_writer import KafkaWriter
+from kafi.kafka.kafka_producer import KafkaProducer
 from kafi.helpers import post, is_base64_encoded, base64_encode
 
 import datetime
@@ -11,7 +11,7 @@ TIMESTAMP_CREATE_TIME=1
 
 #
 
-class RestProxyWriter(KafkaWriter):
+class RestProxyProducer(KafkaProducer):
     def __init__(self, restproxy_obj, topic, **kwargs):
         super().__init__(restproxy_obj, topic, **kwargs)
         #

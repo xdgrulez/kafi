@@ -42,7 +42,7 @@ class AzureBlobAdmin(FSAdmin):
 
     # Metadata
     
-    def read_str(self, abs_path_file_str):
+    def consume_str(self, abs_path_file_str):
         blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
         #
         storageStreamDownloader = blobClient.download_blob()
@@ -52,7 +52,7 @@ class AzureBlobAdmin(FSAdmin):
         #
         return blob_str
 
-    def write_str(self, abs_path_file_str, data_str):
+    def produce_str(self, abs_path_file_str, data_str):
         blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
         #
         data_bytes = data_str.encode("utf-8")

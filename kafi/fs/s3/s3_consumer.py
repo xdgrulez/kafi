@@ -1,10 +1,10 @@
-from kafi.fs.fs_reader import FSReader
+from kafi.fs.fs_consumer import FSConsumer
 
 from minio import Minio
 
 #
 
-class S3Reader(FSReader):
+class S3Consumer(FSConsumer):
     def __init__(self, s3_obj, topic, **kwargs):
         super().__init__(s3_obj, topic, **kwargs)
         #
@@ -17,7 +17,7 @@ class S3Reader(FSReader):
 
     #
 
-    def read_bytes(self, abs_path_file_str):
+    def consume_bytes(self, abs_path_file_str):
         response = self.minio.get_object(self.storage_obj.bucket_name(), abs_path_file_str)
         object_bytes = response.data
         #

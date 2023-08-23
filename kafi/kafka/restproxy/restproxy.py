@@ -1,6 +1,6 @@
 from kafi.kafka.restproxy.restproxy_admin import RestProxyAdmin
-from kafi.kafka.restproxy.restproxy_reader import RestProxyReader
-from kafi.kafka.restproxy.restproxy_writer import RestProxyWriter
+from kafi.kafka.restproxy.restproxy_consumer import RestProxyConsumer
+from kafi.kafka.restproxy.restproxy_producer import RestProxyProducer
 from kafi.kafka.kafka import Kafka
 from kafi.helpers import get
 
@@ -24,14 +24,14 @@ class RestProxy(Kafka):
     #
 
     def get_consumer(self, topics, **kwargs):
-        consumer = RestProxyReader(self, topics, **kwargs)
+        consumer = RestProxyConsumer(self, topics, **kwargs)
         #
         return consumer
 
     #
 
     def get_producer(self, topics, **kwargs):
-        producer = RestProxyWriter(self, topics, **kwargs)
+        producer = RestProxyProducer(self, topics, **kwargs)
         #
         return producer
     

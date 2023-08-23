@@ -48,6 +48,8 @@ class Test(unittest.TestCase):
         self.topic_str_list = []
         self.group_str_list = []
         #
+        self.counter_int = 0
+        #
         print("Test:", self._testMethodName)
 
     def tearDown(self):
@@ -495,6 +497,47 @@ class Test(unittest.TestCase):
         self.assertEqual(offsets_dict1[topic_str][0], 1)
         r.close()
     
+    def test_error_handling(self):
+        c = Cluster(config_str)
+        #
+        topic_str1 = self.create_test_topic_name()
+        c.create(topic_str1)
+        w = c.openw(topic_str1)
+        w.write(self.snack_str_list)
+        w.close()
+        #
+        self.counter_int = 0
+        def map_function(message_dict):
+            if self.counter_int == 2:
+                self.counter_int += 1
+                raise Exception("Error...")
+            #
+            self.counter_int += 1
+            #
+            return message_dict
+
+        topic_str2 = self.create_test_topic_name()
+        c.create(topic_str2)
+        group_str = self.create_test_group_name()
+        try:
+            c.cp(topic_str1, c, topic_str2, group=group_str, n=3, map_function=map_function, consume_batch_size=1, produce_batch_size=1)
+        except Exception:
+            pass
+        #
+        n_int1 = c.l(topic_str2)[topic_str2]
+        self.assertEqual(n_int1, 2)
+        offset_int = c.group_offsets(group_str)[group_str][topic_str1][0]
+        self.assertEqual(offset_int, 2)
+        c.cp(topic_str1, c, topic_str2, group=group_str, n=1, consume_batch_size=1, produce_batch_size=1)
+        n_int2 = c.l(topic_str2)[topic_str2]
+        self.assertEqual(n_int2, 3)
+        #
+        (message_dict_list, n_int3) = c.cat(topic_str1, n=3)
+        self.assertEqual(3, len(message_dict_list))
+        self.assertEqual(3, n_int3)
+        value_str_list = [message_dict["value"] for message_dict in message_dict_list]
+        self.assertEqual(value_str_list, self.snack_str_list)
+
     def test_cluster_settings(self):
         c = Cluster(config_str)
         #
@@ -517,7 +560,7 @@ class Test(unittest.TestCase):
 
     # Shell
 
-    # Shell.cat -> Functional.map -> Functional.flatmap -> Functional.foldl -> ClusterReader.openr/KafkaReader.foldl/ClusterReader.close -> ClusterReader.consume
+    # Shell.cat -> Functional.map -> Functional.flatmap -> Functional.foldl -> ClusterConsumer.openr/KafkaConsumer.foldl/ClusterConsumer.close -> ClusterConsumer.consume
     def test_cat(self):
         c = Cluster(config_str)
         #
@@ -567,7 +610,7 @@ class Test(unittest.TestCase):
         self.assertEqual(message_dict_list2[0]["value"], self.snack_dict_list[1])
         self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
 
-    # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> ClusterReader.openr/KafkaReader.foldl/ClusterReader.close -> ClusterReader.consume
+    # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> ClusterConsumer.openr/KafkaConsumer.foldl/ClusterConsumer.close -> ClusterConsumer.consume
     def test_tail(self):
         c = Cluster(config_str)
         #
@@ -592,7 +635,7 @@ class Test(unittest.TestCase):
         self.assertEqual(message_dict_list2[0]["value"], self.snack_dict_list[2])
         self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
 
-    # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> ClusterReader.openw/Functional.foldl/ClusterReader.close -> ClusterReader.openr/KafkaReader.foldl/ClusterReader.close -> ClusterReader.consume
+    # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> ClusterConsumer.openw/Functional.foldl/ClusterConsumer.close -> ClusterConsumer.openr/KafkaConsumer.foldl/ClusterConsumer.close -> ClusterConsumer.consume
     def test_cp(self):
         c = Cluster(config_str)
         #
@@ -608,8 +651,8 @@ class Test(unittest.TestCase):
             return message_dict
         #
         group_str1 = self.create_test_group_name()
-        (read_n_int, written_n_int) = c.cp(topic_str1, c, topic_str2, group=group_str1, source_value_type="jsonschema", target_value_type="json", write_batch_size=2, map_function=map_ish, n=3)
-        self.assertEqual(3, read_n_int)
+        (consume_n_int, written_n_int) = c.cp(topic_str1, c, topic_str2, group=group_str1, source_value_type="jsonschema", target_value_type="json", produce_batch_size=2, map_function=map_ish, n=3)
+        self.assertEqual(3, consume_n_int)
         self.assertEqual(3, written_n_int)
         #
         group_str2 = self.create_test_group_name()
@@ -634,7 +677,7 @@ class Test(unittest.TestCase):
         self.assertEqual(12, acc_num_words_int)
         self.assertEqual(110, acc_num_bytes_int)
 
-    # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> ClusterReader.openr/read/close
+    # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> ClusterConsumer.openr/read/close
     def test_diff(self):
         c = Cluster(config_str)
         #
@@ -657,7 +700,7 @@ class Test(unittest.TestCase):
         self.assertEqual(3, message_counter_int1)
         self.assertEqual(3, message_counter_int2)
 
-    # Shell.diff -> Shell.diff_fun -> Functional.flatmap -> Functional.foldl -> ClusterReader.open/Kafka.foldl/ClusterReader.close -> ClusterReader.consume 
+    # Shell.diff -> Shell.diff_fun -> Functional.flatmap -> Functional.foldl -> ClusterConsumer.open/Kafka.foldl/ClusterConsumer.close -> ClusterConsumer.consume 
     def test_grep(self):
         c = Cluster(config_str)
         #
@@ -717,8 +760,8 @@ class Test(unittest.TestCase):
         topic_str2 = self.create_test_topic_name()
         #
         group_str1 = self.create_test_group_name()
-        (read_n_int, written_n_int) = c.filter_to(topic_str1, c, topic_str2, group=group_str1, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, source_value_type="avro", target_value_type="json")
-        self.assertEqual(3, read_n_int)
+        (consume_n_int, written_n_int) = c.filter_to(topic_str1, c, topic_str2, group=group_str1, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, source_value_type="avro", target_value_type="json")
+        self.assertEqual(3, consume_n_int)
         self.assertEqual(2, written_n_int)
         #
         group_str2 = self.create_test_group_name()

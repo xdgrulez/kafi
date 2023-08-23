@@ -1,6 +1,6 @@
-from kafi.storage_writer import StorageWriter
+from kafi.storage_producer import StorageProducer
 
-class KafkaWriter(StorageWriter):
+class KafkaProducer(StorageProducer):
     def __init__(self, kafka_obj, topic, **kwargs):
         super().__init__(kafka_obj, topic, **kwargs)
         #

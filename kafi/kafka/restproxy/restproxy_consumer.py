@@ -1,10 +1,10 @@
-from kafi.kafka.kafka_reader import KafkaReader
+from kafi.kafka.kafka_consumer import KafkaConsumer
 
 from kafi.helpers import get, delete, post, base64_decode
 
 #
 
-class RestProxyReader(KafkaReader):
+class RestProxyConsumer(KafkaConsumer):
     def __init__(self, restproxy_obj, *topics, **kwargs):
         super().__init__(restproxy_obj, *topics, **kwargs)
         #

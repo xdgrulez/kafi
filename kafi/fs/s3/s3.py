@@ -1,7 +1,7 @@
 from kafi.fs.fs import FS
 from kafi.fs.s3.s3_admin import S3Admin
-from kafi.fs.s3.s3_reader import S3Reader
-from kafi.fs.s3.s3_writer import S3Writer
+from kafi.fs.s3.s3_consumer import S3Consumer
+from kafi.fs.s3.s3_producer import S3Producer
 
 #
 
@@ -12,20 +12,20 @@ class S3(FS):
     #
 
     def get_admin(self):
-        reader = S3Admin(self)
+        consumer = S3Admin(self)
         #
-        return reader
+        return consumer
 
     #
 
-    def get_reader(self, file, **kwargs):
-        reader = S3Reader(self, file, **kwargs)
+    def get_consumer(self, file, **kwargs):
+        consumer = S3Consumer(self, file, **kwargs)
         #
-        return reader
+        return consumer
 
     #
 
-    def get_writer(self, file, **kwargs):
-        writer = S3Writer(self, file, **kwargs)
+    def get_producer(self, file, **kwargs):
+        producer = S3Producer(self, file, **kwargs)
         #
-        return writer
+        return producer

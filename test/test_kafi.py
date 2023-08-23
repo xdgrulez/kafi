@@ -417,15 +417,15 @@ def test_cp(test_obj, storage1, storage2):
     storage2.create(topic_str2, partitions=partitions_int)
     #
     group_str1 = test_obj.create_test_group_name(storage1)
-    write_batch_size_int1 = random.randint(1, 3*3)
+    produce_batch_size_int1 = random.randint(1, 3*3)
     if storage1.__class__.__name__ == "RestProxy":
         # Need to use the native Kafka API here since the RestProxy V2 consumer does not support timestamps.
         c = Cluster("local")
-        (read_n_int1, written_n_int1) = c.cp(topic_str1, storage2, topic_str2, group=group_str1, source_key_type="bytes", source_value_type="bytes", target_key_type="bytes", target_value_type="bytes", write_batch_size=write_batch_size_int1, n=3*3, keep_timestamps=True, keep_partitions=True)
+        (consume_n_int1, written_n_int1) = c.cp(topic_str1, storage2, topic_str2, group=group_str1, source_key_type="bytes", source_value_type="bytes", target_key_type="bytes", target_value_type="bytes", produce_batch_size=produce_batch_size_int1, n=3*3, keep_timestamps=True, keep_partitions=True)
     else:
-        (read_n_int1, written_n_int1) = storage1.cp(topic_str1, storage2, topic_str2, group=group_str1, source_key_type="bytes", source_value_type="bytes", target_key_type="bytes", target_value_type="bytes", write_batch_size=write_batch_size_int1, n=3*3, keep_timestamps=True, keep_partitions=True)
+        (consume_n_int1, written_n_int1) = storage1.cp(topic_str1, storage2, topic_str2, group=group_str1, source_key_type="bytes", source_value_type="bytes", target_key_type="bytes", target_value_type="bytes", produce_batch_size=produce_batch_size_int1, n=3*3, keep_timestamps=True, keep_partitions=True)
     #
-    test_obj.assertEqual(3*3, read_n_int1)
+    test_obj.assertEqual(3*3, consume_n_int1)
     test_obj.assertEqual(3*3, written_n_int1)
     #
     # Carbon copy topic2 on storage2 back to topic3 on storage1 as bytes.
@@ -433,15 +433,15 @@ def test_cp(test_obj, storage1, storage2):
     storage1.create(topic_str3, partitions=partitions_int)
     #
     group_str2 = test_obj.create_test_group_name(storage2)
-    write_batch_size_int2 = random.randint(1, 3*3)
+    produce_batch_size_int2 = random.randint(1, 3*3)
     if storage2.__class__.__name__ == "RestProxy":
         # Need to use the native Kafka API here since the RestProxy V2 consumer does not support timestamps.
         c = Cluster("local")
-        (read_n_int2, written_n_int2) = c.cp(topic_str2, storage1, topic_str3, group=group_str2, source_key_type="bytes", source_value_type="bytes", target_key_type="bytes", target_value_type="bytes", write_batch_size=write_batch_size_int2, n=3*3, keep_timestamps=True, keep_partitions=True)
+        (consume_n_int2, written_n_int2) = c.cp(topic_str2, storage1, topic_str3, group=group_str2, source_key_type="bytes", source_value_type="bytes", target_key_type="bytes", target_value_type="bytes", produce_batch_size=produce_batch_size_int2, n=3*3, keep_timestamps=True, keep_partitions=True)
     else:
-        (read_n_int2, written_n_int2) = storage2.cp(topic_str2, storage1, topic_str3, group=group_str2, source_key_type="bytes", source_value_type="bytes", target_key_type="bytes", target_value_type="bytes", write_batch_size=write_batch_size_int2, n=3*3, keep_timestamps=True, keep_partitions=True)
+        (consume_n_int2, written_n_int2) = storage2.cp(topic_str2, storage1, topic_str3, group=group_str2, source_key_type="bytes", source_value_type="bytes", target_key_type="bytes", target_value_type="bytes", produce_batch_size=produce_batch_size_int2, n=3*3, keep_timestamps=True, keep_partitions=True)
     #
-    test_obj.assertEqual(3*3, read_n_int2)
+    test_obj.assertEqual(3*3, consume_n_int2)
     test_obj.assertEqual(3*3, written_n_int2)
     #
     # Have the partitions been carbon copied properly?
@@ -489,10 +489,10 @@ def test_cp(test_obj, storage1, storage2):
     #
 
     group_str5 = test_obj.create_test_group_name(storage1)
-    write_batch_size_int3 = random.randint(1, 3*3)
-    (read_n_int3, written_n_int3) = storage1.cp(topic_str3, storage2, topic_str5, group=group_str5, source_type=type_str, target_type="json", write_batch_size=write_batch_size_int3, map_function=map_ish, n=3*3)
+    produce_batch_size_int3 = random.randint(1, 3*3)
+    (consume_n_int3, written_n_int3) = storage1.cp(topic_str3, storage2, topic_str5, group=group_str5, source_type=type_str, target_type="json", produce_batch_size=produce_batch_size_int3, map_function=map_ish, n=3*3)
     #
-    test_obj.assertEqual(3*3, read_n_int3)
+    test_obj.assertEqual(3*3, consume_n_int3)
     test_obj.assertEqual(3*3, written_n_int3)
     #
     group_str6 = test_obj.create_test_group_name(storage1)

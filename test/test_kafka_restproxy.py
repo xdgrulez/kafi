@@ -119,8 +119,8 @@ class Test(unittest.TestCase):
         w.close()
         #
         group_str = self.create_test_group_name()
-        reader = r.openr(topic_str, group=group_str)
-        reader.consume()
+        consumer = r.openr(topic_str, group=group_str)
+        consumer.consume()
         #
         group_str_list1 = r.groups(["test*", "test_group*"])
         self.assertIn(group_str, group_str_list1)
@@ -133,7 +133,7 @@ class Test(unittest.TestCase):
         group_str_list4 = r.groups(state_pattern="unknown", state=False)
         self.assertEqual(group_str_list4, [])
         #
-        reader.close()
+        consumer.close()
 
     def test_describe_groups(self):
         r = RestProxy(config_str)
@@ -147,8 +147,8 @@ class Test(unittest.TestCase):
         w.close()
         #
         group_str = self.create_test_group_name()
-        reader = r.openr(topic_str, group=group_str)
-        reader.consume()
+        consumer = r.openr(topic_str, group=group_str)
+        consumer.consume()
         #
         group_dict = r.describe_groups(group_str)[group_str]
         self.assertEqual(group_dict["group_id"], group_str)
@@ -160,7 +160,7 @@ class Test(unittest.TestCase):
         broker_dict = r.brokers()
         broker_int = list(broker_dict.keys())[0]
         #
-        reader.close()
+        consumer.close()
 
     def test_group_offsets(self):
         r = RestProxy(config_str)
@@ -173,11 +173,11 @@ class Test(unittest.TestCase):
         w.close()
         #
         group_str = self.create_test_group_name()
-        reader = r.openr(topic_str, group=group_str, config={"enable.auto.commit": False})
-        reader.consume()
-        reader.commit()
-        reader.consume()
-        reader.commit()
+        consumer = r.openr(topic_str, group=group_str, config={"enable.auto.commit": False})
+        consumer.consume()
+        consumer.commit()
+        consumer.consume()
+        consumer.commit()
         #
         group_str_topic_str_partition_int_offset_int_dict_dict_dict = r.group_offsets(group_str)
         self.assertIn(group_str, group_str_topic_str_partition_int_offset_int_dict_dict_dict)
@@ -185,8 +185,8 @@ class Test(unittest.TestCase):
         self.assertEqual(group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str][topic_str][0], 1)
         self.assertEqual(group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str][topic_str][1], 1)
         #
-        reader.unsubscribe()
-        reader.close()
+        consumer.unsubscribe()
+        consumer.close()
 
     # Topics
 
@@ -277,13 +277,13 @@ class Test(unittest.TestCase):
         #
         group_str = self.create_test_group_name()
         # Upon consume, the type "str" triggers the conversion into a string, and "bytes" into bytes.
-        reader = r.openr(topic_str, group=group_str, key_type="str", value_type="bytes")
-        message_dict_list = reader.consume(n=3)
+        consumer = r.openr(topic_str, group=group_str, key_type="str", value_type="bytes")
+        message_dict_list = consumer.consume(n=3)
         key_str_list = [message_dict["key"] for message_dict in message_dict_list]
         value_bytes_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(key_str_list, self.snack_str_list)
         self.assertEqual(value_bytes_list, self.snack_bytes_list)
-        reader.close()
+        consumer.close()
 
     def test_produce_consume_json(self):
         r = RestProxy(config_str)
@@ -298,13 +298,13 @@ class Test(unittest.TestCase):
         #
         group_str = self.create_test_group_name()
         # Upon consume, the type "json" triggers the conversion into a dictionary.
-        reader = r.openr(topic_str, group=group_str, key_type="json", value_type="json")
-        message_dict_list = reader.read(n=3)
+        consumer = r.openr(topic_str, group=group_str, key_type="json", value_type="json")
+        message_dict_list = consumer.read(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(key_dict_list, self.snack_dict_list)
         self.assertEqual(value_dict_list, self.snack_dict_list)
-        reader.close()
+        consumer.close()
 
     def test_produce_consume_protobuf(self):
         r = RestProxy(config_str)
@@ -319,13 +319,13 @@ class Test(unittest.TestCase):
         #
         group_str = self.create_test_group_name()
         # Upon consume, the type "protobuf" (alias = "pb") triggers the conversion into a dictionary.
-        reader = r.openr(topic_str, group=group_str, key_type="pb", value_type="protobuf")
-        message_dict_list = reader.read(n=3)
+        consumer = r.openr(topic_str, group=group_str, key_type="pb", value_type="protobuf")
+        message_dict_list = consumer.read(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(key_dict_list, self.snack_dict_list)
         self.assertEqual(value_dict_list, self.snack_dict_list)
-        reader.close()
+        consumer.close()
 
     def test_produce_consume_avro(self):
         r = RestProxy(config_str)
@@ -340,13 +340,13 @@ class Test(unittest.TestCase):
         #
         group_str = self.create_test_group_name()
         # Upon consume, the types "protobuf" (alias = "pb") and "avro" trigger the conversion into a dictionary.
-        reader = r.openr(topic_str, group=group_str, key_type="avro", value_type="avro")
-        message_dict_list = reader.read(n=3)
+        consumer = r.openr(topic_str, group=group_str, key_type="avro", value_type="avro")
+        message_dict_list = consumer.read(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(key_dict_list, self.snack_dict_list)
         self.assertEqual(value_dict_list, self.snack_dict_list)
-        reader.close()
+        consumer.close()
 
     def test_produce_consume_jsonschema(self):
         r = RestProxy(config_str)
@@ -361,13 +361,13 @@ class Test(unittest.TestCase):
         #
         group_str = self.create_test_group_name()
         # Upon consume, the type "jsonschema" (alias = "json_sr") triggers the conversion into a dictionary.
-        reader = r.openr(topic_str, group=group_str, key_type="jsonschema", value_type="json_sr")
-        message_dict_list = reader.read(n=3)
+        consumer = r.openr(topic_str, group=group_str, key_type="jsonschema", value_type="json_sr")
+        message_dict_list = consumer.read(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(key_dict_list, self.snack_dict_list)
         self.assertEqual(value_dict_list, self.snack_dict_list)
-        reader.close()
+        consumer.close()
 
     def test_commit(self):
         r = RestProxy(config_str)
@@ -381,14 +381,14 @@ class Test(unittest.TestCase):
         w.close()
         #
         group_str = self.create_test_group_name()
-        reader = r.openr(topic_str, group=group_str, config={"enable.auto.commit": "False"})
-        reader.consume()
-        offsets_dict = reader.offsets()
+        consumer = r.openr(topic_str, group=group_str, config={"enable.auto.commit": "False"})
+        consumer.consume()
+        offsets_dict = consumer.offsets()
         self.assertEqual(offsets_dict, {})
-        reader.commit()
-        offsets_dict1 = reader.offsets()
+        consumer.commit()
+        offsets_dict1 = consumer.offsets()
         self.assertEqual(offsets_dict1[topic_str][0], 3)
-        reader.close()
+        consumer.close()
     
     def test_cluster_settings(self):
         r = RestProxy(config_str)
@@ -412,7 +412,7 @@ class Test(unittest.TestCase):
 
     # Shell
 
-    # Shell.cat -> Functional.map -> Functional.flatmap -> Functional.foldl -> RestProxyReader.openr/KafkaReader.foldl/RestProxyReader.close -> RestProxyReader.consume
+    # Shell.cat -> Functional.map -> Functional.flatmap -> Functional.foldl -> RestProxyConsumer.openr/KafkaConsumer.foldl/RestProxyConsumer.close -> RestProxyConsumer.consume
     def test_cat(self):
         r = RestProxy(config_str)
         #
@@ -446,7 +446,7 @@ class Test(unittest.TestCase):
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(value_dict_list, self.snack_dict_list)
 
-    # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> RestProxyReader.openr/KafkaReader.foldl/RestProxyReader.close -> RestProxyReader.consume
+    # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> RestProxyConsumer.openr/KafkaConsumer.foldl/RestProxyConsumer.close -> RestProxyConsumer.consume
     def test_tail(self):
         r = RestProxy(config_str)
         #
@@ -463,7 +463,7 @@ class Test(unittest.TestCase):
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(value_dict_list, self.snack_dict_list)
 
-    # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> RestProxyReader.openw/Functional.foldl/RestProxyReader.close -> RestProxyReader.openr/KafkaReader.foldl/RestProxyReader.close -> RestProxyReader.consume
+    # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> RestProxyConsumer.openw/Functional.foldl/RestProxyConsumer.close -> RestProxyConsumer.openr/KafkaConsumer.foldl/RestProxyConsumer.close -> RestProxyConsumer.consume
     def test_cp(self):
         print(self.topic_str_list)
         r = RestProxy(config_str)
@@ -480,8 +480,8 @@ class Test(unittest.TestCase):
             return message_dict
         #
         group_str1 = self.create_test_group_name()
-        (read_n_int, written_n_int) = r.cp(topic_str1, r, topic_str2, group=group_str1, source_type="jsonschema", target_type="json", write_batch_size=2, map_function=map_ish, n=3)
-        self.assertEqual(3, read_n_int)
+        (consume_n_int, written_n_int) = r.cp(topic_str1, r, topic_str2, group=group_str1, source_type="jsonschema", target_type="json", produce_batch_size=2, map_function=map_ish, n=3)
+        self.assertEqual(3, consume_n_int)
         self.assertEqual(3, written_n_int)
         #
         group_str2 = self.create_test_group_name()
@@ -506,7 +506,7 @@ class Test(unittest.TestCase):
         self.assertEqual(18, acc_num_words_int)
         self.assertEqual(169, acc_num_bytes_int)
 
-    # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> RestProxyReader.openr/read/close
+    # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> RestProxyConsumer.openr/read/close
     def test_diff(self):
         r = RestProxy(config_str)
         #
@@ -529,7 +529,7 @@ class Test(unittest.TestCase):
         self.assertEqual(3, message_counter_int1)
         self.assertEqual(3, message_counter_int2)
 
-    # Shell.diff -> Shell.diff_fun -> Functional.flatmap -> Functional.foldl -> RestProxyReader.open/Kafka.foldl/RestProxyReader.close -> RestProxyReader.consume 
+    # Shell.diff -> Shell.diff_fun -> Functional.flatmap -> Functional.foldl -> RestProxyConsumer.open/Kafka.foldl/RestProxyConsumer.close -> RestProxyConsumer.consume 
     def test_grep(self):
         r = RestProxy(config_str)
         #
@@ -589,8 +589,8 @@ class Test(unittest.TestCase):
         topic_str2 = self.create_test_topic_name()
         #
         group_str1 = self.create_test_group_name()
-        (read_n_int, written_n_int) = r.filter_to(topic_str1, r, topic_str2, group=group_str1, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, source_type="avro", target_type="json")
-        self.assertEqual(3, read_n_int)
+        (consume_n_int, written_n_int) = r.filter_to(topic_str1, r, topic_str2, group=group_str1, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, source_type="avro", target_type="json")
+        self.assertEqual(3, consume_n_int)
         self.assertEqual(2, written_n_int)
         #
         group_str2 = self.create_test_group_name()

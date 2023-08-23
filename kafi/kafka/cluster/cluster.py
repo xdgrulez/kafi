@@ -1,6 +1,6 @@
 from kafi.kafka.cluster.cluster_admin import ClusterAdmin
-from kafi.kafka.cluster.cluster_reader import ClusterReader
-from kafi.kafka.cluster.cluster_writer import ClusterWriter
+from kafi.kafka.cluster.cluster_consumer import ClusterConsumer
+from kafi.kafka.cluster.cluster_producer import ClusterProducer
 from kafi.kafka.kafka import Kafka
 
 # Cluster class
@@ -20,13 +20,13 @@ class Cluster(Kafka):
 
     #
     def get_consumer(self, topics, **kwargs):
-        consumer = ClusterReader(self, topics, **kwargs)
+        consumer = ClusterConsumer(self, topics, **kwargs)
         #
         return consumer
 
     #
 
     def get_producer(self, topic, **kwargs):
-        producer = ClusterWriter(self, topic, **kwargs)
+        producer = ClusterProducer(self, topic, **kwargs)
         #
         return producer

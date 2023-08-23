@@ -11,7 +11,7 @@ class Functional:
         verbose_int = self.verbose()
         progress_num_messages_int = self.progress_num_messages()
         #
-        reader = self.openr(topic, **kwargs)
+        consumer = self.openr(topic, config={"enable.auto.commit": "False"}, **kwargs)
         #
         def foldl_function1(acc_progress_message_counter_int_tuple, message_dict):
             (acc, progress_message_counter_int) = acc_progress_message_counter_int_tuple
@@ -24,9 +24,9 @@ class Functional:
             #
             return (acc, progress_message_counter_int)
         #
-        result_progress_message_counter_int_tuple = reader.foldl(foldl_function1, (initial_acc, 0), n, **kwargs)
+        result_progress_message_counter_int_tuple = consumer.foldl(foldl_function1, (initial_acc, 0), n, **kwargs)
         #
-        reader.close()
+        consumer.close()
         #
         return result_progress_message_counter_int_tuple
 
@@ -64,7 +64,7 @@ class Functional:
         progress_num_messages_int = self.progress_num_messages()
         verbose_int = self.verbose()
         #
-        def write_batch(batch_message_dict_list, **target_kwargs):
+        def produce_batch(batch_message_dict_list, **target_kwargs):
             value_list = [message_dict["value"] for message_dict in batch_message_dict_list]
             #
             key_list = [message_dict["key"] for message_dict in batch_message_dict_list]
@@ -81,26 +81,26 @@ class Functional:
             #
             headers_list = [message_dict["headers"] for message_dict in batch_message_dict_list]
             #
-            target_writer.write(value_list, key=key_list, partition=partition_list, timestamp=timestamp_list, headers=headers_list, **target_kwargs)
+            target_producer.write(value_list, key=key_list, partition=partition_list, timestamp=timestamp_list, headers=headers_list, **target_kwargs)
         #
 
-        def foldl_function(write_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, message_dict):
-            (write_batch_size_int, batch_message_dict_list, progress_message_counter_int) = write_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
+        def foldl_function(produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, message_dict):
+            (produce_batch_size_int, batch_message_dict_list, progress_message_counter_int) = produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
             #
             message_dict_list = flatmap_function(message_dict)
             #
             batch_message_dict_list += message_dict_list
             #
-            if len(batch_message_dict_list) == write_batch_size_int:
-                write_batch(batch_message_dict_list, **target_kwargs)
+            if len(batch_message_dict_list) == produce_batch_size_int:
+                produce_batch(batch_message_dict_list, **target_kwargs)
                 #
                 progress_message_counter_int += len(batch_message_dict_list)
                 if verbose_int > 0 and progress_message_counter_int % progress_num_messages_int == 0:
                     print(f"Written: {progress_message_counter_int}")
                 #
-                return (write_batch_size_int, [], progress_message_counter_int)
+                return (produce_batch_size_int, [], progress_message_counter_int)
             else:
-                return (write_batch_size_int, batch_message_dict_list, progress_message_counter_int)
+                return (produce_batch_size_int, batch_message_dict_list, progress_message_counter_int)
 
         source_kwargs = kwargs.copy()
         if "source_key_type" in kwargs:
@@ -134,20 +134,20 @@ class Functional:
         if "target_value_schema_id" in kwargs:
             target_kwargs["value_schema_id"] = kwargs["target_value_schema_id"]
         #
-        write_batch_size_int = kwargs["write_batch_size"] if "write_batch_size" in kwargs else target_storage.write_batch_size()
+        produce_batch_size_int = kwargs["produce_batch_size"] if "produce_batch_size" in kwargs else target_storage.produce_batch_size()
         #
-        target_writer = target_storage.openw(target_topic, **target_kwargs)
+        target_producer = target_storage.openw(target_topic, **target_kwargs)
         #
-        (write_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, read_message_counter_int) = self.foldl(topic, foldl_function, (write_batch_size_int, [], 0), n, **source_kwargs)
-        (_, batch_message_dict_list, written_progress_message_counter_int) = write_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
+        (produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, consume_message_counter_int) = self.foldl(topic, foldl_function, (produce_batch_size_int, [], 0), n, **source_kwargs)
+        (_, batch_message_dict_list, written_progress_message_counter_int) = produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
         #
         if len(batch_message_dict_list) > 0:
-            write_batch(batch_message_dict_list, **target_kwargs)
+            produce_batch(batch_message_dict_list, **target_kwargs)
             written_progress_message_counter_int += len(batch_message_dict_list)
         #
-        target_writer.close()
+        target_producer.close()
         #
-        return (read_message_counter_int, written_progress_message_counter_int)
+        return (consume_message_counter_int, written_progress_message_counter_int)
 
     def map_to(self, topic, target_storage, target_topic, map_function, n=ALL_MESSAGES, **kwargs):
         def flatmap_function(message_dict):
@@ -166,9 +166,9 @@ class Functional:
     def zip_foldl(self, topic1, storage2, topic2, zip_foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         n_int = n
         #
-        read_batch_size_int = kwargs["read_batch_size"] if "read_batch_size" in kwargs else self.read_batch_size()
-        if read_batch_size_int > n_int:
-            read_batch_size_int = n_int
+        consume_batch_size_int = kwargs["consume_batch_size"] if "consume_batch_size" in kwargs else self.consume_batch_size()
+        if consume_batch_size_int > n_int:
+            consume_batch_size_int = n_int
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
         #
@@ -186,8 +186,8 @@ class Functional:
         kwargs2["value_type"] = kwargs2["value_type2"] if "value_type2" in kwargs2 else "bytes"
         kwargs2["type"] = kwargs2["type2"] if "type2" in kwargs2 else "bytes"
         #
-        reader1 = self.openr(topic1, **kwargs1)
-        reader2 = storage2.openr(topic2, **kwargs2)
+        consumer1 = self.openr(topic1, **kwargs1)
+        consumer2 = storage2.openr(topic2, **kwargs2)
         #
         message_counter_int1 = 0
         message_counter_int2 = 0
@@ -196,8 +196,8 @@ class Functional:
         while True:
             message_dict_list1 = []
             while True:
-                message_dict_list1 += reader1.read(n=read_batch_size_int)
-                if not message_dict_list1 or read_batch_size_int == ALL_MESSAGES or len(message_dict_list1) == read_batch_size_int:
+                message_dict_list1 += consumer1.read(n=consume_batch_size_int)
+                if not message_dict_list1 or consume_batch_size_int == ALL_MESSAGES or len(message_dict_list1) == consume_batch_size_int:
                     break
             if not message_dict_list1:
                 break
@@ -206,11 +206,11 @@ class Functional:
             if self.verbose() > 0 and message_counter_int1 % self.progress_num_messages() == 0:
                 print(f"Read (storage 1): {message_counter_int1}")
             #
-            read_batch_size_int2 = num_messages_int1 if num_messages_int1 < read_batch_size_int else read_batch_size_int
+            consume_batch_size_int2 = num_messages_int1 if num_messages_int1 < consume_batch_size_int else consume_batch_size_int
             message_dict_list2 = []
             while True:
-                message_dict_list2 += reader2.read(n=read_batch_size_int2)
-                if not message_dict_list2 or read_batch_size_int2 == ALL_MESSAGES or len(message_dict_list2) == read_batch_size_int2:
+                message_dict_list2 += consumer2.read(n=consume_batch_size_int2)
+                if not message_dict_list2 or consume_batch_size_int2 == ALL_MESSAGES or len(message_dict_list2) == consume_batch_size_int2:
                     break
             if not message_dict_list2:
                 break
@@ -235,6 +235,6 @@ class Functional:
                 if message_counter_int1 >= n_int:
                     break
         #
-        reader1.close()
-        reader2.close()
+        consumer1.close()
+        consumer2.close()
         return acc, message_counter_int1, message_counter_int2

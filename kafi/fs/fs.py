@@ -105,11 +105,11 @@ class FS(Storage):
 
     # Open
     def openr(self, topic, **kwargs):
-        reader = self.get_reader(topic, **kwargs)
+        consumer = self.get_consumer(topic, **kwargs)
         #
-        return reader
+        return consumer
     
     def openw(self, topic, **kwargs):
-        writer = self.get_writer(topic, **kwargs)
+        producer = self.get_producer(topic, **kwargs)
         #
-        return writer
+        return producer

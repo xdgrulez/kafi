@@ -24,14 +24,14 @@ class Storage(Shell):
             self.progress_num_messages(int(self.kafi_config_dict["progress.num.messages"]))
         #
         if "read.batch.size" not in self.kafi_config_dict:
-            self.read_batch_size(1000)
+            self.consume_batch_size(1000)
         else:
-            self.read_batch_size(int(self.kafi_config_dict["read.batch.size"]))
+            self.consume_batch_size(int(self.kafi_config_dict["read.batch.size"]))
         #
         if "write.batch.size" not in self.kafi_config_dict:
-            self.write_batch_size(1000)
+            self.produce_batch_size(1000)
         else:
-            self.write_batch_size(int(self.kafi_config_dict["write.batch.size"]))
+            self.produce_batch_size(int(self.kafi_config_dict["write.batch.size"]))
         #
         if "verbose" not in self.kafi_config_dict:
             verbose_int = 1 if is_interactive() else 0
@@ -51,10 +51,10 @@ class Storage(Shell):
     def progress_num_messages(self, new_value=None): # int
         return self.get_set_config("progress.num.messages", new_value)
 
-    def read_batch_size(self, new_value=None): # int
+    def consume_batch_size(self, new_value=None): # int
         return self.get_set_config("read.batch.size", new_value)
     
-    def write_batch_size(self, new_value=None): # int
+    def produce_batch_size(self, new_value=None): # int
         return self.get_set_config("write.batch.size", new_value)
 
     def verbose(self, new_value=None): # int

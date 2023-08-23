@@ -1,7 +1,7 @@
 import json
 import os
 
-from kafi.storage_writer import StorageWriter
+from kafi.storage_producer import StorageProducer
 from kafi.helpers import get_millis
 
 # Constants
@@ -11,7 +11,7 @@ TIMESTAMP_CREATE_TIME=1
 
 #
 
-class FSWriter(StorageWriter):
+class FSProducer(StorageProducer):
     def __init__(self, fs_obj, topic, **kwargs):
         super().__init__(fs_obj, topic, **kwargs)
         #
@@ -44,7 +44,7 @@ class FSWriter(StorageWriter):
         partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
         partition_int_last_offset_int_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
         #
-        write_batch_size_int = kwargs["write_batch_size"] if "write_batch_size" in kwargs else self.storage_obj.write_batch_size()
+        produce_batch_size_int = kwargs["produce_batch_size"] if "produce_batch_size" in kwargs else self.storage_obj.produce_batch_size()
         message_separator_bytes = self.storage_obj.admin.get_message_separator(self.topic_str)
         #
         keep_partitions_bool = "keep_partitions" in kwargs and kwargs["keep_partitions"]
@@ -103,4 +103,4 @@ class FSWriter(StorageWriter):
                 #
                 start_offset_int = partition_int_last_offset_int_dict[partition_int]
                 abs_path_file_str = os.path.join(topic_abs_dir_str, f"partition,{partition_int:09},{start_offset_int:021}")
-                self.write_bytes(abs_path_file_str, joined_message_bytes)
+                self.produce_bytes(abs_path_file_str, joined_message_bytes)

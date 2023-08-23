@@ -1,4 +1,4 @@
-class StorageWriter():
+class StorageProducer():
     def __init__(self, storage_obj, topic, **kwargs):
         self.storage_obj = storage_obj
         #

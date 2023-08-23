@@ -115,7 +115,7 @@ class Test(unittest.TestCase):
 
     # Write/Read
 
-    def test_write_read_bytes_str(self):
+    def test_produce_consume_bytes_str(self):
         l = self.get_local()
         #
         topic_str = self.create_test_topic_name()
@@ -137,7 +137,7 @@ class Test(unittest.TestCase):
         self.assertEqual(headers_list[0], self.headers_str_bytes_tuple_list)
         r.close()
     
-    def test_write_read_str_json(self):
+    def test_produce_consume_str_json(self):
         l = self.get_local()
         #
         topic_str = self.create_test_topic_name()
@@ -175,7 +175,7 @@ class Test(unittest.TestCase):
 
     # Shell
 
-    # Shell.cat -> Functional.map -> Functional.flatmap -> Functional.foldl -> LocalReader.openr/FSReader.foldl/LocalReader.close -> LocalReader.consume
+    # Shell.cat -> Functional.map -> Functional.flatmap -> Functional.foldl -> LocalConsumer.openr/FSConsumer.foldl/LocalConsumer.close -> LocalConsumer.consume
     def test_cat(self):
         l = self.get_local()
         #
@@ -217,7 +217,7 @@ class Test(unittest.TestCase):
         self.assertEqual(1, n_int2)
         self.assertEqual(message_dict_list2[0]["value"], self.snack_dict_list[2])
 
-    # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> LocalReader.openr/FSReader.foldl/LocalReader.close -> LocalReader.consume
+    # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> LocalConsumer.openr/FSConsumer.foldl/LocalConsumer.close -> LocalConsumer.consume
     def test_tail(self):
         l = self.get_local()
         #
@@ -238,7 +238,7 @@ class Test(unittest.TestCase):
         self.assertEqual(1, n_int2)
         self.assertEqual(message_dict_list2[0]["value"], self.snack_dict_list[2])
 
-    # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> LocalReader.openw/Functional.foldl/LocalReader.close -> LocalReader.openr/FSReader.foldl/LocalReader.close -> LocalReader.consume
+    # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> LocalConsumer.openw/Functional.foldl/LocalConsumer.close -> LocalConsumer.openr/FSConsumer.foldl/LocalConsumer.close -> LocalConsumer.consume
     def test_cp(self):
         l = self.get_local()
         #
@@ -255,8 +255,8 @@ class Test(unittest.TestCase):
             message_dict["value"]["colour"] += "ish"
             return message_dict
         #
-        (read_n_int, written_n_int) = l.cp(topic_str1, l, topic_str2, source_value_type="json", target_value_type="json", write_batch_size=2, map_function=map_ish, n=3)
-        self.assertEqual(3, read_n_int)
+        (consume_n_int, written_n_int) = l.cp(topic_str1, l, topic_str2, source_value_type="json", target_value_type="json", produce_batch_size=2, map_function=map_ish, n=3)
+        self.assertEqual(3, consume_n_int)
         self.assertEqual(3, written_n_int)
         #
         (message_dict_list2, n_int2) = l.cat(topic_str2, value_type="json", n=1)
@@ -278,7 +278,7 @@ class Test(unittest.TestCase):
         self.assertEqual(12, acc_num_words_int)
         self.assertEqual(110, acc_num_bytes_int)
 
-    # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> LocalReader.openr/read/close
+    # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> LocalConsumer.openr/read/close
     def test_diff(self):
         l = self.get_local()
         #
@@ -298,7 +298,7 @@ class Test(unittest.TestCase):
         self.assertEqual(3, message_counter_int1)
         self.assertEqual(3, message_counter_int2)
 
-    # Shell.diff -> Shell.diff_fun -> Functional.flatmap -> Functional.foldl -> LocalReader.open/Kafka.foldl/LocalReader.close -> LocalReader.consume 
+    # Shell.diff -> Shell.diff_fun -> Functional.flatmap -> Functional.foldl -> LocalConsumer.open/Kafka.foldl/LocalConsumer.close -> LocalConsumer.consume 
     def test_grep(self):
         l = self.get_local()
         #
@@ -355,8 +355,8 @@ class Test(unittest.TestCase):
         topic_str2 = self.create_test_topic_name()
 #        l.create(topic_str2)
         #
-        (read_n_int, written_n_int) = l.filter_to(topic_str1, l, topic_str2, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, source_value_type="json", target_value_type="bytes")
-        self.assertEqual(3, read_n_int)
+        (consume_n_int, written_n_int) = l.filter_to(topic_str1, l, topic_str2, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, source_value_type="json", target_value_type="bytes")
+        self.assertEqual(3, consume_n_int)
         self.assertEqual(2, written_n_int)
         #
         (message_dict_list, n_int) = l.cat(topic_str2, value_type="json", n=2)

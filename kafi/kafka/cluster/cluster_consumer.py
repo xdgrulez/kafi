@@ -1,6 +1,6 @@
 import json
 
-from confluent_kafka import Consumer, TopicPartition
+from confluent_kafka import Consumer, Message, TopicPartition
 from confluent_kafka.schema_registry.avro import AvroDeserializer
 from confluent_kafka.schema_registry.json_schema import JSONDeserializer
 from confluent_kafka.schema_registry.protobuf import ProtobufDeserializer
@@ -10,7 +10,7 @@ import os
 import sys
 import tempfile
 
-from kafi.kafka.kafka_reader import KafkaReader
+from kafi.kafka.kafka_consumer import KafkaConsumer
 from kafi.kafka.schemaregistry import SchemaRegistry
 
 # Constants
@@ -19,7 +19,7 @@ ALL_MESSAGES = -1
 
 #
 
-class ClusterReader(KafkaReader):
+class ClusterConsumer(KafkaConsumer):
     def __init__(self, cluster_obj, *topics, **kwargs):
         super().__init__(cluster_obj, *topics, **kwargs)
         #
@@ -90,13 +90,10 @@ class ClusterReader(KafkaReader):
 
     #
 
-    def commit(self, offsets=None, asynchronous=False): # TODO: Support message argument
+    def commit(self, offsets=None, asynchronous=False):
         asynchronous_bool = asynchronous
         #
-        if offsets is None:
-            self.consumer.commit()
-            offsets_dict = {}
-        else:
+        if offsets is not None:
             str_or_int = list(offsets.keys())[0]
             if isinstance(str_or_int, str):
                 offsets_dict = offsets
@@ -108,6 +105,9 @@ class ClusterReader(KafkaReader):
             commit_topicPartition_list = self.consumer.commit(offsets=offsets_topicPartition_list, asynchronous=asynchronous_bool)
             #
             offsets_dict = topicPartition_list_to_offsets_dict(commit_topicPartition_list)
+        else:
+            self.consumer.commit()
+            offsets_dict = {}
         #
         return offsets_dict
 

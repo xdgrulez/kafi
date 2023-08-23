@@ -1,4 +1,4 @@
-class StorageReader():
+class StorageConsumer():
     def __init__(self, storage_obj, *topics, **kwargs):
         self.storage_obj = storage_obj
         #

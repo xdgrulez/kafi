@@ -2,9 +2,9 @@ import io
 
 from minio import Minio
 
-from kafi.fs.fs_writer import FSWriter
+from kafi.fs.fs_producer import FSProducer
 
-class S3Writer(FSWriter):
+class S3Producer(FSProducer):
     def __init__(self, s3_obj, file, **kwargs):
         super().__init__(s3_obj, file, **kwargs)
         #
@@ -17,5 +17,5 @@ class S3Writer(FSWriter):
 
     #
 
-    def write_bytes(self, abs_path_file_str, data_bytes):
+    def produce_bytes(self, abs_path_file_str, data_bytes):
         self.minio.put_object(self.storage_obj.bucket_name(), abs_path_file_str, io.BytesIO(data_bytes), length=len(data_bytes))

@@ -2,7 +2,7 @@ import ast
 import json
 import os
 
-from kafi.storage_reader import StorageReader
+from kafi.storage_consumer import StorageConsumer
 
 # Constants
 
@@ -10,7 +10,7 @@ ALL_MESSAGES = -1
 
 #
 
-class FSReader(StorageReader):
+class FSConsumer(StorageConsumer):
     def __init__(self, fs_obj, *topics, **kwargs):
         super().__init__(fs_obj, *topics, **kwargs)
         #
@@ -55,7 +55,7 @@ class FSReader(StorageReader):
         partition_int_first_partition_rel_file_str_dict = {partition_int: first_partition_rel_file_str for partition_int, first_partition_rel_file_str in partition_int_first_partition_rel_file_str_dict1.items() if first_partition_rel_file_str is not None}
         #
         # Get all partition files to be read for all partitions
-        partition_int_to_be_read_rel_file_str_list_dict = {partition_int: [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str >= partition_int_first_partition_rel_file_str_dict[partition_int]] for partition_int, rel_file_str_list in partition_int_rel_file_str_list_dict.items()}
+        partition_int_to_be_consume_rel_file_str_list_dict = {partition_int: [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str >= partition_int_first_partition_rel_file_str_dict[partition_int]] for partition_int, rel_file_str_list in partition_int_rel_file_str_list_dict.items()}
         #
         def acc_bytes_to_acc(acc, message_bytes, message_counter_int):
             serialized_message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
@@ -123,20 +123,20 @@ class FSReader(StorageReader):
         #
 
         file_counter_int = 0
-        max_num_files_int = max([len(to_be_read_rel_file_str_list) for to_be_read_rel_file_str_list in partition_int_to_be_read_rel_file_str_list_dict.values()])
+        max_num_files_int = max([len(to_be_consume_rel_file_str_list) for to_be_consume_rel_file_str_list in partition_int_to_be_consume_rel_file_str_list_dict.values()])
         rel_file_str_list = []
         #
         for file_counter_int in range(max_num_files_int):
             for partition_int in range(partitions_int):
-                if partition_int in partition_int_to_be_read_rel_file_str_list_dict:
-                    if len(partition_int_to_be_read_rel_file_str_list_dict[partition_int]) > file_counter_int:
-                        rel_file_str_list.append(partition_int_to_be_read_rel_file_str_list_dict[partition_int][file_counter_int])
+                if partition_int in partition_int_to_be_consume_rel_file_str_list_dict:
+                    if len(partition_int_to_be_consume_rel_file_str_list_dict[partition_int]) > file_counter_int:
+                        rel_file_str_list.append(partition_int_to_be_consume_rel_file_str_list_dict[partition_int][file_counter_int])
         #
 
         message_counter_int = 0
         acc = initial_acc
         for rel_file_str in rel_file_str_list:
-            message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_file_str), message_separator_bytes)
+            message_bytes_list = self.consume_messages_from_file(os.path.join(abs_topic_dir_str, rel_file_str), message_separator_bytes)
             for message_bytes in message_bytes_list:
                 (acc, message_counter_int) = acc_bytes_to_acc(acc, message_bytes, message_counter_int)
                 #
@@ -163,7 +163,7 @@ class FSReader(StorageReader):
         #
         message_separator_bytes = self.storage_obj.admin.get_message_separator(self.topic_str)
         #
-        message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_partition_file_str), message_separator_bytes)
+        message_bytes_list = self.consume_messages_from_file(os.path.join(abs_topic_dir_str, rel_partition_file_str), message_separator_bytes)
         if len(message_bytes_list) > 0:
             first_message_bytes = message_bytes_list[index_int]
             serialized_message_dict = ast.literal_eval(first_message_bytes.decode("utf-8"))
@@ -175,8 +175,8 @@ class FSReader(StorageReader):
 
     #
 
-    def read_messages_from_file(self, abs_path_file_str, message_separator_bytes):
-        messages_bytes = self.read_bytes(abs_path_file_str)
+    def consume_messages_from_file(self, abs_path_file_str, message_separator_bytes):
+        messages_bytes = self.consume_bytes(abs_path_file_str)
         #
         message_bytes_list = messages_bytes.split(message_separator_bytes)[:-1]
         #

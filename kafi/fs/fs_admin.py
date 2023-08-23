@@ -60,7 +60,7 @@ class FSAdmin(StorageAdmin):
         topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
         abs_path_file_str = os.path.join(topic_abs_dir_str, "metadata.json")
         #
-        self.write_str(abs_path_file_str, metadata_str)
+        self.produce_str(abs_path_file_str, metadata_str)
     
     #
 
@@ -93,10 +93,10 @@ class FSAdmin(StorageAdmin):
                 first_partition_rel_file_str = partition_rel_file_str_list[0]
                 last_partition_rel_file_str = partition_rel_file_str_list[-1]
                 #
-                fs_reader = self.storage_obj.openr(topic_str)
-                low_offset_int = fs_reader.get_offset_in_partition_file(first_partition_rel_file_str, 0)
-                high_offset_int = fs_reader.get_offset_in_partition_file(last_partition_rel_file_str, -1) + 1
-                fs_reader.close()
+                fs_consumer = self.storage_obj.openr(topic_str)
+                low_offset_int = fs_consumer.get_offset_in_partition_file(first_partition_rel_file_str, 0)
+                high_offset_int = fs_consumer.get_offset_in_partition_file(last_partition_rel_file_str, -1) + 1
+                fs_consumer.close()
             #
             return (low_offset_int, high_offset_int)
         #
@@ -161,22 +161,22 @@ class FSAdmin(StorageAdmin):
 
     # Metadata
 
-    def read_metadata_dict_from_file(self, abs_path_file_str):
-        metadata_str = self.read_str(abs_path_file_str)
+    def consume_metadata_dict_from_file(self, abs_path_file_str):
+        metadata_str = self.consume_str(abs_path_file_str)
         metadata_dict = json.loads(metadata_str)
         #
         return metadata_dict
 
-    def write_metadata_dict_to_file(self, abs_path_file_str, metadata_dict):
+    def produce_metadata_dict_to_file(self, abs_path_file_str, metadata_dict):
         metadata_str = json.dumps(metadata_dict)
         #
-        self.write_str(abs_path_file_str, metadata_str)
+        self.produce_str(abs_path_file_str, metadata_str)
 
     #
 
     def get_metadata(self, topic_str):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
-        metadata_dict = self.read_metadata_dict_from_file(os.path.join(topic_dir_str, "metadata.json"))
+        metadata_dict = self.consume_metadata_dict_from_file(os.path.join(topic_dir_str, "metadata.json"))
         #
         return metadata_dict
 
