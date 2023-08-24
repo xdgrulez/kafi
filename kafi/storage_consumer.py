@@ -14,7 +14,14 @@ class StorageConsumer():
         (self.key_type_dict, self.value_type_dict) = self.get_key_value_type_dict_tuple(self.key_type_str, self.value_type_str, self.topic_str_list)
         #
         self.group_str = self.get_group_str(**kwargs)
-    
+        #
+        self.consumer_config_dict = {}
+        self.consumer_config_dict["auto.offset.reset"] = storage_obj.auto_offset_reset()
+        self.consumer_config_dict["auto.commit.enable"] = storage_obj.enable_auto_commit()
+        if "config" in kwargs:
+            for key_str, value in kwargs["config"].items():
+                self.consumer_config_dict[key_str] = value
+  
     #
 
     def get_topic_str_offsets_dict_dict(self, topic_str_list, **kwargs):

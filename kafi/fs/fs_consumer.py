@@ -14,22 +14,17 @@ OFFSET_INVALID = -1001
 class FSConsumer(StorageConsumer):
     def __init__(self, fs_obj, *topics, **kwargs):
         super().__init__(fs_obj, *topics, **kwargs)
-    
+        #
+        self.topic_str_group_str_partition_int_offset_int_dict_dict_dict = {topic_str: {self.group_str: {partition_int: OFFSET_INVALID for partition_int in range(self.storage_obj.admin.get_partitions(topic_str))}} for topic_str in self.topic_str_list}
+        self.commit()
+
     #
     
     def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         n_int = n
         #
-        config_dict = kwargs["config"] if "config" in kwargs else None
-        if config_dict is not None and "auto.offset.reset" in config_dict:
-            auto_offset_reset_str = config_dict["auto.offset.reset"]
-        else:
-            auto_offset_reset_str = self.storage_obj.auto_offset_reset()
-        #
-        if config_dict is not None and "enable.auto.commit" in config_dict:
-            enable_auto_commit_bool = config_dict["enable.auto.commit"]
-        else:
-            enable_auto_commit_bool = self.storage_obj.enable_auto_commit()
+        auto_offset_reset_str = self.consumer_config_dict["auto.offset.reset"]
+        enable_auto_commit_bool = ast.literal_eval(self.consumer_config_dict["enable.auto.commit"])
         #
         message_counter_int = 0
         acc = initial_acc
@@ -39,9 +34,6 @@ class FSConsumer(StorageConsumer):
             partitions_int = self.storage_obj.admin.get_partitions(topic_str)
             #
             abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(topic_str)
-            #
-            group_str_partition_int_offset_int_dict_dict = {self.group_str: {partition_int: OFFSET_INVALID for partition_int in range(partitions_int)}}
-            self.storage_obj.admin.set_groups(topic_str, group_str_partition_int_offset_int_dict_dict)
             #
             if partition_int_offset_int_dict is None:
                 group_str_partition_int_offset_int_dict_dict = self.storage_obj.admin.get_groups(topic_str)
@@ -72,10 +64,9 @@ class FSConsumer(StorageConsumer):
         def acc_bytes_to_acc(acc, message_bytes, message_counter_int):
             serialized_message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
             #
+            self.topic_str_group_str_partition_int_offset_int_dict_dict_dict[topic_str][self.group_str] = {serialized_message_dict["partition"]: serialized_message_dict["offset"]}
             if enable_auto_commit_bool:
-                topic_str_group_str_partition_int_offset_int_dict_dict_dict = {topic_str: {self.group_str: {}}}
-                topic_str_group_str_partition_int_offset_int_dict_dict_dict[topic_str][self.group_str] = {serialized_message_dict["partition"]: serialized_message_dict["offset"]}
-                self.commit(topic_str_group_str_partition_int_offset_int_dict_dict_dict)
+                self.commit()
             #
             if serialized_message_dict["offset"] >= partition_int_offset_int_dict[partition_int]:
                 deserialized_message_dict = deserialize(serialized_message_dict, self.key_type_str, self.value_type_str)
@@ -197,25 +188,22 @@ class FSConsumer(StorageConsumer):
         if self.group_str not in group_str_topic_str_partition_int_offset_int_dict_dict_dict:
             topic_str_partition_int_offset_int_dict_dict = {topic_str: {} for topic_str in self.topic_str_list}
         else:
-            topic_str_partition_int_offset_int_dict_dict = {topic_str: partition_int_offset_int_dict for topic_str, partition_int_offset_int_dict in group_str_topic_str_partition_int_offset_int_dict_dict_dict[self.group_str] if topic_str in self.topic_str_list}
+            topic_str_partition_int_offset_int_dict_dict = {topic_str: partition_int_offset_int_dict for topic_str, partition_int_offset_int_dict in group_str_topic_str_partition_int_offset_int_dict_dict_dict[self.group_str].items() if topic_str in self.topic_str_list}
         #
         return topic_str_partition_int_offset_int_dict_dict
 
     def commit(self, offsets=None):
         if offsets is None:
-            return None
+            self.storage_obj.admin.set_groups(topic_str, self.topic_str_group_str_partition_int_offset_int_dict_dict_dict)
+            #
+            return self.topic_str_group_str_partition_int_offset_int_dict_dict_dict
         else:
-            topic_str_group_str_partition_int_offset_int_dict_dict_dict = offsets
+            self.topic_str_group_str_partition_int_offset_int_dict_dict_dict = offsets
             #
-            for topic_str, group_str_partition_int_offset_int_dict_dict in topic_str_group_str_partition_int_offset_int_dict_dict_dict.items():
-                group_str_partition_int_offset_int_dict_dict = self.storage_obj.admin.get_groups(topic_str)
-                #
-                for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items():
-                    self.storage_obj.admin.set_groups(topic_str, group_str, partition_int_offset_int_dict)
-                #
-                    topic_str_group_str_partition_int_offset_int_dict_dict_dict[topic_str][group_str] = partition_int_offset_int_dict
+            for topic_str, group_str_partition_int_offset_int_dict_dict in self.topic_str_group_str_partition_int_offset_int_dict_dict_dict.items():
+                self.storage_obj.admin.set_groups(topic_str, group_str_partition_int_offset_int_dict_dict)
             #
-            return topic_str_group_str_partition_int_offset_int_dict_dict_dict
+            return self.topic_str_group_str_partition_int_offset_int_dict_dict_dict
 
     #
 

@@ -32,14 +32,8 @@ class ClusterConsumer(KafkaConsumer):
         #
         # Consumer Config
         #
-        self.consumer_config_dict = self.storage_obj.kafka_config_dict.copy()
         self.consumer_config_dict["group.id"] = self.group_str
-        self.consumer_config_dict["auto.offset.reset"] = self.storage_obj.auto_offset_reset()
-        self.consumer_config_dict["enable.auto.commit"] = self.storage_obj.enable_auto_commit()
         self.consumer_config_dict["session.timeout.ms"] = self.storage_obj.session_timeout_ms()
-        if "config" in kwargs:
-            for key_str, value in kwargs["config"].items():
-                self.consumer_config_dict[key_str] = value
         #
         self.consumer = Consumer(self.consumer_config_dict)
         #

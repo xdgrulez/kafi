@@ -4,7 +4,7 @@ import json
 import os
 
 from kafi.storage_admin import StorageAdmin
-from kafi.helpers import get_millis
+from kafi.helpers import get_millis, json_loads_to_python_dict
 
 class FSAdmin(StorageAdmin):
     def __init__(self, fs_obj, **kwargs):
@@ -215,11 +215,13 @@ class FSAdmin(StorageAdmin):
         #
         group_str_topic_str_partition_int_offset_int_dict_dict_dict = {}
         for topic_str in topic_str_list:
-            group_str_partition_int_offset_int_dict_dict = self.get_groups(topic_str)
+            group_str_partition_int_offset_int_dict_dict1 = self.get_groups(topic_str)
             #
-            group_str_partition_int_offset_int_dict_dict = {group_str: partition_int_offset_int_dict for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items() if any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)}
+            group_str_partition_int_offset_int_dict_dict = {group_str: partition_int_offset_int_dict for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict1.items() if any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)}
             #
             for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items():
+                if group_str not in group_str_topic_str_partition_int_offset_int_dict_dict_dict:
+                    group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str] = {topic_str: {}}
                 group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str][topic_str] = partition_int_offset_int_dict
         #
         return group_str_topic_str_partition_int_offset_int_dict_dict_dict
@@ -243,7 +245,8 @@ class FSAdmin(StorageAdmin):
         data_str = self.read_str(abs_path_file_str)
         #
         if data_str is not None:
-            data_dict = json.loads(data_str)
+            json_loads_data_dict = json.loads(data_str)
+            data_dict = json_loads_to_python_dict(json_loads_data_dict)
         else:
             data_dict = {}
         #
@@ -293,7 +296,7 @@ class FSAdmin(StorageAdmin):
     def set_groups(self, topic_str, set_group_str_partition_int_offset_int_dict_dict):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
         #
-        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.get_groups(topic_str)
+        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.read_dict_from_json_file(os.path.join(topic_dir_str, "groups.json"))
         #
         for group_str, partition_int_offset_int_dict in set_group_str_partition_int_offset_int_dict_dict.items():
             for partition_int, offset_int in partition_int_offset_int_dict.items():

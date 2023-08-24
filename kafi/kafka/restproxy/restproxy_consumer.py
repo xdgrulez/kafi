@@ -12,16 +12,10 @@ class RestProxyConsumer(KafkaConsumer):
         #
         # Consumer Config
         #
-        self.consumer_config_dict = {}
-        self.consumer_config_dict["auto.offset.reset"] = restproxy_obj.auto_offset_reset()
-        self.consumer_config_dict["auto.commit.enable"] = restproxy_obj.enable_auto_commit()
         self.consumer_config_dict["fetch.min.bytes"] = restproxy_obj.fetch_min_bytes()
         self.consumer_config_dict["consumer.request.timeout.ms"] = restproxy_obj.consumer_request_timeout_ms()
-        if "config" in kwargs:
-            for key_str, value in kwargs["config"].items():
-                if key_str == "enable.auto.commit":
-                    key_str = "auto.commit.enable"
-                self.consumer_config_dict[key_str] = value
+        if "enable.auto.commit" in self.consumer_config_dict:
+            self.consumer_config_dict["auto.commit.enable"] = self.consumer_config_dict["enable.auto.commit"]
         #
         # Instance ID
         #

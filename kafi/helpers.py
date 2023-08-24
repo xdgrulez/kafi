@@ -207,3 +207,21 @@ def split_list_into_sublists(input_list, sublist_size_int):
     output_list_list = [input_list[i:i + sublist_size_int] for i in range(0, len(input_list), sublist_size_int)]
     #
     return output_list_list
+
+
+def json_loads_to_python_dict(json_loads):
+    if isinstance(json_loads, dict):
+        python_dict = {}
+        for json_loads_key_str, json_loads_value in json_loads.items():
+            if json_loads_key_str.isdigit():
+                key = int(json_loads_key_str)
+            else:
+                key = json_loads_key_str
+            #
+            python_dict[key] = json_loads_to_python_dict(json_loads_value)
+        #
+        return python_dict
+    elif isinstance(json_loads, list):
+        return [json_loads_to_python_dict(json_loads_element) for json_loads_element in json_loads]
+    else:
+        return json_loads
