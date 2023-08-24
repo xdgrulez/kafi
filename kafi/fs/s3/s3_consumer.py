@@ -13,7 +13,7 @@ class S3Consumer(FSConsumer):
     #
 
     def close(self):
-        return self.topic_str
+        return self.topic_str_list
 
     #
 

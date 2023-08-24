@@ -20,7 +20,7 @@ class FSProducer(StorageProducer):
 
     #
 
-    def write(self, value, **kwargs):
+    def produce(self, value, **kwargs):
         def serialize(payload, key_bool):
             type_str = self.key_type_str if key_bool else self.value_type_str
             #

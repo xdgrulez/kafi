@@ -15,7 +15,7 @@ class AzureBlobConsumer(FSConsumer):
     #
 
     def close(self):
-        return self.topic_str
+        return self.topic_str_list
 
     #
 
@@ -23,6 +23,6 @@ class AzureBlobConsumer(FSConsumer):
         blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
         #
         storageStreamDownloader = blobClient.download_blob()
-        blob_bytes = storageStreamDownloader.read()
+        blob_bytes = storageStreamDownloader.consume()
         #
         return blob_bytes

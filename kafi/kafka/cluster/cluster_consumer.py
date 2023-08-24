@@ -197,7 +197,7 @@ class ClusterConsumer(KafkaConsumer):
         file_str = f"schema_{schema_id_int}.proto"
         file_path_str = f"{path_str}/{file_str}"
         with open(file_path_str, "w") as textIOWrapper:
-            textIOWrapper.write(schema_str)
+            textIOWrapper.produce(schema_str)
         #
         import grpc_tools.protoc
         grpc_tools.protoc.main(["protoc", f"-I{path_str}", f"--python_out={path_str}", f"{file_str}"])

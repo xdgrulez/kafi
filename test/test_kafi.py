@@ -410,7 +410,7 @@ def test_cp(test_obj, storage1, storage2):
         snack_dict3 = snack_dict.copy()
         snack_dict3["name"] += "3"
         snack_dict_list += [snack_dict1, snack_dict2, snack_dict3]
-    w.write(snack_dict_list, key=[{"key": "1"}, {"key": "1"}, {"key": "1"}, {"key": "2"}, {"key": "2"}, {"key": "2"}, {"key": "3"}, {"key": "3"}, {"key": "3"}], headers=test_obj.headers_str_bytes_tuple_list)
+    w.produce(snack_dict_list, key=[{"key": "1"}, {"key": "1"}, {"key": "1"}, {"key": "2"}, {"key": "2"}, {"key": "2"}, {"key": "3"}, {"key": "3"}, {"key": "3"}], headers=test_obj.headers_str_bytes_tuple_list)
     w.close()
     # Carbon copy topic1 on storage1 to topic2 on storage2 as bytes.
     topic_str2 = test_obj.create_test_topic_name(storage2)
@@ -522,12 +522,12 @@ def test_diff(test_obj, storage1, storage2):
     topic_str1 = test_obj.create_test_topic_name(storage1)
     storage1.create(topic_str1)
     w1 = storage1.producer(topic_str1, value_type="str")
-    w1.write(test_obj.snack_str_list)
+    w1.produce(test_obj.snack_str_list)
     w1.close()
     #
     topic_str2 = test_obj.create_test_topic_name(storage2)
     w2 = storage2.producer(topic_str2, value_type="str")
-    w2.write(test_obj.snack_ish_dict_list)
+    w2.produce(test_obj.snack_ish_dict_list)
     w2.close()
     #
     group_str1 = test_obj.create_test_group_name(storage1)

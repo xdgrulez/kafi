@@ -87,9 +87,9 @@ class Test(unittest.TestCase):
         self.assertIn(topic_str, new_topic_str_list)
         #
         producer = s.producer(topic_str)
-        producer.write("message 1")
-        producer.write("message 2")
-        producer.write("message 3")
+        producer.produce("message 1")
+        producer.produce("message 2")
+        producer.produce("message 3")
         producer.close()
         #
         topic_str_size_int_dict_l = s.l(pattern=topic_str)
@@ -120,13 +120,13 @@ class Test(unittest.TestCase):
         s.create(topic_str)
         # Upon write, the type "bytes" triggers conversion into bytes, "str" into a string.
         producer = s.producer(topic_str, key_type="bytes", value_type="str")
-        producer.write(self.snack_str_list, key=self.snack_str_list, headers=self.headers_str_bytes_tuple_list)
+        producer.produce(self.snack_str_list, key=self.snack_str_list, headers=self.headers_str_bytes_tuple_list)
         producer.close()
         self.assertEqual(s.l(topic_str)[topic_str], 3)
         #
         # Upon read, the type "str" triggers conversion into a string, "bytes" into bytes.
         consumer = s.consumer(topic_str, key_type="str", value_type="bytes")
-        message_dict_list = consumer.read(n=3)
+        message_dict_list = consumer.consume(n=3)
         key_str_list = [message_dict["key"] for message_dict in message_dict_list]
         value_bytes_list = [message_dict["value"] for message_dict in message_dict_list]
         headers_list = [message_dict["headers"] for message_dict in message_dict_list]
@@ -135,20 +135,20 @@ class Test(unittest.TestCase):
         self.assertEqual(headers_list[0], self.headers_str_bytes_tuple_list)
         consumer.close()
     
-    def test_produce_consume_str_json(self):
+    def test_produce_read_str_json(self):
         s = self.get_s3()
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         # Upon write, the type "str" triggers conversion into a string, "json" into a dictionary.
         producer = s.producer(topic_str, key_type="str", value_type="json")
-        producer.write(self.snack_dict_list, key=self.snack_str_list, headers=self.headers_str_bytes_dict)
+        producer.produce(self.snack_dict_list, key=self.snack_str_list, headers=self.headers_str_bytes_dict)
         producer.close()
         self.assertEqual(s.ls(topic_str, partitions=True)[topic_str][0], 3)
         #
         # Upon read, the type "json" triggers the conversion into a dictionary, and "str" into a string.
         consumer = s.consumer(topic_str, key_type="json", value_type="str")
-        message_dict_list = consumer.read(n=3)
+        message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_str_list = [message_dict["value"] for message_dict in message_dict_list]
         headers_list = [message_dict["headers"] for message_dict in message_dict_list]
@@ -173,14 +173,14 @@ class Test(unittest.TestCase):
 
     # Shell
 
-    # Shell.cat -> Functional.map -> Functional.flatmap -> Functional.foldl -> LocalConsumer.openr/FSConsumer.foldl/LocalConsumer.close -> LocalConsumer.consume
+    # Shell.cat -> Functional.map -> Functional.flatmap -> Functional.foldl -> LocalConsumer.consumer/FSConsumer.foldl/LocalConsumer.close -> LocalConsumer.consume
     def test_cat(self):
         s = self.get_s3()
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str)
-        producer.write(self.snack_str_list)
+        producer.produce(self.snack_str_list)
         producer.close()
         #
         (message_dict_list1, n_int1) = s.cat(topic_str)
@@ -201,7 +201,7 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="json")
-        producer.write(self.snack_str_list)
+        producer.produce(self.snack_str_list)
         producer.close()
         #
         (message_dict_list1, n_int1) = s.head(topic_str, value_type="str", n=3)
@@ -215,14 +215,14 @@ class Test(unittest.TestCase):
         self.assertEqual(1, n_int2)
         self.assertEqual(message_dict_list2[0]["value"], self.snack_dict_list[2])
 
-    # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> LocalConsumer.openr/FSConsumer.foldl/LocalConsumer.close -> LocalConsumer.consume
+    # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> LocalConsumer.consumer/FSConsumer.foldl/LocalConsumer.close -> LocalConsumer.consume
     def test_tail(self):
         s = self.get_s3()
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="bytes")
-        producer.write(self.snack_dict_list)
+        producer.produce(self.snack_dict_list)
         producer.close()
         #
         (message_dict_list1, n_int1) = s.tail(topic_str, type="json", n=3)
@@ -236,14 +236,14 @@ class Test(unittest.TestCase):
         self.assertEqual(1, n_int2)
         self.assertEqual(message_dict_list2[0]["value"], self.snack_dict_list[2])
 
-    # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> LocalConsumer.openw/Functional.foldl/LocalConsumer.close -> LocalConsumer.openr/FSConsumer.foldl/LocalConsumer.close -> LocalConsumer.consume
+    # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> LocalConsumer.producer/Functional.foldl/LocalConsumer.close -> LocalConsumer.consumer/FSConsumer.foldl/LocalConsumer.close -> LocalConsumer.consume
     def test_cp(self):
         s = self.get_s3()
         #
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         producer = s.producer(topic_str1, value_type="json")
-        producer.write(self.snack_bytes_list)
+        producer.produce(self.snack_bytes_list)
         producer.close()
         #
         topic_str2 = self.create_test_topic_name()
@@ -268,7 +268,7 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="bytes")
-        producer.write(self.snack_dict_list)
+        producer.produce(self.snack_dict_list)
         producer.close()
         #
         (num_messages_int, acc_num_words_int, acc_num_bytes_int) = s.wc(topic_str, value_type="str", n=2)
@@ -276,19 +276,19 @@ class Test(unittest.TestCase):
         self.assertEqual(12, acc_num_words_int)
         self.assertEqual(110, acc_num_bytes_int)
 
-    # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> LocalConsumer.openr/read/close
+    # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> LocalConsumer.consumer/read/close
     def test_diff(self):
         s = self.get_s3()
         #
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         w1 = s.producer(topic_str1, value_type="str")
-        w1.write(self.snack_str_list)
+        w1.produce(self.snack_str_list)
         w1.close()
         #
         topic_str2 = self.create_test_topic_name()
         w2 = s.producer(topic_str2, value_type="str")
-        w2.write(self.snack_ish_dict_list)
+        w2.produce(self.snack_ish_dict_list)
         w2.close()
         #
         (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = s.diff(topic_str1, s, topic_str2, value_type1="json", value_type2="json", n=3)
@@ -303,7 +303,7 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="json")
-        producer.write(self.snack_str_list)
+        producer.produce(self.snack_str_list)
         producer.close()
         #
         (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = s.grep(topic_str, ".*brown.*", value_type="str", n=3)
@@ -319,7 +319,7 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="json")
-        producer.write(self.snack_str_list)
+        producer.produce(self.snack_str_list)
         producer.close()
         #
         colour_str_list = []
@@ -334,7 +334,7 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="bytes")
-        producer.write(self.snack_str_list)
+        producer.produce(self.snack_str_list)
         producer.close()
         #
         (message_dict_list, message_counter_int) = s.filter(topic_str, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, value_type="json")
@@ -347,7 +347,7 @@ class Test(unittest.TestCase):
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         producer = s.producer(topic_str1, value_type="json")
-        producer.write(self.snack_str_list)
+        producer.produce(self.snack_str_list)
         producer.close()
         #
         topic_str2 = self.create_test_topic_name()

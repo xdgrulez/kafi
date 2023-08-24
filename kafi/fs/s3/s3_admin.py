@@ -39,7 +39,7 @@ class S3Admin(FSAdmin):
 
     # Metadata
     
-    def consume_str(self, abs_path_file_str):
+    def read_str(self, abs_path_file_str):
         response = self.minio.get_object(self.storage_obj.bucket_name(), abs_path_file_str)
         object_bytes = response.data
         #
@@ -47,7 +47,7 @@ class S3Admin(FSAdmin):
         #
         return object_str
 
-    def produce_str(self, abs_path_file_str, data_str):
+    def write_str(self, abs_path_file_str, data_str):
         data_bytes = data_str.encode("utf-8")
         #
         self.minio.put_object(self.storage_obj.bucket_name(), abs_path_file_str, io.BytesIO(data_bytes), length=len(data_bytes))

@@ -60,7 +60,8 @@ class FSAdmin(StorageAdmin):
         #
         metadata_dict = {"topic": topic_str, "partitions": partitions_int, "message_separator": message_separator_str}
         self.set_metadata(topic_str, metadata_dict)
-        self.produce_str(abs_path_file_str, metadata_str)
+        #
+        self.set_groups(topic_str, {})
     
     #
 
@@ -93,9 +94,9 @@ class FSAdmin(StorageAdmin):
                 first_partition_rel_file_str = partition_rel_file_str_list[0]
                 last_partition_rel_file_str = partition_rel_file_str_list[-1]
                 #
-                fs_consumer = self.storage_obj.openr(topic_str)
-                low_offset_int = fs_consumer.get_offset_in_partition_file(first_partition_rel_file_str, 0)
-                high_offset_int = fs_consumer.get_offset_in_partition_file(last_partition_rel_file_str, -1) + 1
+                fs_consumer = self.storage_obj.consumer(topic_str)
+                low_offset_int = fs_consumer.get_offset_in_partition_file(topic_str, first_partition_rel_file_str, 0)
+                high_offset_int = fs_consumer.get_offset_in_partition_file(topic_str, last_partition_rel_file_str, -1) + 1
                 fs_consumer.close()
             #
             return (low_offset_int, high_offset_int)
@@ -161,8 +162,8 @@ class FSAdmin(StorageAdmin):
 
     #
 
-    def consume_metadata_dict_from_file(self, abs_path_file_str):
-        metadata_str = self.consume_str(abs_path_file_str)
+    def delete_groups(self, pattern, state_pattern="*"):
+        pattern_str_list = [pattern] if isinstance(pattern, str) else pattern
         state_pattern_str_list = [state_pattern] if isinstance(state_pattern, str) else state_pattern
         #
         topic_str_list = self.list_topics()
@@ -177,10 +178,10 @@ class FSAdmin(StorageAdmin):
         #
         return group_str_list
 
-    def produce_metadata_dict_to_file(self, abs_path_file_str, metadata_dict):
+    def describe_groups(self, pattern="*", state_pattern="*"):
         group_str_state_str_dict = self.groups(self, pattern, state_pattern, state=True)
         #
-        self.produce_str(abs_path_file_str, metadata_str)
+        group_str_group_description_dict_dict = {group_str: {"group_id": group_str, "is_simple_consumer_group": False, "members": [], "partition_assignor": "", "state": state_str, "coordinator": {"id": 1, "id_string": 1, "host": "localhost", "port": 9092, "rack": None}} for group_str, state_str in group_str_state_str_dict}
         #
         return group_str_group_description_dict_dict
 
@@ -239,7 +240,11 @@ class FSAdmin(StorageAdmin):
 
     def read_dict_from_json_file(self, abs_path_file_str):
         data_str = self.read_str(abs_path_file_str)
-        data_dict = json.loads(data_str)
+        #
+        if data_str is not None:
+            data_dict = json.loads(data_str)
+        else:
+            data_dict = {}
         #
         return data_dict
 
@@ -252,7 +257,7 @@ class FSAdmin(StorageAdmin):
 
     def get_metadata(self, topic_str):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
-        metadata_dict = self.consume_metadata_dict_from_file(os.path.join(topic_dir_str, "metadata.json"))
+        metadata_dict = self.read_dict_from_json_file(os.path.join(topic_dir_str, "metadata.json"))
         #
         return metadata_dict
 
@@ -287,7 +292,7 @@ class FSAdmin(StorageAdmin):
     def set_groups(self, topic_str, group_str_partition_int_offset_int_dict_dict):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
         #
-        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.storage_obj.admin.get_groups(topic_str)
+        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.get_groups(topic_str)
         #
         for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items():
             for partition_int, offset_int in partition_int_offset_int_dict:

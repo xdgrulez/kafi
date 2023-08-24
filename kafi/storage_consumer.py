@@ -1,3 +1,5 @@
+from kafi.helpers import get_millis
+
 class StorageConsumer():
 
     def __init__(self, storage_obj, *topics, **kwargs):

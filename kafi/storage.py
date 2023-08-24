@@ -49,10 +49,10 @@ class Storage(Shell):
         else:
             self.consumer_group_prefix(str(self.kafi_config_dict["consumer.group.prefix"]))
         #
-        if "auto.commit.enable" not in self.kafi_config_dict:
-            self.auto_commit_enable(True)
+        if "enable.auto.commit" not in self.kafi_config_dict:
+            self.enable_auto_commit(True)
         else:
-            self.auto_commit_enable(bool(self.kafi_config_dict["auto.commit.enable"]))
+            self.enable_auto_commit(bool(self.kafi_config_dict["enable.auto.commit"]))
 
     #
 
@@ -74,8 +74,8 @@ class Storage(Shell):
     def consumer_group_prefix(self, new_value=None): # str
         return self.get_set_config("consumer.group.prefix", new_value)
 
-    def auto_commit_enable(self, new_value=None): # bool
-        return self.get_set_config("auto.commit.enable", new_value)
+    def enable_auto_commit(self, new_value=None): # bool
+        return self.get_set_config("enable.auto.commit", new_value)
 
     #
 

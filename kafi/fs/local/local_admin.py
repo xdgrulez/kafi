@@ -32,14 +32,17 @@ class LocalAdmin(FSAdmin):
 
     # Metadata
     
-    def consume_str(self, abs_path_file_str):
-        with open(abs_path_file_str, "r") as bufferedConsumer:
-            str = bufferedConsumer.read()
+    def read_str(self, abs_path_file_str):
+        str = None
+        #
+        if os.path.exists(abs_path_file_str):
+            with open(abs_path_file_str, "r") as bufferedReader:
+                str = bufferedReader.read()
         #
         return str
 
-    def produce_str(self, abs_path_file_str, data_str):
+    def write_str(self, abs_path_file_str, data_str):
         os.makedirs(os.path.dirname(abs_path_file_str), exist_ok=True)
         #
-        with open(abs_path_file_str, "w") as bufferedProducer:
-            bufferedProducer.write(data_str)
+        with open(abs_path_file_str, "w") as bufferedWriter:
+            bufferedWriter.write(data_str)
