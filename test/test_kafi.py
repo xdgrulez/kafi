@@ -396,10 +396,10 @@ def test_cp(test_obj, storage1, storage2):
         type_str = ["avro", "protobuf", "jsonschema"][random_int]
         key_schema_str = test_obj.key_schema_str_list[random_int]
         value_schema_str = test_obj.value_schema_str_list[random_int]
-        w = storage1.openw(topic_str1, key_type=type_str, value_type=type_str, key_schema=key_schema_str, value_schema=value_schema_str)
+        w = storage1.producer(topic_str1, key_type=type_str, value_type=type_str, key_schema=key_schema_str, value_schema=value_schema_str)
     else:
         type_str = "json"
-        w = storage1.openw(topic_str1, key_type=type_str, value_type=type_str)
+        w = storage1.producer(topic_str1, key_type=type_str, value_type=type_str)
     #
     snack_dict_list = []
     for snack_dict in test_obj.snack_dict_list:
@@ -521,12 +521,12 @@ def test_cp(test_obj, storage1, storage2):
 def test_diff(test_obj, storage1, storage2):
     topic_str1 = test_obj.create_test_topic_name(storage1)
     storage1.create(topic_str1)
-    w1 = storage1.openw(topic_str1, value_type="str")
+    w1 = storage1.producer(topic_str1, value_type="str")
     w1.write(test_obj.snack_str_list)
     w1.close()
     #
     topic_str2 = test_obj.create_test_topic_name(storage2)
-    w2 = storage2.openw(topic_str2, value_type="str")
+    w2 = storage2.producer(topic_str2, value_type="str")
     w2.write(test_obj.snack_ish_dict_list)
     w2.close()
     #

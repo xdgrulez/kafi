@@ -104,12 +104,12 @@ class FS(Storage):
         return self.admin.partitions(pattern, verbose)
 
     # Open
-    def openr(self, topic, **kwargs):
+    def consumer(self, topic, **kwargs):
         consumer = self.get_consumer(topic, **kwargs)
         #
         return consumer
     
-    def openw(self, topic, **kwargs):
+    def producer(self, topic, **kwargs):
         producer = self.get_producer(topic, **kwargs)
         #
         return producer

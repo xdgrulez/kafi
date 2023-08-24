@@ -1,4 +1,5 @@
 class StorageConsumer():
+
     def __init__(self, storage_obj, *topics, **kwargs):
         self.storage_obj = storage_obj
         #
@@ -9,6 +10,8 @@ class StorageConsumer():
         (self.key_type_str, self.value_type_str) = self.storage_obj.get_key_value_type_tuple(**kwargs)
         #
         (self.key_type_dict, self.value_type_dict) = self.get_key_value_type_dict_tuple(self.key_type_str, self.value_type_str, self.topic_str_list)
+        #
+        self.group_str = self.get_group_str(**kwargs)
     
     #
 
@@ -42,3 +45,12 @@ class StorageConsumer():
             value_type_dict = {topic_str: value_type for topic_str in topic_str_list}
         #
         return (key_type_dict, value_type_dict)
+
+    #
+
+    def get_group_str(self, **kwargs):
+        if "group" in kwargs:
+            return kwargs["group"]
+        else:
+            prefix_str = self.storage_obj.consumer_group_prefix()
+            return prefix_str + str(get_millis())

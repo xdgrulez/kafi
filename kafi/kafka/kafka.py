@@ -76,18 +76,6 @@ class Kafka(Storage):
         #
         # both cluster and restproxy kafi section
         #
-        if "consumer.group.prefix" not in self.kafi_config_dict:
-            self.consumer_group_prefix("")
-        else:
-            self.consumer_group_prefix(str(self.kafi_config_dict["consumer.group.prefix"]))
-        #
-        # restproxy config kafi section
-        #
-        if "auto.commit.enable" not in self.kafi_config_dict:
-            self.auto_commit_enable(True)
-        else:
-            self.auto_commit_enable(bool(self.kafi_config_dict["auto.commit.enable"]))
-        #
         if "fetch.min.bytes" not in self.kafi_config_dict:
             self.fetch_min_bytes(-1)
         else:
@@ -141,14 +129,6 @@ class Kafka(Storage):
         return self.get_set_config("block.interval", new_value)
 
     #
-
-    def consumer_group_prefix(self, new_value=None): # str
-        return self.get_set_config("consumer.group.prefix", new_value)
-
-    #
-
-    def auto_commit_enable(self, new_value=None): # bool
-        return self.get_set_config("auto.commit.enable", new_value)
 
     def fetch_min_bytes(self, new_value=None): # int
         return self.get_set_config("fetch.min.bytes", new_value)
@@ -259,12 +239,12 @@ class Kafka(Storage):
         return self.admin.delete_acl(restype, name, resource_pattern_type, principal, host, operation, permission_type)
 
     # Open
-    def openr(self, topics, **kwargs):
+    def consumer(self, topics, **kwargs):
         consumer = self.get_consumer(topics, **kwargs)
         #
         return consumer
         
-    def openw(self, topic, **kwargs):
+    def producer(self, topic, **kwargs):
         producer = self.get_producer(topic, **kwargs)
         #
         return producer

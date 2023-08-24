@@ -11,12 +11,6 @@ ALL_MESSAGES = -1
 class KafkaConsumer(StorageConsumer):
     def __init__(self, kafka_obj, *topics, **kwargs):
         super().__init__(kafka_obj, *topics, **kwargs)
-        #
-        self.topic_str_list = self.topic_str_list
-        #
-        self.topic_str_offsets_dict_dict = self.topic_str_offsets_dict_dict
-        #
-        self.group_str = self.get_group_str(**kwargs)
 
     #
 
@@ -72,12 +66,3 @@ class KafkaConsumer(StorageConsumer):
             return message_dict_list
         #
         return self.foldl(foldl_function, [], n)
-
-    # Helpers
-
-    def get_group_str(self, **kwargs):
-        if "group" in kwargs:
-            return kwargs["group"]
-        else:
-            prefix_str = self.storage_obj.consumer_group_prefix()
-            return prefix_str + str(get_millis())

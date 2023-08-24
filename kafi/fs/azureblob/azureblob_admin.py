@@ -17,7 +17,6 @@ class AzureBlobAdmin(FSAdmin):
     # Topics/Files
 
     def list_dirs(self, abs_path_dir_str):
-        # ["test/topic,test-topic_.../metadata.json, ...]
         blob_str_itemPaged = self.containerClient.list_blob_names(name_starts_with=abs_path_dir_str)
         rel_dir_str_list = [os.path.basename(os.path.dirname(blob_str)) for blob_str in blob_str_itemPaged]
         #

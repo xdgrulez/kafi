@@ -1,12 +1,16 @@
 import base64
+from fnmatch import fnmatch
 import json
 import os
 
 from kafi.storage_admin import StorageAdmin
+from kafi.helpers import get_millis
 
 class FSAdmin(StorageAdmin):
     def __init__(self, fs_obj, **kwargs):
         super().__init__(fs_obj, **kwargs)
+        #
+        self.default_state_str = "empty"
 
     #
 
@@ -55,11 +59,7 @@ class FSAdmin(StorageAdmin):
         message_separator_str = base64.b64encode(message_separator_bytes).decode('utf-8')
         #
         metadata_dict = {"topic": topic_str, "partitions": partitions_int, "message_separator": message_separator_str}
-        metadata_str = json.dumps(metadata_dict)
-        #
-        topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
-        abs_path_file_str = os.path.join(topic_abs_dir_str, "metadata.json")
-        #
+        self.set_metadata(topic_str, metadata_dict)
         self.produce_str(abs_path_file_str, metadata_str)
     
     #
@@ -159,20 +159,96 @@ class FSAdmin(StorageAdmin):
     def is_topic(self, rel_dir_file_str):
         return rel_dir_file_str.startswith("topic,")
 
-    # Metadata
+    #
 
     def consume_metadata_dict_from_file(self, abs_path_file_str):
         metadata_str = self.consume_str(abs_path_file_str)
-        metadata_dict = json.loads(metadata_str)
+        state_pattern_str_list = [state_pattern] if isinstance(state_pattern, str) else state_pattern
         #
-        return metadata_dict
+        topic_str_list = self.list_topics()
+        #
+        group_str_list = []
+        for topic_str in topic_str_list:
+            group_str_partition_int_offset_int_dict_dict = self.get_groups(topic_str)
+            #
+            group_str_partition_int_offset_int_dict_dict = {group_str: partition_int_offset_int_dict for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items() if not (any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list))}
+            #
+            self.set_groups(topic_str, group_str_partition_int_offset_int_dict_dict)
+        #
+        return group_str_list
 
     def produce_metadata_dict_to_file(self, abs_path_file_str, metadata_dict):
-        metadata_str = json.dumps(metadata_dict)
+        group_str_state_str_dict = self.groups(self, pattern, state_pattern, state=True)
         #
         self.produce_str(abs_path_file_str, metadata_str)
+        #
+        return group_str_group_description_dict_dict
 
-    #
+    def groups(self, pattern="*", state_pattern="*", state=False):
+        pattern_str_list = [pattern] if isinstance(pattern, str) else pattern
+        state_pattern_str_list = [state_pattern] if isinstance(state_pattern, str) else state_pattern
+        state_bool = state
+        #
+        topic_str_list = self.list_topics()
+        #
+        group_str_list = []
+        for topic_str in topic_str_list:
+            group_str_partition_int_offset_int_dict_dict = self.get_groups(topic_str)
+            #
+            group_str_list += list(group_str_partition_int_offset_int_dict_dict.keys())
+        #
+        group_str_list = [group_str for group_str in group_str_list if any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)]
+        #
+        if state_bool:
+            group_str_state_str_dict = {group_str: self.default_state_str for group_str in group_str_list}
+            return group_str_state_str_dict
+        else:
+            return group_str_list
+
+    def group_offsets(self, pattern, state_pattern="*"):
+        pattern_str_list = [pattern] if isinstance(pattern, str) else pattern
+        state_pattern_str_list = [state_pattern] if isinstance(state_pattern, str) else state_pattern
+        #
+        topic_str_list = self.list_topics()
+        #
+        group_str_topic_str_partition_int_offset_int_dict_dict_dict = {}
+        for topic_str in topic_str_list:
+            group_str_partition_int_offset_int_dict_dict = self.get_groups(topic_str)
+            #
+            group_str_partition_int_offset_int_dict_dict = {group_str: partition_int_offset_int_dict for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items() if any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)}
+            #
+            for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items():
+                group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str][topic_str] = partition_int_offset_int_dict
+        #
+        return group_str_topic_str_partition_int_offset_int_dict_dict_dict
+
+    def set_group_offsets(self, group_offsets):
+        group_str_topic_str_partition_int_offset_int_dict_dict_dict = group_offsets
+        #
+        topic_str_group_str_partition_int_offset_int_dict_dict_dict = {}
+        for group_str, topic_str_partition_int_offset_int_dict_dict in group_str_topic_str_partition_int_offset_int_dict_dict_dict.items():
+            for topic_str, partition_int_offset_int_dict in topic_str_partition_int_offset_int_dict_dict.items():
+                topic_str_group_str_partition_int_offset_int_dict_dict_dict[topic_str][group_str] = partition_int_offset_int_dict
+        #
+        for topic_str, group_str_partition_int_offset_int_dict_dict in topic_str_group_str_partition_int_offset_int_dict_dict_dict.items():
+            self.set_groups(self, topic_str, group_str_partition_int_offset_int_dict_dict)
+        #
+        return group_str_topic_str_partition_int_offset_int_dict_dict_dict
+
+    # Metadata/Groups
+
+    def read_dict_from_json_file(self, abs_path_file_str):
+        data_str = self.read_str(abs_path_file_str)
+        data_dict = json.loads(data_str)
+        #
+        return data_dict
+
+    def write_dict_to_json_file(self, abs_path_file_str, data_dict):
+        metadata_str = json.dumps(data_dict)
+        #
+        self.write_str(abs_path_file_str, metadata_str)
+
+    # Metadata
 
     def get_metadata(self, topic_str):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
@@ -192,3 +268,31 @@ class FSAdmin(StorageAdmin):
         message_separator_bytes = bytes(base64.b64decode(message_separator_str))
         #
         return message_separator_bytes
+
+    def set_metadata(self, topic_str, metadata_dict):
+        topic_dir_str = self.get_topic_abs_dir_str(topic_str)
+        self.write_dict_to_json_file(os.path.join(topic_dir_str, "metadata.json"), metadata_dict)
+
+    # Groups
+
+    def get_groups(self, topic_str):
+        topic_dir_str = self.get_topic_abs_dir_str(topic_str)
+        #
+        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.read_dict_from_json_file(os.path.join(topic_dir_str, "groups.json"))
+        #
+        group_str_partition_int_offset_int_dict_dict = {group_str: partition_int_offset_int_dict_last_updated_int_dict["offsets"] for group_str, partition_int_offset_int_dict_last_updated_int_dict in group_str_partition_int_offset_int_dict_last_updated_int_dict_dict.items()}
+        #
+        return group_str_partition_int_offset_int_dict_dict
+
+    def set_groups(self, topic_str, group_str_partition_int_offset_int_dict_dict):
+        topic_dir_str = self.get_topic_abs_dir_str(topic_str)
+        #
+        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.storage_obj.admin.get_groups(topic_str)
+        #
+        for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items():
+            for partition_int, offset_int in partition_int_offset_int_dict:
+                group_str_partition_int_offset_int_dict_last_updated_int_dict_dict[group_str]["offsets"][partition_int] = offset_int
+            #
+            group_str_partition_int_offset_int_dict_last_updated_int_dict_dict[group_str]["last_updated"] = get_millis()
+        #
+        self.write_dict_to_json_file(os.path.join(topic_dir_str, "groups.json"), group_str_partition_int_offset_int_dict_last_updated_int_dict_dict)

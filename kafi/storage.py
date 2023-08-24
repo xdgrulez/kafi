@@ -44,7 +44,15 @@ class Storage(Shell):
         else:
             self.auto_offset_reset(str(self.kafi_config_dict["auto.offset.reset"]))
         #
-
+        if "consumer.group.prefix" not in self.kafi_config_dict:
+            self.consumer_group_prefix("")
+        else:
+            self.consumer_group_prefix(str(self.kafi_config_dict["consumer.group.prefix"]))
+        #
+        if "auto.commit.enable" not in self.kafi_config_dict:
+            self.auto_commit_enable(True)
+        else:
+            self.auto_commit_enable(bool(self.kafi_config_dict["auto.commit.enable"]))
 
     #
 
@@ -62,6 +70,12 @@ class Storage(Shell):
 
     def auto_offset_reset(self, new_value=None): # str
         return self.get_set_config("auto.offset.reset", new_value)
+
+    def consumer_group_prefix(self, new_value=None): # str
+        return self.get_set_config("consumer.group.prefix", new_value)
+
+    def auto_commit_enable(self, new_value=None): # bool
+        return self.get_set_config("auto.commit.enable", new_value)
 
     #
 
