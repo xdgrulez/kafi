@@ -128,8 +128,9 @@ class FSAdmin(StorageAdmin):
 
     def find_partition_file_str(self, topic_str, partition_int, to_find_offset_int):
         topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
-        rel_file_str_list = self.list_files(topic_abs_dir_str)
-        rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str.startswith("partition,") and int(rel_file_str.split(",")[1]) == partition_int]
+        rel_file_str_list1 = self.list_files(topic_abs_dir_str)
+        rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list1 if rel_file_str.startswith("partition,") and int(rel_file_str.split(",")[1]) == partition_int]
+        #
         if rel_file_str_list == []:
             return None
         rel_file_str_list.sort()
@@ -289,13 +290,16 @@ class FSAdmin(StorageAdmin):
         #
         return group_str_partition_int_offset_int_dict_dict
 
-    def set_groups(self, topic_str, group_str_partition_int_offset_int_dict_dict):
+    def set_groups(self, topic_str, set_group_str_partition_int_offset_int_dict_dict):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
         #
         group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.get_groups(topic_str)
         #
-        for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items():
-            for partition_int, offset_int in partition_int_offset_int_dict:
+        for group_str, partition_int_offset_int_dict in set_group_str_partition_int_offset_int_dict_dict.items():
+            for partition_int, offset_int in partition_int_offset_int_dict.items():
+                if group_str not in group_str_partition_int_offset_int_dict_last_updated_int_dict_dict:
+                    group_str_partition_int_offset_int_dict_last_updated_int_dict_dict[group_str] = {"offsets": {}}
+                #
                 group_str_partition_int_offset_int_dict_last_updated_int_dict_dict[group_str]["offsets"][partition_int] = offset_int
             #
             group_str_partition_int_offset_int_dict_last_updated_int_dict_dict[group_str]["last_updated"] = get_millis()

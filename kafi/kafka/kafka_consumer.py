@@ -56,13 +56,3 @@ class KafkaConsumer(StorageConsumer):
                     break
         #
         return acc
-
-    #
-
-    def read(self, n=ALL_MESSAGES):
-        def foldl_function(message_dict_list, message_dict):
-            message_dict_list.append(message_dict)
-            #
-            return message_dict_list
-        #
-        return self.foldl(foldl_function, [], n)

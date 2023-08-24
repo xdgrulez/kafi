@@ -7,13 +7,14 @@ from kafi.storage_consumer import StorageConsumer
 # Constants
 
 ALL_MESSAGES = -1
+OFFSET_INVALID = -1001
 
 #
 
 class FSConsumer(StorageConsumer):
     def __init__(self, fs_obj, *topics, **kwargs):
         super().__init__(fs_obj, *topics, **kwargs)
-
+    
     #
     
     def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
@@ -38,6 +39,9 @@ class FSConsumer(StorageConsumer):
             partitions_int = self.storage_obj.admin.get_partitions(topic_str)
             #
             abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(topic_str)
+            #
+            group_str_partition_int_offset_int_dict_dict = {self.group_str: {partition_int: OFFSET_INVALID for partition_int in range(partitions_int)}}
+            self.storage_obj.admin.set_groups(topic_str, group_str_partition_int_offset_int_dict_dict)
             #
             if partition_int_offset_int_dict is None:
                 group_str_partition_int_offset_int_dict_dict = self.storage_obj.admin.get_groups(topic_str)
@@ -148,7 +152,7 @@ class FSConsumer(StorageConsumer):
         #
 
         for rel_file_str in rel_file_str_list:
-            message_bytes_list = self.consume_messages_from_file(os.path.join(abs_topic_dir_str, rel_file_str), message_separator_bytes)
+            message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_file_str), message_separator_bytes)
             for message_bytes in message_bytes_list:
                 (acc, message_counter_int) = acc_bytes_to_acc(acc, message_bytes, message_counter_int)
                 #
@@ -175,7 +179,7 @@ class FSConsumer(StorageConsumer):
         #
         message_separator_bytes = self.storage_obj.admin.get_message_separator(topic_str)
         #
-        message_bytes_list = self.consume_messages_from_file(os.path.join(abs_topic_dir_str, rel_partition_file_str), message_separator_bytes)
+        message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_partition_file_str), message_separator_bytes)
         if len(message_bytes_list) > 0:
             first_message_bytes = message_bytes_list[index_int]
             serialized_message_dict = ast.literal_eval(first_message_bytes.decode("utf-8"))
@@ -215,7 +219,7 @@ class FSConsumer(StorageConsumer):
 
     #
 
-    def consume_messages_from_file(self, abs_path_file_str, message_separator_bytes):
+    def read_messages_from_file(self, abs_path_file_str, message_separator_bytes):
         messages_bytes = self.consume_bytes(abs_path_file_str)
         #
         message_bytes_list = messages_bytes.split(message_separator_bytes)[:-1]
