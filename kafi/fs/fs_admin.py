@@ -10,7 +10,7 @@ class FSAdmin(StorageAdmin):
     def __init__(self, fs_obj, **kwargs):
         super().__init__(fs_obj, **kwargs)
         #
-        self.default_state_str = "empty"
+        self.default_state_str = "stable"
 
     #
 
@@ -180,9 +180,9 @@ class FSAdmin(StorageAdmin):
         return group_str_list
 
     def describe_groups(self, pattern="*", state_pattern="*"):
-        group_str_state_str_dict = self.groups(self, pattern, state_pattern, state=True)
+        group_str_state_str_dict = self.groups(pattern, state_pattern, state=True)
         #
-        group_str_group_description_dict_dict = {group_str: {"group_id": group_str, "is_simple_consumer_group": False, "members": [], "partition_assignor": "", "state": state_str, "coordinator": {"id": 1, "id_string": 1, "host": "localhost", "port": 9092, "rack": None}} for group_str, state_str in group_str_state_str_dict}
+        group_str_group_description_dict_dict = {group_str: {"group_id": group_str, "is_simple_consumer_group": False} for group_str, state_str in group_str_state_str_dict.items()}
         #
         return group_str_group_description_dict_dict
 
@@ -232,10 +232,13 @@ class FSAdmin(StorageAdmin):
         topic_str_group_str_offsets_dict_dict_dict = {}
         for group_str, topic_str_offsets_dict_dict in group_str_topic_str_offsets_dict_dict_dict.items():
             for topic_str, offsets_dict in topic_str_offsets_dict_dict.items():
+                if topic_str not in topic_str_group_str_offsets_dict_dict_dict:
+                    topic_str_group_str_offsets_dict_dict_dict[topic_str] = {group_str: {}}
+                #
                 topic_str_group_str_offsets_dict_dict_dict[topic_str][group_str] = offsets_dict
         #
         for topic_str, group_str_offsets_dict_dict in topic_str_group_str_offsets_dict_dict_dict.items():
-            self.set_groups(self, topic_str, group_str_offsets_dict_dict)
+            self.set_groups(topic_str, group_str_offsets_dict_dict)
         #
         return group_str_topic_str_offsets_dict_dict_dict
 

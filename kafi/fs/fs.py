@@ -66,7 +66,7 @@ class FS(Storage):
     def message_separator(self, new_value=None): # str
         return self.get_set_config("message.separator", new_value, dict=self.s3_config_dict)
 
-    #
+    # Topics
 
     def topics(self, pattern=None, size=False, **kwargs):
         return self.admin.topics(pattern, size, **kwargs)
@@ -102,6 +102,23 @@ class FS(Storage):
 
     def partitions(self, pattern=None, verbose=False):
         return self.admin.partitions(pattern, verbose)
+
+    # Groups
+
+    def groups(self, pattern="*", state_pattern="*", state=False):
+        return self.admin.groups(pattern, state_pattern, state)
+    
+    def describe_groups(self, pattern="*", state_pattern="*"):
+        return self.admin.describe_groups(pattern, state_pattern)
+    
+    def delete_groups(self, pattern, state_pattern="*"):
+        return self.admin.delete_groups(pattern, state_pattern)
+    
+    def group_offsets(self, pattern, state_pattern="*"):
+        return self.admin.group_offsets(pattern, state_pattern)
+
+    def set_group_offsets(self, group_offsets):
+        return self.admin.set_group_offsets(group_offsets)
 
     # Open
     def consumer(self, topic, **kwargs):

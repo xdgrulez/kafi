@@ -80,6 +80,115 @@ class Test(unittest.TestCase):
 
     ### LocalAdmin
 
+    # Groups
+
+    def test_groups(self):
+        l = self.get_local()
+        #
+        topic_str = self.create_test_topic_name()
+        l.create(topic_str)
+        producer = l.producer(topic_str)
+        producer.produce("message 1")
+        producer.produce("message 2")
+        producer.produce("message 3")
+        producer.close()
+        #
+        group_str = self.create_test_group_name()
+        consumer = l.consumer(topic_str, group=group_str)
+        consumer.consume(n=1)
+        #
+        group_str_list1 = l.groups(["test*", "test_group*"])
+        self.assertIn(group_str, group_str_list1)
+        group_str_list2 = l.groups("test_group*")
+        self.assertIn(group_str, group_str_list2)
+        group_str_list3 = l.groups("test_group*", state_pattern=["stable"])
+        self.assertIn(group_str, group_str_list3)
+        group_str_state_str_dict = l.groups("test_group*", state_pattern="stab*", state=True)
+        self.assertIn("stable", group_str_state_str_dict[group_str])
+        group_str_list4 = l.groups(state_pattern="unknown", state=False)
+        self.assertEqual(group_str_list4, [])
+        #
+        consumer.close()
+
+    def test_describe_groups(self):
+        l = self.get_local()
+        #
+        topic_str = self.create_test_topic_name()
+        l.create(topic_str)
+        producer = l.producer(topic_str)
+        producer.produce("message 1")
+        producer.produce("message 2")
+        producer.produce("message 3")
+        producer.close()
+        #
+        group_str = self.create_test_group_name()
+        consumer = l.consumer(topic_str, group=group_str)
+        consumer.consume(n=1)
+        #
+        group_dict = l.describe_groups(group_str)[group_str]
+        self.assertEqual(group_dict["group_id"], group_str)
+        self.assertEqual(group_dict["is_simple_consumer_group"], False)
+        # self.assertEqual(group_dict["members"][0]["client_id"], "rdkafka")
+        # self.assertIsNone(group_dict["members"][0]["assignment"]["topic_partitions"][0]["error"])
+        # self.assertIsNone(group_dict["members"][0]["assignment"]["topic_partitions"][0]["metadata"])
+        # self.assertEqual(group_dict["members"][0]["assignment"]["topic_partitions"][0]["offset"], -1001)
+        # self.assertEqual(group_dict["members"][0]["assignment"]["topic_partitions"][0]["partition"], 0)
+        # self.assertEqual(group_dict["members"][0]["assignment"]["topic_partitions"][0]["topic"], topic_str)
+        # self.assertIsNone(group_dict["members"][0]["group_instance_id"])
+        # self.assertEqual(group_dict["partition_assignor"], "range")
+        # self.assertEqual(group_dict["state"], "stable")
+        # broker_dict = l.brokers()
+        # broker_int = list(broker_dict.keys())[0]
+        # self.assertEqual(group_dict["coordinator"]["id"], broker_int)
+        # self.assertEqual(group_dict["coordinator"]["id_string"], f"{broker_int}")
+        #
+        consumer.close()
+
+    def test_delete_groups(self):
+        l = self.get_local()
+        #
+        topic_str = self.create_test_topic_name()
+        l.create(topic_str)
+        producer = l.producer(topic_str)
+        producer.produce("message 1")
+        producer.produce("message 2")
+        producer.produce("message 3")
+        producer.close()
+        #
+        group_str = self.create_test_group_name()
+        consumer = l.consumer(topic_str, group=group_str)
+        consumer.consume(n=1)
+        #
+        group_str_list = l.delete_groups(group_str, state_pattern=["empt*"])
+        self.assertEqual(group_str_list, [])
+        group_str_list = l.groups(group_str, state_pattern="*")
+        self.assertEqual(group_str_list, [group_str])
+        #
+        consumer.close()
+
+    def test_set_group_offsets(self):
+        l = self.get_local()
+        #
+        topic_str = self.create_test_topic_name()
+        l.create(topic_str)
+        producer = l.producer(topic_str)
+        producer.produce("message 1")
+        producer.produce("message 2")
+        producer.produce("message 3")
+        producer.close()
+        #
+        group_str = self.create_test_group_name()
+        consumer = l.consumer(topic_str, group=group_str, config={"enable.auto.commit": False})
+        group_str_topic_str_offsets_dict_dict_dict = l.set_group_offsets({group_str: {topic_str: {0: 2}}})
+        self.assertEqual(group_str_topic_str_offsets_dict_dict_dict, {group_str: {topic_str: {0: 2}}})
+        [message_dict] = consumer.consume(n=1)
+        consumer.commit()
+        self.assertEqual(message_dict["value"], "message 3")
+        #
+        consumer.close()
+
+    # Topics
+
     def test_create_delete(self):
         l = self.get_local()
         #
