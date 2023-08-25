@@ -37,7 +37,7 @@ class FSConsumer(StorageConsumer):
             #
             if partition_int_offset_int_dict is None:
                 group_str_partition_int_offset_int_dict_dict = self.storage_obj.admin.get_groups(topic_str)
-                if self.group_str in group_str_partition_int_offset_int_dict_dict:
+                if all(self.group_str in group_str_partition_int_offset_int_dict_dict:
                     partition_int_offset_int_dict = group_str_partition_int_offset_int_dict_dict[self.group_str]
                 else:
                     if auto_offset_reset_str == "latest":
@@ -194,16 +194,15 @@ class FSConsumer(StorageConsumer):
 
     def commit(self, offsets=None):
         if offsets is None:
-            self.storage_obj.admin.set_groups(topic_str, self.topic_str_group_str_partition_int_offset_int_dict_dict_dict)
-            #
-            return self.topic_str_group_str_partition_int_offset_int_dict_dict_dict
+            for topic_str in self.topic_str_list:
+                self.storage_obj.admin.set_groups(topic_str, self.topic_str_group_str_partition_int_offset_int_dict_dict_dict[topic_str])
         else:
             self.topic_str_group_str_partition_int_offset_int_dict_dict_dict = offsets
             #
             for topic_str, group_str_partition_int_offset_int_dict_dict in self.topic_str_group_str_partition_int_offset_int_dict_dict_dict.items():
                 self.storage_obj.admin.set_groups(topic_str, group_str_partition_int_offset_int_dict_dict)
-            #
-            return self.topic_str_group_str_partition_int_offset_int_dict_dict_dict
+        #
+        return self.topic_str_group_str_partition_int_offset_int_dict_dict_dict
 
     #
 

@@ -1,6 +1,6 @@
+import ast
 import base64
 from fnmatch import fnmatch
-import json
 import os
 
 from kafi.storage_admin import StorageAdmin
@@ -241,27 +241,26 @@ class FSAdmin(StorageAdmin):
 
     # Metadata/Groups
 
-    def read_dict_from_json_file(self, abs_path_file_str):
+    def read_dict_from_file(self, abs_path_file_str):
         data_str = self.read_str(abs_path_file_str)
         #
         if data_str is not None:
-            json_loads_data_dict = json.loads(data_str)
-            data_dict = json_loads_to_python_dict(json_loads_data_dict)
+            data_dict = ast.literal_eval(data_str)
         else:
             data_dict = {}
         #
         return data_dict
 
-    def write_dict_to_json_file(self, abs_path_file_str, data_dict):
-        metadata_str = json.dumps(data_dict)
+    def write_dict_to_file(self, abs_path_file_str, data_dict):
+        data_str = str(data_dict)
         #
-        self.write_str(abs_path_file_str, metadata_str)
+        self.write_str(abs_path_file_str, data_str)
 
     # Metadata
 
     def get_metadata(self, topic_str):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
-        metadata_dict = self.read_dict_from_json_file(os.path.join(topic_dir_str, "metadata.json"))
+        metadata_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "metadata.json"))
         #
         return metadata_dict
 
@@ -280,14 +279,14 @@ class FSAdmin(StorageAdmin):
 
     def set_metadata(self, topic_str, metadata_dict):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
-        self.write_dict_to_json_file(os.path.join(topic_dir_str, "metadata.json"), metadata_dict)
+        self.write_dict_to_file(os.path.join(topic_dir_str, "metadata.json"), metadata_dict)
 
     # Groups
 
     def get_groups(self, topic_str):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
         #
-        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.read_dict_from_json_file(os.path.join(topic_dir_str, "groups.json"))
+        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "groups.json"))
         #
         group_str_partition_int_offset_int_dict_dict = {group_str: partition_int_offset_int_dict_last_updated_int_dict["offsets"] for group_str, partition_int_offset_int_dict_last_updated_int_dict in group_str_partition_int_offset_int_dict_last_updated_int_dict_dict.items()}
         #
@@ -296,7 +295,7 @@ class FSAdmin(StorageAdmin):
     def set_groups(self, topic_str, set_group_str_partition_int_offset_int_dict_dict):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
         #
-        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.read_dict_from_json_file(os.path.join(topic_dir_str, "groups.json"))
+        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "groups.json"))
         #
         for group_str, partition_int_offset_int_dict in set_group_str_partition_int_offset_int_dict_dict.items():
             for partition_int, offset_int in partition_int_offset_int_dict.items():
@@ -307,4 +306,4 @@ class FSAdmin(StorageAdmin):
             #
             group_str_partition_int_offset_int_dict_last_updated_int_dict_dict[group_str]["last_updated"] = get_millis()
         #
-        self.write_dict_to_json_file(os.path.join(topic_dir_str, "groups.json"), group_str_partition_int_offset_int_dict_last_updated_int_dict_dict)
+        self.write_dict_to_file(os.path.join(topic_dir_str, "groups.json"), group_str_partition_int_offset_int_dict_last_updated_int_dict_dict)
