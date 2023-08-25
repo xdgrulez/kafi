@@ -31,7 +31,7 @@ class RestProxyConsumer(KafkaConsumer):
         url_str1 = f"{rest_proxy_url_str}/consumers/{self.group_str}"
         headers_dict1 = {"Content-Type": "application/vnd.kafka.v2+json"}
         #
-        value_type_str = self.key_type_dict[self.topic_str_list[0]]
+        value_type_str = self.topic_str_key_type_str_dict[self.topic_str_list[0]]
         if value_type_str.lower() == "json":
             type_str = "JSON"
         elif value_type_str.lower() == "avro":
@@ -77,7 +77,7 @@ class RestProxyConsumer(KafkaConsumer):
 
     #
 
-    def consume(self, **kwargs):
+    def consume_impl(self, **kwargs):
         timeout_int = kwargs["timeout"] if "timeout" in kwargs else None
         max_bytes_int = kwargs["max_bytes"] if "max_bytes" in kwargs else None 
         #
@@ -89,8 +89,8 @@ class RestProxyConsumer(KafkaConsumer):
         if max_bytes_int is None:
             max_bytes_int = 67108864
         #
-        key_type_str = self.key_type_dict[self.topic_str_list[0]]
-        value_type_str = self.value_type_dict[self.topic_str_list[0]]
+        key_type_str = self.topic_str_key_type_str_dict[self.topic_str_list[0]]
+        value_type_str = self.topic_str_value_type_str_dict[self.topic_str_list[0]]
         if value_type_str.lower() == "json":
             type_str = "json"
         elif value_type_str.lower() == "avro":
@@ -165,12 +165,12 @@ class RestProxyConsumer(KafkaConsumer):
             offset_int = rest_topic_partition_offset_dict["offset"]
             #
             if topic_str in offsets_dict:
-                partition_int_offset_int_dict = offsets_dict[topic_str]
+                offsets_dict = offsets_dict[topic_str]
             else:
-                partition_int_offset_int_dict = {}
-            partition_int_offset_int_dict[partition_int] = offset_int
+                offsets_dict = {}
+            offsets_dict[partition_int] = offset_int
             #
-            offsets_dict[topic_str] = partition_int_offset_int_dict
+            offsets_dict[topic_str] = offsets_dict
         #
         return offsets_dict
 

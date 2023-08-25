@@ -177,6 +177,9 @@ class Test(unittest.TestCase):
     def test_commit(self):
         l = self.get_local()
         #
+        l.enable_auto_commit(False)
+        l.foldl_commit(False)
+        #
         topic_str = self.create_test_topic_name()
         l.create(topic_str)
         producer = l.producer(topic_str)
@@ -186,8 +189,8 @@ class Test(unittest.TestCase):
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer = l.consumer(topic_str, group=group_str, config={"enable.auto.commit": "False"})
-        consumer.consume()
+        consumer = l.consumer(topic_str, group=group_str, config={"enable.auto.commit": False})
+        consumer.consume(n=1)
         offsets_dict = consumer.offsets()
         self.assertEqual(offsets_dict[topic_str][0], OFFSET_INVALID)
         consumer.commit()

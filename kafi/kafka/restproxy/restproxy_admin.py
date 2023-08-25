@@ -189,23 +189,23 @@ class RestProxyAdmin(KafkaAdmin):
             kafkaConsumerLag_dict_list = response_dict["data"]
             #
             if group_str in group_offsets:
-                topic_str_partition_int_offset_int_dict_dict = group_offsets[group_str]
+                topic_str_offsets_dict_dict = group_offsets[group_str]
             else:
-                topic_str_partition_int_offset_int_dict_dict = {}
+                topic_str_offsets_dict_dict = {}
             #
             for kafkaConsumerLag_dict in kafkaConsumerLag_dict_list:
                 topic_str = kafkaConsumerLag_dict["topic_name"]
                 partition_int = kafkaConsumerLag_dict["partition_id"]
                 offset_int = kafkaConsumerLag_dict["current_offset"]
-                if topic_str in topic_str_partition_int_offset_int_dict_dict:
-                    partition_int_offset_int_dict = topic_str_partition_int_offset_int_dict_dict[topic_str]
+                if topic_str in topic_str_offsets_dict_dict:
+                    offsets_dict = topic_str_offsets_dict_dict[topic_str]
                 else:
-                    partition_int_offset_int_dict = {}
+                    offsets_dict = {}
                 #
-                partition_int_offset_int_dict[partition_int] = offset_int
-                topic_str_partition_int_offset_int_dict_dict[topic_str] = partition_int_offset_int_dict
+                offsets_dict[partition_int] = offset_int
+                topic_str_offsets_dict_dict[topic_str] = offsets_dict
             #
-            group_offsets[group_str] = topic_str_partition_int_offset_int_dict_dict
+            group_offsets[group_str] = topic_str_offsets_dict_dict
         #
         return group_offsets
 

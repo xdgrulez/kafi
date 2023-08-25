@@ -4,7 +4,7 @@ from fnmatch import fnmatch
 import os
 
 from kafi.storage_admin import StorageAdmin
-from kafi.helpers import get_millis, json_loads_to_python_dict
+from kafi.helpers import get_millis
 
 class FSAdmin(StorageAdmin):
     def __init__(self, fs_obj, **kwargs):
@@ -171,11 +171,11 @@ class FSAdmin(StorageAdmin):
         #
         group_str_list = []
         for topic_str in topic_str_list:
-            group_str_partition_int_offset_int_dict_dict = self.get_groups(topic_str)
+            group_str_offsets_dict_dict = self.get_groups(topic_str)
             #
-            group_str_partition_int_offset_int_dict_dict = {group_str: partition_int_offset_int_dict for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items() if not (any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list))}
+            group_str_offsets_dict_dict = {group_str: offsets_dict for group_str, offsets_dict in group_str_offsets_dict_dict.items() if not (any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list))}
             #
-            self.set_groups(topic_str, group_str_partition_int_offset_int_dict_dict)
+            self.set_groups(topic_str, group_str_offsets_dict_dict)
         #
         return group_str_list
 
@@ -195,9 +195,9 @@ class FSAdmin(StorageAdmin):
         #
         group_str_list = []
         for topic_str in topic_str_list:
-            group_str_partition_int_offset_int_dict_dict = self.get_groups(topic_str)
+            group_str_offsets_dict_dict = self.get_groups(topic_str)
             #
-            group_str_list += list(group_str_partition_int_offset_int_dict_dict.keys())
+            group_str_list += list(group_str_offsets_dict_dict.keys())
         #
         group_str_list = [group_str for group_str in group_str_list if any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)]
         #
@@ -213,31 +213,31 @@ class FSAdmin(StorageAdmin):
         #
         topic_str_list = self.list_topics()
         #
-        group_str_topic_str_partition_int_offset_int_dict_dict_dict = {}
+        group_str_topic_str_offsets_dict_dict_dict = {}
         for topic_str in topic_str_list:
-            group_str_partition_int_offset_int_dict_dict1 = self.get_groups(topic_str)
+            group_str_offsets_dict_dict1 = self.get_groups(topic_str)
             #
-            group_str_partition_int_offset_int_dict_dict = {group_str: partition_int_offset_int_dict for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict1.items() if any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)}
+            group_str_offsets_dict_dict = {group_str: offsets_dict for group_str, offsets_dict in group_str_offsets_dict_dict1.items() if any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)}
             #
-            for group_str, partition_int_offset_int_dict in group_str_partition_int_offset_int_dict_dict.items():
-                if group_str not in group_str_topic_str_partition_int_offset_int_dict_dict_dict:
-                    group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str] = {topic_str: {}}
-                group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str][topic_str] = partition_int_offset_int_dict
+            for group_str, offsets_dict in group_str_offsets_dict_dict.items():
+                if group_str not in group_str_topic_str_offsets_dict_dict_dict:
+                    group_str_topic_str_offsets_dict_dict_dict[group_str] = {topic_str: {}}
+                group_str_topic_str_offsets_dict_dict_dict[group_str][topic_str] = offsets_dict
         #
-        return group_str_topic_str_partition_int_offset_int_dict_dict_dict
+        return group_str_topic_str_offsets_dict_dict_dict
 
     def set_group_offsets(self, group_offsets):
-        group_str_topic_str_partition_int_offset_int_dict_dict_dict = group_offsets
+        group_str_topic_str_offsets_dict_dict_dict = group_offsets
         #
-        topic_str_group_str_partition_int_offset_int_dict_dict_dict = {}
-        for group_str, topic_str_partition_int_offset_int_dict_dict in group_str_topic_str_partition_int_offset_int_dict_dict_dict.items():
-            for topic_str, partition_int_offset_int_dict in topic_str_partition_int_offset_int_dict_dict.items():
-                topic_str_group_str_partition_int_offset_int_dict_dict_dict[topic_str][group_str] = partition_int_offset_int_dict
+        topic_str_group_str_offsets_dict_dict_dict = {}
+        for group_str, topic_str_offsets_dict_dict in group_str_topic_str_offsets_dict_dict_dict.items():
+            for topic_str, offsets_dict in topic_str_offsets_dict_dict.items():
+                topic_str_group_str_offsets_dict_dict_dict[topic_str][group_str] = offsets_dict
         #
-        for topic_str, group_str_partition_int_offset_int_dict_dict in topic_str_group_str_partition_int_offset_int_dict_dict_dict.items():
-            self.set_groups(self, topic_str, group_str_partition_int_offset_int_dict_dict)
+        for topic_str, group_str_offsets_dict_dict in topic_str_group_str_offsets_dict_dict_dict.items():
+            self.set_groups(self, topic_str, group_str_offsets_dict_dict)
         #
-        return group_str_topic_str_partition_int_offset_int_dict_dict_dict
+        return group_str_topic_str_offsets_dict_dict_dict
 
     # Metadata/Groups
 
@@ -286,24 +286,24 @@ class FSAdmin(StorageAdmin):
     def get_groups(self, topic_str):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
         #
-        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "groups.json"))
+        group_str_offsets_dict_last_updated_int_dict_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "groups.json"))
         #
-        group_str_partition_int_offset_int_dict_dict = {group_str: partition_int_offset_int_dict_last_updated_int_dict["offsets"] for group_str, partition_int_offset_int_dict_last_updated_int_dict in group_str_partition_int_offset_int_dict_last_updated_int_dict_dict.items()}
+        group_str_offsets_dict_dict = {group_str: offsets_dict_last_updated_int_dict["offsets"] for group_str, offsets_dict_last_updated_int_dict in group_str_offsets_dict_last_updated_int_dict_dict.items()}
         #
-        return group_str_partition_int_offset_int_dict_dict
+        return group_str_offsets_dict_dict
 
-    def set_groups(self, topic_str, set_group_str_partition_int_offset_int_dict_dict):
+    def set_groups(self, topic_str, set_group_str_offsets_dict_dict):
         topic_dir_str = self.get_topic_abs_dir_str(topic_str)
         #
-        group_str_partition_int_offset_int_dict_last_updated_int_dict_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "groups.json"))
+        group_str_offsets_dict_last_updated_int_dict_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "groups.json"))
         #
-        for group_str, partition_int_offset_int_dict in set_group_str_partition_int_offset_int_dict_dict.items():
-            for partition_int, offset_int in partition_int_offset_int_dict.items():
-                if group_str not in group_str_partition_int_offset_int_dict_last_updated_int_dict_dict:
-                    group_str_partition_int_offset_int_dict_last_updated_int_dict_dict[group_str] = {"offsets": {}}
+        for group_str, offsets_dict in set_group_str_offsets_dict_dict.items():
+            for partition_int, offset_int in offsets_dict.items():
+                if group_str not in group_str_offsets_dict_last_updated_int_dict_dict:
+                    group_str_offsets_dict_last_updated_int_dict_dict[group_str] = {"offsets": {}}
                 #
-                group_str_partition_int_offset_int_dict_last_updated_int_dict_dict[group_str]["offsets"][partition_int] = offset_int
+                group_str_offsets_dict_last_updated_int_dict_dict[group_str]["offsets"][partition_int] = offset_int
             #
-            group_str_partition_int_offset_int_dict_last_updated_int_dict_dict[group_str]["last_updated"] = get_millis()
+            group_str_offsets_dict_last_updated_int_dict_dict[group_str]["last_updated"] = get_millis()
         #
-        self.write_dict_to_file(os.path.join(topic_dir_str, "groups.json"), group_str_partition_int_offset_int_dict_last_updated_int_dict_dict)
+        self.write_dict_to_file(os.path.join(topic_dir_str, "groups.json"), group_str_offsets_dict_last_updated_int_dict_dict)

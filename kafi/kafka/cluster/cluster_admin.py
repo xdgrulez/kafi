@@ -286,7 +286,7 @@ class ClusterAdmin(KafkaAdmin):
         #
         topic_str_partition_int_offsets_int_dict_dict = {}
         for topic_str in topic_str_list:
-            partition_int_offset_int_dict = {}
+            offsets_dict = {}
             #
             topicPartition_list = [TopicPartition(topic_str, partition_int, timestamp_int) for partition_int, timestamp_int in partition_int_timestamp_int_dict.items()]
             if topicPartition_list:
@@ -296,9 +296,9 @@ class ClusterAdmin(KafkaAdmin):
                 topicPartition_list1 = consumer.offsets_for_times(topicPartition_list, timeout=timeout_float)
                 #
                 for topicPartition in topicPartition_list1:
-                    partition_int_offset_int_dict[topicPartition.partition] = topicPartition.offset
+                    offsets_dict[topicPartition.partition] = topicPartition.offset
                 #
-                topic_str_partition_int_offsets_int_dict_dict[topic_str] = partition_int_offset_int_dict
+                topic_str_partition_int_offsets_int_dict_dict[topic_str] = offsets_dict
         #
         return topic_str_partition_int_offsets_int_dict_dict
 
@@ -360,9 +360,9 @@ class ClusterAdmin(KafkaAdmin):
 
 # helpers
 
-# group_offsets =TA group_str_topic_str_partition_int_offset_int_dict_dict_dict
-# topic_offsets =TA topic_str_partition_int_offset_int_dict_dict
-# (partition_)offsets =TA partition_int_offset_int_dict
+# group_offsets =TA group_str_topic_str_offsets_dict_dict_dict
+# topic_offsets =TA topic_str_offsets_dict_dict
+# (partition_)offsets =TA offsets_dict
 def group_str_consumerGroupTopicPartitions_future_dict_to_consumerGroupTopicPartitions_list(group_str_consumerGroupTopicPartitions_future_dict):
     consumerGroupTopicPartitions_list = [consumerGroupTopicPartitions_future.result() for consumerGroupTopicPartitions_future in group_str_consumerGroupTopicPartitions_future_dict.values()]
     #
@@ -370,13 +370,13 @@ def group_str_consumerGroupTopicPartitions_future_dict_to_consumerGroupTopicPart
 
 
 def consumerGroupTopicPartitions_list_to_group_offsets(consumerGroupTopicPartitions_list):
-    group_str_topic_str_partition_int_offset_int_dict_dict_dict = {}
+    group_str_topic_str_offsets_dict_dict_dict = {}
     for consumerGroupTopicPartitions in consumerGroupTopicPartitions_list:
         group_str = consumerGroupTopicPartitions.group_id
-        topic_str_partition_int_offset_int_dict_dict = consumerGroupTopicPartitions_to_topic_offsets(consumerGroupTopicPartitions)
-        group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str] = topic_str_partition_int_offset_int_dict_dict
+        topic_str_offsets_dict_dict = consumerGroupTopicPartitions_to_topic_offsets(consumerGroupTopicPartitions)
+        group_str_topic_str_offsets_dict_dict_dict[group_str] = topic_str_offsets_dict_dict
     #
-    return group_str_topic_str_partition_int_offset_int_dict_dict_dict
+    return group_str_topic_str_offsets_dict_dict_dict
 
 
 def consumerGroupTopicPartitions_to_topic_offsets(consumerGroupTopicPartitions):
@@ -389,9 +389,9 @@ def consumerGroupTopicPartitions_to_topic_offsets(consumerGroupTopicPartitions):
         else:
             topic_str_partition_int_offset_int_tuple_list_dict[topic_str] = [(topicPartition.partition, topicPartition.offset)]
     #
-    topic_str_partition_int_offset_int_dict_dict = {topic_str: {partition_int_offset_int_tuple[0]: partition_int_offset_int_tuple[1] for partition_int_offset_int_tuple in partition_int_offset_int_tuple_list} for topic_str, partition_int_offset_int_tuple_list in topic_str_partition_int_offset_int_tuple_list_dict.items()}
+    topic_str_offsets_dict_dict = {topic_str: {partition_int_offset_int_tuple[0]: partition_int_offset_int_tuple[1] for partition_int_offset_int_tuple in partition_int_offset_int_tuple_list} for topic_str, partition_int_offset_int_tuple_list in topic_str_partition_int_offset_int_tuple_list_dict.items()}
     #
-    return topic_str_partition_int_offset_int_dict_dict
+    return topic_str_offsets_dict_dict
 
 
 def group_str_consumerGroupTopicPartitions_future_dict_to_group_offsets(group_str_consumerGroupTopicPartitions_future_dict):

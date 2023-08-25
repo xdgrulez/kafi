@@ -179,11 +179,11 @@ class Test(unittest.TestCase):
         consumer.consume()
         consumer.commit()
         #
-        group_str_topic_str_partition_int_offset_int_dict_dict_dict = consumer.group_offsets(group_str)
-        self.assertIn(group_str, group_str_topic_str_partition_int_offset_int_dict_dict_dict)
-        self.assertIn(topic_str, group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str])
-        self.assertEqual(group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str][topic_str][0], 1)
-        self.assertEqual(group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str][topic_str][1], 1)
+        group_str_topic_str_offsets_dict_dict_dict = consumer.group_offsets(group_str)
+        self.assertIn(group_str, group_str_topic_str_offsets_dict_dict_dict)
+        self.assertIn(topic_str, group_str_topic_str_offsets_dict_dict_dict[group_str])
+        self.assertEqual(group_str_topic_str_offsets_dict_dict_dict[group_str][topic_str][0], 1)
+        self.assertEqual(group_str_topic_str_offsets_dict_dict_dict[group_str][topic_str][1], 1)
         #
         consumer.unsubscribe()
         consumer.close()

@@ -1,6 +1,6 @@
 import json
 
-from confluent_kafka import Consumer, Message, TopicPartition
+from confluent_kafka import Consumer, TopicPartition
 from confluent_kafka.schema_registry.avro import AvroDeserializer
 from confluent_kafka.schema_registry.json_schema import JSONDeserializer
 from confluent_kafka.schema_registry.protobuf import ProtobufDeserializer
@@ -23,8 +23,8 @@ class ClusterConsumer(KafkaConsumer):
     def __init__(self, cluster_obj, *topics, **kwargs):
         super().__init__(cluster_obj, *topics, **kwargs)
         #
-        if "schema.registry.url" in self.storage_obj.schema_registry_config_dict:
-            self.schemaRegistry = SchemaRegistry(self.storage_obj.schema_registry_config_dict, self.storage_obj.kafi_config_dict)
+        if "schema.registry.url" in cluster_obj.schema_registry_config_dict:
+            self.schemaRegistry = SchemaRegistry(cluster_obj.schema_registry_config_dict, cluster_obj.kafi_config_dict)
         else:
             self.schemaRegistry = None
         #
@@ -32,8 +32,9 @@ class ClusterConsumer(KafkaConsumer):
         #
         # Consumer Config
         #
+        self.consumer_config_dict.update(cluster_obj.kafka_config_dict)
         self.consumer_config_dict["group.id"] = self.group_str
-        self.consumer_config_dict["session.timeout.ms"] = self.storage_obj.session_timeout_ms()
+        self.consumer_config_dict["session.timeout.ms"] = cluster_obj.session_timeout_ms()
         #
         self.consumer = Consumer(self.consumer_config_dict)
         #
@@ -47,14 +48,14 @@ class ClusterConsumer(KafkaConsumer):
     def subscribe(self):
         def on_assign(consumer, partitions):
             def set_offset(topicPartition):
-                if topicPartition.topic in self.topic_str_offsets_dict_dict:
-                    offsets = self.topic_str_offsets_dict_dict[topicPartition.topic]
+                if topicPartition.topic in self.topic_str_start_offsets_dict_dict:
+                    offsets = self.topic_str_start_offsets_dict_dict[topicPartition.topic]
                     if topicPartition.partition in offsets:
                         offset_int = offsets[topicPartition.partition]
                         topicPartition.offset = offset_int
                 return topicPartition
             #
-            if self.topic_str_offsets_dict_dict is not None:
+            if self.topic_str_start_offsets_dict_dict is not None:
                 topicPartition_list = [set_offset(topicPartition) for topicPartition in partitions]
                 consumer.assign(topicPartition_list)
         self.consumer.subscribe(self.topic_str_list, on_assign=on_assign)
@@ -73,12 +74,12 @@ class ClusterConsumer(KafkaConsumer):
 
     #
 
-    def consume(self, **kwargs):
+    def consume_impl(self, **kwargs):
         n_int = kwargs["n"] if "n" in kwargs and kwargs["n"] != ALL_MESSAGES else 1
         #
         message_list = self.consumer.consume(n_int, self.storage_obj.consume_timeout())
         #
-        deserialized_message_dict_list = [self.deserialize(message, key_type=self.key_type_dict[message.topic()], value_type=self.value_type_dict[message.topic()]) for message in message_list]
+        deserialized_message_dict_list = [self.deserialize(message, key_type=self.topic_str_key_type_str_dict[message.topic()], value_type=self.topic_str_value_type_str_dict[message.topic()]) for message in message_list]
         #
         return deserialized_message_dict_list
 
@@ -191,7 +192,7 @@ class ClusterConsumer(KafkaConsumer):
         file_str = f"schema_{schema_id_int}.proto"
         file_path_str = f"{path_str}/{file_str}"
         with open(file_path_str, "w") as textIOWrapper:
-            textIOWrapper.produce(schema_str)
+            textIOWrapper.write(schema_str)
         #
         import grpc_tools.protoc
         grpc_tools.protoc.main(["protoc", f"-I{path_str}", f"--python_out={path_str}", f"{file_str}"])

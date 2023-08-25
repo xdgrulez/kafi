@@ -119,15 +119,15 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer =c.consumer(topic_str, group=group_str)
-        consumer.consume()
+        consumer = c.consumer(topic_str, group=group_str)
+        consumer.consume(n=1)
         #
         group_str_list1 = c.groups(["test*", "test_group*"])
         self.assertIn(group_str, group_str_list1)
@@ -147,15 +147,15 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer =c.consumer(topic_str, group=group_str)
-        consumer.consume()
+        consumer = c.consumer(topic_str, group=group_str)
+        consumer.consume(n=1)
         #
         group_dict = c.describe_groups(group_str)[group_str]
         self.assertEqual(group_dict["group_id"], group_str)
@@ -181,15 +181,15 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer =c.consumer(topic_str, group=group_str)
-        consumer.consume()
+        consumer = c.consumer(topic_str, group=group_str)
+        consumer.consume(n=1)
         #
         group_str_list = c.delete_groups(group_str, state_pattern=["empt*"])
         self.assertEqual(group_str_list, [])
@@ -203,23 +203,23 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str, partitions=2)
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce("message 1", partition=0)
         producer.produce("message 2", partition=1)
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer =c.consumer(topic_str, group=group_str, config={"enable.auto.commit": False})
-        consumer.consume()
+        consumer = c.consumer(topic_str, group=group_str, config={"enable.auto.commit": False})
+        consumer.consume(n=1)
         consumer.commit()
-        consumer.consume()
+        consumer.consume(n=1)
         consumer.commit()
         #
-        group_str_topic_str_partition_int_offset_int_dict_dict_dict = c.group_offsets(group_str)
-        self.assertIn(group_str, group_str_topic_str_partition_int_offset_int_dict_dict_dict)
-        self.assertIn(topic_str, group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str])
-        self.assertEqual(group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str][topic_str][0], 1)
-        self.assertEqual(group_str_topic_str_partition_int_offset_int_dict_dict_dict[group_str][topic_str][1], 1)
+        group_str_topic_str_offsets_dict_dict_dict = c.group_offsets(group_str)
+        self.assertIn(group_str, group_str_topic_str_offsets_dict_dict_dict)
+        self.assertIn(topic_str, group_str_topic_str_offsets_dict_dict_dict[group_str])
+        self.assertEqual(group_str_topic_str_offsets_dict_dict_dict[group_str][topic_str][0], 1)
+        self.assertEqual(group_str_topic_str_offsets_dict_dict_dict[group_str][topic_str][1], 1)
         #
         member_id_str = consumer.memberid()
         self.assertEqual("rdkafka-", member_id_str[:8])
@@ -232,17 +232,17 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer =c.consumer(topic_str, group=group_str, config={"enable.auto.commit": False})
-        group_str_topic_str_partition_int_offset_int_dict_dict_dict = c.set_group_offsets({group_str: {topic_str: {0: 2}}})
-        self.assertEqual(group_str_topic_str_partition_int_offset_int_dict_dict_dict, {group_str: {topic_str: {0: 2}}})
-        [message_dict] = consumer.consume()
+        consumer = c.consumer(topic_str, group=group_str, config={"enable.auto.commit": False})
+        group_str_topic_str_offsets_dict_dict_dict = c.set_group_offsets({group_str: {topic_str: {0: 2}}})
+        self.assertEqual(group_str_topic_str_offsets_dict_dict_dict, {group_str: {topic_str: {0: 2}}})
+        [message_dict] = consumer.consume(n=1)
         consumer.commit()
         self.assertEqual(message_dict["value"], "message 3")
         #
@@ -281,7 +281,7 @@ class Test(unittest.TestCase):
         new_topic_str_list = c.ls(["test_*"])
         self.assertIn(topic_str, new_topic_str_list)
         #
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce("message 1", on_delivery=lambda kafkaError, message: print(kafkaError, message))
         producer.produce("message 2")
         producer.produce("message 3")
@@ -305,7 +305,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce("message 1")
         time.sleep(1)
         producer.produce("message 2")
@@ -314,14 +314,14 @@ class Test(unittest.TestCase):
         self.assertEqual(c.l(topic_str, partitions=True)[topic_str]["partitions"][0], 2)
         #
         group_str = self.create_test_group_name()
-        consumer =c.consumer(topic_str, group=group_str)
+        consumer = c.consumer(topic_str, group=group_str)
         message_dict_list = consumer.consume(n=2)
         consumer.close()
         message1_timestamp_int = message_dict_list[1]["timestamp"][1]
         message1_offset_int = message_dict_list[1]["offset"]
         #
-        topic_str_partition_int_offset_int_dict_dict = c.offsets_for_times(topic_str, {0: message1_timestamp_int})
-        found_message1_offset_int = topic_str_partition_int_offset_int_dict_dict[topic_str][0]
+        topic_str_offsets_dict_dict = c.offsets_for_times(topic_str, {0: message1_timestamp_int})
+        found_message1_offset_int = topic_str_offsets_dict_dict[topic_str][0]
         self.assertEqual(message1_offset_int, found_message1_offset_int)
 
     def test_partitions_set_partitions(self):
@@ -359,14 +359,14 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
         # Upon produce, the types "bytes" and "string" trigger the conversion of bytes, strings and dictionaries to bytes on Kafka.
-        producer =c.producer(topic_str, key_type="bytes", value_type="str")
+        producer = c.producer(topic_str, key_type="bytes", value_type="str")
         producer.produce(self.snack_str_list, key=self.snack_str_list)
         producer.close()
         self.assertEqual(c.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
         group_str = self.create_test_group_name()
         # Upon consume, the type "str" triggers the conversion into a string, and "bytes" into bytes.
-        consumer =c.consumer(topic_str, group=group_str, key_type="str", value_type="bytes")
+        consumer = c.consumer(topic_str, group=group_str, key_type="str", value_type="bytes")
         message_dict_list = consumer.consume(n=3)
         key_str_list = [message_dict["key"] for message_dict in message_dict_list]
         value_bytes_list = [message_dict["value"] for message_dict in message_dict_list]
@@ -380,14 +380,14 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
         # Upon produce, the types "str" and "json" trigger the conversion of bytes, strings and dictionaries to bytes on Kafka.
-        producer =c.producer(topic_str, key_type="str", value_type="json")
+        producer = c.producer(topic_str, key_type="str", value_type="json")
         producer.produce(self.snack_dict_list, key=self.snack_str_list)
         producer.close()
         self.assertEqual(c.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
         group_str = self.create_test_group_name()
         # Upon consume, the type "json" triggers the conversion into a dictionary, and "str" into a string.
-        consumer =c.consumer(topic_str, group=group_str, key_type="json", value_type="str")
+        consumer = c.consumer(topic_str, group=group_str, key_type="json", value_type="str")
         message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_str_list = [message_dict["value"] for message_dict in message_dict_list]
@@ -401,14 +401,14 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
         # Upon produce, the type "protobuf" (alias = "pb") triggers the conversion of bytes, strings and dictionaries into Protobuf-encoded bytes on Kafka.
-        producer =c.producer(topic_str, key_type="protobuf", value_type="pb", key_schema=self.protobuf_schema_str, value_schema=self.protobuf_schema_str)
+        producer = c.producer(topic_str, key_type="protobuf", value_type="pb", key_schema=self.protobuf_schema_str, value_schema=self.protobuf_schema_str)
         producer.produce(self.snack_dict_list, key=self.snack_str_list)
         producer.close()
         self.assertEqual(c.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
         group_str = self.create_test_group_name()
         # Upon consume, the type "protobuf" (alias = "pb") triggers the conversion into a dictionary.
-        consumer =c.consumer(topic_str, group=group_str, key_type="pb", value_type="protobuf")
+        consumer = c.consumer(topic_str, group=group_str, key_type="pb", value_type="protobuf")
         message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
@@ -422,14 +422,14 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
         # Upon produce, the type "protobuf" (alias = "pb") triggers the conversion of bytes, strings and dictionaries into Protobuf-encoded bytes on Kafka, and "avro" into Avro-encoded bytes.
-        producer =c.producer(topic_str, key_type="protobuf", value_type="avro", key_schema=self.protobuf_schema_str, value_schema=self.avro_schema_str)
+        producer = c.producer(topic_str, key_type="protobuf", value_type="avro", key_schema=self.protobuf_schema_str, value_schema=self.avro_schema_str)
         producer.produce(self.snack_dict_list, key=self.snack_bytes_list)
         producer.close()
         self.assertEqual(c.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
         group_str = self.create_test_group_name()
         # Upon consume, the types "protobuf" (alias = "pb") and "avro" trigger the conversion into a dictionary.
-        consumer =c.consumer(topic_str, group=group_str, key_type="pb", value_type="avro")
+        consumer = c.consumer(topic_str, group=group_str, key_type="pb", value_type="avro")
         message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
@@ -443,14 +443,14 @@ class Test(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
         # Upon produce, the type "str" triggers the conversion of bytes, strings and dictionaries into bytes on Kafka, and "jsonschema" (alias = "json_sr") into JSONSchema-encoded bytes on Kafka.
-        producer =c.producer(topic_str, key_type="str", value_type="jsonschema", value_schema=self.jsonschema_schema_str)
+        producer = c.producer(topic_str, key_type="str", value_type="jsonschema", value_schema=self.jsonschema_schema_str)
         producer.produce(self.snack_dict_list, key=self.snack_str_list)
         producer.close()
         self.assertEqual(c.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
         group_str = self.create_test_group_name()
         # Upon consume, the types "json" and "jsonschema" (alias = "json_sr") trigger the conversion into a dictionary.
-        consumer =c.consumer(topic_str, group=group_str, key_type="json", value_type="json_sr")
+        consumer = c.consumer(topic_str, group=group_str, key_type="json", value_type="json_sr")
         message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
@@ -463,15 +463,15 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer =c.consumer(topic_str, group=group_str, offsets={0: 2})
-        message_dict_list = consumer.consume()
+        consumer = c.consumer(topic_str, group=group_str, offsets={0: 2})
+        message_dict_list = consumer.consume(n=1)
         self.assertEqual(len(message_dict_list), 1)
         self.assertEqual(message_dict_list[0]["value"], "message 3")
         consumer.close()
@@ -479,17 +479,20 @@ class Test(unittest.TestCase):
     def test_commit(self):
         c = Cluster(config_str)
         #
+        c.enable_auto_commit(False)
+        c.foldl_commit(False)
+        #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer =c.consumer(topic_str, group=group_str, config={"enable.auto.commit": "False"})
-        consumer.consume()
+        consumer = c.consumer(topic_str, group=group_str)
+        consumer.consume(n=1)
         offsets_dict = consumer.offsets()
         self.assertEqual(offsets_dict[topic_str][0], OFFSET_INVALID)
         consumer.commit()
@@ -499,6 +502,9 @@ class Test(unittest.TestCase):
     
     def test_error_handling(self):
         c = Cluster(config_str)
+        #
+        c.enable_auto_commit(False)
+        c.foldl_commit(True)
         #
         topic_str1 = self.create_test_topic_name()
         c.create(topic_str1)
@@ -526,6 +532,7 @@ class Test(unittest.TestCase):
         #
         n_int1 = c.l(topic_str2)[topic_str2]
         self.assertEqual(n_int1, 2)
+        time.sleep(2)
         offset_int = c.group_offsets(group_str)[group_str][topic_str1][0]
         self.assertEqual(offset_int, 2)
         c.cp(topic_str1, c, topic_str2, group=group_str, n=1, consume_batch_size=1, produce_batch_size=1)
@@ -566,7 +573,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str)
+        producer = c.producer(topic_str)
         producer.produce(self.snack_str_list, headers=self.headers_str_str_dict)
         producer.close()
         #
@@ -591,7 +598,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str, value_type="avro", value_schema=self.avro_schema_str)
+        producer = c.producer(topic_str, value_type="avro", value_schema=self.avro_schema_str)
         producer.produce(self.snack_str_list, headers=self.headers_str_str_tuple_list)
         producer.close()
         #
@@ -616,7 +623,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str, value_type="protobuf", value_schema=self.protobuf_schema_str)
+        producer = c.producer(topic_str, value_type="protobuf", value_schema=self.protobuf_schema_str)
         producer.produce(self.snack_dict_list, headers=self.headers_str_bytes_dict)
         producer.close()
         #
@@ -641,7 +648,7 @@ class Test(unittest.TestCase):
         #
         topic_str1 = self.create_test_topic_name()
         c.create(topic_str1)
-        producer =c.producer(topic_str1, value_type="json_sr", value_schema=self.jsonschema_schema_str)
+        producer = c.producer(topic_str1, value_type="json_sr", value_schema=self.jsonschema_schema_str)
         producer.produce(self.snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
         producer.close()
         topic_str2 = self.create_test_topic_name()
@@ -667,7 +674,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str, value_type="protobuf", value_schema=self.protobuf_schema_str)
+        producer = c.producer(topic_str, value_type="protobuf", value_schema=self.protobuf_schema_str)
         producer.produce(self.snack_dict_list)
         producer.close()
         #
@@ -706,7 +713,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str, value_type="protobuf", value_schema=self.protobuf_schema_str)
+        producer = c.producer(topic_str, value_type="protobuf", value_schema=self.protobuf_schema_str)
         producer.produce(self.snack_str_list)
         producer.close()
         #
@@ -723,7 +730,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str, value_type="jsonschema", value_schema=self.jsonschema_schema_str)
+        producer = c.producer(topic_str, value_type="jsonschema", value_schema=self.jsonschema_schema_str)
         producer.produce(self.snack_str_list)
         producer.close()
         #
@@ -739,7 +746,7 @@ class Test(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
-        producer =c.producer(topic_str, value_type="avro", value_schema=self.avro_schema_str)
+        producer = c.producer(topic_str, value_type="avro", value_schema=self.avro_schema_str)
         producer.produce(self.snack_str_list)
         producer.close()
         #
@@ -753,7 +760,7 @@ class Test(unittest.TestCase):
         #
         topic_str1 = self.create_test_topic_name()
         c.create(topic_str1)
-        producer =c.producer(topic_str1, value_type="avro", value_schema=self.avro_schema_str)
+        producer = c.producer(topic_str1, value_type="avro", value_schema=self.avro_schema_str)
         producer.produce(self.snack_str_list)
         producer.close()
         #

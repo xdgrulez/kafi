@@ -50,9 +50,14 @@ class Storage(Shell):
             self.consumer_group_prefix(str(self.kafi_config_dict["consumer.group.prefix"]))
         #
         if "enable.auto.commit" not in self.kafi_config_dict:
-            self.enable_auto_commit(True)
+            self.enable_auto_commit(False)
         else:
             self.enable_auto_commit(bool(self.kafi_config_dict["enable.auto.commit"]))
+        #
+        if "foldl.commit" not in self.kafi_config_dict:
+            self.foldl_commit(True)
+        else:
+            self.foldl_commit(bool(self.kafi_config_dict["foldl.commit"]))
 
     #
 
@@ -76,6 +81,9 @@ class Storage(Shell):
 
     def enable_auto_commit(self, new_value=None): # bool
         return self.get_set_config("enable.auto.commit", new_value)
+
+    def foldl_commit(self, new_value=None): # bool
+        return self.get_set_config("foldl.commit", new_value)
 
     #
 

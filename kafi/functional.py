@@ -11,7 +11,7 @@ class Functional:
         verbose_int = self.verbose()
         progress_num_messages_int = self.progress_num_messages()
         #
-        consumer = self.consumer(topic, config={"enable.auto.commit": "False"}, **kwargs)
+        consumer = self.consumer(topic, **kwargs)
         #
         def foldl_function1(acc_progress_message_counter_int_tuple, message_dict):
             (acc, progress_message_counter_int) = acc_progress_message_counter_int_tuple
