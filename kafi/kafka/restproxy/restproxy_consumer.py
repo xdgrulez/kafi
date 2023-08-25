@@ -14,8 +14,7 @@ class RestProxyConsumer(KafkaConsumer):
         #
         self.consumer_config_dict["fetch.min.bytes"] = restproxy_obj.fetch_min_bytes()
         self.consumer_config_dict["consumer.request.timeout.ms"] = restproxy_obj.consumer_request_timeout_ms()
-        if "enable.auto.commit" in self.consumer_config_dict:
-            self.consumer_config_dict["auto.commit.enable"] = self.consumer_config_dict["enable.auto.commit"]
+        self.consumer_config_dict["auto.commit.enable"] = self.enable_auto_commit_bool
         #
         # Instance ID
         #

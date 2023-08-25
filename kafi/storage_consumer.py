@@ -20,10 +20,11 @@ class StorageConsumer():
         # Configure.
         self.consumer_config_dict = {}
         self.consumer_config_dict["auto.offset.reset"] = storage_obj.auto_offset_reset()
-        self.consumer_config_dict["enable.auto.commit"] = storage_obj.enable_auto_commit()
         if "config" in kwargs:
             for key_str, value in kwargs["config"].items():
                 self.consumer_config_dict[key_str] = value
+        #
+        self.enable_auto_commit_bool = kwargs["enable.auto.commit"] if "enable.auto.commit" in kwargs else storage_obj.enable_auto_commit()
 
     #
 

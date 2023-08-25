@@ -54,10 +54,10 @@ class Storage(Shell):
         else:
             self.enable_auto_commit(bool(self.kafi_config_dict["enable.auto.commit"]))
         #
-        if "foldl.commit" not in self.kafi_config_dict:
-            self.foldl_commit(True)
+        if "commit.after.processing" not in self.kafi_config_dict:
+            self.commit_after_processing(True)
         else:
-            self.foldl_commit(bool(self.kafi_config_dict["foldl.commit"]))
+            self.commit_after_processing(bool(self.kafi_config_dict["commit.after.processing"]))
 
     #
 
@@ -82,8 +82,8 @@ class Storage(Shell):
     def enable_auto_commit(self, new_value=None): # bool
         return self.get_set_config("enable.auto.commit", new_value)
 
-    def foldl_commit(self, new_value=None): # bool
-        return self.get_set_config("foldl.commit", new_value)
+    def commit_after_processing(self, new_value=None): # bool
+        return self.get_set_config("commit.after.processing", new_value)
 
     #
 

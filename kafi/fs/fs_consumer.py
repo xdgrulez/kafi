@@ -24,7 +24,6 @@ class FSConsumer(StorageConsumer):
         n_int = n
         #
         auto_offset_reset_str = self.consumer_config_dict["auto.offset.reset"]
-        enable_auto_commit_bool = self.consumer_config_dict["enable.auto.commit"]
         #
         message_counter_int = 0
         acc = initial_acc
@@ -64,17 +63,19 @@ class FSConsumer(StorageConsumer):
             # Filter out partitions not corresponding to files.
             partition_int_first_partition_rel_file_str_dict = {partition_int: first_partition_rel_file_str for partition_int, first_partition_rel_file_str in partition_int_first_partition_rel_file_str_dict.items() if first_partition_rel_file_str is not None}
             #
-            # Get all partition files to be read for all partitions
+            # Get all partition files to be read for all partitions.
             partition_int_to_be_consume_rel_file_str_list_dict = {partition_int: [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str >= partition_int_first_partition_rel_file_str_dict[partition_int]] for partition_int, rel_file_str_list in partition_int_rel_file_str_list_dict.items()}
-            if enable_auto_commit_bool:
+            # Create the group.
+            if self.enable_auto_commit_bool:
                 self.commit()
             #
             def acc_bytes_to_acc(acc, message_bytes, message_counter_int):
                 serialized_message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
                 #
                 self.next_topic_str_group_str_offsets_dict_dict_dict[topic_str][self.group_str] = {serialized_message_dict["partition"]: serialized_message_dict["offset"] + 1}
-                if enable_auto_commit_bool:
-                        self.commit()
+                if self.enable_auto_commit_bool:
+                    # Commit immediately after reading the message if enable.auto.commit == True
+                    self.commit()
                 #
                 if serialized_message_dict["offset"] >= start_offsets_dict[partition_int]:
                     deserialized_message_dict = deserialize(serialized_message_dict, self.topic_str_key_type_str_dict[topic_str], self.topic_str_value_type_str_dict[topic_str])
@@ -83,7 +84,8 @@ class FSConsumer(StorageConsumer):
                     #
                     message_counter_int += 1
                     #
-                    if not enable_auto_commit_bool and self.storage_obj.foldl_commit():
+                    if not self.enable_auto_commit_bool and self.storage_obj.commit_after_processing():
+                        # Only commit once the message has been processed if enable.auto.commit == False and commit.after.processing == True
                         self.commit()
                 #
                 return (acc, message_counter_int)

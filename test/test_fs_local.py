@@ -178,7 +178,7 @@ class Test(unittest.TestCase):
         l = self.get_local()
         #
         l.enable_auto_commit(False)
-        l.foldl_commit(False)
+        l.commit_after_processing(False)
         #
         topic_str = self.create_test_topic_name()
         l.create(topic_str)

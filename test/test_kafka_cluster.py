@@ -480,7 +480,7 @@ class Test(unittest.TestCase):
         c = Cluster(config_str)
         #
         c.enable_auto_commit(False)
-        c.foldl_commit(False)
+        c.commit_after_processing(False)
         #
         topic_str = self.create_test_topic_name()
         c.create(topic_str)
@@ -504,7 +504,7 @@ class Test(unittest.TestCase):
         c = Cluster(config_str)
         #
         c.enable_auto_commit(False)
-        c.foldl_commit(True)
+        c.commit_after_processing(True)
         #
         topic_str1 = self.create_test_topic_name()
         c.create(topic_str1)

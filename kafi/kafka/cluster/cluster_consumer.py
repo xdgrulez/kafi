@@ -35,6 +35,7 @@ class ClusterConsumer(KafkaConsumer):
         self.consumer_config_dict.update(cluster_obj.kafka_config_dict)
         self.consumer_config_dict["group.id"] = self.group_str
         self.consumer_config_dict["session.timeout.ms"] = cluster_obj.session_timeout_ms()
+        self.consumer_config_dict["enable.auto.commit"] = self.enable_auto_commit_bool
         #
         self.consumer = Consumer(self.consumer_config_dict)
         #
