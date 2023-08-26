@@ -68,6 +68,12 @@ class FS(Storage):
 
     # Topics
 
+    def config(self, pattern):
+        return self.admin.config(pattern)
+
+    def set_config(self, pattern, config, test=False):
+        return self.admin.set_config(pattern, config, test)
+
     def topics(self, pattern=None, size=False, **kwargs):
         return self.admin.topics(pattern, size, **kwargs)
     

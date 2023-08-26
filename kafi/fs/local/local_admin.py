@@ -30,6 +30,9 @@ class LocalAdmin(FSAdmin):
     def delete_dir(self, abs_path_dir_str):
         os.rmdir(abs_path_dir_str)
 
+    def exists_file(self, abs_path_file_str):
+        return os.path.exists(abs_path_file_str)
+
     # Metadata
     
     def read_str(self, abs_path_file_str):

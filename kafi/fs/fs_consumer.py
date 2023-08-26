@@ -37,19 +37,26 @@ class FSConsumer(StorageConsumer):
             if start_offsets_dict is None:
                 # If we got no start offsets, try to get the start offsets from the group.
                 group_offsets_dict = self.storage_obj.admin.get_groups(topic_str)[self.group_str]
-                if all(group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in range(partitions_int)):
-                    # The group has just been initialized but no offset has been committed yet. In this case, the start offsets are based on the value of auto.offset.reset.
+                #
+                if any(group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in range(partitions_int)):
+                    # If any of the partitions still does not have a committed offset yet...
                     if auto_offset_reset_str.lower() == "latest":
                         # If auto.offset.reset == latest, start offsets = last offsets.
                         partition_int_offset_tuple_dict = self.watermarks(topic_str, **kwargs)[topic_str]
-                        start_offsets_dict = {partition_int: offset_tuple[1] for partition_int, offset_tuple in partition_int_offset_tuple_dict.items()}
+                        auto_offset_reset_offsets_dict = {partition_int: offset_tuple[1] for partition_int, offset_tuple in partition_int_offset_tuple_dict.items()}
                     elif auto_offset_reset_str.lower() == "earliest":
                         # If auto.offset.reset == earliest, start offsets = 0
-                        start_offsets_dict = {partition_int: 0 for partition_int in range(partitions_int)}
+                        auto_offset_reset_offsets_dict = {partition_int: 0 for partition_int in range(partitions_int)}
                     else:
                         raise Exception("Only \"earliest\" and \"latest\" supported for \"auto.offset.reset\".")
+                    # ...and for each partition still not having a committed offset yet, use the auto.offset.reset one.
+                    start_offsets_dict = {}
+                    for partition_int, offset_int in group_offsets_dict.items():
+                        if offset_int == OFFSET_INVALID:
+                            start_offsets_dict[partition_int] = auto_offset_reset_offsets_dict[partition_int]
+                        else:
+                            start_offsets_dict[partition_int] = group_offsets_dict[partition_int]
                 else:
-                    # The group already has committed offsets. In this case, start offsets = committed offsets.
                     start_offsets_dict = group_offsets_dict
             #
             message_separator_bytes = self.storage_obj.admin.get_message_separator(topic_str)
@@ -60,19 +67,16 @@ class FSConsumer(StorageConsumer):
             # Get first partition files for all partitions.
             partition_int_first_partition_rel_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str(topic_str, partition_int, offset_int) for partition_int, offset_int in start_offsets_dict.items()}
             #
-            # Filter out partitions not corresponding to files.
+            # Filter out partitions not corresponding to any filee listed by get_partition_files() above.
             partition_int_first_partition_rel_file_str_dict = {partition_int: first_partition_rel_file_str for partition_int, first_partition_rel_file_str in partition_int_first_partition_rel_file_str_dict.items() if first_partition_rel_file_str is not None}
             #
-            # Get all partition files to be read for all partitions.
-            partition_int_to_be_consume_rel_file_str_list_dict = {partition_int: [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str >= partition_int_first_partition_rel_file_str_dict[partition_int]] for partition_int, rel_file_str_list in partition_int_rel_file_str_list_dict.items()}
-            # Create the group.
-            if self.enable_auto_commit_bool:
-                self.commit()
+            # Get all partition files to be consumed for all partitions.
+            partition_int_to_be_consume_rel_file_str_list_dict = {partition_int: [rel_file_str for rel_file_str in rel_file_str_list if partition_int in partition_int_first_partition_rel_file_str_dict and rel_file_str >= partition_int_first_partition_rel_file_str_dict[partition_int]] for partition_int, rel_file_str_list in partition_int_rel_file_str_list_dict.items()}
             #
             def acc_bytes_to_acc(acc, message_bytes, message_counter_int):
                 serialized_message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
                 #
-                self.next_topic_str_group_str_offsets_dict_dict_dict[topic_str][self.group_str] = {serialized_message_dict["partition"]: serialized_message_dict["offset"] + 1}
+                self.next_topic_str_group_str_offsets_dict_dict_dict[topic_str][self.group_str][serialized_message_dict["partition"]] = serialized_message_dict["offset"] + 1
                 if self.enable_auto_commit_bool:
                     # Commit immediately after reading the message if enable.auto.commit == True
                     self.commit()
@@ -175,25 +179,6 @@ class FSConsumer(StorageConsumer):
             return message_dict_list
         #
         return self.foldl(foldl_function, [], n)
-
-    # Helpers
-
-    def get_offset_in_partition_file(self, topic_str, rel_partition_file_str, index_int):
-        abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(topic_str)
-        #
-        message_separator_bytes = self.storage_obj.admin.get_message_separator(topic_str)
-        #
-        message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_partition_file_str), message_separator_bytes)
-        if len(message_bytes_list) > 0:
-            first_message_bytes = message_bytes_list[index_int]
-            serialized_message_dict = ast.literal_eval(first_message_bytes.decode("utf-8"))
-            offset_int = serialized_message_dict["offset"]
-        else:
-            raise Exception("Empty partition file.")
-        #
-        return offset_int
-
-    #
 
     def offsets(self):
         group_str_topic_str_offsets_dict_dict_dict = self.storage_obj.admin.group_offsets(self.group_str)

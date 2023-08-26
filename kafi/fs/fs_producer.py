@@ -42,17 +42,27 @@ class FSProducer(StorageProducer):
         topic_abs_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(self.topic_str)
         #
         partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
-        partition_int_last_offset_int_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
+        last_offsets_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
         #
-        produce_batch_size_int = kwargs["produce_batch_size"] if "produce_batch_size" in kwargs else self.storage_obj.produce_batch_size()
         message_separator_bytes = self.storage_obj.admin.get_message_separator(self.topic_str)
         #
-        keep_partitions_bool = "keep_partitions" in kwargs and kwargs["keep_partitions"]
-        keep_timestamps_bool = "keep_timestamps" in kwargs and kwargs["keep_timestamps"]
         key = kwargs["key"] if "key" in kwargs else None
+        #
         timestamp = kwargs["timestamp"] if "timestamp" in kwargs and kwargs["timestamp"] is not None else CURRENT_TIME
+        if "timestamp" in kwargs:
+            # Keep the timestamps provided in the kwargs.
+            keep_timestamps_bool = True
+        else:
+            keep_timestamps_bool = "keep_timestamps" in kwargs and kwargs["keep_timestamps"]
+        #
         headers = kwargs["headers"] if "headers" in kwargs else None
+        #
         partitions = kwargs["partition"] if "partition" in kwargs else None
+        if "partition" in kwargs:
+            # Keep the partitions provided in the kwargs.
+            keep_partitions_bool = True
+        else:
+            keep_partitions_bool = "keep_partitions" in kwargs and kwargs["keep_partitions"]
         #
         value_list = value if isinstance(value, list) else [value]
         #
@@ -65,7 +75,7 @@ class FSProducer(StorageProducer):
         #
         partition_int_message_bytes_list_dict = {partition_int: [] for partition_int in range(partitions_int)}
         round_robin_counter_int = 0
-        partition_int_offset_counter_int_dict = {partition_int: last_offset_int if last_offset_int > 0 else 0 for partition_int, last_offset_int in partition_int_last_offset_int_dict.items()}
+        partition_int_offset_counter_int_dict = {partition_int: last_offset_int if last_offset_int > 0 else 0 for partition_int, last_offset_int in last_offsets_dict.items()}
         for value, key, timestamp, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_list, headers_str_bytes_tuple_list_list, partition_int_list):
             value_bytes = serialize(value, False)
             key_bytes = serialize(key, True)
@@ -101,6 +111,7 @@ class FSProducer(StorageProducer):
             if len(message_bytes_list) > 0:
                 joined_message_bytes = b"".join(message_bytes_list)
                 #
-                start_offset_int = partition_int_last_offset_int_dict[partition_int]
-                abs_path_file_str = os.path.join(topic_abs_dir_str, f"partition,{partition_int:09},{start_offset_int:021}")
+                start_offset_int = last_offsets_dict[partition_int]
+                end_offset_int = start_offset_int + len(message_bytes_list) - 1
+                abs_path_file_str = os.path.join(topic_abs_dir_str, f"partition,{partition_int:09},{start_offset_int:021},{end_offset_int:021}")
                 self.produce_bytes(abs_path_file_str, joined_message_bytes)

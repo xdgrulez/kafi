@@ -141,6 +141,9 @@ class ClusterConsumer(KafkaConsumer):
         #
 
         def bytes_to_dict(bytes):
+            if bytes is None:
+                return None
+            #
             return json.loads(bytes)
         #
 
@@ -205,6 +208,9 @@ class ClusterConsumer(KafkaConsumer):
         return generalizedProtocolMessageType
 
     def bytes_protobuf_to_dict(self, bytes):
+        if bytes is None:
+            return None
+        #
         schema_id_int = int.from_bytes(bytes[1:5], "big")
         if schema_id_int in self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict:
             generalizedProtocolMessageType, protobuf_schema_str = self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int]
@@ -218,6 +224,9 @@ class ClusterConsumer(KafkaConsumer):
         return dict
 
     def bytes_avro_to_dict(self, bytes):
+        if bytes is None:
+            return None
+        #
         schema_id_int = int.from_bytes(bytes[1:5], "big")
         schema_dict = self.schemaRegistry.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
@@ -227,6 +236,9 @@ class ClusterConsumer(KafkaConsumer):
         return dict
 
     def bytes_jsonschema_to_dict(self, bytes):
+        if bytes is None:
+            return None
+        #
         schema_id_int = int.from_bytes(bytes[1:5], "big")
         schema_dict = self.schemaRegistry.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
