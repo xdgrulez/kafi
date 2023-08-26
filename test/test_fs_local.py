@@ -237,6 +237,25 @@ class Test(unittest.TestCase):
         l.create(topic_str)
         self.assertTrue(l.exists(topic_str))
 
+    def test_partitions_set_partitions(self):
+        l = self.get_local()
+        #
+        topic_str = self.create_test_topic_name()
+        l.create(topic_str)
+        partitions_int_1 = l.partitions(topic_str)[topic_str]
+        self.assertEqual(partitions_int_1, 1)
+        l.set_partitions(topic_str, 2)
+        partitions_int_2 = l.partitions(topic_str)[topic_str]
+        self.assertEqual(partitions_int_2, 2)
+        # topic_str_partition_int_partition_dict_dict_dict = l.partitions(topic_str, verbose=True)[topic_str]
+        # self.assertEqual(list(topic_str_partition_int_partition_dict_dict_dict.keys()), [0, 1])
+        # self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["leader"], 1)
+        # self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["replicas"], [1])
+        # self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["isrs"], [1])
+        # self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["leader"], 1)
+        # self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["replicas"], [1])
+        # self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["isrs"], [1])
+
     # Write/Read
 
     def test_produce_consume_bytes_str(self):

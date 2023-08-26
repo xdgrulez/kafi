@@ -33,20 +33,6 @@ class FSAdmin(StorageAdmin):
 
     #
 
-    def partitions(self, pattern=None, verbose=False):
-        topic_str_list = self.list_topics(pattern)
-        filtered_topic_str_list = self.filter_topics(topic_str_list, pattern)
-        #
-        topic_str_partitions_int_dict = {}
-        for topic_str in filtered_topic_str_list:
-            partitions_int = self.get_partitions(topic_str)
-            #
-            topic_str_partitions_int_dict[topic_str] = partitions_int
-        #
-        return topic_str_partitions_int_dict
-
-    #
-
     def create(self, topic, partitions=1, config={}, block=True, **kwargs):
         topic_str = topic
         #
@@ -76,6 +62,34 @@ class FSAdmin(StorageAdmin):
                 self.delete_file(os.path.join(topic_abs_dir_str, rel_file_str))
             #
             self.delete_dir(topic_abs_dir_str)
+
+    #
+
+    def partitions(self, pattern=None, verbose=False):
+        topic_str_list = self.list_topics(pattern)
+        #
+        topic_str_partitions_int_dict = {topic_str: self.get_partitions(topic_str) for topic_str in topic_str_list}
+        #
+        return topic_str_partitions_int_dict
+
+    def set_partitions(self, pattern, num_partitions, test=False):
+        partitions_int = num_partitions
+        test_bool = test
+        #
+        topic_str_list = self.list_topics(pattern)
+        #
+        topic_str_partitions_int_dict = {}
+        for topic_str in topic_str_list:
+            metadata_dict = self.get_metadata(topic_str)
+            #
+            metadata_dict["partitions"] = partitions_int
+            #
+            if not test_bool:
+                self.set_metadata(topic_str, metadata_dict)
+            #
+            topic_str_partitions_int_dict[topic_str] = partitions_int
+        #
+        return topic_str_partitions_int_dict
 
     #
 

@@ -103,6 +103,9 @@ class FS(Storage):
     def partitions(self, pattern=None, verbose=False):
         return self.admin.partitions(pattern, verbose)
 
+    def set_partitions(self, pattern, num_partitions, test=False):
+        return self.admin.set_partitions(pattern, num_partitions, test)
+
     # Groups
 
     def groups(self, pattern="*", state_pattern="*", state=False):
