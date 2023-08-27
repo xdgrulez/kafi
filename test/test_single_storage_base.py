@@ -16,8 +16,11 @@ from kafi.helpers import *
 
 OFFSET_INVALID = -1001
 
-class SingleStorageBase(unittest.TestCase):
+class TestSingleStorageBase(unittest.TestCase):
     def setUp(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWarning)
         #
         # https://simon-aubury.medium.com/kafka-with-avro-vs-kafka-with-protobuf-vs-kafka-with-json-schema-667494cbb2af
@@ -48,6 +51,9 @@ class SingleStorageBase(unittest.TestCase):
         print("Test:", self._testMethodName)
 
     def tearDown(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         if s.__class__.__name__ == "RestProxy":
@@ -83,6 +89,9 @@ class SingleStorageBase(unittest.TestCase):
     # ACLs
 
     def test_acls(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         if self.principal_str:
             s = self.get_storage()
             topic_str = self.create_test_topic_name()
@@ -96,6 +105,9 @@ class SingleStorageBase(unittest.TestCase):
     # Brokers
     
     def test_brokers(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         if not self.is_ccloud():
             broker_dict = s.brokers()
@@ -114,6 +126,9 @@ class SingleStorageBase(unittest.TestCase):
     # Groups
 
     def test_groups(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -142,6 +157,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
 
     def test_describe_groups(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -181,6 +199,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
 
     def test_delete_groups(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -204,6 +225,9 @@ class SingleStorageBase(unittest.TestCase):
         self.assertEqual(group_str_list, [])
 
     def test_group_offsets(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         s.enable_auto_commit(False)
         s.commit_after_processing(False)
@@ -235,6 +259,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
 
     def test_set_group_offsets(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         s.enable_auto_commit(False)
         s.commit_after_processing(False)
@@ -260,6 +287,9 @@ class SingleStorageBase(unittest.TestCase):
     # Topics
 
     def test_config_set_config(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -270,6 +300,9 @@ class SingleStorageBase(unittest.TestCase):
         self.assertEqual(new_retention_ms_str, "4711")
 
     def test_create_delete(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -281,6 +314,9 @@ class SingleStorageBase(unittest.TestCase):
         self.assertNotIn(topic_str, topic_str_list)
 
     def test_topics(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -308,6 +344,9 @@ class SingleStorageBase(unittest.TestCase):
         self.assertEqual(topic_str_partitions_dict_dict[topic_str][0], 3)
 
     def test_offsets_for_times(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         s.verbose(1)
@@ -334,6 +373,9 @@ class SingleStorageBase(unittest.TestCase):
         self.assertEqual(message1_offset_int, found_message1_offset_int)
 
     def test_partitions_set_partitions(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -359,6 +401,9 @@ class SingleStorageBase(unittest.TestCase):
             self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["isrs"], [1])
 
     def test_exists(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -369,6 +414,9 @@ class SingleStorageBase(unittest.TestCase):
     # Produce/Consume
 
     def test_produce_consume_bytes_str(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -390,6 +438,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
     
     def test_produce_consume_json(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -411,6 +462,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
 
     def test_produce_consume_protobuf(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -432,6 +486,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
 
     def test_produce_consume_avro(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -453,6 +510,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
 
     def test_produce_consume_jsonschema(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -474,6 +534,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
 
     def test_consume_from_offsets(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -492,6 +555,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
 
     def test_commit(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         s.enable_auto_commit(False)
@@ -526,6 +592,9 @@ class SingleStorageBase(unittest.TestCase):
         consumer.close()
     
     def test_error_handling(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         s.enable_auto_commit(False)
@@ -571,12 +640,18 @@ class SingleStorageBase(unittest.TestCase):
         self.assertEqual(value_str_list, self.snack_str_list)
 
     def test_cluster_settings(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         s.verbose(0)
         self.assertEqual(s.verbose(), 0)
 
     def test_configs(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         config_str_list1 = s.configs()
@@ -593,6 +668,9 @@ class SingleStorageBase(unittest.TestCase):
 
     # Shell.cat -> Functional.map -> Functional.flatmap -> Functional.foldl -> ClusterConsumer.consumer/KafkaConsumer.foldl/ClusterConsumer.close -> ClusterConsumer.consume
     def test_cat(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -620,6 +698,9 @@ class SingleStorageBase(unittest.TestCase):
 
     # Shell.head -> Shell.cat
     def test_head(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -647,6 +728,9 @@ class SingleStorageBase(unittest.TestCase):
 
     # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> ClusterConsumer.consumer/KafkaConsumer.foldl/ClusterConsumer.close -> ClusterConsumer.consume
     def test_tail(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -674,6 +758,9 @@ class SingleStorageBase(unittest.TestCase):
 
     # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> ClusterConsumer.producer/Functional.foldl/ClusterConsumer.close -> ClusterConsumer.consumer/KafkaConsumer.foldl/ClusterConsumer.close -> ClusterConsumer.consume
     def test_cp(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str1 = self.create_test_topic_name()
@@ -701,6 +788,9 @@ class SingleStorageBase(unittest.TestCase):
             self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
 
     def test_wc(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -717,6 +807,9 @@ class SingleStorageBase(unittest.TestCase):
 
     # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> ClusterConsumer.consumer/read/close
     def test_diff(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str1 = self.create_test_topic_name()
@@ -740,6 +833,9 @@ class SingleStorageBase(unittest.TestCase):
 
     # Shell.diff -> Shell.diff_fun -> Functional.flatmap -> Functional.foldl -> ClusterConsumer.open/Kafka.foldl/ClusterConsumer.close -> ClusterConsumer.consume 
     def test_grep(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -757,6 +853,9 @@ class SingleStorageBase(unittest.TestCase):
     # Functional
 
     def test_foreach(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -773,6 +872,9 @@ class SingleStorageBase(unittest.TestCase):
         self.assertEqual("chocolate", colour_str_list[2])
 
     def test_filter(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
@@ -787,6 +889,9 @@ class SingleStorageBase(unittest.TestCase):
         self.assertEqual(3, message_counter_int)
 
     def test_filter_to(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
         s = self.get_storage()
         #
         topic_str1 = self.create_test_topic_name()

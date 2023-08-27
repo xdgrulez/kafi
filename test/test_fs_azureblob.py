@@ -1,9 +1,17 @@
-from test.single_storage_base import SingleStorageBase
+import os
+import sys
+
+if os.path.basename(os.getcwd()) == "test":
+    sys.path.insert(1, "..")
+else:
+    sys.path.insert(1, ".")
+
+from test.test_single_storage_base import TestSingleStorageBase
 from kafi.fs.azureblob.azureblob import AzureBlob
 
 #
 
-class Test(SingleStorageBase):
+class Test(TestSingleStorageBase):
     def setUp(self):
         super().setUp()
         self.path_str = "test"

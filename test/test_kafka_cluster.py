@@ -1,9 +1,17 @@
-from test.single_storage_base import SingleStorageBase
+import os
+import sys
+
+if os.path.basename(os.getcwd()) == "test":
+    sys.path.insert(1, "..")
+else:
+    sys.path.insert(1, ".")
+
+from test.test_single_storage_base import TestSingleStorageBase
 from kafi.kafka.cluster.cluster import Cluster
 
 #
 
-class Test(SingleStorageBase):
+class Test(TestSingleStorageBase):
     def setUp(self):
         super().setUp()
         self.principal_str = None
@@ -23,7 +31,7 @@ class Test(SingleStorageBase):
 
     def is_ccloud(self):
         c = self.get_storage()
-        return "confluent.cloud" not in c.kafka_config_dict["bootstrap.servers"]
+        return "confluent.cloud" in c.kafka_config_dict["bootstrap.servers"]
 
     ### ClusterAdmin
     # ACLs

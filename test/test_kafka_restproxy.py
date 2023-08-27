@@ -1,8 +1,16 @@
-from test.single_storage_base import SingleStorageBase
+import os
+import sys
+
+if os.path.basename(os.getcwd()) == "test":
+    sys.path.insert(1, "..")
+else:
+    sys.path.insert(1, ".")
+
+from test.test_single_storage_base import TestSingleStorageBase
 from kafi.kafka.restproxy.restproxy import RestProxy
 from kafi.kafka.cluster.cluster import Cluster
 
-class Test(SingleStorageBase):
+class Test(TestSingleStorageBase):
     def setUp(self):
         super().setUp()
         self.principal_str = None
@@ -26,7 +34,7 @@ class Test(SingleStorageBase):
     def is_ccloud(self):
         r = self.get_storage()
         #
-        return "confluent.cloud" not in r.rest_proxy_config_dict["rest.proxy.url"]
+        return "confluent.cloud" in r.rest_proxy_config_dict["rest.proxy.url"]
     
     ### RestProxyAdmin
     # ACLs

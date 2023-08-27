@@ -1,11 +1,17 @@
 import os
+import sys
 
-from test.single_storage_base import SingleStorageBase
+if os.path.basename(os.getcwd()) == "test":
+    sys.path.insert(1, "..")
+else:
+    sys.path.insert(1, ".")
+
+from test.test_single_storage_base import TestSingleStorageBase
 from kafi.fs.local.local import Local
 
 #
 
-class Test(SingleStorageBase):
+class Test(TestSingleStorageBase):
     def setUp(self):
         super().setUp()
         self.path_str = "/tmp/kafi/test/local"
