@@ -27,7 +27,7 @@ class AzureBlobAdmin(FSAdmin):
 
     def list_files(self, abs_path_dir_str):
         blob_str_itemPaged = self.containerClient.list_blob_names(name_starts_with=abs_path_dir_str)
-        rel_file_str_set = set([os.path.basename(blob_str) for blob_str in blob_str_itemPaged])
+        rel_file_str_set = set([os.path.relpath(blob_str, abs_path_dir_str) for blob_str in blob_str_itemPaged])
         #
         rel_file_str_list = list(rel_file_str_set)
         rel_file_str_list.sort()

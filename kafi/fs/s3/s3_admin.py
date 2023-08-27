@@ -4,6 +4,7 @@ import os
 from kafi.fs.fs_admin import FSAdmin
 
 from minio import Minio
+from minio.error import MinioException
 
 #
 
@@ -17,16 +18,18 @@ class S3Admin(FSAdmin):
 
     def list_dirs(self, abs_path_dir_str):
         object_generator = self.minio.list_objects(self.storage_obj.bucket_name(), prefix=abs_path_dir_str, recursive=True)
-        rel_dir_str_list = [os.path.basename(os.path.dirname(object.object_name)) for object in object_generator]
+        rel_dir_str_set = set([os.path.basename(os.path.dirname(object.object_name)) for object in object_generator])
         #
+        rel_dir_str_list = list(rel_dir_str_set)
         rel_dir_str_list.sort()
         #
         return rel_dir_str_list
 
     def list_files(self, abs_path_dir_str):
         object_generator = self.minio.list_objects(self.storage_obj.bucket_name(), prefix=abs_path_dir_str, recursive=True)
-        rel_file_str_list = [os.path.basename(object.object_name) for object in object_generator]
+        rel_file_str_set = set([os.path.relpath(object.object_name, abs_path_dir_str) for object in object_generator])
         #
+        rel_file_str_list = list(rel_file_str_set)
         rel_file_str_list.sort()
         #
         return rel_file_str_list
@@ -36,6 +39,13 @@ class S3Admin(FSAdmin):
 
     def delete_dir(self, _):
         pass
+
+    def exists_file(self, abs_path_file_str):
+        try:
+            self.minio.stat_object(self.storage_obj.bucket_name(), abs_path_file_str)
+            return True
+        except MinioException:
+            return False
 
     # Metadata
     

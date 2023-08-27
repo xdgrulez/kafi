@@ -484,7 +484,7 @@ def test_cp(test_obj, storage1, storage2):
         message_dict["value"]["colour"] += "ish"
         if storage1.__class__.__name__ == "RestProxy" or storage2.__class__.__name__ == "RestProxy":
             # Could go to fast for the REST Proxy
-            time.sleep(0.5)
+            time.sleep(1.0)
         return message_dict
     #
 
