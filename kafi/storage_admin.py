@@ -50,19 +50,19 @@ class StorageAdmin():
             else:
                 # e.g. ["topic"]
                 topic_str_list = self.list_topics(pattern_str_or_str_list)
-                filtered_topic_str_list = self.filter_topics(topic_str_list, pattern_str_or_str_list)
+                filtered_topic_str_list = self.pattern_match(topic_str_list, pattern_str_or_str_list)
                 return filtered_topic_str_list
 
     # Helpers
 
-    def filter_topics(self, topic_str_list, pattern_str_or_str_list):
+    def pattern_match(self, input_str_list, pattern_str_or_str_list):
         if pattern_str_or_str_list is not None:
             if isinstance(pattern_str_or_str_list, str):
                 pattern_str_or_str_list = [pattern_str_or_str_list]
-            filtered_topic_str_list = [topic_str for topic_str in topic_str_list if any(fnmatch(topic_str, pattern_str) for pattern_str in pattern_str_or_str_list)]
+            output_topic_str_list = [input_str for input_str in input_str_list if any(fnmatch(input_str, pattern_str) for pattern_str in pattern_str_or_str_list)]
         else:
-            filtered_topic_str_list = topic_str_list
+            output_topic_str_list = input_str_list
         #
-        filtered_topic_str_list.sort()
+        output_topic_str_list.sort()
         #
-        return filtered_topic_str_list
+        return output_topic_str_list

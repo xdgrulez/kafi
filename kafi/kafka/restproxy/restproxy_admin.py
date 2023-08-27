@@ -292,7 +292,7 @@ class RestProxyAdmin(KafkaAdmin):
         kafkaTopic_dict_list = response_dict["data"]
         topic_str_list = [kafkaTopic_dict["topic_name"] for kafkaTopic_dict in kafkaTopic_dict_list]
         #
-        filtered_topic_str_list = self.filter_topics(topic_str_list, pattern)
+        filtered_topic_str_list = self.pattern_match(topic_str_list, pattern)
         #
         return filtered_topic_str_list
 

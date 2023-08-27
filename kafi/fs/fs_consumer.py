@@ -15,11 +15,18 @@ class FSConsumer(StorageConsumer):
     def __init__(self, fs_obj, *topics, **kwargs):
         super().__init__(fs_obj, *topics, **kwargs)
         #
-        self.next_topic_str_group_str_offsets_dict_dict_dict = {topic_str: {self.group_str: {partition_int: OFFSET_INVALID for partition_int in range(self.storage_obj.admin.get_partitions(topic_str))}} for topic_str in self.topic_str_list}
-        self.commit()
+        self.next_topic_str_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.storage_obj.admin.get_partitions(topic_str))} for topic_str in self.topic_str_list}
+        new_group_dict = {"offsets": self.next_topic_str_offsets_dict_dict, "state": "stable"}
+        self.storage_obj.admin.set_group_dict(self.group_str, new_group_dict)
 
     #
+
+    def close(self):
+        new_group_dict = {"state": "empty"}
+        self.storage_obj.admin.set_group_dict(self.group_str, new_group_dict)
     
+    #
+  
     def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         n_int = n
         #
@@ -36,7 +43,8 @@ class FSConsumer(StorageConsumer):
             #
             if start_offsets_dict is None:
                 # If we got no start offsets, try to get the start offsets from the group.
-                group_offsets_dict = self.storage_obj.admin.get_groups(topic_str)[self.group_str]
+                group_dict = self.storage_obj.admin.get_group_dict(self.group_str)
+                group_offsets_dict = group_dict["offsets"][topic_str]
                 #
                 if any(group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in range(partitions_int)):
                     # If any of the partitions still does not have a committed offset yet...
@@ -76,7 +84,7 @@ class FSConsumer(StorageConsumer):
             def acc_bytes_to_acc(acc, message_bytes, message_counter_int):
                 serialized_message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
                 #
-                self.next_topic_str_group_str_offsets_dict_dict_dict[topic_str][self.group_str][serialized_message_dict["partition"]] = serialized_message_dict["offset"] + 1
+                self.next_topic_str_offsets_dict_dict[topic_str][serialized_message_dict["partition"]] = serialized_message_dict["offset"] + 1
                 if self.enable_auto_commit_bool:
                     # Commit immediately after reading the message if enable.auto.commit == True
                     self.commit()
@@ -160,7 +168,7 @@ class FSConsumer(StorageConsumer):
         #
 
         for rel_file_str in rel_file_str_list:
-            message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, rel_file_str), message_separator_bytes)
+            message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, "partitions", rel_file_str), message_separator_bytes)
             for message_bytes in message_bytes_list:
                 (acc, message_counter_int) = acc_bytes_to_acc(acc, message_bytes, message_counter_int)
                 #
@@ -192,15 +200,17 @@ class FSConsumer(StorageConsumer):
 
     def commit(self, offsets=None):
         if offsets is None:
-            for topic_str in self.topic_str_list:
-                self.storage_obj.admin.set_groups(topic_str, self.next_topic_str_group_str_offsets_dict_dict_dict[topic_str])
-        else:
-            self.next_topic_str_group_str_offsets_dict_dict_dict = offsets
+            new_group_dict = {"offsets": self.next_topic_str_offsets_dict_dict}
             #
-            for topic_str, group_str_offsets_dict_dict in self.next_topic_str_group_str_offsets_dict_dict_dict.items():
-                self.storage_obj.admin.set_groups(topic_str, group_str_offsets_dict_dict)
+            topic_str_group_str_offsets_dict_dict_dict = {topic_str: {self.group_str: self.next_topic_str_offsets_dict_dict[topic_str]} for topic_str in self.topic_str_list}
+        else:
+            topic_str_group_str_offsets_dict_dict_dict = offsets
+            #
+            new_group_dict = {"offsets": {topic_str: group_str_offsets_dict_dict[self.group_str] for topic_str, group_str_offsets_dict_dict in topic_str_group_str_offsets_dict_dict_dict.items()}}
         #
-        return self.next_topic_str_group_str_offsets_dict_dict_dict
+        self.storage_obj.admin.set_group_dict(self.group_str, new_group_dict)
+        #
+        return topic_str_group_str_offsets_dict_dict_dict
 
     #
 

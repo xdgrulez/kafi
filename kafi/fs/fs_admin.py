@@ -16,13 +16,25 @@ class FSAdmin(StorageAdmin):
 
     def list_topics(self, pattern=None):
         root_dir_str = self.storage_obj.root_dir()
-        rel_dir_str_list = self.list_dirs(root_dir_str)
+        rel_dir_str_list = self.list_dirs(os.path.join(root_dir_str, "topics"))
         #
-        topic_str_list = [rel_dir_str.split(",")[1] for rel_dir_str in rel_dir_str_list if self.is_topic(rel_dir_str)]
+        all_topic_str_list = [rel_dir_str.split(",")[1] for rel_dir_str in rel_dir_str_list if rel_dir_str.startswith("topic,")]
         #
-        filtered_topic_str_list = self.filter_topics(topic_str_list, pattern)
+        topic_str_list = self.pattern_match(all_topic_str_list, pattern)
         #
-        return filtered_topic_str_list
+        return topic_str_list
+
+    def list_groups(self, pattern=None):
+        root_dir_str = self.storage_obj.root_dir()
+        rel_file_str_list = self.list_files(os.path.join(root_dir_str, "groups"))
+        #
+        all_group_str_list = [rel_file_str.split(",")[1] for rel_file_str in rel_file_str_list if rel_file_str.startswith("group,")]
+        all_group_str_set = set(all_group_str_list)
+        all_group_str_list = list(all_group_str_set)
+        #
+        group_str_list = self.pattern_match(all_group_str_list, pattern)
+        #
+        return group_str_list
 
     #
 
@@ -71,13 +83,11 @@ class FSAdmin(StorageAdmin):
         #
         metadata_dict = {"topic": topic_str, "partitions": partitions_int, "message_separator": message_separator_str, "config": config_dict}
         self.set_metadata(topic_str, metadata_dict)
-        #
-        self.set_groups(topic_str, {})
     
     #
 
     def delete(self, pattern, block=True):
-        topic_str_list = self.topics(pattern)
+        topic_str_list = self.list_topics(pattern)
         #
         for topic_str in topic_str_list:
             topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
@@ -85,6 +95,10 @@ class FSAdmin(StorageAdmin):
             rel_file_str_list = self.list_files(topic_abs_dir_str)
             for rel_file_str in rel_file_str_list:
                 self.delete_file(os.path.join(topic_abs_dir_str, rel_file_str))
+            #
+            rel_dir_str_list = self.list_dirs(topic_abs_dir_str)
+            for rel_dir_str in rel_dir_str_list:
+                self.delete_dir(os.path.join(topic_abs_dir_str, rel_dir_str))
             #
             self.delete_dir(topic_abs_dir_str)
 
@@ -120,11 +134,11 @@ class FSAdmin(StorageAdmin):
 
     def watermarks(self, pattern, **kwargs):
         topic_str_list = self.list_topics(pattern)
-        filtered_topic_str_list = self.filter_topics(topic_str_list, pattern)
+        filtered_topic_str_list = self.pattern_match(topic_str_list, pattern)
         #
         def get_watermark_offsets(topic_str, partition_int):
             topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
-            rel_file_str_list = self.list_files(topic_abs_dir_str)
+            rel_file_str_list = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
             partition_rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str.startswith("partition") and int(rel_file_str.split(",")[1]) == partition_int]
             partition_rel_file_str_list.sort()
             low_offset_int = 0
@@ -159,14 +173,14 @@ class FSAdmin(StorageAdmin):
         return abs_path_str
 
     def get_topic_abs_dir_str(self, topic_str):
-        topic_abs_dir_str = os.path.join(self.storage_obj.root_dir(), f"topic,{topic_str}")
+        topic_abs_dir_str = os.path.join(self.storage_obj.root_dir(), "topics", f"topic,{topic_str}")
         #
         return topic_abs_dir_str
 
     def find_partition_file_str(self, topic_str, partition_int, to_find_offset_int):
         # Get sorted list of all relative file names rel_file_str_list for the partition files for partition_int of topic_str.
         topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
-        rel_file_str_list1 = self.list_files(topic_abs_dir_str)
+        rel_file_str_list1 = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
         rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list1 if rel_file_str.startswith("partition,") and int(rel_file_str.split(",")[1]) == partition_int]
         if rel_file_str_list == []:
             return None
@@ -188,7 +202,7 @@ class FSAdmin(StorageAdmin):
         #
         partitions_int = self.get_partitions(topic_str)
         #
-        rel_file_str_list = self.list_files(topic_abs_dir_str)
+        rel_file_str_list = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
         #
         def sort(list):
             list.sort()
@@ -199,92 +213,56 @@ class FSAdmin(StorageAdmin):
         #
         return partition_int_rel_file_str_list_dict
 
-    def is_topic(self, rel_dir_file_str):
-        return rel_dir_file_str.startswith("topic,")
-
-    # #! löscht irgendwie falsch
+    #
 
     def delete_groups(self, pattern, state_pattern="*"):
-        pattern_str_list = [pattern] if isinstance(pattern, str) else pattern
-        state_pattern_str_list = [state_pattern] if isinstance(state_pattern, str) else state_pattern
+        group_str_list = self.groups(pattern, state_pattern)
         #
-        topic_str_list = self.list_topics()
-        #
-        deleted_group_str_set = set()
-        for topic_str in topic_str_list:
-            old_group_str_offsets_dict_dict = self.get_groups(topic_str)
+        root_dir_str = self.storage_obj.root_dir()
+        for group_str in group_str_list:
+            group_abs_path_file_str = os.path.join(root_dir_str, "groups", f"group,{group_str}")
             #
-            group_str_offsets_dict_dict = {group_str: offsets_dict for group_str, offsets_dict in old_group_str_offsets_dict_dict.items() if not (any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list))}
-            #
-            deleted_group_str_set = deleted_group_str_set.union(set(old_group_str_offsets_dict_dict.keys()) - set(group_str_offsets_dict_dict.keys()))
-            #
-            self.set_groups(topic_str, group_str_offsets_dict_dict)
+            self.delete_file(group_abs_path_file_str)
         #
-        deleted_group_str_list = list(deleted_group_str_set)
-        deleted_group_str_list.sort()
-        #
-        return deleted_group_str_list
+        return group_str_list
 
     def describe_groups(self, pattern="*", state_pattern="*"):
         group_str_state_str_dict = self.groups(pattern, state_pattern, state=True)
         #
-        group_str_group_description_dict_dict = {group_str: {"group_id": group_str, "is_simple_consumer_group": False, "partition_assignor": "range", "state": self.default_state_str} for group_str, state_str in group_str_state_str_dict.items()}
+        group_str_group_description_dict_dict = {group_str: {"group_id": group_str, "is_simple_consumer_group": False, "partition_assignor": "range", "state": state_str} for group_str, state_str in group_str_state_str_dict.items()}
         #
+
         return group_str_group_description_dict_dict
 
     def groups(self, pattern="*", state_pattern="*", state=False):
-        pattern_str_list = [pattern] if isinstance(pattern, str) else pattern
         state_pattern_str_list = [state_pattern] if isinstance(state_pattern, str) else state_pattern
         state_bool = state
         #
-        topic_str_list = self.list_topics()
+        group_str_list = self.list_groups(pattern)
         #
-        group_str_set = set()
-        for topic_str in topic_str_list:
-            group_str_offsets_dict_dict = self.get_groups(topic_str)
-            #
-            group_str_set = group_str_set.union(set(group_str_offsets_dict_dict.keys()))
-        #
-        group_str_list = [group_str for group_str in group_str_set if any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)]
+        group_str_state_str_tuple_list = [(group_str, self.get_group_state(group_str)) for group_str in group_str_list]
+        group_str_state_str_tuple_list = [(group_str, state_str) for group_str, state_str in group_str_state_str_tuple_list if any(fnmatch(state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)]
         #
         if state_bool:
-            group_str_state_str_dict = {group_str: self.default_state_str for group_str in group_str_list}
+            group_str_state_str_dict = {group_str: state_str for group_str, state_str in group_str_state_str_tuple_list}
             return group_str_state_str_dict
         else:
+            group_str_list = [group_str for group_str, _ in group_str_state_str_tuple_list]
             return group_str_list
 
     def group_offsets(self, pattern, state_pattern="*"):
-        pattern_str_list = [pattern] if isinstance(pattern, str) else pattern
-        state_pattern_str_list = [state_pattern] if isinstance(state_pattern, str) else state_pattern
+        group_str_list = self.groups(pattern, state_pattern)
         #
-        topic_str_list = self.list_topics()
-        #
-        group_str_topic_str_offsets_dict_dict_dict = {}
-        for topic_str in topic_str_list:
-            group_str_offsets_dict_dict1 = self.get_groups(topic_str)
-            #
-            group_str_offsets_dict_dict = {group_str: offsets_dict for group_str, offsets_dict in group_str_offsets_dict_dict1.items() if any(fnmatch(group_str, pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(self.default_state_str, state_pattern_str) for state_pattern_str in state_pattern_str_list)}
-            #
-            for group_str, offsets_dict in group_str_offsets_dict_dict.items():
-                if group_str not in group_str_topic_str_offsets_dict_dict_dict:
-                    group_str_topic_str_offsets_dict_dict_dict[group_str] = {topic_str: {}}
-                group_str_topic_str_offsets_dict_dict_dict[group_str][topic_str] = offsets_dict
+        group_str_topic_str_offsets_dict_dict_dict = {group_str: self.get_group_dict(group_str)["offsets"] for group_str in group_str_list}
         #
         return group_str_topic_str_offsets_dict_dict_dict
 
     def set_group_offsets(self, group_offsets):
         group_str_topic_str_offsets_dict_dict_dict = group_offsets
         #
-        topic_str_group_str_offsets_dict_dict_dict = {}
         for group_str, topic_str_offsets_dict_dict in group_str_topic_str_offsets_dict_dict_dict.items():
-            for topic_str, offsets_dict in topic_str_offsets_dict_dict.items():
-                if topic_str not in topic_str_group_str_offsets_dict_dict_dict:
-                    topic_str_group_str_offsets_dict_dict_dict[topic_str] = {group_str: {}}
-                #
-                topic_str_group_str_offsets_dict_dict_dict[topic_str][group_str] = offsets_dict
-        #
-        for topic_str, group_str_offsets_dict_dict in topic_str_group_str_offsets_dict_dict_dict.items():
-            self.set_groups(topic_str, group_str_offsets_dict_dict)
+            new_group_dict = {"offsets": topic_str_offsets_dict_dict}
+            self.set_group_dict(group_str, new_group_dict)
         #
         return group_str_topic_str_offsets_dict_dict_dict
 
@@ -341,27 +319,45 @@ class FSAdmin(StorageAdmin):
 
     # Groups
 
-    def get_groups(self, topic_str):
-        topic_dir_str = self.get_topic_abs_dir_str(topic_str)
+    def get_group_state(self, group_str):
+        group_dict = self.get_group_dict(group_str)
         #
-        group_str_offsets_dict_last_updated_int_dict_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "groups"))
+        state_str = group_dict["state"]
         #
-        group_str_offsets_dict_dict = {group_str: offsets_dict_last_updated_int_dict["offsets"] for group_str, offsets_dict_last_updated_int_dict in group_str_offsets_dict_last_updated_int_dict_dict.items()}
-        #
-        return group_str_offsets_dict_dict
+        return state_str
 
-    def set_groups(self, topic_str, set_group_str_offsets_dict_dict):
-        topic_dir_str = self.get_topic_abs_dir_str(topic_str)
+    def get_group_dict(self, group_str):
+        root_dir_str = self.storage_obj.root_dir()
+        abs_path_file_str = os.path.join(root_dir_str, "groups", f"group,{group_str}")
         #
-        group_str_offsets_dict_last_updated_int_dict_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "groups"))
+        group_dict = self.read_dict_from_file(abs_path_file_str)
         #
-        for group_str, offsets_dict in set_group_str_offsets_dict_dict.items():
-            for partition_int, offset_int in offsets_dict.items():
-                if group_str not in group_str_offsets_dict_last_updated_int_dict_dict:
-                    group_str_offsets_dict_last_updated_int_dict_dict[group_str] = {"offsets": {}}
+        return group_dict
+
+    def set_group_dict(self, group_str, new_group_dict):
+        root_dir_str = self.storage_obj.root_dir()
+        abs_path_file_str = os.path.join(root_dir_str, "groups", f"group,{group_str}")
+        #
+        group_dict = self.read_dict_from_file(abs_path_file_str)
+        #
+        if "offsets" in new_group_dict:
+            for topic_str, offsets_dict in new_group_dict["offsets"].items():
+                if "offsets" not in group_dict:
+                    group_dict["offsets"] = {}
+                if topic_str not in group_dict["offsets"]:
+                    group_dict["offsets"][topic_str] = {}
                 #
-                group_str_offsets_dict_last_updated_int_dict_dict[group_str]["offsets"][partition_int] = offset_int
-            #
-            group_str_offsets_dict_last_updated_int_dict_dict[group_str]["last_updated"] = get_millis()
+                for partition_int, offset_int in offsets_dict.items():
+                    group_dict["offsets"][topic_str][partition_int] = offset_int
         #
-        self.write_dict_to_file(os.path.join(topic_dir_str, "groups"), group_str_offsets_dict_last_updated_int_dict_dict)
+        if "last_update" in new_group_dict:
+            group_dict["last_update"] = new_group_dict["last_update"]
+        else:
+            group_dict["last_update"] = get_millis()
+        #
+        if "state" in new_group_dict:
+            group_dict["state"] = new_group_dict["state"]
+        #
+        self.write_dict_to_file(abs_path_file_str, group_dict)
+        #
+        return group_dict
