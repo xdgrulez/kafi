@@ -57,3 +57,17 @@ class LocalAdmin(FSAdmin):
         #
         with open(abs_path_file_str, "w") as bufferedWriter:
             bufferedWriter.write(data_str)
+
+    #
+
+    def read_bytes(self, abs_path_file_str):
+        with open(abs_path_file_str, "rb") as bufferedReader:
+            bytes = bufferedReader.read()
+        #
+        return bytes
+
+    def write_bytes(self, abs_path_file_str, data_bytes):
+        os.makedirs(os.path.dirname(abs_path_file_str), exist_ok=True)
+        #
+        with open(abs_path_file_str, "wb") as bufferedWriter:
+            bufferedWriter.write(data_bytes)

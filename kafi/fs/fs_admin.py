@@ -167,6 +167,13 @@ class FSAdmin(StorageAdmin):
 
     # Topics/Partitions
 
+    def read_messages_from_file(self, abs_path_file_str, message_separator_bytes):
+        messages_bytes = self.read_bytes(abs_path_file_str)
+        #
+        message_bytes_list = messages_bytes.split(message_separator_bytes)[:-1]
+        #
+        return message_bytes_list
+
     def get_abs_path_str(self, rel_path_str):
         abs_path_str = os.path.join(self.storage_obj.root_dir(), rel_path_str)
         #

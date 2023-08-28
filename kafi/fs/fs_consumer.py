@@ -166,9 +166,8 @@ class FSConsumer(StorageConsumer):
                     if len(partition_int_to_be_consume_rel_file_str_list_dict[partition_int]) > file_counter_int:
                         rel_file_str_list.append(partition_int_to_be_consume_rel_file_str_list_dict[partition_int][file_counter_int])
         #
-
         for rel_file_str in rel_file_str_list:
-            message_bytes_list = self.read_messages_from_file(os.path.join(abs_topic_dir_str, "partitions", rel_file_str), message_separator_bytes)
+            message_bytes_list = self.storage_obj.admin.read_messages_from_file(os.path.join(abs_topic_dir_str, "partitions", rel_file_str), message_separator_bytes)
             for message_bytes in message_bytes_list:
                 (acc, message_counter_int) = acc_bytes_to_acc(acc, message_bytes, message_counter_int)
                 #
@@ -211,13 +210,3 @@ class FSConsumer(StorageConsumer):
         self.storage_obj.admin.set_group_dict(self.group_str, new_group_dict)
         #
         return topic_str_group_str_offsets_dict_dict_dict
-
-    #
-
-    def read_messages_from_file(self, abs_path_file_str, message_separator_bytes):
-        messages_bytes = self.consume_bytes(abs_path_file_str)
-        #
-        message_bytes_list = messages_bytes.split(message_separator_bytes)[:-1]
-        #
-        return message_bytes_list
-    

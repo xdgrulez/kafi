@@ -14,11 +14,3 @@ class LocalConsumer(FSConsumer):
 
     def close(self):
         return self.topic_str_list
-
-    #
-
-    def consume_bytes(self, abs_path_file_str):
-        with open(abs_path_file_str, "rb") as bufferedReader:
-            bytes = bufferedReader.read()
-        #
-        return bytes

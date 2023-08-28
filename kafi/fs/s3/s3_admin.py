@@ -61,3 +61,18 @@ class S3Admin(FSAdmin):
         data_bytes = data_str.encode("utf-8")
         #
         self.minio.put_object(self.storage_obj.bucket_name(), abs_path_file_str, io.BytesIO(data_bytes), length=len(data_bytes))
+
+    #
+
+    def read_bytes(self, abs_path_file_str):
+        self.minio = Minio(self.storage_obj.s3_config_dict["endpoint"], access_key=self.storage_obj.s3_config_dict["access.key"], secret_key=self.storage_obj.s3_config_dict["secret.key"], secure=False)
+        #
+        response = self.minio.get_object(self.storage_obj.bucket_name(), abs_path_file_str)
+        object_bytes = response.data
+        #
+        return object_bytes
+
+    def write_bytes(self, abs_path_file_str, data_bytes):
+        self.minio = Minio(self.storage_obj.s3_config_dict["endpoint"], access_key=self.storage_obj.s3_config_dict["access.key"], secret_key=self.storage_obj.s3_config_dict["secret.key"], secure=False)
+        #
+        self.minio.put_object(self.storage_obj.bucket_name(), abs_path_file_str, io.BytesIO(data_bytes), length=len(data_bytes))

@@ -114,4 +114,4 @@ class FSProducer(StorageProducer):
                 start_offset_int = last_offsets_dict[partition_int]
                 end_offset_int = start_offset_int + len(message_bytes_list) - 1
                 abs_path_file_str = os.path.join(topic_abs_dir_str, "partitions", f"partition,{partition_int:09},{start_offset_int:021},{end_offset_int:021}")
-                self.produce_bytes(abs_path_file_str, joined_message_bytes)
+                self.storage_obj.admin.write_bytes(abs_path_file_str, joined_message_bytes)
