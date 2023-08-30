@@ -144,3 +144,6 @@ class Test(TestSingleStorageBase):
 
     def test_filter_to(self):
         super().test_filter_to()
+
+    def test_filter_file_to_topic(self):
+        super().test_filter_file_to_topic()

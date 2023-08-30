@@ -21,28 +21,11 @@ class FSProducer(StorageProducer):
     #
 
     def produce(self, value, **kwargs):
-        def serialize(payload, key_bool):
-            type_str = self.key_type_str if key_bool else self.value_type_str
-            #
-            if not type_str.lower() in ["json", "str", "bytes"]:
-                raise Exception("Only json, str or bytes supported.")
-            #
-            if isinstance(payload, dict):
-                payload_bytes = json.dumps(payload).encode("utf-8")
-            elif isinstance(payload, str):
-                payload_bytes = payload.encode("utf-8")
-            else:
-                payload_bytes = payload
-            #
-            return payload_bytes
-        #        
-
-        partitions_int = self.storage_obj.admin.get_partitions(self.topic_str)
-        #
-        topic_abs_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(self.topic_str)
-        #
-        partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
-        last_offsets_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
+        if self.topic_str.startswith("file,"):
+            last_offsets_dict = {0: 0}
+        else:
+            partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
+            last_offsets_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
         #
         message_separator_bytes = self.storage_obj.admin.get_message_separator(self.topic_str)
         #
@@ -73,13 +56,12 @@ class FSProducer(StorageProducer):
         headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         partition_int_list = partitions if isinstance(partitions, list) else [partitions for _ in value_list]
         #
-        partition_int_message_bytes_list_dict = {partition_int: [] for partition_int in range(partitions_int)}
+        partitions_int = self.storage_obj.admin.get_partitions(self.topic_str)
+        partition_int_message_dict_list_dict = {partition_int: [] for partition_int in range(partitions_int)}
         round_robin_counter_int = 0
         partition_int_offset_counter_int_dict = {partition_int: last_offset_int if last_offset_int > 0 else 0 for partition_int, last_offset_int in last_offsets_dict.items()}
+        #
         for value, key, timestamp, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_list, headers_str_bytes_tuple_list_list, partition_int_list):
-            value_bytes = serialize(value, False)
-            key_bytes = serialize(key, True)
-            #
             if keep_partitions_bool:
                 target_partition_int = partition_int
             else:
@@ -93,7 +75,7 @@ class FSProducer(StorageProducer):
                     else:
                         round_robin_counter_int += 1
                 else:
-                    target_partition_int = hash(key_bytes) % partitions_int
+                    target_partition_int = hash(str(key)) % partitions_int
             #
             if timestamp == CURRENT_TIME:
                 if not keep_timestamps_bool:
@@ -101,17 +83,26 @@ class FSProducer(StorageProducer):
             if not isinstance(timestamp, tuple):
                 timestamp = (TIMESTAMP_CREATE_TIME, timestamp)
             #
-            message_bytes = str({"value": value_bytes, "key": key_bytes, "timestamp": timestamp, "headers": headers_str_bytes_tuple_list, "partition": target_partition_int, "offset": partition_int_offset_counter_int_dict[target_partition_int]}).encode("utf-8") + message_separator_bytes
+            message_dict = {"value": value, "key": key, "timestamp": timestamp, "headers": headers_str_bytes_tuple_list, "partition": target_partition_int, "offset": partition_int_offset_counter_int_dict[target_partition_int]}
             #
-            partition_int_message_bytes_list_dict[target_partition_int].append(message_bytes)
+            partition_int_message_dict_list_dict[target_partition_int].append(message_dict)
             #
             partition_int_offset_counter_int_dict[target_partition_int] += 1
         #
-        for partition_int, message_bytes_list in partition_int_message_bytes_list_dict.items():
-            if len(message_bytes_list) > 0:
-                joined_message_bytes = b"".join(message_bytes_list)
+        topic_abs_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(self.topic_str)
+        for partition_int, message_dict_list in partition_int_message_dict_list_dict.items():
+            if len(message_dict_list) > 0:
+                messages_bytes = self.serialize(self.topic_str, message_dict_list, message_separator_bytes)
                 #
                 start_offset_int = last_offsets_dict[partition_int]
-                end_offset_int = start_offset_int + len(message_bytes_list) - 1
-                abs_path_file_str = os.path.join(topic_abs_dir_str, "partitions", f"partition,{partition_int:09},{start_offset_int:021},{end_offset_int:021}")
-                self.storage_obj.admin.write_bytes(abs_path_file_str, joined_message_bytes)
+                end_offset_int = start_offset_int + len(message_dict_list) - 1
+                #
+                if self.topic_str.startswith("file,"):
+                    file_str = self.topic_str.split(",")[1]
+                    #
+                    abs_files_dir_str = self.storage_obj.admin.get_files_abs_dir_str()
+                    abs_path_file_str = os.path.join(abs_files_dir_str, file_str)
+                else:
+                    abs_path_file_str = os.path.join(topic_abs_dir_str, "partitions", f"partition,{partition_int:09},{start_offset_int:021},{end_offset_int:021}")
+                #
+                self.storage_obj.admin.write_bytes(abs_path_file_str, messages_bytes)

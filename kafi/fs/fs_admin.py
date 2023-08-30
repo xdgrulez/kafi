@@ -18,7 +18,7 @@ class FSAdmin(StorageAdmin):
         root_dir_str = self.storage_obj.root_dir()
         rel_dir_str_list = self.list_dirs(os.path.join(root_dir_str, "topics"))
         #
-        all_topic_str_list = [rel_dir_str.split(",")[1] for rel_dir_str in rel_dir_str_list if rel_dir_str.startswith("topic,")]
+        all_topic_str_list = [rel_dir_str.split(",")[1] for rel_dir_str in rel_dir_str_list if rel_dir_str.startswith("topic,") and not rel_dir_str.endswith("partitions")]
         #
         topic_str_list = self.pattern_match(all_topic_str_list, pattern)
         #
@@ -167,13 +167,6 @@ class FSAdmin(StorageAdmin):
 
     # Topics/Partitions
 
-    def read_messages_from_file(self, abs_path_file_str, message_separator_bytes):
-        messages_bytes = self.read_bytes(abs_path_file_str)
-        #
-        message_bytes_list = messages_bytes.split(message_separator_bytes)[:-1]
-        #
-        return message_bytes_list
-
     def get_abs_path_str(self, rel_path_str):
         abs_path_str = os.path.join(self.storage_obj.root_dir(), rel_path_str)
         #
@@ -183,6 +176,11 @@ class FSAdmin(StorageAdmin):
         topic_abs_dir_str = os.path.join(self.storage_obj.root_dir(), "topics", f"topic,{topic_str}")
         #
         return topic_abs_dir_str
+
+    def get_files_abs_dir_str(self):
+        files_abs_dir_str = os.path.join(self.storage_obj.root_dir(), "files")
+        #
+        return files_abs_dir_str
 
     def find_partition_file_str(self, topic_str, partition_int, to_find_offset_int):
         # Get sorted list of all relative file names rel_file_str_list for the partition files for partition_int of topic_str.
@@ -302,8 +300,11 @@ class FSAdmin(StorageAdmin):
         return metadata_dict
 
     def get_partitions(self, topic_str):
-        metadata_dict = self.get_metadata(topic_str)
-        partitions_int = metadata_dict["partitions"]
+        if topic_str.startswith("file,"):
+            partitions_int = 1
+        else:
+            metadata_dict = self.get_metadata(topic_str)
+            partitions_int = metadata_dict["partitions"]
         #
         return partitions_int
 

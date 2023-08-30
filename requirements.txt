@@ -4,5 +4,7 @@ fastavro
 grpcio-tools
 jsonschema
 minio
+pandas
 piny
+pyarrow
 requests
