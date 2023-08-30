@@ -147,3 +147,6 @@ class Test(TestSingleStorageBase):
 
     def test_filter_file_to_topic(self):
         super().test_filter_file_to_topic()
+
+    def test_parquet(self):
+        super().test_parquet()

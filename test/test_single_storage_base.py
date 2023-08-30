@@ -938,3 +938,29 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(2, n_int)
         self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
         self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
+
+    def test_parquet(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str1 = self.create_test_topic_name()
+        s.create(topic_str1)
+        producer = s.producer(topic_str1, value_type="json")
+        producer.produce(self.snack_str_list)
+        producer.close()
+        #
+        #topic_str2 = self.create_test_topic_name()
+        #
+        group_str1 = self.create_test_group_name()
+        (consume_n_int, written_n_int) = s.cp(topic_str1, s, "file,snacks.parquet", group=group_str1, source_type="json")
+        self.assertEqual(3, consume_n_int)
+        self.assertEqual(3, written_n_int)
+        #
+        (message_dict_list, n_int) = s.cat("file,snacks.parquet")
+        self.assertEqual(3, len(message_dict_list))
+        self.assertEqual(3, n_int)
+        value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
+        self.assertEqual(value_dict_list, self.snack_dict_list)
+    
