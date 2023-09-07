@@ -16,7 +16,7 @@ class Storage(Shell):
         #
         self.config_dict = self.get_config_dict(config_str)
         #
-        self.kafi_config_dict = self.config_dict["kafi"] if "kafi" in self.config_dict else {}
+        self.kafi_config_dict = self.config_dict["kafi"] if "kafi" in self.config_dict else self.config_dict["kash"] if "kash" in self.config_dict else {}
         #
         if "progress.num.messages" not in self.kafi_config_dict:
             self.progress_num_messages(1000)

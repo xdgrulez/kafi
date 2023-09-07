@@ -27,8 +27,6 @@ class Kafka(Storage):
         #
         self.schema_registry_config_dict = self.config_dict["schema_registry"]
         #
-        self.kafi_config_dict = self.config_dict["kafi"]
-        #
         self.schemaRegistry = None
         self.admin = None
         #
