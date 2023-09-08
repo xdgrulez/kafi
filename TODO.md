@@ -1,3 +1,4 @@
+* produce file -> number files if multiple batches/same for consume
 * clean up groups after offsets.retention.minutes (default: 24h) after last update (explicit call at first?)
 * tests sollten nur eine basistestklasse nutzen und instanziieren
 * cluster*/restproxy* soweit wie möglich verallgemeinern auf kafka*
