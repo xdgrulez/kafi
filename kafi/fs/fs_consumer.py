@@ -1,6 +1,7 @@
 import os
 
 from kafi.storage_consumer import StorageConsumer
+from kafi.helpers import is_file
 
 # Constants
 
@@ -34,8 +35,8 @@ class FSConsumer(StorageConsumer):
         acc = initial_acc
         rel_file_str_list = []
         for topic_str in self.topic_str_list:
-            if topic_str.startswith("file,"):
-                file_str = topic_str.split(",")[1]
+            if is_file(topic_str):
+                file_str = topic_str
                 #
                 start_offsets_dict = {0: 0}
                 #

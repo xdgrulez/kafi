@@ -1,10 +1,12 @@
 import json
 import pandas as pd
 
+from kafi.helpers import is_file
+
 class Serializer:
     def serialize(self, topic_str, message_dict_list, message_separator_bytes):
-        if topic_str.startswith("file,"):
-            rel_file_str = topic_str.split(",")[1]
+        if is_file(topic_str):
+            rel_file_str = topic_str
             #
             suffix_str = rel_file_str.split(".")[-1]
             #

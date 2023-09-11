@@ -4,7 +4,7 @@ from fnmatch import fnmatch
 import os
 
 from kafi.storage_admin import StorageAdmin
-from kafi.helpers import get_millis
+from kafi.helpers import get_millis, is_file
 
 class FSAdmin(StorageAdmin):
     def __init__(self, fs_obj, **kwargs):
@@ -18,7 +18,7 @@ class FSAdmin(StorageAdmin):
         root_dir_str = self.storage_obj.root_dir()
         rel_dir_str_list = self.list_dirs(os.path.join(root_dir_str, "topics"))
         #
-        all_topic_str_list = [rel_dir_str.split(",")[1] for rel_dir_str in rel_dir_str_list if rel_dir_str.startswith("topic,") and not rel_dir_str.endswith("partitions")]
+        all_topic_str_list = [rel_dir_str for rel_dir_str in rel_dir_str_list if not rel_dir_str.endswith("partitions")]
         #
         topic_str_list = self.pattern_match(all_topic_str_list, pattern)
         #
@@ -28,7 +28,7 @@ class FSAdmin(StorageAdmin):
         root_dir_str = self.storage_obj.root_dir()
         rel_file_str_list = self.list_files(os.path.join(root_dir_str, "groups"))
         #
-        all_group_str_list = [rel_file_str.split(",")[1] for rel_file_str in rel_file_str_list if rel_file_str.startswith("group,")]
+        all_group_str_list = [rel_file_str for rel_file_str in rel_file_str_list]
         all_group_str_set = set(all_group_str_list)
         all_group_str_list = list(all_group_str_set)
         #
@@ -139,7 +139,7 @@ class FSAdmin(StorageAdmin):
         def get_watermark_offsets(topic_str, partition_int):
             topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
             rel_file_str_list = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
-            partition_rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list if rel_file_str.startswith("partition") and int(rel_file_str.split(",")[1]) == partition_int]
+            partition_rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list if int(rel_file_str.split(",")[0]) == partition_int]
             partition_rel_file_str_list.sort()
             low_offset_int = 0
             high_offset_int = 0
@@ -147,8 +147,8 @@ class FSAdmin(StorageAdmin):
                 first_partition_rel_file_str = partition_rel_file_str_list[0]
                 last_partition_rel_file_str = partition_rel_file_str_list[-1]
                 #
-                low_offset_int = int(first_partition_rel_file_str.split(",")[2])
-                high_offset_int = int(last_partition_rel_file_str.split(",")[3]) + 1
+                low_offset_int = int(first_partition_rel_file_str.split(",")[1])
+                high_offset_int = int(last_partition_rel_file_str.split(",")[2]) + 1
             #
             return (low_offset_int, high_offset_int)
         #
@@ -173,7 +173,7 @@ class FSAdmin(StorageAdmin):
         return abs_path_str
 
     def get_topic_abs_dir_str(self, topic_str):
-        topic_abs_dir_str = os.path.join(self.storage_obj.root_dir(), "topics", f"topic,{topic_str}")
+        topic_abs_dir_str = os.path.join(self.storage_obj.root_dir(), "topics", f"{topic_str}")
         #
         return topic_abs_dir_str
 
@@ -186,12 +186,12 @@ class FSAdmin(StorageAdmin):
         # Get sorted list of all relative file names rel_file_str_list for the partition files for partition_int of topic_str.
         topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
         rel_file_str_list1 = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
-        rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list1 if rel_file_str.startswith("partition,") and int(rel_file_str.split(",")[1]) == partition_int]
+        rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list1 if int(rel_file_str.split(",")[0]) == partition_int]
         if rel_file_str_list == []:
             return None
         rel_file_str_list.sort()
         # Now find the file in which the message with offset to_find_offset_int must be contained :)
-        rel_file_str_offset_int_dict = {rel_file_str: (int(rel_file_str.split(",")[2]), int(rel_file_str.split(",")[3])) for rel_file_str in rel_file_str_list}
+        rel_file_str_offset_int_dict = {rel_file_str: (int(rel_file_str.split(",")[1]), int(rel_file_str.split(",")[2])) for rel_file_str in rel_file_str_list}
         found_rel_file_str = None
         for rel_file_str, start_offset_int_end_offset_int_tuple in rel_file_str_offset_int_dict.items():
             (start_offset_int, end_offset_int) = start_offset_int_end_offset_int_tuple
@@ -214,7 +214,7 @@ class FSAdmin(StorageAdmin):
             return list
         #
 
-        partition_int_rel_file_str_list_dict = {partition_int: sort([rel_file_str for rel_file_str in rel_file_str_list if rel_file_str.startswith("partition,") and int(rel_file_str.split(",")[1]) == partition_int]) for partition_int in range(partitions_int)}
+        partition_int_rel_file_str_list_dict = {partition_int: sort([rel_file_str for rel_file_str in rel_file_str_list if int(rel_file_str.split(",")[0]) == partition_int]) for partition_int in range(partitions_int)}
         #
         return partition_int_rel_file_str_list_dict
 
@@ -225,7 +225,7 @@ class FSAdmin(StorageAdmin):
         #
         root_dir_str = self.storage_obj.root_dir()
         for group_str in group_str_list:
-            group_abs_path_file_str = os.path.join(root_dir_str, "groups", f"group,{group_str}")
+            group_abs_path_file_str = os.path.join(root_dir_str, "groups", f"{group_str}")
             #
             self.delete_file(group_abs_path_file_str)
         #
@@ -300,7 +300,7 @@ class FSAdmin(StorageAdmin):
         return metadata_dict
 
     def get_partitions(self, topic_str):
-        if topic_str.startswith("file,"):
+        if is_file(topic_str):
             partitions_int = 1
         else:
             metadata_dict = self.get_metadata(topic_str)
@@ -309,9 +309,12 @@ class FSAdmin(StorageAdmin):
         return partitions_int
 
     def get_message_separator(self, topic_str):
-        metadata_dict = self.get_metadata(topic_str)
-        message_separator_str = metadata_dict["message_separator"]
-        message_separator_bytes = bytes(base64.b64decode(message_separator_str))
+        if is_file(topic_str):
+            message_separator_bytes = b"\n"
+        else:
+            metadata_dict = self.get_metadata(topic_str)
+            message_separator_str = metadata_dict["message_separator"]
+            message_separator_bytes = bytes(base64.b64decode(message_separator_str))
         #
         return message_separator_bytes
 
@@ -336,7 +339,7 @@ class FSAdmin(StorageAdmin):
 
     def get_group_dict(self, group_str):
         root_dir_str = self.storage_obj.root_dir()
-        abs_path_file_str = os.path.join(root_dir_str, "groups", f"group,{group_str}")
+        abs_path_file_str = os.path.join(root_dir_str, "groups", f"{group_str}")
         #
         group_dict = self.read_dict_from_file(abs_path_file_str)
         #
@@ -344,7 +347,7 @@ class FSAdmin(StorageAdmin):
 
     def set_group_dict(self, group_str, new_group_dict):
         root_dir_str = self.storage_obj.root_dir()
-        abs_path_file_str = os.path.join(root_dir_str, "groups", f"group,{group_str}")
+        abs_path_file_str = os.path.join(root_dir_str, "groups", f"{group_str}")
         #
         group_dict = self.read_dict_from_file(abs_path_file_str)
         #
