@@ -76,10 +76,7 @@ class FSAdmin(StorageAdmin):
         config_dict = config
         partitions_int = partitions
         #
-        message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else self.storage_obj.message_separator()
-        message_separator_str = base64.b64encode(message_separator_bytes).decode('utf-8')
-        #
-        metadata_dict = {"topic": topic_str, "partitions": partitions_int, "message_separator": message_separator_str, "config": config_dict}
+        metadata_dict = {"topic": topic_str, "partitions": partitions_int, "config": config_dict}
         self.set_metadata(topic_str, metadata_dict)
     
     #
@@ -302,13 +299,6 @@ class FSAdmin(StorageAdmin):
         partitions_int = metadata_dict["partitions"]
         #
         return partitions_int
-
-    def get_message_separator(self, topic_str):
-        metadata_dict = self.get_metadata(topic_str)
-        message_separator_str = metadata_dict["message_separator"]
-        message_separator_bytes = bytes(base64.b64decode(message_separator_str))
-        #
-        return message_separator_bytes
 
     def get_config(self, topic_str):
         metadata_dict = self.get_metadata(topic_str)

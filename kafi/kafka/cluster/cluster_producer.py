@@ -1,19 +1,6 @@
-import importlib
-import json
-import os
-import sys
-import tempfile
-
-from google.protobuf.json_format import ParseDict
-
 from confluent_kafka import Producer
-from confluent_kafka.schema_registry.avro import AvroSerializer
-from confluent_kafka.schema_registry.json_schema import JSONSerializer
-from confluent_kafka.schema_registry.protobuf import ProtobufSerializer
-from confluent_kafka.serialization import MessageField, SerializationContext
 
 from kafi.kafka.kafka_producer import KafkaProducer
-from kafi.kafka.schemaregistry import SchemaRegistry
 
 # Constants
 
@@ -26,14 +13,7 @@ class ClusterProducer(KafkaProducer):
     def __init__(self, cluster_obj, topic, **kwargs):
         super().__init__(cluster_obj, topic, **kwargs)
         #
-        self.schema_hash_int_generalizedProtocolMessageType_dict = {}
-        #
         self.on_delivery_function = kwargs["on_delivery"] if "on_delivery" in kwargs else None
-        #
-        if "schema.registry.url" in cluster_obj.schema_registry_config_dict:
-            self.schemaRegistry = SchemaRegistry(cluster_obj.schema_registry_config_dict, cluster_obj.kafi_config_dict)
-        else:
-            self.schemaRegistry = None
         #
         self.producer = Producer(cluster_obj.kafka_config_dict)
 
@@ -68,62 +48,11 @@ class ClusterProducer(KafkaProducer):
         headers_list = headers if isinstance(headers, list) and len(headers) == len(value_list) else [headers for _ in value_list]
         headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         #
-
-        def serialize(payload, key_bool, normalize_schemas=False):
-            type_str = self.key_type_str if key_bool else self.value_type_str
-            schema_str = self.key_schema_str if key_bool else self.value_schema_str
-            schema_id_int = self.key_schema_id_int if key_bool else self.value_schema_id_int
-            messageField = MessageField.KEY if key_bool else MessageField.VALUE
-            #
-
-            def payload_to_payload_dict(payload):
-                if isinstance(payload, str) or isinstance(payload, bytes):
-                    payload_dict = json.loads(payload)
-                else:
-                    payload_dict = payload
-                return payload_dict
-            #
-            def get_schema(schema_str):
-                if schema_str is None:
-                    if schema_id_int is None:
-                        raise Exception("Please provide a schema or schema ID for the " + ("key" if key_bool else "value") + ".")
-                    schema = self.schemaRegistry.schemaRegistryClient.get_schema(schema_id_int)
-                else:
-                    schema = schema_str
-                return schema
-            #
-            if type_str.lower() in ["bytes", "str", "json"]:
-                if isinstance(payload, dict):
-                    payload_str_or_bytes = json.dumps(payload)
-                else: # str or bytes
-                    payload_str_or_bytes = payload
-            elif type_str.lower() in ["pb", "protobuf"]:
-                schema = get_schema(schema_str)
-                generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
-                protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistry.schemaRegistryClient, {"use.deprecated.format": False})
-                payload_dict = payload_to_payload_dict(payload)
-                protobuf_message = generalizedProtocolMessageType()
-                ParseDict(payload_dict, protobuf_message)
-                payload_str_or_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))
-            elif type_str.lower() == "avro":
-                schema = get_schema(schema_str)
-                avroSerializer = AvroSerializer(self.schemaRegistry.schemaRegistryClient, schema)
-                payload_dict = payload_to_payload_dict(payload)
-                payload_str_or_bytes = avroSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
-            elif type_str.lower() in ["jsonschema", "json_sr"]:
-                schema = get_schema(schema_str)
-                jSONSerializer = JSONSerializer(schema, self.schemaRegistry.schemaRegistryClient)
-                payload_dict = payload_to_payload_dict(payload)
-                payload_str_or_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
-            else:
-                raise Exception("Only \"bytes\", \"str\", \"json\", \"avro\", \"protobuf\" (\"pb\") and \"jsonschema\" (\"json_sr\") supported.")
-            return payload_str_or_bytes
-        #
-        key_str_or_bytes_list = []
-        value_str_or_bytes_list = []
+        key_bytes_list = []
+        value_bytes_list = []
         for value, key, partition_int, timestamp, headers_str_bytes_tuple_list in zip(value_list, key_list, partition_int_list, timestamp_list, headers_str_bytes_tuple_list_list):
-            key_str_or_bytes = serialize(key, key_bool=True)
-            value_str_or_bytes = serialize(value, key_bool=False)
+            key_str_or_bytes = self.serialize(key, True)
+            value_str_or_bytes = self.serialize(value, False)
             #
             timestamp_int = timestamp[1] if isinstance(timestamp, tuple) else timestamp
             #
@@ -131,41 +60,7 @@ class ClusterProducer(KafkaProducer):
             #
             self.written_counter_int += 1
             #
-            key_str_or_bytes_list.append(key_str_or_bytes)
-            value_str_or_bytes_list.append(value_str_or_bytes)
+            key_bytes_list.append(key_str_or_bytes)
+            value_bytes_list.append(value_str_or_bytes)
         #
-        return key_str_or_bytes_list, value_str_or_bytes_list
-
-    # Helpers
-
-    def schema_str_to_generalizedProtocolMessageType(self, schema_str, topic_str, key_bool, normalize_schemas=False):
-        schema_hash_int = hash(schema_str)
-        if schema_hash_int in self.schema_hash_int_generalizedProtocolMessageType_dict:
-            generalizedProtocolMessageType = self.schema_hash_int_generalizedProtocolMessageType_dict[schema_hash_int]
-        else:
-            subject_name_str = self.schemaRegistry.create_subject_name_str(topic_str, key_bool)
-            schema_dict = self.schemaRegistry.create_schema_dict(schema_str, "PROTOBUF")
-            schema_id_int = self.schemaRegistry.register_schema(subject_name_str, schema_dict, normalize_schemas)
-            #
-            generalizedProtocolMessageType = self.schema_id_int_and_schema_str_to_generalizedProtocolMessageType(schema_id_int, schema_str)
-            #
-            self.schema_hash_int_generalizedProtocolMessageType_dict[schema_hash_int] = generalizedProtocolMessageType
-        #
-        return generalizedProtocolMessageType
-
-    def schema_id_int_and_schema_str_to_generalizedProtocolMessageType(self, schema_id_int, schema_str):
-        path_str = f"/{tempfile.gettempdir()}/kafi/clusters/{self.storage_obj.config_str}"
-        os.makedirs(path_str, exist_ok=True)
-        file_str = f"schema_{schema_id_int}.proto"
-        file_path_str = f"{path_str}/{file_str}"
-        with open(file_path_str, "w") as textIOWrapper:
-            textIOWrapper.write(schema_str)
-        #
-        import grpc_tools.protoc
-        grpc_tools.protoc.main(["protoc", f"-I{path_str}", f"--python_out={path_str}", f"{file_str}"])
-        #
-        sys.path.insert(1, path_str)
-        schema_module = importlib.import_module(f"schema_{schema_id_int}_pb2")
-        schema_name_str = list(schema_module.DESCRIPTOR.message_types_by_name.keys())[0]
-        generalizedProtocolMessageType = getattr(schema_module, schema_name_str)
-        return generalizedProtocolMessageType
+        return key_bytes_list, value_bytes_list

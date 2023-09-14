@@ -1,3 +1,4 @@
+import ast
 import os
 
 from kafi.storage_consumer import StorageConsumer
@@ -64,38 +65,42 @@ class FSConsumer(StorageConsumer):
                             start_offsets_dict[partition_int] = group_offsets_dict[partition_int]
                 else:
                     start_offsets_dict = group_offsets_dict
-                #
-                # Get partition files for all partitions.
-                partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str)
-                #
-                # Get first partition files for all partitions.
-                partition_int_first_partition_rel_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str(topic_str, partition_int, offset_int) for partition_int, offset_int in start_offsets_dict.items()}
-                #
-                # Filter out partitions not corresponding to any filee listed by get_partition_files() above.
-                partition_int_first_partition_rel_file_str_dict = {partition_int: first_partition_rel_file_str for partition_int, first_partition_rel_file_str in partition_int_first_partition_rel_file_str_dict.items() if first_partition_rel_file_str is not None}
-                #
-                # Get all partition files to be consumed for all partitions.
-                partition_int_to_be_consume_rel_file_str_list_dict = {partition_int: [rel_file_str for rel_file_str in rel_file_str_list if partition_int in partition_int_first_partition_rel_file_str_dict and rel_file_str >= partition_int_first_partition_rel_file_str_dict[partition_int]] for partition_int, rel_file_str_list in partition_int_rel_file_str_list_dict.items()}
-                #
-                # Create list of partition files to read.
-                file_counter_int = 0
-                max_num_files_int = max([len(to_be_consume_rel_file_str_list) for to_be_consume_rel_file_str_list in partition_int_to_be_consume_rel_file_str_list_dict.values()])
-                #
-                for file_counter_int in range(max_num_files_int):
-                    for partition_int in range(partitions_int):
-                        if partition_int in partition_int_to_be_consume_rel_file_str_list_dict:
-                            if len(partition_int_to_be_consume_rel_file_str_list_dict[partition_int]) > file_counter_int:
-                                rel_file_str_list.append(partition_int_to_be_consume_rel_file_str_list_dict[partition_int][file_counter_int])
-            
+            #
+            # Get partition files for all partitions.
+            partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str)
+            #
+            # Get first partition files for all partitions.
+            partition_int_first_partition_rel_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str(topic_str, partition_int, offset_int) for partition_int, offset_int in start_offsets_dict.items()}
+            #
+            # Filter out partitions not corresponding to any filee listed by get_partition_files() above.
+            partition_int_first_partition_rel_file_str_dict = {partition_int: first_partition_rel_file_str for partition_int, first_partition_rel_file_str in partition_int_first_partition_rel_file_str_dict.items() if first_partition_rel_file_str is not None}
+            #
+            # Get all partition files to be consumed for all partitions.
+            partition_int_to_be_consume_rel_file_str_list_dict = {partition_int: [rel_file_str for rel_file_str in rel_file_str_list if partition_int in partition_int_first_partition_rel_file_str_dict and rel_file_str >= partition_int_first_partition_rel_file_str_dict[partition_int]] for partition_int, rel_file_str_list in partition_int_rel_file_str_list_dict.items()}
+            #
+            # Create list of partition files to read.
+            file_counter_int = 0
+            max_num_files_int = max([len(to_be_consume_rel_file_str_list) for to_be_consume_rel_file_str_list in partition_int_to_be_consume_rel_file_str_list_dict.values()])
+            #
+            for file_counter_int in range(max_num_files_int):
+                for partition_int in range(partitions_int):
+                    if partition_int in partition_int_to_be_consume_rel_file_str_list_dict:
+                        if len(partition_int_to_be_consume_rel_file_str_list_dict[partition_int]) > file_counter_int:
+                            rel_file_str_list.append(partition_int_to_be_consume_rel_file_str_list_dict[partition_int][file_counter_int])
             #
             abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(topic_str)
-            message_separator_bytes = self.storage_obj.admin.get_message_separator(topic_str)
             for rel_file_str in rel_file_str_list:
                 messages_bytes = self.storage_obj.admin.read_bytes(os.path.join(abs_topic_dir_str, "partitions", rel_file_str))
                 #
-                message_dict_list = self.deserialize(topic_str, messages_bytes, message_separator_bytes, self.topic_str_key_type_str_dict[topic_str], self.topic_str_value_type_str_dict[topic_str])
+                message_bytes_list = messages_bytes.split(b"\n")[:-1]
                 #
-                for message_dict in message_dict_list:
+                for message_bytes in message_bytes_list:
+                    message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
+                    #
+                    message_dict["key"] = self.deserialize(message_dict["key"], self.topic_str_key_type_str_dict[message_dict["topic"]])
+                    #
+                    message_dict["value"] = self.deserialize(message_dict["value"], self.topic_str_value_type_str_dict[message_dict["topic"]])
+                    #
                     partition_int = message_dict["partition"]
                     self.next_topic_str_offsets_dict_dict[topic_str][partition_int] = message_dict["offset"] + 1
                     if self.enable_auto_commit_bool:

@@ -1,6 +1,4 @@
-from kafi.kafka.schemaregistry import SchemaRegistry
 from kafi.storage import Storage
-from kafi.helpers import get_millis
 
 # Constants
 
@@ -25,9 +23,6 @@ class Kafka(Storage):
         else:
             self.rest_proxy_config_dict = None
         #
-        self.schema_registry_config_dict = self.config_dict["schema_registry"]
-        #
-        self.schemaRegistry = None
         self.admin = None
         #
         # cluster config kafi section
@@ -93,12 +88,6 @@ class Kafka(Storage):
             self.requests_num_retries(10)
         else:
             self.requests_num_retries(int(self.kafi_config_dict["requests.num.retries"]))
-        #
-        if "schema.registry.url" in self.schema_registry_config_dict:
-            self.schemaRegistry = self.get_schemaRegistry()
-        else:
-            self.schemaRegistry = None
-        #
 
     #
 
@@ -139,13 +128,6 @@ class Kafka(Storage):
 
     def requests_num_retries(self, new_value=None): # int
         return self.get_set_config("requests.num.retries", new_value)
-
-    #
-
-    def get_schemaRegistry(self):
-        schemaRegistry = SchemaRegistry(self.schema_registry_config_dict, self.kafi_config_dict)
-        #
-        return schemaRegistry
 
     #
 

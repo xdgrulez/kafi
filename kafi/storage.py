@@ -5,6 +5,7 @@ import re
 from piny import YamlLoader
 
 from kafi.shell import Shell
+from kafi.schemaregistry import SchemaRegistry
 from kafi.helpers import bytes_or_str_to_bytes, is_interactive
 
 class Storage(Shell):
@@ -15,6 +16,10 @@ class Storage(Shell):
         self.optional_section_str_list = optional_section_str_list
         #
         self.config_dict = self.get_config_dict(config_str)
+        #
+        self.schema_registry_config_dict = self.config_dict["schema_registry"]
+        #
+        self.schemaRegistry = None
         #
         self.kafi_config_dict = self.config_dict["kafi"] if "kafi" in self.config_dict else self.config_dict["kash"] if "kash" in self.config_dict else {}
         #
@@ -58,6 +63,11 @@ class Storage(Shell):
             self.commit_after_processing(True)
         else:
             self.commit_after_processing(bool(self.kafi_config_dict["commit.after.processing"]))
+        #
+        if "schema.registry.url" in self.schema_registry_config_dict:
+            self.schemaRegistry = self.get_schemaRegistry()
+        else:
+            self.schemaRegistry = None
 
     #
 
@@ -166,6 +176,13 @@ class Storage(Shell):
             raise Exception("Type error: Headers must either be a list of tuples of strings and bytes, or a dictionary of strings and bytes.")
         #
         return headers_str_bytes_tuple_list
+
+    #
+
+    def get_schemaRegistry(self):
+        schemaRegistry = SchemaRegistry(self.schema_registry_config_dict, self.kafi_config_dict)
+        #
+        return schemaRegistry
 
     # Helpers
 

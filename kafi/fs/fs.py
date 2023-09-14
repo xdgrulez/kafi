@@ -38,11 +38,6 @@ class FS(Storage):
                 self.bucket_name(str(self.s3_config_dict["bucket.name"]))
         else:
             self.s3_config_dict = None
-        # all kafi section
-        if "message.separator" not in self.kafi_config_dict:
-            self.message_separator(b"\n")
-        else:
-            self.message_separator(bytes(self.kafi_config_dict["message.separator"]))
         #
         self.admin = self.get_admin()
 
@@ -60,11 +55,6 @@ class FS(Storage):
     
     def bucket_name(self, new_value=None): # str
         return self.get_set_config("bucket.name", new_value, dict=self.s3_config_dict)
-
-    # all
-
-    def message_separator(self, new_value=None): # str
-        return self.get_set_config("message.separator", new_value, dict=self.s3_config_dict)
 
     # Topics
 

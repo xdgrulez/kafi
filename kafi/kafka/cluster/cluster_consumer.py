@@ -1,17 +1,6 @@
-import json
-
 from confluent_kafka import Consumer, TopicPartition
-from confluent_kafka.schema_registry.avro import AvroDeserializer
-from confluent_kafka.schema_registry.json_schema import JSONDeserializer
-from confluent_kafka.schema_registry.protobuf import ProtobufDeserializer
-from google.protobuf.json_format import MessageToDict
-import importlib
-import os
-import sys
-import tempfile
 
 from kafi.kafka.kafka_consumer import KafkaConsumer
-from kafi.kafka.schemaregistry import SchemaRegistry
 
 # Constants
 
@@ -22,13 +11,6 @@ ALL_MESSAGES = -1
 class ClusterConsumer(KafkaConsumer):
     def __init__(self, cluster_obj, *topics, **kwargs):
         super().__init__(cluster_obj, *topics, **kwargs)
-        #
-        if "schema.registry.url" in cluster_obj.schema_registry_config_dict:
-            self.schemaRegistry = SchemaRegistry(cluster_obj.schema_registry_config_dict, cluster_obj.kafi_config_dict)
-        else:
-            self.schemaRegistry = None
-        #
-        self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict = {}
         #
         # Consumer Config
         #
@@ -80,7 +62,7 @@ class ClusterConsumer(KafkaConsumer):
         #
         message_list = self.consumer.consume(n_int, self.storage_obj.consume_timeout())
         #
-        deserialized_message_dict_list = [self.deserialize(message, key_type=self.topic_str_key_type_str_dict[message.topic()], value_type=self.topic_str_value_type_str_dict[message.topic()]) for message in message_list]
+        deserialized_message_dict_list = [{"topic": message.topic(), "headers": message.headers(), "partition": message.partition(), "offset": message.offset(), "timestamp": message.timestamp(), "key": self.deserialize(message.key(), self.topic_str_key_type_str_dict[message.topic()]), "value": self.deserialize(message.value(), self.topic_str_value_type_str_dict[message.topic()])} for message in message_list]
         #
         return deserialized_message_dict_list
 
@@ -121,131 +103,6 @@ class ClusterConsumer(KafkaConsumer):
         member_id_str = self.consumer.memberid()
         #
         return member_id_str 
-
-    #
-
-    def deserialize(self, message, key_type, value_type):
-        key_type_str = key_type
-        value_type_str = value_type
-        #
-
-        def bytes_to_str(bytes):
-            if bytes:
-                return bytes.decode("utf-8")
-            else:
-                return bytes
-        #
-
-        def bytes_to_bytes(bytes):
-            return bytes
-        #
-
-        def bytes_to_dict(bytes):
-            if bytes is None:
-                return None
-            #
-            return json.loads(bytes)
-        #
-
-        if key_type_str.lower() == "str":
-            decode_key = bytes_to_str
-        elif key_type_str.lower() == "bytes":
-            decode_key = bytes_to_bytes
-        elif key_type_str.lower() == "json":
-            decode_key = bytes_to_dict
-        elif key_type_str.lower() in ["pb", "protobuf"]:
-            def decode_key(bytes):
-                return self.bytes_protobuf_to_dict(bytes)
-        elif key_type_str.lower() == "avro":
-            def decode_key(bytes):
-                return self.bytes_avro_to_dict(bytes)
-        elif key_type_str.lower() in ["jsonschema", "json_sr"]:
-            def decode_key(bytes):
-                return self.bytes_jsonschema_to_dict(bytes)
-        #
-        if value_type_str.lower() == "str":
-            decode_value = bytes_to_str
-        elif value_type_str.lower() == "bytes":
-            decode_value = bytes_to_bytes
-        elif value_type_str.lower() == "json":
-            decode_value = bytes_to_dict
-        elif value_type_str.lower() in ["pb", "protobuf"]:
-            def decode_value(bytes):
-                return self.bytes_protobuf_to_dict(bytes)
-        elif value_type_str.lower() == "avro":
-            def decode_value(bytes):
-                return self.bytes_avro_to_dict(bytes)
-        elif value_type_str.lower() in ["jsonschema", "json_sr"]:
-            def decode_value(bytes):
-                return self.bytes_jsonschema_to_dict(bytes)
-        #
-        deserialized_message_dict_list = {"headers": message.headers(), "topic": message.topic(), "partition": message.partition(), "offset": message.offset(), "timestamp": message.timestamp(), "key": decode_key(message.key()), "value": decode_value(message.value())}
-        return deserialized_message_dict_list
-
-    def schema_id_int_to_generalizedProtocolMessageType_protobuf_schema_str_tuple(self, schema_id_int):
-        schema_dict = self.schemaRegistry.get_schema(schema_id_int)
-        schema_str = schema_dict["schema_str"]
-        #
-        generalizedProtocolMessageType = self.schema_id_int_and_schema_str_to_generalizedProtocolMessageType(schema_id_int, schema_str)
-        #
-        return generalizedProtocolMessageType, schema_str
-
-    def schema_id_int_and_schema_str_to_generalizedProtocolMessageType(self, schema_id_int, schema_str):
-        path_str = f"/{tempfile.gettempdir()}/kafi/clusters/{self.storage_obj.config_str}"
-        os.makedirs(path_str, exist_ok=True)
-        file_str = f"schema_{schema_id_int}.proto"
-        file_path_str = f"{path_str}/{file_str}"
-        with open(file_path_str, "w") as textIOWrapper:
-            textIOWrapper.write(schema_str)
-        #
-        import grpc_tools.protoc
-        grpc_tools.protoc.main(["protoc", f"-I{path_str}", f"--python_out={path_str}", f"{file_str}"])
-        #
-        sys.path.insert(1, path_str)
-        schema_module = importlib.import_module(f"schema_{schema_id_int}_pb2")
-        schema_name_str = list(schema_module.DESCRIPTOR.message_types_by_name.keys())[0]
-        generalizedProtocolMessageType = getattr(schema_module, schema_name_str)
-        return generalizedProtocolMessageType
-
-    def bytes_protobuf_to_dict(self, bytes):
-        if bytes is None:
-            return None
-        #
-        schema_id_int = int.from_bytes(bytes[1:5], "big")
-        if schema_id_int in self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict:
-            generalizedProtocolMessageType, protobuf_schema_str = self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int]
-        else:
-            generalizedProtocolMessageType, protobuf_schema_str = self.schema_id_int_to_generalizedProtocolMessageType_protobuf_schema_str_tuple(schema_id_int)
-            self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int] = (generalizedProtocolMessageType, protobuf_schema_str)
-        #
-        protobufDeserializer = ProtobufDeserializer(generalizedProtocolMessageType, {"use.deprecated.format": False})
-        protobuf_message = protobufDeserializer(bytes, None)
-        dict = MessageToDict(protobuf_message)
-        return dict
-
-    def bytes_avro_to_dict(self, bytes):
-        if bytes is None:
-            return None
-        #
-        schema_id_int = int.from_bytes(bytes[1:5], "big")
-        schema_dict = self.schemaRegistry.get_schema(schema_id_int)
-        schema_str = schema_dict["schema_str"]
-        #
-        avroDeserializer = AvroDeserializer(self.schemaRegistry.schemaRegistryClient, schema_str)
-        dict = avroDeserializer(bytes, None)
-        return dict
-
-    def bytes_jsonschema_to_dict(self, bytes):
-        if bytes is None:
-            return None
-        #
-        schema_id_int = int.from_bytes(bytes[1:5], "big")
-        schema_dict = self.schemaRegistry.get_schema(schema_id_int)
-        schema_str = schema_dict["schema_str"]
-        #
-        jsonDeserializer = JSONDeserializer(schema_str)
-        dict = jsonDeserializer(bytes, None)
-        return dict
 
 #
 

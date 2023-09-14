@@ -774,7 +774,9 @@ class TestSingleStorageBase(unittest.TestCase):
         producer = s.producer(topic_str1, value_type="json")
         producer.produce(self.snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
         producer.close()
+        #
         topic_str2 = self.create_test_topic_name()
+        s.create(topic_str2)
         #
         def map_ish(message_dict):
             message_dict["value"]["colour"] += "ish"
@@ -907,6 +909,7 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         topic_str2 = self.create_test_topic_name()
+        s.create(topic_str2)
         #
         group_str1 = self.create_test_group_name()
         (consume_n_int, written_n_int) = s.filter_to(topic_str1, s, topic_str2, group=group_str1, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, source_type="json", target_type="json")

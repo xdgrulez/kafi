@@ -1,121 +1,112 @@
-import ast
-import io
+import os
+import importlib
 import json
-import pandas as pd
+import sys
+import tempfile
 
-from kafi.helpers import is_file
+from confluent_kafka.schema_registry.avro import AvroDeserializer
+from confluent_kafka.schema_registry.json_schema import JSONDeserializer
+from confluent_kafka.schema_registry.protobuf import ProtobufDeserializer
+from google.protobuf.json_format import MessageToDict
+from kafi.schemaregistry import SchemaRegistry
 
 class Deserializer:
-    def deserialize(self, topic_str, message_bytes, message_separator_bytes, key_type_str, value_type_str):
-        if is_file(topic_str):
-            rel_file_str = topic_str
-            #
-            suffix_str = rel_file_str.split(".")[-1]
-            #
-            if suffix_str == "txt":
-                return self.deserialize_lines(message_bytes, message_separator_bytes, key_type_str, value_type_str)
-            elif suffix_str == "parquet":
-                return self.deserialize_parquet(message_bytes, message_separator_bytes, key_type_str, value_type_str)
-            else:
-                raise Exception("Only \"txt\" supported.")
+    def deserialize(self, payload_bytes, type_str):
+        if type_str.lower() == "bytes":
+            deserialized_payload = self.bytes_to_bytes(payload_bytes)
+        elif type_str.lower() == "str":
+            deserialized_payload = self.bytes_to_str(payload_bytes)
+        elif type_str.lower() == "json":
+            deserialized_payload = self.bytes_to_dict(payload_bytes)
+        elif type_str.lower() in ["protobuf", "pb"]:
+            deserialized_payload = self.bytes_protobuf_to_dict(payload_bytes)
+        elif type_str.lower() == "avro":
+            deserialized_payload = self.bytes_avro_to_dict(payload_bytes)
+        elif type_str.lower() in ["jsonschema", "json_sr"]:
+            deserialized_payload = self.bytes_jsonschema_to_dict(payload_bytes)
         else:
-            return self.deserialize_partition_bytes(message_bytes, message_separator_bytes, key_type_str, value_type_str)
-    
-    #
+            raise Exception("Only \"str\", \"bytes\", \"json\", \"protobuf\" (\"pb\"), \"avro\" and \"jsonschema\" (\"json_sr\") supported.")
+        #
+        return deserialized_payload
 
-    def deserialize_partition_bytes(self, messages_bytes, message_separator_bytes, key_type_str, value_type_str):
-        if key_type_str.lower() == "str":
-            decode_key = to_str
-        elif key_type_str.lower() == "bytes":
-            decode_key = to_bytes
-        elif key_type_str.lower() == "json":
-            decode_key = to_dict
+    def bytes_to_str(self, bytes):
+        if bytes:
+            return bytes.decode("utf-8")
         else:
-            raise Exception("Only json, str or bytes supported.")
+            return bytes
+
+    def bytes_to_bytes(self, bytes):
+        return bytes
+
+    def bytes_to_dict(self, bytes):
+        if bytes is None:
+            return None
         #
-        if value_type_str.lower() == "str":
-            decode_value = to_str
-        elif value_type_str.lower() == "bytes":
-            decode_value = to_bytes
-        elif value_type_str.lower() == "json":
-            decode_value = to_dict
+        return json.loads(bytes)
+
+    def bytes_protobuf_to_dict(self, bytes):
+        if bytes is None:
+            return None
+        #
+        schema_id_int = int.from_bytes(bytes[1:5], "big")
+        if schema_id_int in self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict:
+            generalizedProtocolMessageType, protobuf_schema_str = self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int]
         else:
-            raise Exception("Only json, str or bytes supported.")
+            generalizedProtocolMessageType, protobuf_schema_str = self.schema_id_int_to_generalizedProtocolMessageType_protobuf_schema_str_tuple(schema_id_int)
+            self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int] = (generalizedProtocolMessageType, protobuf_schema_str)
         #
+        protobufDeserializer = ProtobufDeserializer(generalizedProtocolMessageType, {"use.deprecated.format": False})
+        protobuf_message = protobufDeserializer(bytes, None)
+        dict = MessageToDict(protobuf_message)
+        return dict
 
-        message_bytes_list = messages_bytes.split(message_separator_bytes)[:-1]
+    def bytes_avro_to_dict(self, bytes):
+        if bytes is None:
+            return None
         #
-        message_dict_list = []
-        for messages_bytes in message_bytes_list:
-            parsed_message_dict = ast.literal_eval(messages_bytes.decode("utf-8"))
-            #
-            message_dict = {"headers": parsed_message_dict["headers"], "timestamp": parsed_message_dict["timestamp"], "key": decode_key(parsed_message_dict["key"]), "value": decode_value(parsed_message_dict["value"]), "offset": parsed_message_dict["offset"], "partition": parsed_message_dict["partition"]}
-            message_dict_list.append(message_dict)
+        schema_id_int = int.from_bytes(bytes[1:5], "big")
+        schema_dict = self.schemaRegistry.get_schema(schema_id_int)
+        schema_str = schema_dict["schema_str"]
         #
-        return message_dict_list
+        avroDeserializer = AvroDeserializer(self.schemaRegistry.schemaRegistryClient, schema_str)
+        dict = avroDeserializer(bytes, None)
+        return dict
 
-    def deserialize_lines(self, messages_bytes, message_separator_bytes, key_type_str, value_type_str):
-        if value_type_str.lower() == "str":
-            decode_value = to_str
-        elif value_type_str.lower() == "bytes":
-            decode_value = to_bytes
-        elif value_type_str.lower() == "json":
-            decode_value = to_dict
-        else:
-            raise Exception("Only json, str or bytes supported.")
+    def bytes_jsonschema_to_dict(self, bytes):
+        if bytes is None:
+            return None
         #
-
-        message_bytes_list = messages_bytes.split(message_separator_bytes)[:-1]
+        schema_id_int = int.from_bytes(bytes[1:5], "big")
+        schema_dict = self.schemaRegistry.get_schema(schema_id_int)
+        schema_str = schema_dict["schema_str"]
         #
-        message_dict_list = []
-        offset_counter_int = 0
-        for messages_bytes in message_bytes_list:            
-            message_dict = {"headers": None, "timestamp": None, "key": None, "value": decode_value(messages_bytes), "offset": offset_counter_int, "partition": 0}
-            #
-            offset_counter_int += 1
-            #
-            message_dict_list.append(message_dict)
+        jsonDeserializer = JSONDeserializer(schema_str)
+        dict = jsonDeserializer(bytes, None)
+        return dict
+
+    # Helpers
+
+    def schema_id_int_to_generalizedProtocolMessageType_protobuf_schema_str_tuple(self, schema_id_int):
+        schema_dict = self.schemaRegistry.get_schema(schema_id_int)
+        schema_str = schema_dict["schema_str"]
         #
-        return message_dict_list
-
-    def deserialize_parquet(self, messages_bytes, message_separator_bytes, key_type_str, value_type_str):
-        df = pd.read_parquet(io.BytesIO(messages_bytes))
+        generalizedProtocolMessageType = self.schema_id_int_and_schema_str_to_generalizedProtocolMessageType(schema_id_int, schema_str)
         #
-        df["json"] = df.apply(lambda x: x.to_json(), axis=1)
+        return generalizedProtocolMessageType, schema_str
+
+    def schema_id_int_and_schema_str_to_generalizedProtocolMessageType(self, schema_id_int, schema_str):
+        path_str = f"/{tempfile.gettempdir()}/kafi/clusters/{self.storage_obj.config_str}"
+        os.makedirs(path_str, exist_ok=True)
+        file_str = f"schema_{schema_id_int}.proto"
+        file_path_str = f"{path_str}/{file_str}"
+        with open(file_path_str, "w") as textIOWrapper:
+            textIOWrapper.write(schema_str)
         #
-        message_dict_list = []
-        offset_counter_int = 0
-        for _, row in df.iterrows():
-            message_dict = {"headers": None, "timestamp": None, "key": None, "value": json.loads(row["json"]), "offset": offset_counter_int, "partition": 0}
-            #
-            offset_counter_int += 1
-            #
-            message_dict_list.append(message_dict)
+        import grpc_tools.protoc
+        grpc_tools.protoc.main(["protoc", f"-I{path_str}", f"--python_out={path_str}", f"{file_str}"])
         #
-        return message_dict_list
-
-#
-
-def to_str(x):
-    if isinstance(x, bytes):
-        return x.decode("utf-8")
-    elif isinstance(x, dict):
-        return str(x)
-    else:
-        return x
-#
-
-def to_bytes(x):
-    if isinstance(x, str):
-        return x.encode("utf-8")
-    elif isinstance(x, dict):
-        return str(x).encode("utf-8")
-    else:
-        return x
-#
-
-def to_dict(x):
-    if isinstance(x, bytes) or isinstance(x, str):
-        return json.loads(x)
-    else:
-        return x
+        sys.path.insert(1, path_str)
+        schema_module = importlib.import_module(f"schema_{schema_id_int}_pb2")
+        schema_name_str = list(schema_module.DESCRIPTOR.message_types_by_name.keys())[0]
+        generalizedProtocolMessageType = getattr(schema_module, schema_name_str)
+        return generalizedProtocolMessageType

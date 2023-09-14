@@ -6,12 +6,12 @@ if os.path.basename(os.getcwd()) == "test":
 else:
     sys.path.insert(1, ".")
 
-from test.test_single_fs_base import TestSingleFSBase
+from test.test_single_storage_base import TestSingleStorageBase
 from kafi.fs.s3.s3 import S3
 
 #
 
-class Test(TestSingleFSBase):
+class Test(TestSingleStorageBase):
     def setUp(self):
         super().setUp()
         self.path_str = "test"
