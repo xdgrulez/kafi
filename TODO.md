@@ -1,8 +1,6 @@
 * produce file -> number files if multiple batches/same for consume
 * clean up groups after offsets.retention.minutes (default: 24h) after last update (explicit call at first?)
-* tests sollten nur eine basistestklasse nutzen und instanziieren
 * cluster*/restproxy* soweit wie möglich verallgemeinern auf kafka*
-* fs groups, commit
 * foldl + Co: offset erst nach erfolgreichem Durchlauf committen
 * file() (read/write-Abzweig)
 
@@ -14,6 +12,8 @@
 * Pretty print JSON etc. (as default output?), easily accessible ppretty in kash.py 0.1
 
 * spezifische args bei cluster* und restproxy* => kwargs
+* c.cp("bla", l, "blups.txt") - ohne keep_timestamps => (1, 0) ???
+
 
 # Methods
 

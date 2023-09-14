@@ -1,7 +1,7 @@
 import os
 
 from kafi.storage_producer import StorageProducer
-from kafi.helpers import get_millis, is_file
+from kafi.helpers import get_millis
 
 # Constants
 
@@ -13,18 +13,12 @@ TIMESTAMP_CREATE_TIME=1
 class FSProducer(StorageProducer):
     def __init__(self, fs_obj, topic, **kwargs):
         super().__init__(fs_obj, topic, **kwargs)
-        #
-        if not is_file(self.topic_str) and not fs_obj.exists(self.topic_str):
-            fs_obj.admin.create(self.topic_str)
 
     #
 
     def produce(self, value, **kwargs):
-        if is_file(self.topic_str):
-            last_offsets_dict = {0: 0}
-        else:
-            partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
-            last_offsets_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
+        partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
+        last_offsets_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
         #
         message_separator_bytes = self.storage_obj.admin.get_message_separator(self.topic_str)
         #
@@ -96,12 +90,6 @@ class FSProducer(StorageProducer):
                 start_offset_int = last_offsets_dict[partition_int]
                 end_offset_int = start_offset_int + len(message_dict_list) - 1
                 #
-                if is_file(self.topic_str):
-                    file_str = self.topic_str
-                    #
-                    abs_files_dir_str = self.storage_obj.admin.get_files_abs_dir_str()
-                    abs_path_file_str = os.path.join(abs_files_dir_str, file_str)
-                else:
-                    abs_path_file_str = os.path.join(topic_abs_dir_str, "partitions", f"{partition_int:09},{start_offset_int:021},{end_offset_int:021}")
+                abs_path_file_str = os.path.join(topic_abs_dir_str, "partitions", f"{partition_int:09},{start_offset_int:021},{end_offset_int:021}")
                 #
                 self.storage_obj.admin.write_bytes(abs_path_file_str, messages_bytes)

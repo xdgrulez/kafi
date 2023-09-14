@@ -3,3 +3,6 @@ s3:
   access.key: "admin"
   secret.key: "password"
   bucket.name: "test"
+
+schema_registry:
+  schema.registry.url: http://localhost:8081

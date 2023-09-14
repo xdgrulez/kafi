@@ -4,7 +4,7 @@ from fnmatch import fnmatch
 import os
 
 from kafi.storage_admin import StorageAdmin
-from kafi.helpers import get_millis, is_file
+from kafi.helpers import get_millis
 
 class FSAdmin(StorageAdmin):
     def __init__(self, fs_obj, **kwargs):
@@ -20,9 +20,9 @@ class FSAdmin(StorageAdmin):
         #
         all_topic_str_list = [rel_dir_str for rel_dir_str in rel_dir_str_list if not rel_dir_str.endswith("partitions")]
         #
-        topic_str_list = self.pattern_match(all_topic_str_list, pattern)
+        topic_or_file_str_list = self.pattern_match(all_topic_str_list, pattern)
         #
-        return topic_str_list
+        return topic_or_file_str_list
 
     def list_groups(self, pattern=None):
         root_dir_str = self.storage_obj.root_dir()
@@ -62,10 +62,8 @@ class FSAdmin(StorageAdmin):
 
     #
 
-    def exists(self, topic):
-        topic_str = topic
-        #
-        return self.topics(topic_str) != []
+    def exists(self, topic_or_file_str):
+        return self.list_topics(topic_or_file_str) != []
 
     #
 
@@ -300,21 +298,15 @@ class FSAdmin(StorageAdmin):
         return metadata_dict
 
     def get_partitions(self, topic_str):
-        if is_file(topic_str):
-            partitions_int = 1
-        else:
-            metadata_dict = self.get_metadata(topic_str)
-            partitions_int = metadata_dict["partitions"]
+        metadata_dict = self.get_metadata(topic_str)
+        partitions_int = metadata_dict["partitions"]
         #
         return partitions_int
 
     def get_message_separator(self, topic_str):
-        if is_file(topic_str):
-            message_separator_bytes = b"\n"
-        else:
-            metadata_dict = self.get_metadata(topic_str)
-            message_separator_str = metadata_dict["message_separator"]
-            message_separator_bytes = bytes(base64.b64decode(message_separator_str))
+        metadata_dict = self.get_metadata(topic_str)
+        message_separator_str = metadata_dict["message_separator"]
+        message_separator_bytes = bytes(base64.b64decode(message_separator_str))
         #
         return message_separator_bytes
 

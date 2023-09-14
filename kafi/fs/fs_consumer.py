@@ -1,7 +1,6 @@
 import os
 
 from kafi.storage_consumer import StorageConsumer
-from kafi.helpers import is_file
 
 # Constants
 
@@ -35,45 +34,36 @@ class FSConsumer(StorageConsumer):
         acc = initial_acc
         rel_file_str_list = []
         for topic_str in self.topic_str_list:
-            if is_file(topic_str):
-                file_str = topic_str
+            partitions_int = self.storage_obj.admin.get_partitions(topic_str)
+            #
+            # Get start offsets.
+            start_offsets_dict = self.topic_str_start_offsets_dict_dict[topic_str] if self.topic_str_start_offsets_dict_dict is not None and topic_str in self.topic_str_start_offsets_dict_dict else None
+            #
+            if start_offsets_dict is None:
+                # If we got no start offsets, try to get the start offsets from the group.
+                group_dict = self.storage_obj.admin.get_group_dict(self.group_str)
+                group_offsets_dict = group_dict["offsets"][topic_str]
                 #
-                start_offsets_dict = {0: 0}
-                #
-                abs_files_dir_str = self.storage_obj.admin.get_files_abs_dir_str()
-                rel_file_str = os.path.join(abs_files_dir_str, file_str)
-                rel_file_str_list.append(rel_file_str)
-            else:
-                partitions_int = self.storage_obj.admin.get_partitions(topic_str)
-                #
-                # Get start offsets.
-                start_offsets_dict = self.topic_str_start_offsets_dict_dict[topic_str] if self.topic_str_start_offsets_dict_dict is not None and topic_str in self.topic_str_start_offsets_dict_dict else None
-                #
-                if start_offsets_dict is None:
-                    # If we got no start offsets, try to get the start offsets from the group.
-                    group_dict = self.storage_obj.admin.get_group_dict(self.group_str)
-                    group_offsets_dict = group_dict["offsets"][topic_str]
-                    #
-                    if any(group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in range(partitions_int)):
-                        # If any of the partitions still does not have a committed offset yet...
-                        if auto_offset_reset_str.lower() == "latest":
-                            # If auto.offset.reset == latest, start offsets = last offsets.
-                            partition_int_offset_tuple_dict = self.watermarks(topic_str, **kwargs)[topic_str]
-                            auto_offset_reset_offsets_dict = {partition_int: offset_tuple[1] for partition_int, offset_tuple in partition_int_offset_tuple_dict.items()}
-                        elif auto_offset_reset_str.lower() == "earliest":
-                            # If auto.offset.reset == earliest, start offsets = 0
-                            auto_offset_reset_offsets_dict = {partition_int: 0 for partition_int in range(partitions_int)}
-                        else:
-                            raise Exception("Only \"earliest\" and \"latest\" supported for \"auto.offset.reset\".")
-                        # ...and for each partition still not having a committed offset yet, use the auto.offset.reset one.
-                        start_offsets_dict = {}
-                        for partition_int, offset_int in group_offsets_dict.items():
-                            if offset_int == OFFSET_INVALID:
-                                start_offsets_dict[partition_int] = auto_offset_reset_offsets_dict[partition_int]
-                            else:
-                                start_offsets_dict[partition_int] = group_offsets_dict[partition_int]
+                if any(group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in range(partitions_int)):
+                    # If any of the partitions still does not have a committed offset yet...
+                    if auto_offset_reset_str.lower() == "latest":
+                        # If auto.offset.reset == latest, start offsets = last offsets.
+                        partition_int_offset_tuple_dict = self.watermarks(topic_str, **kwargs)[topic_str]
+                        auto_offset_reset_offsets_dict = {partition_int: offset_tuple[1] for partition_int, offset_tuple in partition_int_offset_tuple_dict.items()}
+                    elif auto_offset_reset_str.lower() == "earliest":
+                        # If auto.offset.reset == earliest, start offsets = 0
+                        auto_offset_reset_offsets_dict = {partition_int: 0 for partition_int in range(partitions_int)}
                     else:
-                        start_offsets_dict = group_offsets_dict
+                        raise Exception("Only \"earliest\" and \"latest\" supported for \"auto.offset.reset\".")
+                    # ...and for each partition still not having a committed offset yet, use the auto.offset.reset one.
+                    start_offsets_dict = {}
+                    for partition_int, offset_int in group_offsets_dict.items():
+                        if offset_int == OFFSET_INVALID:
+                            start_offsets_dict[partition_int] = auto_offset_reset_offsets_dict[partition_int]
+                        else:
+                            start_offsets_dict[partition_int] = group_offsets_dict[partition_int]
+                else:
+                    start_offsets_dict = group_offsets_dict
                 #
                 # Get partition files for all partitions.
                 partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str)

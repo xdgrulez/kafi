@@ -6,12 +6,12 @@ if os.path.basename(os.getcwd()) == "test":
 else:
     sys.path.insert(1, ".")
 
-from test.test_single_storage_base import TestSingleStorageBase
+from test.test_single_fs_base import TestSingleFSBase
 from kafi.fs.local.local import Local
 
 #
 
-class Test(TestSingleStorageBase):
+class Test(TestSingleFSBase):
     def setUp(self):
         super().setUp()
         self.path_str = "/tmp/kafi/test/local"
@@ -88,13 +88,13 @@ class Test(TestSingleStorageBase):
         super().test_produce_consume_json()
 
     def test_produce_consume_protobuf(self):
-        pass
+        super().test_produce_consume_protobuf()
 
     def test_produce_consume_avro(self):
-        pass
+        super().test_produce_consume_avro()
 
     def test_produce_consume_jsonschema(self):
-        pass
+        super().test_produce_consume_jsonschema()
 
     def test_consume_from_offsets(self):
         super().test_consume_from_offsets()
@@ -144,6 +144,8 @@ class Test(TestSingleStorageBase):
 
     def test_filter_to(self):
         super().test_filter_to()
+
+    # Files
 
     def test_filter_file_to_topic(self):
         super().test_filter_file_to_topic()

@@ -1,5 +1,3 @@
-from kafi.helpers import get_millis
-
 from kafi.storage_consumer import StorageConsumer
 
 # Constants

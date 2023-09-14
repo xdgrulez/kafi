@@ -29,3 +29,4 @@ class Local(FS):
         producer = LocalProducer(self, file, **kwargs)
         #
         return producer
+    

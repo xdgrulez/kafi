@@ -2,7 +2,6 @@ from kafi.deserializer import Deserializer
 from kafi.helpers import get_millis
 
 class StorageConsumer(Deserializer):
-
     def __init__(self, storage_obj, *topics, **kwargs):
         self.storage_obj = storage_obj
         #
