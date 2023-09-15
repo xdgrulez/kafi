@@ -11,6 +11,8 @@ from confluent_kafka.serialization import MessageField, SerializationContext
 
 from google.protobuf.json_format import ParseDict
 
+from kafi.helpers import to_bytes
+
 class Serializer:
     def serialize(self, payload, key_bool, normalize_schemas=False):
         type_str = self.key_type_str if key_bool else self.value_type_str
@@ -41,14 +43,7 @@ class Serializer:
         #
 
         if type_str.lower() in ["bytes", "str", "json"]:
-            if isinstance(payload, bytes):
-                serialized_payload_bytes = payload
-            elif isinstance(payload, str):
-                serialized_payload_bytes = payload.encode("utf-8")
-            elif isinstance(payload, dict):
-                serialized_payload_bytes = json.dumps(payload)
-            else:
-                serialized_payload_bytes = payload
+            serialized_payload_bytes = to_bytes(payload)
         elif type_str.lower() in ["pb", "protobuf"]:
             schema = get_schema()
             generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)

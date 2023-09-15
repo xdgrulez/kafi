@@ -17,9 +17,9 @@ class Pandas():
             return acc
         #
 
-        df_n_int_tuple = self.foldl(topic, foldl_function, pd.DataFrame(), n, **kwargs)
+        (df, _) = self.foldl(topic, foldl_function, pd.DataFrame(), n, **kwargs)
         #
-        return df_n_int_tuple
+        return df
 
     def from_df(self, df, topic, n=ALL_MESSAGES, **kwargs):
         n_int = n

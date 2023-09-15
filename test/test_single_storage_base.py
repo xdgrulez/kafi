@@ -938,8 +938,7 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        (df, n_int1) = s.to_df(topic_str1, group=group_str1)
-        self.assertTrue(n_int1, 3)
+        df = s.to_df(topic_str1, group=group_str1)
         self.assertTrue(len(df), 3)
         self.assertTrue(df.iloc[1]["name"], "cake")
         self.assertTrue(df.iloc[1]["calories"], 260.0)

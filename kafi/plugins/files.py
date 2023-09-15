@@ -1,5 +1,4 @@
-import json
-import os
+from kafi.helpers import to_bytes
 
 # Constants
 
@@ -12,12 +11,12 @@ class Files():
         file_str = file
         #
         def foldl_function(acc, message_dict):
-            value_bytes = json.dumps(message_dict["value"]).encode("utf-8")
+            value_bytes = to_bytes(message_dict["value"])
             #
             if key_value_separator_bytes == None:
                 line_bytes = value_bytes
             else:
-                key_bytes = json.dumps(message_dict["key"]).encode("utf-8")
+                key_bytes = to_bytes(message_dict["key"])
                 line_bytes = key_bytes + key_value_separator_bytes + value_bytes
             #
             line_bytes += message_separator_bytes
@@ -30,7 +29,7 @@ class Files():
         message_separator_bytes = kwargs["message_separator"] if "message_separator" in kwargs else b"\n"
         key_value_separator_bytes = kwargs["key_value_separator"] if "key_value_separator" in kwargs else None
         #
-        abs_path_file_str = os.path.join(fs_obj.root_dir(), "files", file_str)
+        abs_path_file_str = fs_obj.admin.get_abs_path_str(file_str)
         #
         (lines_bytes, n_int) = self.foldl(topic, foldl_function, b"", n, **kwargs)
         #
@@ -64,7 +63,7 @@ class Files():
             return key_bytes, value_bytes 
         #
 
-        abs_path_file_str = os.path.join(fs_obj.root_dir(), "files", file_str)
+        abs_path_file_str = fs_obj.admin.get_abs_path_str(file_str)
         #
         lines_bytes = fs_obj.admin.read_bytes(abs_path_file_str)
         #

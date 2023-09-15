@@ -14,10 +14,6 @@ def is_interactive():
     return hasattr(sys, 'ps1')
 
 
-def is_file(str):
-    return "/" in str
-
-
 def pretty(dict):
     return json.dumps(dict, indent=2)
 
@@ -158,6 +154,22 @@ def base64_decode(base64_str):
     return base64.b64decode(bytes(base64_str, encoding="utf-8"))
 
 
+def to_bytes(data):
+    if isinstance(data, bytes):
+        data_bytes = data
+    elif isinstance(data, str):
+        data_bytes = data.encode("utf-8")
+    elif isinstance(data, dict):
+        data_bytes = json.dumps(data).encode("utf-8")
+    elif data is None:
+        data_bytes = None
+    else:
+        data_str = str(data)
+        data_bytes = data_str.encode("utf-8")
+    #
+    return data_bytes
+
+
 def bytes_or_str_to_bytes(bytes_or_str):
     if isinstance(bytes_or_str, bytes):
         return_bytes = bytes_or_str
@@ -192,18 +204,3 @@ def str_to_bytes(str):
         bytes = str.encode("utf-8")
     #
     return bytes
-
-
-def dict_to_bytes(dict):
-    if dict is None:
-        bytes = None
-    else:
-        bytes = str(dict).encode("utf-8")
-    #
-    return bytes
-
-
-def split_list_into_sublists(input_list, sublist_size_int):
-    output_list_list = [input_list[i:i + sublist_size_int] for i in range(0, len(input_list), sublist_size_int)]
-    #
-    return output_list_list

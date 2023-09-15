@@ -625,12 +625,13 @@ def test_from_to_file(test_obj, storage1, storage2):
         producer.close()
         #
         group_str1 = test_obj.create_test_group_name(storage1)
-        n_int1 = storage1.to_file(topic_str1, storage2, f"{topic_str1}.txt", group=group_str1)
+        file_str = f"{topic_str1}.txt"
+        n_int1 = storage1.to_file(topic_str1, storage2, file_str, group=group_str1)
         test_obj.assertTrue(n_int1, 3)
         #
         topic_str2 = test_obj.create_test_topic_name(storage1)
         storage1.create(topic_str2)
-        storage1.from_file(storage2, f"{topic_str1}.txt", topic_str2)
+        storage1.from_file(storage2, file_str, topic_str2)
         #
         group_str2 = test_obj.create_test_group_name(storage1)
         (message_dict_list, n_int2) = storage1.cat(topic_str2, group=group_str2, n=3)
@@ -639,6 +640,8 @@ def test_from_to_file(test_obj, storage1, storage2):
         test_obj.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
         test_obj.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
         test_obj.assertEqual(80.0, message_dict_list[2]["value"]["calories"])
+        #
+        storage2.admin.delete_file(storage2.admin.get_abs_path_str(file_str))
 
 #
 
