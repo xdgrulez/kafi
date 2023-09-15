@@ -13,11 +13,14 @@ TIMESTAMP_CREATE_TIME=1
 class FSProducer(StorageProducer):
     def __init__(self, fs_obj, topic, **kwargs):
         super().__init__(fs_obj, topic, **kwargs)
+        #
+        if not fs_obj.exists(self.topic_str):
+            fs_obj.create(self.topic_str)
 
     #
 
     def produce(self, value, **kwargs):
-        partition_int_offsets_tuple_dict = self.storage_obj.admin.watermarks(self.topic_str)[self.topic_str]
+        partition_int_offsets_tuple_dict = self.storage_obj.watermarks(self.topic_str)[self.topic_str]
         last_offsets_dict = {partition_int: offsets_tuple[1] for partition_int, offsets_tuple in partition_int_offsets_tuple_dict.items()}
         #
         key = kwargs["key"] if "key" in kwargs else None
@@ -81,12 +84,12 @@ class FSProducer(StorageProducer):
             partition_int_offset_counter_int_dict[target_partition_int] += 1
         #
         topic_abs_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(self.topic_str)
-        messages_bytes = b""
         for partition_int, message_dict_list in partition_int_message_dict_list_dict.items():
             if len(message_dict_list) > 0:
+                messages_bytes = b""
                 for message_dict in message_dict_list:
                     message_dict["key"] = self.serialize(message_dict["key"], True)
-                    message_dict["value"] = self.serialize(message_dict["value"], True)
+                    message_dict["value"] = self.serialize(message_dict["value"], False)
                     #
                     start_offset_int = last_offsets_dict[partition_int]
                     end_offset_int = start_offset_int + len(message_dict_list) - 1
