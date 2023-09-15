@@ -384,6 +384,106 @@ class Test(unittest.TestCase):
         #        
         test_diff(self, r, c)
 
+    # Files AzureBlob and X
+
+    def test_from_to_file_azureblob_azureblob(self):
+        a1 = self.get_azureblob()
+        a2 = self.get_azureblob()
+        #        
+        test_from_to_file(self, a1, a2)
+
+    def test_from_to_file_azureblob_local(self):
+        a = self.get_azureblob()
+        l = self.get_local()
+        #        
+        test_from_to_file(self, a, l)
+
+    def test_from_to_file_azureblob_s3(self):
+        a = self.get_azureblob()
+        s = self.get_s3()
+        #        
+        test_from_to_file(self, a, s)
+
+    # Files Local and X
+
+    def test_from_to_file_local_azureblob(self):
+        l = self.get_local()
+        a = self.get_azureblob()
+        #        
+        test_from_to_file(self, l, a)
+
+    def test_from_to_file_local_local(self):
+        l1 = self.get_local()
+        l2 = self.get_local()
+        #        
+        test_from_to_file(self, l1, l2)
+
+    def test_from_to_file_local_s3(self):
+        l = self.get_local()
+        s = self.get_s3()
+        #        
+        test_from_to_file(self, l, s)
+
+    # Files S3 and X
+
+    def test_from_to_file_s3_azureblob(self):
+        s = self.get_s3()
+        a = self.get_azureblob()
+        #        
+        test_from_to_file(self, s, a)
+
+    def test_from_to_file_s3_local(self):
+        s = self.get_s3()
+        l = self.get_local()
+        #        
+        test_from_to_file(self, s, l)
+
+    def test_from_to_file_s3_s3(self):
+        s1 = self.get_s3()
+        s2 = self.get_s3()
+        #        
+        test_from_to_file(self, s1, s2)
+
+    # Files Cluster and X
+
+    def test_from_to_cluster_azureblob(self):
+        c = Cluster("local")
+        a = self.get_azureblob()
+        #        
+        test_from_to_file(self, c, a)
+
+    def test_from_to_file_cluster_local(self):
+        c = Cluster("local")
+        l = self.get_local()
+        #        
+        test_from_to_file(self, c, l)
+
+    def test_from_to_file_cluster_s3(self):
+        c = Cluster("local")
+        s = self.get_s3()
+        #        
+        test_from_to_file(self, c, s)
+
+    # Files RestProxy and X
+
+    def test_from_to_restproxy_azureblob(self):
+        r = RestProxy("local")
+        a = self.get_azureblob()
+        #        
+        test_from_to_file(self, r, a)
+
+    def test_from_to_file_restproxy_local(self):
+        r = RestProxy("local")
+        l = self.get_local()
+        #        
+        test_from_to_file(self, r, l)
+
+    def test_from_to_file_restproxy_s3(self):
+        r = RestProxy("local")
+        s = self.get_s3()
+        #        
+        test_from_to_file(self, r, s)
+
 #
 
 def test_cp(test_obj, storage1, storage2):
@@ -513,6 +613,32 @@ def test_cp(test_obj, storage1, storage2):
             #
             test_obj.assertLess(message_dict_list3[j0]["offset"], message_dict_list3[j1]["offset"])
             test_obj.assertLess(message_dict_list3[j1]["offset"], message_dict_list3[j2]["offset"])
+
+# Files
+
+def test_from_to_file(test_obj, storage1, storage2):
+    if storage2.__class__.__name__ in ["AzureBlob", "Local", "S3"]:
+        topic_str1 = test_obj.create_test_topic_name(storage1)
+        storage1.create(topic_str1)
+        producer = storage1.producer(topic_str1, value_type="json")
+        producer.produce(test_obj.snack_str_list)
+        producer.close()
+        #
+        group_str1 = test_obj.create_test_group_name(storage1)
+        n_int1 = storage1.to_file(topic_str1, storage2, f"{topic_str1}.txt", group=group_str1)
+        test_obj.assertTrue(n_int1, 3)
+        #
+        topic_str2 = test_obj.create_test_topic_name(storage1)
+        storage1.create(topic_str2)
+        storage1.from_file(storage2, f"{topic_str1}.txt", topic_str2)
+        #
+        group_str2 = test_obj.create_test_group_name(storage1)
+        (message_dict_list, n_int2) = storage1.cat(topic_str2, group=group_str2, n=3)
+        test_obj.assertEqual(3, len(message_dict_list))
+        test_obj.assertEqual(3, n_int2)
+        test_obj.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
+        test_obj.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
+        test_obj.assertEqual(80.0, message_dict_list[2]["value"]["calories"])
 
 #
 

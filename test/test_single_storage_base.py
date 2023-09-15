@@ -136,14 +136,14 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
-        producer = s.producer(topic_str)
+        producer = s.producer(topic_str, value_type="str")
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str)
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
         consumer.consume(n=1)
         #
         group_str_list1 = s.groups(["test*", "test_group*"])
@@ -167,14 +167,14 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
-        producer = s.producer(topic_str)
+        producer = s.producer(topic_str, value_type="str")
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str)
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
         consumer.consume(n=1)
         #
         group_dict = s.describe_groups(group_str)[group_str]
@@ -209,14 +209,14 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
-        producer = s.producer(topic_str)
+        producer = s.producer(topic_str, value_type="str")
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str)
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
         consumer.consume(n=1)
         consumer.close()
         #
@@ -237,13 +237,13 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str, partitions=2)
-        producer = s.producer(topic_str)
+        producer = s.producer(topic_str, value_type="str")
         producer.produce("message 1", partition=0)
         producer.produce("message 2", partition=1)
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str)
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
         consumer.consume(n=1)
         consumer.commit()
         consumer.consume(n=1)
@@ -271,14 +271,14 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
-        producer = s.producer(topic_str)
+        producer = s.producer(topic_str, value_type="str")
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str)
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
         group_str_topic_str_offsets_dict_dict_dict = s.set_group_offsets({group_str: {topic_str: {0: 2}}})
         self.assertEqual(group_str_topic_str_offsets_dict_dict_dict, {group_str: {topic_str: {0: 2}}})
         [message_dict] = consumer.consume(n=1)
@@ -356,7 +356,7 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
-        producer = s.producer(topic_str)
+        producer = s.producer(topic_str, value_type="str")
         producer.produce("message 1")
         time.sleep(1)
         producer.produce("message 2")
@@ -365,7 +365,7 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(s.l(topic_str, partitions=True)[topic_str]["partitions"][0], 2)
         #
         group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str)
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
         message_dict_list = consumer.consume(n=2)
         consumer.close()
         message1_timestamp_int = message_dict_list[1]["timestamp"][1]
@@ -544,14 +544,14 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
-        producer = s.producer(topic_str)
+        producer = s.producer(topic_str, value_type="str")
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str, offsets={0: 2})
+        consumer = s.consumer(topic_str, group=group_str, value_type="str", offsets={0: 2})
         message_dict_list = consumer.consume(n=1)
         self.assertEqual(len(message_dict_list), 1)
         self.assertEqual(message_dict_list[0]["value"], "message 3")
@@ -568,14 +568,14 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
-        producer = s.producer(topic_str)
+        producer = s.producer(topic_str, value_type="str")
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str)
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
         consumer.consume(n=1)
         offsets_dict = consumer.offsets()
         #
@@ -605,7 +605,7 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
-        w = s.producer(topic_str1)
+        w = s.producer(topic_str1, value_type="str")
         w.produce(self.snack_str_list)
         w.close()
         n_int1 = s.l(topic_str1)[topic_str1]
@@ -626,7 +626,7 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str1 = self.create_test_group_name()
         #
         try:
-            s.cp(topic_str1, s, topic_str2, group=group_str1, n=3, map_function=map_function, consume_batch_size=1, produce_batch_size=1)
+            s.cp(topic_str1, s, topic_str2, group=group_str1, n=3, map_function=map_function, value_type="str", consume_batch_size=1, produce_batch_size=1)
         except Exception:
             pass
         #
@@ -639,7 +639,7 @@ class TestSingleStorageBase(unittest.TestCase):
         # self.assertEqual(n_int2, 3)
         #
         group_str2 = self.create_test_group_name()
-        (message_dict_list, n_int1) = s.cat(topic_str1, group=group_str2, n=3)
+        (message_dict_list, n_int1) = s.cat(topic_str1, group=group_str2, value_type="str", n=3)
         self.assertEqual(3, len(message_dict_list))
         self.assertEqual(3, n_int1)
         value_str_list = [message_dict["value"] for message_dict in message_dict_list]
@@ -682,11 +682,11 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str)
-        producer.produce(self.snack_str_list, headers=self.headers_str_str_dict)
+        producer.produce(self.snack_str_list, headers=self.headers_str_str_dict, value_type="str")
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        (message_dict_list1, n_int1) = s.cat(topic_str, group=group_str1)
+        (message_dict_list1, n_int1) = s.cat(topic_str, group=group_str1, value_type="str")
         self.assertEqual(3, len(message_dict_list1))
         self.assertEqual(3, n_int1)
         value_str_list1 = [message_dict["value"] for message_dict in message_dict_list1]
@@ -696,7 +696,7 @@ class TestSingleStorageBase(unittest.TestCase):
             self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
             #
             group_str2 = self.create_test_group_name()
-            (message_dict_list2, n_int2) = s.cat(topic_str, group=group_str2, offsets={0:1}, n=1)
+            (message_dict_list2, n_int2) = s.cat(topic_str, group=group_str2, value_type="str", offsets={0:1}, n=1)
             self.assertEqual(1, len(message_dict_list2))
             self.assertEqual(1, n_int2)
             self.assertEqual(message_dict_list2[0]["value"], self.snack_str_list[1])
@@ -920,5 +920,38 @@ class TestSingleStorageBase(unittest.TestCase):
         (message_dict_list, n_int) = s.cat(topic_str2, group=group_str2, type="json", n=2)
         self.assertEqual(2, len(message_dict_list))
         self.assertEqual(2, n_int)
+        self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
+        self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
+
+    # Pandas
+
+    def test_from_to_df(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str1 = self.create_test_topic_name()
+        s.create(topic_str1)
+        producer = s.producer(topic_str1, value_type="json")
+        producer.produce(self.snack_str_list)
+        producer.close()
+        #
+        group_str1 = self.create_test_group_name()
+        (df, n_int1) = s.to_df(topic_str1, group=group_str1)
+        self.assertTrue(n_int1, 3)
+        self.assertTrue(len(df), 3)
+        self.assertTrue(df.iloc[1]["name"], "cake")
+        self.assertTrue(df.iloc[1]["calories"], 260.0)
+        self.assertTrue(df.iloc[1]["colour"], "brown")
+        #
+        topic_str2 = self.create_test_topic_name()
+        s.create(topic_str2)
+        s.from_df(df, topic_str2)
+        #
+        group_str2 = self.create_test_group_name()
+        (message_dict_list, n_int2) = s.cat(topic_str2, group=group_str2, n=2)
+        self.assertEqual(2, len(message_dict_list))
+        self.assertEqual(2, n_int2)
         self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
         self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])

@@ -5,10 +5,12 @@ import re
 from piny import YamlLoader
 
 from kafi.shell import Shell
+from kafi.plugins.pandas import Pandas
+from kafi.plugins.files import Files
 from kafi.schemaregistry import SchemaRegistry
 from kafi.helpers import bytes_or_str_to_bytes, is_interactive
 
-class Storage(Shell):
+class Storage(Shell, Pandas, Files):
     def __init__(self, dir_str, config_str, mandatory_section_str_list, optional_section_str_list):
         self.dir_str = dir_str
         self.config_str = config_str
@@ -187,8 +189,8 @@ class Storage(Shell):
     # Helpers
 
     def get_key_value_type_tuple(self, **kwargs):
-        key_type = "str"
-        value_type = "str"
+        key_type = "json"
+        value_type = "json"
         #
         if "type" in kwargs:
             key_type = kwargs["type"]

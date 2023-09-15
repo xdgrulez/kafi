@@ -168,7 +168,7 @@ class FSAdmin(StorageAdmin):
         return abs_path_str
 
     def get_topic_abs_dir_str(self, topic_str):
-        topic_abs_dir_str = os.path.join(self.storage_obj.root_dir(), "topics", f"{topic_str}")
+        topic_abs_dir_str = os.path.join(self.storage_obj.root_dir(), "topics", topic_str)
         #
         return topic_abs_dir_str
 
