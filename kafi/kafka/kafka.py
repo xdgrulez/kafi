@@ -154,16 +154,16 @@ class Kafka(Storage):
     def config(self, pattern):
         return self.admin.config(pattern)
 
-    def set_config(self, pattern, config, test=False):
-        return self.admin.set_config(pattern, config, test)
+    def set_config(self, pattern, config, **kwargs):
+        return self.admin.set_config(pattern, config, **kwargs)
     
-    def create(self, topic, partitions=1, config={}, block=True):
-        return self.admin.create(topic, partitions, config, block)
+    def create(self, topic, partitions=1, config={}, **kwargs):
+        return self.admin.create(topic, partitions, config, **kwargs)
     
     touch = create
 
-    def delete(self, pattern, block=True):
-        return self.admin.delete(pattern, block)
+    def delete(self, pattern, **kwargs):
+        return self.admin.delete(pattern, **kwargs)
 
     rm = delete
 
@@ -173,8 +173,8 @@ class Kafka(Storage):
     def partitions(self, pattern=None, verbose=False):
         return self.admin.partitions(pattern, verbose)
 
-    def set_partitions(self, pattern, num_partitions, test=False):
-        return self.admin.set_partitions(pattern, num_partitions, test)
+    def set_partitions(self, pattern, num_partitions, **kwargs):
+        return self.admin.set_partitions(pattern, num_partitions, **kwargs)
     
     def list_topics(self, pattern):
         return self.admin.list_topics(pattern)
@@ -204,8 +204,8 @@ class Kafka(Storage):
     def broker_config(self, pattern=None):
         return self.admin.broker_config(pattern)
     
-    def set_broker_config(self, pattern, config, test=False):
-        return self.admin.set_broker_config(pattern, config, test)
+    def set_broker_config(self, pattern, config, **kwargs):
+        return self.admin.set_broker_config(pattern, config, **kwargs)
 
     # ACLs
 

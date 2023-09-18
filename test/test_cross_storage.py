@@ -650,7 +650,7 @@ def test_from_to_file(test_obj, storage1, storage2):
         #
         group_str1 = test_obj.create_test_group_name(storage1)
         file_str = f"{topic_str1}{suffix_str}"
-        n_int1 = storage1.to_file(topic_str1, storage2, file_str, group=group_str1)
+        n_int1 = storage1.to_file(topic_str1, storage2, file_str, group=group_str1, type="json")
         test_obj.assertTrue(n_int1, 3)
         #
         topic_str2 = test_obj.create_test_topic_name(storage1)
@@ -658,7 +658,7 @@ def test_from_to_file(test_obj, storage1, storage2):
         storage1.from_file(storage2, file_str, topic_str2)
         #
         group_str2 = test_obj.create_test_group_name(storage1)
-        (message_dict_list, n_int2) = storage1.cat(topic_str2, group=group_str2, n=3)
+        (message_dict_list, n_int2) = storage1.cat(topic_str2, group=group_str2, n=3, type="json")
         test_obj.assertEqual(3, len(message_dict_list))
         test_obj.assertEqual(3, n_int2)
         test_obj.assertEqual(500.0, message_dict_list[0]["value"]["calories"])

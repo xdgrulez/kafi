@@ -111,7 +111,7 @@ class RestProxyAdmin(KafkaAdmin):
         #
         return broker_int_broker_config_dict
 
-    def set_broker_config(self, config, pattern=None, test=False):
+    def set_broker_config(self, config, pattern=None, **kwargs):
         config_dict = config
         broker_dict = self.brokers(pattern)
         #
@@ -233,7 +233,7 @@ class RestProxyAdmin(KafkaAdmin):
         #
         return topic_str_config_dict_dict
     
-    def set_config(self, pattern_str_or_str_list, config_dict, test=False):
+    def set_config(self, pattern_str_or_str_list, config_dict, **kwargs):
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
         topic_str_list = self.list_topics(pattern_str_or_str_list)
@@ -252,7 +252,7 @@ class RestProxyAdmin(KafkaAdmin):
 
     #
 
-    def create(self, topic_str, partitions=1, config={}, block=True):
+    def create(self, topic_str, partitions=1, config={}, **kwargs):
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
         partitions_int = partitions
@@ -268,7 +268,7 @@ class RestProxyAdmin(KafkaAdmin):
         #
         return topic_str
 
-    def delete(self, pattern_str_or_str_list, block=True):
+    def delete(self, pattern_str_or_str_list, **kwargs):
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
         topic_str_list = self.list_topics(pattern_str_or_str_list)

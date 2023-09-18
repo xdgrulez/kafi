@@ -62,8 +62,8 @@ class FS(Storage, Files):
     def config(self, pattern):
         return self.admin.config(pattern)
 
-    def set_config(self, pattern, config, test=False):
-        return self.admin.set_config(pattern, config, test)
+    def set_config(self, pattern, config, **kwargs):
+        return self.admin.set_config(pattern, config, **kwargs)
 
     def topics(self, pattern=None, size=False, **kwargs):
         return self.admin.topics(pattern, size, **kwargs)
@@ -86,22 +86,22 @@ class FS(Storage, Files):
     def create(self, topic, partitions=1, **kwargs):
         topic_str = topic
         #
-        self.admin.create(topic_str, partitions)
+        self.admin.create(topic_str, partitions, **kwargs)
         #
         return topic_str
     
     touch = create
 
-    def delete(self, pattern):
-        return self.admin.delete(pattern)
+    def delete(self, pattern, **kwargs):
+        return self.admin.delete(pattern, **kwargs)
 
     rm = delete
 
     def partitions(self, pattern=None, verbose=False):
         return self.admin.partitions(pattern, verbose)
 
-    def set_partitions(self, pattern, num_partitions, test=False):
-        return self.admin.set_partitions(pattern, num_partitions, test)
+    def set_partitions(self, pattern, num_partitions, **kwargs):
+        return self.admin.set_partitions(pattern, num_partitions, **kwargs)
 
     # Groups
 

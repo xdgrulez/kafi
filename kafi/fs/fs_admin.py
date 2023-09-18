@@ -44,17 +44,15 @@ class FSAdmin(StorageAdmin):
         #
         return topic_str_config_dict_dict
 
-    def set_config(self, pattern, config, test=False):
+    def set_config(self, pattern, config, **kwargs):
         config_dict = config
-        test_bool = test
         #
         topic_str_list = self.list_topics(pattern)
         #
         for topic_str in topic_str_list:
             metadata_dict = self.get_metadata(topic_str)
             metadata_dict["config"] = config_dict
-            if not test_bool:
-                self.set_metadata(topic_str, metadata_dict)
+            self.set_metadata(topic_str, metadata_dict)
         #
         topic_str_config_dict_dict = {topic_str: config_dict for topic_str in topic_str_list}
         return topic_str_config_dict_dict
@@ -66,7 +64,7 @@ class FSAdmin(StorageAdmin):
 
     #
 
-    def create(self, topic, partitions=1, config={}, block=True, **kwargs):
+    def create(self, topic, partitions=1, config={}, **kwargs):
         topic_str = topic
         #
         if self.exists(topic_str):
@@ -80,7 +78,7 @@ class FSAdmin(StorageAdmin):
     
     #
 
-    def delete(self, pattern, block=True):
+    def delete(self, pattern, **kwargs):
         topic_str_list = self.list_topics(pattern)
         #
         for topic_str in topic_str_list:
@@ -107,9 +105,8 @@ class FSAdmin(StorageAdmin):
         #
         return topic_str_partitions_int_dict
 
-    def set_partitions(self, pattern, num_partitions, test=False):
+    def set_partitions(self, pattern, num_partitions, **kwargs):
         partitions_int = num_partitions
-        test_bool = test
         #
         topic_str_list = self.list_topics(pattern)
         #
@@ -119,8 +116,7 @@ class FSAdmin(StorageAdmin):
             #
             metadata_dict["partitions"] = partitions_int
             #
-            if not test_bool:
-                self.set_metadata(topic_str, metadata_dict)
+            self.set_metadata(topic_str, metadata_dict)
             #
             topic_str_partitions_int_dict[topic_str] = partitions_int
         #

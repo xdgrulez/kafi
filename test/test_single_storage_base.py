@@ -938,7 +938,7 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        df = s.to_df(topic_str1, group=group_str1)
+        df = s.to_df(topic_str1, group=group_str1, type="json")
         self.assertTrue(len(df), 3)
         self.assertTrue(df.iloc[1]["name"], "cake")
         self.assertTrue(df.iloc[1]["calories"], 260.0)
@@ -949,7 +949,7 @@ class TestSingleStorageBase(unittest.TestCase):
         s.from_df(df, topic_str2)
         #
         group_str2 = self.create_test_group_name()
-        (message_dict_list, n_int2) = s.cat(topic_str2, group=group_str2, n=3)
+        (message_dict_list, n_int2) = s.cat(topic_str2, group=group_str2, n=3, type="json")
         self.assertEqual(3, len(message_dict_list))
         self.assertEqual(3, n_int2)
         self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])

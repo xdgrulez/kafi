@@ -77,14 +77,14 @@ class ClusterAdmin(KafkaAdmin):
         #
         return broker_int_broker_config_dict
 
-    def set_broker_config(self, config, pattern=None, test=False):
+    def set_broker_config(self, config, pattern=None, **kwargs):
         config_dict = config
-        test_bool = test
+        test_bool = kwargs["test"] if "test" in kwargs else False
         #
         broker_dict = self.brokers(pattern)
         #
         for broker_int in broker_dict:
-            self.set_resource_config_dict(ResourceType.BROKER, str(broker_int), config_dict, test_bool)
+            self.set_resource_config_dict(ResourceType.BROKER, str(broker_int), config_dict, test=test_bool)
         #
         broker_int_broker_config_dict_dict = {broker_int: config_dict for broker_int in broker_dict}
         #
@@ -100,8 +100,8 @@ class ClusterAdmin(KafkaAdmin):
         config_dict = {config_key_str: configEntry.value for config_key_str, configEntry in configEntry_dict.items()}
         return config_dict
 
-    def set_resource_config_dict(self, resourceType, resource_str, new_config_dict, test=False):
-        test_bool = test
+    def set_resource_config_dict(self, resourceType, resource_str, new_config_dict, **kwargs):
+        test_bool = kwargs["test"] if "test" in kwargs else False
         #
         old_config_dict = self.get_resource_config_dict(resourceType, resource_str)
         #
@@ -223,26 +223,26 @@ class ClusterAdmin(KafkaAdmin):
         #
         return topic_str_config_dict_dict
 
-    def set_config(self, pattern, config, test=False):
+    def set_config(self, pattern, config, **kwargs):
         pattern_str_or_str_list = pattern
         config_dict = config
-        test_bool = test
+        test_bool = kwargs["test"] if "test" in kwargs else False
         #
         topic_str_list = self.list_topics(pattern_str_or_str_list)
         #
         for topic_str in topic_str_list:
-            self.set_resource_config_dict(ResourceType.TOPIC, topic_str, config_dict, test_bool)
+            self.set_resource_config_dict(ResourceType.TOPIC, topic_str, config_dict, test=test_bool)
         #
         topic_str_key_str_value_str_tuple_dict = {topic_str: config_dict for topic_str in topic_str_list}
         return topic_str_key_str_value_str_tuple_dict
 
     #
 
-    def create(self, topic, partitions=1, config={}, block=True):
+    def create(self, topic, partitions=1, config={}, **kwargs):
         topic_str = topic
         partitions_int = partitions
         config_dict = config
-        block_bool = block
+        block_bool = kwargs["block"] if "block" in kwargs else True
         #
         config_dict["retention.ms"] = self.storage_obj.retention_ms()
         #
@@ -254,9 +254,9 @@ class ClusterAdmin(KafkaAdmin):
         #
         return topic_str
 
-    def delete(self, pattern, block=True):
+    def delete(self, pattern, **kwargs):
         pattern_str_or_str_list = pattern
-        block_bool = block
+        block_bool = kwargs["block"] if "block" in kwargs else True
         #
         topic_str_list = self.list_topics(pattern_str_or_str_list)
         #
@@ -327,10 +327,10 @@ class ClusterAdmin(KafkaAdmin):
             topic_str_partitions_int_dict = {topic_str: len(topic_str_topicMetadata_dict[topic_str].partitions) for topic_str in topic_str_topicMetadata_dict if any(fnmatch(topic_str, pattern_str) for pattern_str in pattern_str_or_str_list)}
             return topic_str_partitions_int_dict
 
-    def set_partitions(self, pattern, num_partitions, test=False):
+    def set_partitions(self, pattern, num_partitions, **kwargs):
         pattern_str_or_str_list = pattern
         partitions_int = num_partitions
-        test_bool = test
+        test_bool = kwargs["test"] if "test" in kwargs else False
         #
         topic_str_list = self.list_topics(pattern_str_or_str_list)
         #
