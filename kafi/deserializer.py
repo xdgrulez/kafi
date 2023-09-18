@@ -8,7 +8,6 @@ from confluent_kafka.schema_registry.avro import AvroDeserializer
 from confluent_kafka.schema_registry.json_schema import JSONDeserializer
 from confluent_kafka.schema_registry.protobuf import ProtobufDeserializer
 from google.protobuf.json_format import MessageToDict
-from kafi.schemaregistry import SchemaRegistry
 
 class Deserializer:
     def deserialize(self, payload_bytes, type_str):

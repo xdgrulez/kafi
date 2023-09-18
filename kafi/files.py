@@ -1,8 +1,6 @@
 import io
 import pathlib
 
-import pandas as pd
-
 from kafi.pandas import Pandas
 
 # Constants
@@ -46,6 +44,8 @@ class Files(Pandas):
         return len(df)
 
     def from_file(self, fs_obj, file, topic, n=ALL_MESSAGES, **kwargs):
+        import pandas as pd
+        #
         file_str = file
         #
         suffix_str = pathlib.Path(file_str).suffix

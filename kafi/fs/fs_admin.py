@@ -1,5 +1,4 @@
 import ast
-import base64
 from fnmatch import fnmatch
 import os
 

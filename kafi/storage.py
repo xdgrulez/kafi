@@ -188,7 +188,8 @@ class Storage(Shell, Files):
     # Helpers
 
     def get_key_value_type_tuple(self, **kwargs):
-        key_type = "json"
+        # Default key and value types.
+        key_type = "str"
         value_type = "json"
         #
         if "type" in kwargs:
