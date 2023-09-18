@@ -1,3 +1,5 @@
+import pandas as pd
+
 # Constants
 
 ALL_MESSAGES = -1
@@ -6,9 +8,6 @@ ALL_MESSAGES = -1
 
 class Pandas():
     def to_df(self, topic, n=ALL_MESSAGES, **kwargs):
-        import pandas as pd
-        #
-
         def foldl_function(acc, message_dict):
             df = pd.DataFrame.from_records([message_dict["value"]])
             #

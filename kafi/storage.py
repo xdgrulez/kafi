@@ -5,12 +5,11 @@ import re
 from piny import YamlLoader
 
 from kafi.shell import Shell
-from kafi.plugins.pandas import Pandas
-from kafi.plugins.files import Files
+from kafi.files import Files
 from kafi.schemaregistry import SchemaRegistry
 from kafi.helpers import bytes_or_str_to_bytes, is_interactive
 
-class Storage(Shell, Pandas, Files):
+class Storage(Shell, Files):
     def __init__(self, dir_str, config_str, mandatory_section_str_list, optional_section_str_list):
         self.dir_str = dir_str
         self.config_str = config_str

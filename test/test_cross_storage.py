@@ -610,35 +610,6 @@ def test_cp(test_obj, storage1, storage2):
             test_obj.assertLess(message_dict_list3[j0]["offset"], message_dict_list3[j1]["offset"])
             test_obj.assertLess(message_dict_list3[j1]["offset"], message_dict_list3[j2]["offset"])
 
-# Files
-
-def test_from_to_file(test_obj, storage1, storage2):
-    if storage2.__class__.__name__ in ["AzureBlob", "Local", "S3"]:
-        topic_str1 = test_obj.create_test_topic_name(storage1)
-        storage1.create(topic_str1)
-        producer = storage1.producer(topic_str1, value_type="json")
-        producer.produce(test_obj.snack_str_list)
-        producer.close()
-        #
-        group_str1 = test_obj.create_test_group_name(storage1)
-        file_str = f"{topic_str1}.txt"
-        n_int1 = storage1.to_file(topic_str1, storage2, file_str, group=group_str1)
-        test_obj.assertTrue(n_int1, 3)
-        #
-        topic_str2 = test_obj.create_test_topic_name(storage1)
-        storage1.create(topic_str2)
-        storage1.from_file(storage2, file_str, topic_str2)
-        #
-        group_str2 = test_obj.create_test_group_name(storage1)
-        (message_dict_list, n_int2) = storage1.cat(topic_str2, group=group_str2, n=3)
-        test_obj.assertEqual(3, len(message_dict_list))
-        test_obj.assertEqual(3, n_int2)
-        test_obj.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
-        test_obj.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
-        test_obj.assertEqual(80.0, message_dict_list[2]["value"]["calories"])
-        #
-        storage2.admin.delete_file(storage2.admin.get_abs_path_str(file_str))
-
 #
 
 def test_diff(test_obj, storage1, storage2):
@@ -662,3 +633,36 @@ def test_diff(test_obj, storage1, storage2):
     test_obj.assertEqual(3, len(message_dict_message_dict_tuple_list))
     test_obj.assertEqual(3, message_counter_int1)
     test_obj.assertEqual(3, message_counter_int2)
+
+# Files
+
+def test_from_to_file(test_obj, storage1, storage2):
+    if storage2.__class__.__name__ in ["AzureBlob", "Local", "S3"]:
+        suffix_str_list = [".csv", ".feather", ".json", ".orc", ".parquet", ".xlsx", ".xml"]
+        random_int = random.randint(0, len(suffix_str_list) - 1)
+        suffix_str = suffix_str_list[random_int]
+        #
+        topic_str1 = test_obj.create_test_topic_name(storage1)
+        storage1.create(topic_str1)
+        producer = storage1.producer(topic_str1, value_type="json")
+        producer.produce(test_obj.snack_str_list)
+        producer.close()
+        #
+        group_str1 = test_obj.create_test_group_name(storage1)
+        file_str = f"{topic_str1}{suffix_str}"
+        n_int1 = storage1.to_file(topic_str1, storage2, file_str, group=group_str1)
+        test_obj.assertTrue(n_int1, 3)
+        #
+        topic_str2 = test_obj.create_test_topic_name(storage1)
+        storage1.create(topic_str2)
+        storage1.from_file(storage2, file_str, topic_str2)
+        #
+        group_str2 = test_obj.create_test_group_name(storage1)
+        (message_dict_list, n_int2) = storage1.cat(topic_str2, group=group_str2, n=3)
+        test_obj.assertEqual(3, len(message_dict_list))
+        test_obj.assertEqual(3, n_int2)
+        test_obj.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
+        test_obj.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
+        test_obj.assertEqual(80.0, message_dict_list[2]["value"]["calories"])
+        #
+        storage2.admin.delete_file(storage2.admin.get_abs_path_str(f"files/{file_str}"))

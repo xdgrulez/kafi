@@ -6,3 +6,8 @@ jsonschema
 minio
 piny
 requests
+#
+lxml
+openpyxl
+pandas
+pyarrow
