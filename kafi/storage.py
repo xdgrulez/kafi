@@ -18,7 +18,7 @@ class Storage(Shell, Files):
         #
         self.config_dict = self.get_config_dict(config_str)
         #
-        self.schema_registry_config_dict = self.config_dict["schema_registry"]
+        self.schema_registry_config_dict = self.config_dict["schema_registry"] if "schema_registry" in self.config_dict else {}
         #
         self.schemaRegistry = None
         #
