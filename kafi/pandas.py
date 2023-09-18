@@ -17,7 +17,7 @@ class Pandas():
             return acc
         #
 
-        (df, _) = self.foldl(topic, foldl_function, pd.DataFrame(), n, **kwargs)
+        (df,  _) = self.foldl(topic, foldl_function, pd.DataFrame(), n, **kwargs)
         #
         return df
 

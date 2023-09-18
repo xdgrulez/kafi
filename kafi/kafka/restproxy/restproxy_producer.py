@@ -50,19 +50,19 @@ class RestProxyProducer(KafkaProducer):
             #
             if self.value_type_str.lower() == "json":
                 type_str = "JSON"
-                if not isinstance(value, dict):
+                if value is not None and not isinstance(value, dict):
                     value = json.loads(value)
             elif self.value_type_str.lower() == "avro":
                 type_str = "AVRO"
-                if not isinstance(value, dict):
+                if value is not None and not isinstance(value, dict):
                     value = json.loads(value)
             elif self.value_type_str.lower() in ["pb", "protobuf"]:
                 type_str = "PROTOBUF"
-                if not isinstance(value, dict):
+                if value is not None and not isinstance(value, dict):
                     value = json.loads(value)
             elif self.value_type_str.lower() in ["jsonschema", "json_sr"]:
                 type_str = "JSONSCHEMA"
-                if not isinstance(value, dict):
+                if value is not None and not isinstance(value, dict):
                     value = json.loads(value)
             else:
                 type_str = "BINARY"

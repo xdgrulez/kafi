@@ -11,6 +11,10 @@ class StorageProducer(Serializer):
         #
         (self.key_schema_str, self.value_schema_str, self.key_schema_id_int, self.value_schema_id_int) = self.get_key_value_schema_tuple(**kwargs)
         #
+        self.keep_partitions_bool = kwargs["keep_partitions"] if "keep_partitions" in kwargs else False
+        #
+        self.keep_timestamps_bool = kwargs["keep_timestamps"] if "keep_timestamps" in kwargs else False
+        #
         self.written_counter_int = 0
         #
         self.schema_hash_int_generalizedProtocolMessageType_dict = {}
@@ -19,6 +23,27 @@ class StorageProducer(Serializer):
             self.schemaRegistry = SchemaRegistry(self.storage_obj.schema_registry_config_dict, self.storage_obj.kafi_config_dict)
         else:
             self.schemaRegistry = None
+
+    #
+
+    def produce_list(self, message_dict_list, **kwargs):
+        value_list = [message_dict["value"] for message_dict in message_dict_list]
+        #
+        key_list = [message_dict["key"] for message_dict in message_dict_list]
+        #
+        if self.keep_partitions_bool:
+            partition_list = [message_dict["partition"] for message_dict in message_dict_list]
+        else:
+            partition_list = None
+        #
+        if self.keep_timestamps_bool and message_dict_list[0]["timestamp"] is not None:
+            timestamp_list = [message_dict["timestamp"] for message_dict in message_dict_list]
+        else:
+            timestamp_list = None
+        #
+        headers_list = [message_dict["headers"] for message_dict in message_dict_list]
+        #
+        return self.produce(value_list, key=key_list, partition=partition_list, timestamp=timestamp_list, headers=headers_list, **kwargs)
 
     # Helpers
 

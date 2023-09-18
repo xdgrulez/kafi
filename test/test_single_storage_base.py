@@ -923,6 +923,39 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
         self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
 
+    def test_uncompact_to(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str1 = self.create_test_topic_name()
+        s.create(topic_str1)
+        producer = s.producer(topic_str1, type="json")
+        producer.produce(self.snack_dict_list, key=[{"key": 1}, {"key": 2}, {"key": 3}])
+        #
+        producer.produce(None, key={"key": 1})
+        producer.produce({"name": "cake", "calories": 260.0, "colour": "whiteish"}, key={"key": 2})
+        #
+        producer.close()
+        #
+        topic_str2 = self.create_test_topic_name()
+        s.create(topic_str2)
+        #
+        group_str1 = self.create_test_group_name()
+        s.uncompact_to(topic_str1, s, topic_str2, group=group_str1, type="json")
+        #
+        n_int1 = s.l(topic_str2)[topic_str2]
+        self.assertEqual(2, n_int1)
+        #
+        group_str2 = self.create_test_group_name()
+        (message_dict_list, n_int2) = s.cat(topic_str2, group=group_str2, type="json", n=2)
+        self.assertEqual(2, len(message_dict_list))
+        self.assertEqual(2, n_int2)
+        self.assertEqual("cake", message_dict_list[0]["value"]["name"])
+        self.assertEqual("whiteish", message_dict_list[0]["value"]["colour"])
+        self.assertEqual("timtam", message_dict_list[1]["value"]["name"])
+
     # Pandas
 
     def test_from_to_df(self):

@@ -64,25 +64,6 @@ class Functional:
         progress_num_messages_int = self.progress_num_messages()
         verbose_int = self.verbose()
         #
-        def produce_batch(batch_message_dict_list, **target_kwargs):
-            value_list = [message_dict["value"] for message_dict in batch_message_dict_list]
-            #
-            key_list = [message_dict["key"] for message_dict in batch_message_dict_list]
-            #
-            if "keep_partitions" in target_kwargs and target_kwargs["keep_partitions"] == True:
-                partition_list = [message_dict["partition"] for message_dict in batch_message_dict_list]
-            else:
-                partition_list = None
-            #
-            if "keep_timestamps" in target_kwargs and target_kwargs["keep_timestamps"] == True and batch_message_dict_list[0]["timestamp"] is not None:
-                timestamp_list = [message_dict["timestamp"] for message_dict in batch_message_dict_list]
-            else:
-                timestamp_list = None
-            #
-            headers_list = [message_dict["headers"] for message_dict in batch_message_dict_list]
-            #
-            target_producer.produce(value_list, key=key_list, partition=partition_list, timestamp=timestamp_list, headers=headers_list, **target_kwargs)
-        #
 
         def foldl_function(produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, message_dict):
             (produce_batch_size_int, batch_message_dict_list, progress_message_counter_int) = produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
@@ -92,7 +73,7 @@ class Functional:
             batch_message_dict_list += message_dict_list
             #
             if len(batch_message_dict_list) == produce_batch_size_int:
-                produce_batch(batch_message_dict_list, **target_kwargs)
+                target_producer.produce_list(batch_message_dict_list, **target_kwargs)
                 #
                 progress_message_counter_int += len(batch_message_dict_list)
                 if verbose_int > 0 and progress_message_counter_int % progress_num_messages_int == 0:
@@ -102,37 +83,10 @@ class Functional:
             else:
                 return (produce_batch_size_int, batch_message_dict_list, progress_message_counter_int)
 
-        source_kwargs = kwargs.copy()
-        if "source_key_type" in kwargs:
-            source_kwargs["key_type"] = kwargs["source_key_type"]
-        if "source_value_type" in kwargs:
-            source_kwargs["value_type"] = kwargs["source_value_type"]
-        if "source_type" in kwargs:
-            source_kwargs["type"] = kwargs["source_type"]
-        if "source_key_schema" in kwargs:
-            source_kwargs["key_schema"] = kwargs["source_key_schema"]
-        if "source_value_schema" in kwargs:
-            source_kwargs["value_schema"] = kwargs["source_value_schema"]
-        if "source_key_schema_id" in kwargs:
-            source_kwargs["key_schema_id"] = kwargs["source_key_schema_id"]
-        if "source_value_schema_id" in kwargs:
-            source_kwargs["value_schema_id"] = kwargs["source_value_schema_id"]
         #
-        target_kwargs = kwargs.copy()
-        if "target_key_type" in kwargs:
-            target_kwargs["key_type"] = kwargs["target_key_type"]
-        if "target_value_type" in kwargs:
-            target_kwargs["value_type"] = kwargs["target_value_type"]
-        if "target_type" in kwargs:
-            target_kwargs["type"] = kwargs["target_type"]
-        if "target_key_schema" in kwargs:
-            target_kwargs["key_schema"] = kwargs["target_key_schema"]
-        if "target_value_schema" in kwargs:
-            target_kwargs["value_schema"] = kwargs["target_value_schema"]
-        if "target_key_schema_id" in kwargs:
-            target_kwargs["key_schema_id"] = kwargs["target_key_schema_id"]
-        if "target_value_schema_id" in kwargs:
-            target_kwargs["value_schema_id"] = kwargs["target_value_schema_id"]
+        source_kwargs = self.get_source_kwargs(**kwargs)
+        #
+        target_kwargs = self.get_target_kwargs(**kwargs)
         #
         produce_batch_size_int = kwargs["produce_batch_size"] if "produce_batch_size" in kwargs else target_storage.produce_batch_size()
         #
@@ -142,7 +96,7 @@ class Functional:
         (_, batch_message_dict_list, written_progress_message_counter_int) = produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
         #
         if len(batch_message_dict_list) > 0:
-            produce_batch(batch_message_dict_list, **target_kwargs)
+            target_producer.produce_list(batch_message_dict_list, **target_kwargs)
             written_progress_message_counter_int += len(batch_message_dict_list)
         #
         target_producer.close()
@@ -160,6 +114,39 @@ class Functional:
             return [message_dict] if filter_function(message_dict) else []
         #
         return self.flatmap_to(topic, target_storage, target_topic, flatmap_function, n, **kwargs)
+
+    #
+
+    def uncompact_to(self, topic, target_storage, target_topic, n=ALL_MESSAGES, **kwargs):
+        def foldl_function(acc, message_dict):
+            key_hash_int_message_dict_dict = acc
+            #
+            key = message_dict["key"]
+            value = message_dict["value"]
+            #
+            if key is not None:
+                key_hash_int = hash(str(key))
+                if value is None:
+                    if key_hash_int in key_hash_int_message_dict_dict:
+                        del key_hash_int_message_dict_dict[key_hash_int]
+                else:
+                    key_hash_int_message_dict_dict[key_hash_int] = message_dict
+            #
+            return key_hash_int_message_dict_dict
+        #
+
+        source_kwargs = self.get_source_kwargs(**kwargs)
+        #
+        target_kwargs = self.get_target_kwargs(**kwargs)
+        #
+        (key_hash_int_message_dict_dict, _) = self.foldl(topic, foldl_function, {}, n, **source_kwargs)
+        #
+        target_producer = target_storage.producer(target_topic, **target_kwargs)
+        message_dict_list = list(key_hash_int_message_dict_dict.values())
+        key_bytes_list_value_bytes_list_tuple = target_producer.produce_list(message_dict_list, **target_kwargs)
+        target_producer.close()
+        #
+        return key_bytes_list_value_bytes_list_tuple
 
     #
 
@@ -238,3 +225,43 @@ class Functional:
         consumer1.close()
         consumer2.close()
         return acc, message_counter_int1, message_counter_int2
+
+    #
+
+    def get_source_kwargs(self, **kwargs):
+        source_kwargs = kwargs.copy()
+        if "source_key_type" in kwargs:
+            source_kwargs["key_type"] = kwargs["source_key_type"]
+        if "source_value_type" in kwargs:
+            source_kwargs["value_type"] = kwargs["source_value_type"]
+        if "source_type" in kwargs:
+            source_kwargs["type"] = kwargs["source_type"]
+        if "source_key_schema" in kwargs:
+            source_kwargs["key_schema"] = kwargs["source_key_schema"]
+        if "source_value_schema" in kwargs:
+            source_kwargs["value_schema"] = kwargs["source_value_schema"]
+        if "source_key_schema_id" in kwargs:
+            source_kwargs["key_schema_id"] = kwargs["source_key_schema_id"]
+        if "source_value_schema_id" in kwargs:
+            source_kwargs["value_schema_id"] = kwargs["source_value_schema_id"]
+        #
+        return source_kwargs
+
+    def get_target_kwargs(self, **kwargs):
+        target_kwargs = kwargs.copy()
+        if "target_key_type" in kwargs:
+            target_kwargs["key_type"] = kwargs["target_key_type"]
+        if "target_value_type" in kwargs:
+            target_kwargs["value_type"] = kwargs["target_value_type"]
+        if "target_type" in kwargs:
+            target_kwargs["type"] = kwargs["target_type"]
+        if "target_key_schema" in kwargs:
+            target_kwargs["key_schema"] = kwargs["target_key_schema"]
+        if "target_value_schema" in kwargs:
+            target_kwargs["value_schema"] = kwargs["target_value_schema"]
+        if "target_key_schema_id" in kwargs:
+            target_kwargs["key_schema_id"] = kwargs["target_key_schema_id"]
+        if "target_value_schema_id" in kwargs:
+            target_kwargs["value_schema_id"] = kwargs["target_value_schema_id"]
+        #
+        return target_kwargs
