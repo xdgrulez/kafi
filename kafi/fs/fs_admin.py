@@ -95,7 +95,9 @@ class FSAdmin(StorageAdmin):
                 self.delete_dir(os.path.join(topic_abs_dir_str, rel_dir_str))
             #
             self.delete_dir(topic_abs_dir_str)
-
+        #
+        return topic_str_list
+    
     #
 
     def partitions(self, pattern=None, verbose=False):
