@@ -31,15 +31,9 @@ class StorageProducer(Serializer):
         #
         key_list = [message_dict["key"] for message_dict in message_dict_list]
         #
-        if self.keep_partitions_bool:
-            partition_list = [message_dict["partition"] for message_dict in message_dict_list]
-        else:
-            partition_list = None
+        partition_list = [message_dict["partition"] for message_dict in message_dict_list]
         #
-        if self.keep_timestamps_bool and message_dict_list[0]["timestamp"] is not None:
-            timestamp_list = [message_dict["timestamp"] for message_dict in message_dict_list]
-        else:
-            timestamp_list = None
+        timestamp_list = [message_dict["timestamp"] for message_dict in message_dict_list]
         #
         headers_list = [message_dict["headers"] for message_dict in message_dict_list]
         #

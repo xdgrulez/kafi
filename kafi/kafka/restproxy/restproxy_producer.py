@@ -28,8 +28,6 @@ class RestProxyProducer(KafkaProducer):
         (rest_proxy_url_str, auth_str_tuple) = self.storage_obj.get_url_str_auth_str_tuple_tuple()
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{self.topic_str}/records"
         #
-        keep_partitions_bool = "keep_partitions" in kwargs and kwargs["keep_partitions"]
-        keep_timestamps_bool = "keep_timestamps" in kwargs and kwargs["keep_timestamps"]
         key = kwargs["key"] if "key" in kwargs else None
         timestamp = kwargs["timestamp"] if "timestamp" in kwargs and kwargs["timestamp"] is not None else CURRENT_TIME
         headers = kwargs["headers"] if "headers" in kwargs else None
@@ -107,7 +105,7 @@ class RestProxyProducer(KafkaProducer):
                 else:
                     payload_dict["key"] = {"type": type_str, "data": key}
             #
-            if keep_timestamps_bool:
+            if self.keep_timestamps_bool or timestamp is not None:
                 if isinstance(timestamp, tuple):
                     timestamp_str = datetime.datetime.fromtimestamp(timestamp[1]/1000.0, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                     payload_dict["timestamp"] = timestamp_str
@@ -115,7 +113,7 @@ class RestProxyProducer(KafkaProducer):
             if headers_str_bytes_tuple_list is not None:
                 payload_dict["headers"] = [{"name": headers_str_bytes_tuple[0], "value": base64_encode(headers_str_bytes_tuple[1]).decode("utf-8")} for headers_str_bytes_tuple in headers_str_bytes_tuple_list]
             #
-            if keep_partitions_bool or partition_int is not None:
+            if self.keep_partitions_bool or partition_int is not None:
                 payload_dict["partition_id"] = partition_int
             #
             payload_dict_list.append(bytes(json.dumps(payload_dict), "utf-8"))

@@ -30,7 +30,7 @@ class FSProducer(StorageProducer):
             # Keep the timestamps provided in the kwargs.
             keep_timestamps_bool = True
         else:
-            keep_timestamps_bool = "keep_timestamps" in kwargs and kwargs["keep_timestamps"]
+            keep_timestamps_bool = self.keep_timestamps_bool
         #
         headers = kwargs["headers"] if "headers" in kwargs else None
         #
@@ -39,7 +39,7 @@ class FSProducer(StorageProducer):
             # Keep the partitions provided in the kwargs.
             keep_partitions_bool = True
         else:
-            keep_partitions_bool = "keep_partitions" in kwargs and kwargs["keep_partitions"]
+            keep_partitions_bool = self.keep_partitions_bool
         #
         value_list = value if isinstance(value, list) else [value]
         #
