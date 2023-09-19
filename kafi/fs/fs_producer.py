@@ -86,6 +86,9 @@ class FSProducer(StorageProducer):
         topic_abs_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(self.topic_str)
         for partition_int, message_dict_list in partition_int_message_dict_list_dict.items():
             if len(message_dict_list) > 0:
+                start_timestamp_int = message_dict_list[0]["timestamp"][1]
+                end_timestamp_int = message_dict_list[-1]["timestamp"][1]
+                #
                 messages_bytes = b""
                 for message_dict in message_dict_list:
                     message_dict["key"] = self.serialize(message_dict["key"], True)
@@ -94,7 +97,7 @@ class FSProducer(StorageProducer):
                     start_offset_int = last_offsets_dict[partition_int]
                     end_offset_int = start_offset_int + len(message_dict_list) - 1
                     #
-                    abs_path_file_str = os.path.join(topic_abs_dir_str, "partitions", f"{partition_int:09},{start_offset_int:021},{end_offset_int:021}")
+                    abs_path_file_str = os.path.join(topic_abs_dir_str, "partitions", f"{partition_int:09},{start_offset_int:021},{end_offset_int:021},{start_timestamp_int},{end_timestamp_int}")
                     #
                     message_bytes = str(message_dict).encode("utf-8") + b"\n"
                     #

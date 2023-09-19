@@ -244,7 +244,7 @@ class ClusterAdmin(KafkaAdmin):
         config_dict = config
         block_bool = kwargs["block"] if "block" in kwargs else True
         #
-        config_dict["retention.ms"] = self.storage_obj.retention_ms()
+        config_dict["retention.ms"] = config_dict["retention.ms"] if "retention.ms" in config_dict else self.storage_obj.retention_ms()
         #
         newTopic = NewTopic(topic_str, partitions_int, config=config_dict)
         self.adminClient.create_topics([newTopic])

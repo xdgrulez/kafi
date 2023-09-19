@@ -97,6 +97,9 @@ class FS(Storage, Files):
 
     rm = delete
 
+    def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
+        return self.admin.offsets_for_times(pattern, partitions_timestamps, **kwargs)
+
     def partitions(self, pattern=None, verbose=False):
         return self.admin.partitions(pattern, verbose)
 

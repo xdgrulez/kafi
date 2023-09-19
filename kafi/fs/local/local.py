@@ -7,7 +7,7 @@ from kafi.fs.local.local_producer import LocalProducer
 
 class Local(FS):
     def __init__(self, config_str):
-        super().__init__("locals", config_str, ["local"], [])
+        super().__init__("locals", config_str, ["local"], ["schema_registry"])
     
     #
 

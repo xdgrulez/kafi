@@ -70,7 +70,7 @@ class FSConsumer(StorageConsumer):
             partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str)
             #
             # Get first partition files for all partitions.
-            partition_int_first_partition_rel_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str(topic_str, partition_int, offset_int) for partition_int, offset_int in start_offsets_dict.items()}
+            partition_int_first_partition_rel_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str_by_offset(topic_str, partition_int, offset_int) for partition_int, offset_int in start_offsets_dict.items()}
             #
             # Filter out partitions not corresponding to any filee listed by get_partition_files() above.
             partition_int_first_partition_rel_file_str_dict = {partition_int: first_partition_rel_file_str for partition_int, first_partition_rel_file_str in partition_int_first_partition_rel_file_str_dict.items() if first_partition_rel_file_str is not None}

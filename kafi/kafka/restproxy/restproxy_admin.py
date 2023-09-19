@@ -258,7 +258,7 @@ class RestProxyAdmin(KafkaAdmin):
         partitions_int = partitions
         config_dict = config
         #
-        config_dict["retention.ms"] = "-1"
+        config_dict["retention.ms"] = config_dict["retention.ms"] if "retention.ms" in config_dict else self.storage_obj.retention_ms()
         #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics"
         headers_dict = {"Content-Type": "application/json"}

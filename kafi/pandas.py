@@ -1,10 +1,12 @@
+from kafi.functional import Functional
+
 # Constants
 
 ALL_MESSAGES = -1
 
 #
 
-class Pandas():
+class Pandas(Functional):
     def to_df(self, topic, n=ALL_MESSAGES, **kwargs):
         import pandas as pd
         #

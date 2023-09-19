@@ -98,6 +98,39 @@ class FSAdmin(StorageAdmin):
     
     #
 
+    def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
+        pattern_str_or_str_list = pattern
+        partition_int_timestamp_int_dict = partitions_timestamps
+        #
+        topic_str_list = self.list_topics(pattern_str_or_str_list)
+        #
+        topic_str_partition_int_offsets_int_dict_dict = {}
+        for topic_str in topic_str_list:
+            partitions_int = self.get_partitions(topic_str)
+            #
+            abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(topic_str)
+            #
+            for partition_int in range(partitions_int):
+                rel_file_str = self.storage_obj.admin.find_partition_file_str_by_timestamp(topic_str, partition_int, partition_int_timestamp_int_dict[partition_int])
+                #
+                messages_bytes = self.storage_obj.admin.read_bytes(os.path.join(abs_topic_dir_str, "partitions", rel_file_str))
+                #
+                message_bytes_list = messages_bytes.split(b"\n")[:-1]
+                #
+                for message_bytes in message_bytes_list:
+                    message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
+                    #
+                    if message_dict["timestamp"][1] >= partition_int_timestamp_int_dict[partition_int]:
+                        if topic_str not in topic_str_partition_int_offsets_int_dict_dict:
+                            topic_str_partition_int_offsets_int_dict_dict[topic_str] = {}
+                        #
+                        topic_str_partition_int_offsets_int_dict_dict[topic_str][partition_int] = message_dict["offset"]
+                        break
+        #
+        return topic_str_partition_int_offsets_int_dict_dict
+
+    #
+
     def partitions(self, pattern=None, verbose=False):
         topic_str_list = self.list_topics(pattern)
         #
@@ -174,7 +207,7 @@ class FSAdmin(StorageAdmin):
         #
         return files_abs_dir_str
 
-    def find_partition_file_str(self, topic_str, partition_int, to_find_offset_int):
+    def find_partition_file_str_by_offset(self, topic_str, partition_int, to_find_offset_int):
         # Get sorted list of all relative file names rel_file_str_list for the partition files for partition_int of topic_str.
         topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
         rel_file_str_list1 = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
@@ -182,13 +215,33 @@ class FSAdmin(StorageAdmin):
         if rel_file_str_list == []:
             return None
         rel_file_str_list.sort()
-        # Now find the file in which the message with offset to_find_offset_int must be contained :)
-        rel_file_str_offset_int_dict = {rel_file_str: (int(rel_file_str.split(",")[1]), int(rel_file_str.split(",")[2])) for rel_file_str in rel_file_str_list}
+        # Now find the first file in which the message with offset to_find_offset_int is contained :)
+        rel_file_str_start_offset_int_end_offset_int_tuple_dict = {rel_file_str: (int(rel_file_str.split(",")[1]), int(rel_file_str.split(",")[2])) for rel_file_str in rel_file_str_list}
         found_rel_file_str = None
-        for rel_file_str, start_offset_int_end_offset_int_tuple in rel_file_str_offset_int_dict.items():
+        for rel_file_str, start_offset_int_end_offset_int_tuple in rel_file_str_start_offset_int_end_offset_int_tuple_dict.items():
             (start_offset_int, end_offset_int) = start_offset_int_end_offset_int_tuple
             #
             if to_find_offset_int >= start_offset_int and to_find_offset_int <= end_offset_int:
+                found_rel_file_str = rel_file_str
+                break
+        #
+        return found_rel_file_str
+
+    def find_partition_file_str_by_timestamp(self, topic_str, partition_int, to_find_timestamp_int):
+        # Get sorted list of all relative file names rel_file_str_list for the partition files for partition_int of topic_str.
+        topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
+        rel_file_str_list1 = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
+        rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list1 if int(rel_file_str.split(",")[0]) == partition_int]
+        if rel_file_str_list == []:
+            return None
+        rel_file_str_list.sort()
+        # Now find the first file in which the message with timestamp to_find_timestamp_int is be contained :)
+        rel_file_str_start_timestamp_int_end_timestamp_int_tuple_dict = {rel_file_str: (int(rel_file_str.split(",")[3]), int(rel_file_str.split(",")[4])) for rel_file_str in rel_file_str_list}
+        found_rel_file_str = None
+        for rel_file_str, start_timestamp_int_end_timestamp_int_tuple in rel_file_str_start_timestamp_int_end_timestamp_int_tuple_dict.items():
+            (start_timestamp_int, end_timestamp_int) = start_timestamp_int_end_timestamp_int_tuple
+            #
+            if to_find_timestamp_int >= start_timestamp_int and to_find_timestamp_int <= end_timestamp_int:
                 found_rel_file_str = rel_file_str
                 break
         #
