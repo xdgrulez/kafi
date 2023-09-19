@@ -1,4 +1,4 @@
-# kafi
+![kafi logo](pics/kafi.jpg)
 
 *kafi* brings the two worlds of Kafka and files together. It is a swiss army knife for Kafka built for two main reasons:
 * to make debugging Kafka-based applications more hassle-free
