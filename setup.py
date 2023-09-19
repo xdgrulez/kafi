@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='kafi',
-    version='0.0.1',
+    version='0.0.2',
     description='Kafka and Files',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -22,7 +22,13 @@ setup(
                       'jsonschema',
                       'minio',
                       'piny',
-                      'requests'
+                      'requests',
+                      'azure-storage-blob',
+                      'minio',
+                      'lxml',
+                      'openpyxl',
+                      'pandas',
+                      'pyarrow'
                       ],
     classifiers=[
         'Development Status :: 3 - Alpha',
