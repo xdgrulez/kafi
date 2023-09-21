@@ -128,7 +128,7 @@ class RestProxyConsumer(KafkaConsumer):
 
     #
 
-    def commit(self, offsets=None):
+    def commit(self, offsets=None, **kwargs):
         offsets_dict = offsets
         #
         (rest_proxy_url_str, auth_str_tuple) = self.storage_obj.get_url_str_auth_str_tuple_tuple()

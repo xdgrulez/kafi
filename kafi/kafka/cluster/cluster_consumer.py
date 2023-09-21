@@ -68,8 +68,8 @@ class ClusterConsumer(KafkaConsumer):
 
     #
 
-    def commit(self, offsets=None, asynchronous=False):
-        asynchronous_bool = asynchronous
+    def commit(self, offsets=None, **kwargs):
+        asynchronous_bool = kwargs["asynchronous"] if "asynchronous" in kwargs else False
         #
         if offsets is not None:
             str_or_int = list(offsets.keys())[0]
@@ -89,8 +89,8 @@ class ClusterConsumer(KafkaConsumer):
         #
         return offsets_dict
 
-    def offsets(self, timeout=-1.0):
-        timeout_float = timeout
+    def offsets(self, **kwargs):
+        timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
         #
         assignment_topicPartition_list = self.consumer.assignment()
         committed_topicPartition_list = self.consumer.committed(assignment_topicPartition_list, timeout=timeout_float)

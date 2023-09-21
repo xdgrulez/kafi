@@ -1,19 +1,8 @@
-* produce file -> number files if multiple batches/same for consume
-* clean up groups after offsets.retention.minutes (default: 24h) after last update (explicit call at first?)
-* cluster*/restproxy* soweit wie möglich verallgemeinern auf kafka*
-* foldl + Co: offset erst nach erfolgreichem Durchlauf committen
-* file() (read/write-Abzweig)
-
-* Disclaimer for r.l() if cleanup.policy = compacted
+* clean up fs groups after offsets.retention.minutes (default: 24h) after last update (explicit call at first?)
 * offsets with REST Proxy? Geht es vielleicht doch?
 * set default value for key_type/value_type etc. in kash-section
 * bring back recreate
 * next talk: keywords on slides, no (almost) full sentences, use Jupyter notebook instead of shell
-* Pretty print JSON etc. (as default output?), easily accessible ppretty in kash.py 0.1
-
-* spezifische args bei cluster* und restproxy* => kwargs
-* c.cp("bla", l, "blups.txt") - ohne keep_timestamps => (1, 0) ???
-
 
 # Methods
 

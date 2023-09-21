@@ -66,6 +66,18 @@ class Storage(Shell, Files, AddOns):
         else:
             self.commit_after_processing(bool(self.kafi_config_dict["commit.after.processing"]))
         #
+        if "key.type" not in self.kafi_config_dict:
+            self.key_type("str")
+        else:
+            self.key_type(str(self.kafi_config_dict["key.type"]))
+        #
+        if "value.type" not in self.kafi_config_dict:
+            self.value_type("json")
+        else:
+            self.value_type(str(self.kafi_config_dict["value.type"]))
+        #
+        #
+        #
         if "schema.registry.url" in self.schema_registry_config_dict:
             self.schemaRegistry = self.get_schemaRegistry()
         else:
@@ -96,6 +108,12 @@ class Storage(Shell, Files, AddOns):
 
     def commit_after_processing(self, new_value=None): # bool
         return self.get_set_config("commit.after.processing", new_value)
+
+    def key_type(self, new_value=None): # str
+        return self.get_set_config("key.type", new_value)
+
+    def value_type(self, new_value=None): # str
+        return self.get_set_config("value.type", new_value)
 
     #
 
@@ -190,8 +208,8 @@ class Storage(Shell, Files, AddOns):
 
     def get_key_value_type_tuple(self, **kwargs):
         # Default key and value types.
-        key_type = "str"
-        value_type = "json"
+        key_type = self.key_type()
+        value_type = self.value_type()
         #
         if "type" in kwargs:
             key_type = kwargs["type"]
