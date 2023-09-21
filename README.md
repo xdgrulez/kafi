@@ -2,7 +2,7 @@
 
 *kafi* brings the two worlds of Kafka and files together. It stands for "(Ka)fka and (Fi)les" (plus "Kafi" is the Swiss name for a coffee or a coffee place).
 
-What can *kafi* do for your?
+What can *kafi* do for you?
 * it makes debugging Kafka-based applications a breeze
 * it is useful for data scientists building data pipelines, bringing files from local disk, S3 or Azure Blob Storage to Kafka and vice versa etc.
 
