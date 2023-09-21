@@ -979,7 +979,7 @@ class TestSingleStorageBase(unittest.TestCase):
         partitions_int1 = s.partitions(topic_str)[topic_str]
         self.assertEqual(2, partitions_int1)
         #
-        s.recreate(topic_str)
+        s.retouch(topic_str)
         #
         n_int2 = s.l(topic_str)[topic_str]
         self.assertEqual(0, n_int2)

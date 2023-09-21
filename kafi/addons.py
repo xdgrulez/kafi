@@ -58,3 +58,5 @@ class AddOns(Functional):
         self.delete(topic_str)
         #
         return self.create(topic_str, partitions=partitions_int, config=old_config_dict, **kwargs)
+
+    retouch = recreate
