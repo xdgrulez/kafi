@@ -15,7 +15,7 @@ def is_interactive():
 
 
 def pretty(dict):
-    return json.dumps(dict, indent=2)
+    return json.dumps(dict, indent=2, default=str)
 
 
 def ppretty(dict):
@@ -131,7 +131,7 @@ def is_base64_encoded(str_or_bytes_or_dict):
         elif isinstance(str_or_bytes_or_dict, str):
             decoded_bytes = base64.b64decode(bytes(str_or_bytes_or_dict, encoding="utf-8"))
         elif isinstance(str_or_bytes_or_dict, dict):
-            decoded_bytes = base64.b64decode(bytes(json.dumps(str_or_bytes_or_dict), encoding="utf-8"))
+            decoded_bytes = base64.b64decode(bytes(json.dumps(str_or_bytes_or_dict, default=str), encoding="utf-8"))
         else:
             return False
         encoded_bytes = base64.b64encode(decoded_bytes)
@@ -146,7 +146,7 @@ def base64_encode(str_or_bytes_or_dict):
     elif isinstance(str_or_bytes_or_dict, str):
         encoded_bytes = base64.b64encode(bytes(str_or_bytes_or_dict, encoding="utf-8"))
     elif isinstance(str_or_bytes_or_dict, dict):
-        encoded_bytes = base64.b64encode(bytes(json.dumps(str_or_bytes_or_dict), encoding="utf-8"))
+        encoded_bytes = base64.b64encode(bytes(json.dumps(str_or_bytes_or_dict, default=str), encoding="utf-8"))
     return encoded_bytes
 
 
@@ -160,7 +160,7 @@ def to_bytes(data):
     elif isinstance(data, str):
         data_bytes = data.encode("utf-8")
     elif isinstance(data, dict):
-        data_bytes = json.dumps(data).encode("utf-8")
+        data_bytes = json.dumps(data, default=str).encode("utf-8")
     elif data is None:
         data_bytes = None
     else:

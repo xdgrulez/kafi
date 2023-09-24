@@ -1,6 +1,4 @@
 from kafi.kafi import *
-
 c = Cluster("local")
-l = Local("local")
-l.rm("uje1")
-c.cp("uje", l, "uje1")
+a = AzureBlob("local")
+c.to_file("scored_protobuf", a, "scored.xlsx", type="protobuf")

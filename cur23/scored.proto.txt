@@ -1,0 +1,1 @@
+message Scored { required string datetime = 1; required string text = 2; message Source { required string name = 1; required string id = 2; required string user = 3; } required Source source = 3; message Sentiment { required string model = 1; required int32 score = 2; } required Sentiment sentiment = 4; }

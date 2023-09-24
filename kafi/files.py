@@ -45,6 +45,7 @@ class Files(Pandas):
 
     def from_file(self, fs_obj, file, topic, n=ALL_MESSAGES, **kwargs):
         import pandas as pd
+        import numpy as np
         #
         file_str = file
         #

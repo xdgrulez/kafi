@@ -28,12 +28,15 @@ class Pandas(Functional):
         #
 
         producer = self.producer(topic, **kwargs)
-        for index_int, row in df.iterrows():
+        counter_int = 0
+        for _, row in df.iterrows():
             if n_int != ALL_MESSAGES:
-                if index_int >= n_int:
+                if counter_int >= n_int:
                     break
             #
             producer.produce(row.to_dict())
+            #
+            counter_int += 1
         producer.close()
         #
-        return index_int
+        return counter_int

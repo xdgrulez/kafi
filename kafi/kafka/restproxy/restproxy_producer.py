@@ -116,7 +116,7 @@ class RestProxyProducer(KafkaProducer):
             if self.keep_partitions_bool or partition_int is not None:
                 payload_dict["partition_id"] = partition_int
             #
-            payload_dict_list.append(bytes(json.dumps(payload_dict), "utf-8"))
+            payload_dict_list.append(bytes(json.dumps(payload_dict, default=str), "utf-8"))
         #
         #payload_dict_generator = (payload_dict for payload_dict in payload_dict_list)
         def g():

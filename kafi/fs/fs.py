@@ -23,6 +23,11 @@ class FS(Storage, Files):
         if "azure_blob" in mandatory_section_str_list:
             self.azure_blob_config_dict = self.config_dict["azure_blob"]
             #
+            if "root.dir" not in self.azure_blob_config_dict:
+                self.root_dir("")
+            else:
+                self.root_dir(str(self.azure_blob_config_dict["root.dir"]))
+            #
             if "container.name" not in self.azure_blob_config_dict:
                 self.container_name("test")
             else:
@@ -32,6 +37,11 @@ class FS(Storage, Files):
         # s3
         if "s3" in mandatory_section_str_list:
             self.s3_config_dict = self.config_dict["s3"]
+            #
+            if "root.dir" not in self.s3_config_dict:
+                self.root_dir("")
+            else:
+                self.root_dir(str(self.s3_config_dict["root.dir"]))
             #
             if "bucket.name" not in self.s3_config_dict:
                 self.bucket_name("minio-test-bucket")
