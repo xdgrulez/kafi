@@ -119,7 +119,11 @@ class TestSingleStorageBase(unittest.TestCase):
             self.assertEqual(broker_dict, broker_dict1)
             broker_dict2 = s.brokers([broker_int])
             self.assertEqual(broker_dict1, broker_dict2)
-            old_background_threads_str = s.broker_config(broker_int)[broker_int]["background.threads"]
+            old_broker_config_dict = s.broker_config(broker_int)[broker_int]
+            if "background.threads" in old_broker_config_dict:
+                old_background_threads_str = old_broker_config_dict["background.threads"]
+            else:
+                old_background_threads_str = 10
             s.set_broker_config({"background.threads": 5}, broker_int)
             time.sleep(0.5)
             new_background_threads_str = s.broker_config(broker_int)[broker_int]["background.threads"]
