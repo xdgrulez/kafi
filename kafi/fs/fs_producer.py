@@ -83,7 +83,7 @@ class FSProducer(StorageProducer):
             #
             partition_int_offset_counter_int_dict[target_partition_int] += 1
         #
-        topic_abs_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(self.topic_str)
+        topic_abs_dir_str = self.storage_obj.admin.get_topic_abs_path_str(self.topic_str)
         for partition_int, message_dict_list in partition_int_message_dict_list_dict.items():
             if len(message_dict_list) > 0:
                 start_timestamp_int = message_dict_list[0]["timestamp"][1]

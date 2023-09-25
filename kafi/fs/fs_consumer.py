@@ -88,7 +88,7 @@ class FSConsumer(StorageConsumer):
                         if len(partition_int_to_be_consume_rel_file_str_list_dict[partition_int]) > file_counter_int:
                             rel_file_str_list.append(partition_int_to_be_consume_rel_file_str_list_dict[partition_int][file_counter_int])
             #
-            abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(topic_str)
+            abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_path_str(topic_str)
             for rel_file_str in rel_file_str_list:
                 messages_bytes = self.storage_obj.admin.read_bytes(os.path.join(abs_topic_dir_str, "partitions", rel_file_str))
                 #

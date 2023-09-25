@@ -82,7 +82,7 @@ class FSAdmin(StorageAdmin):
         topic_str_list = self.list_topics(pattern)
         #
         for topic_str in topic_str_list:
-            topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
+            topic_abs_dir_str = self.get_topic_abs_path_str(topic_str)
             #
             rel_file_str_list = self.list_files(topic_abs_dir_str)
             for rel_file_str in rel_file_str_list:
@@ -108,7 +108,7 @@ class FSAdmin(StorageAdmin):
         for topic_str in topic_str_list:
             partitions_int = self.get_partitions(topic_str)
             #
-            abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_dir_str(topic_str)
+            abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_path_str(topic_str)
             #
             for partition_int in range(partitions_int):
                 rel_file_str = self.storage_obj.admin.find_partition_file_str_by_timestamp(topic_str, partition_int, partition_int_timestamp_int_dict[partition_int])
@@ -162,7 +162,7 @@ class FSAdmin(StorageAdmin):
         filtered_topic_str_list = self.pattern_match(topic_str_list, pattern)
         #
         def get_watermark_offsets(topic_str, partition_int):
-            topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
+            topic_abs_dir_str = self.get_topic_abs_path_str(topic_str)
             rel_file_str_list = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
             partition_rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list if int(rel_file_str.split(",")[0]) == partition_int]
             partition_rel_file_str_list.sort()
@@ -197,19 +197,19 @@ class FSAdmin(StorageAdmin):
         #
         return abs_path_str
 
-    def get_topic_abs_dir_str(self, topic_str):
+    def get_topic_abs_path_str(self, topic_str):
         topic_abs_dir_str = os.path.join(self.storage_obj.root_dir(), "topics", topic_str)
         #
         return topic_abs_dir_str
 
-    def get_files_abs_dir_str(self):
-        files_abs_dir_str = os.path.join(self.storage_obj.root_dir(), "files")
+    def get_file_abs_path_str(self, file_str):
+        file_abs_file_str = os.path.join(self.storage_obj.root_dir(), "files", file_str)
         #
-        return files_abs_dir_str
+        return file_abs_file_str
 
     def find_partition_file_str_by_offset(self, topic_str, partition_int, to_find_offset_int):
         # Get sorted list of all relative file names rel_file_str_list for the partition files for partition_int of topic_str.
-        topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
+        topic_abs_dir_str = self.get_topic_abs_path_str(topic_str)
         rel_file_str_list1 = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
         rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list1 if int(rel_file_str.split(",")[0]) == partition_int]
         if rel_file_str_list == []:
@@ -229,7 +229,7 @@ class FSAdmin(StorageAdmin):
 
     def find_partition_file_str_by_timestamp(self, topic_str, partition_int, to_find_timestamp_int):
         # Get sorted list of all relative file names rel_file_str_list for the partition files for partition_int of topic_str.
-        topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
+        topic_abs_dir_str = self.get_topic_abs_path_str(topic_str)
         rel_file_str_list1 = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
         rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list1 if int(rel_file_str.split(",")[0]) == partition_int]
         if rel_file_str_list == []:
@@ -248,7 +248,7 @@ class FSAdmin(StorageAdmin):
         return found_rel_file_str
 
     def get_partition_files(self, topic_str):
-        topic_abs_dir_str = self.get_topic_abs_dir_str(topic_str)
+        topic_abs_dir_str = self.get_topic_abs_path_str(topic_str)
         #
         partitions_int = self.get_partitions(topic_str)
         #
@@ -339,7 +339,7 @@ class FSAdmin(StorageAdmin):
     # Metadata
 
     def get_metadata(self, topic_str):
-        topic_dir_str = self.get_topic_abs_dir_str(topic_str)
+        topic_dir_str = self.get_topic_abs_path_str(topic_str)
         metadata_dict = self.read_dict_from_file(os.path.join(topic_dir_str, "metadata"))
         #
         return metadata_dict
@@ -357,7 +357,7 @@ class FSAdmin(StorageAdmin):
         return config_dict
 
     def set_metadata(self, topic_str, metadata_dict):
-        topic_dir_str = self.get_topic_abs_dir_str(topic_str)
+        topic_dir_str = self.get_topic_abs_path_str(topic_str)
         self.write_dict_to_file(os.path.join(topic_dir_str, "metadata"), metadata_dict)
 
     # Groups

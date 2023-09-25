@@ -38,8 +38,8 @@ class Files(Pandas):
             df.to_xml(data_bytesIO)
         #
         data_bytes = data_bytesIO.getvalue()
-        abs_path_file_str = fs_obj.admin.get_abs_path_str(f"files/{file_str}")
-        fs_obj.admin.write_bytes(abs_path_file_str, data_bytes)
+        file_abs_path_str = fs_obj.admin.get_file_abs_path_str(file_str)
+        fs_obj.admin.write_bytes(file_abs_path_str, data_bytes)
         #
         return len(df)
 
@@ -53,8 +53,8 @@ class Files(Pandas):
         if suffix_str not in [".csv", ".feather", ".json", ".orc", ".parquet", ".xlsx", ".xml"]:
             raise Exception("Only \".csv\", \".feather\", \".json\", \".orc\", \".parquet\", \".xlsx\" and \".xml\" supported.")
         #
-        abs_path_file_str = fs_obj.admin.get_abs_path_str(f"files/{file_str}")
-        data_bytes = fs_obj.admin.read_bytes(abs_path_file_str)
+        file_abs_path_str = fs_obj.admin.get_file_abs_path_str(file_str)
+        data_bytes = fs_obj.admin.read_bytes(file_abs_path_str)
         data_bytesIO = io.BytesIO(data_bytes)
         #
         if suffix_str == ".csv":

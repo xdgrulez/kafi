@@ -253,6 +253,8 @@ class TestSingleStorageBase(unittest.TestCase):
         consumer.consume(n=1)
         consumer.commit()
         #
+        time.sleep(2)
+        #
         group_str_topic_str_offsets_dict_dict_dict = s.group_offsets(group_str)
         self.assertIn(group_str, group_str_topic_str_offsets_dict_dict_dict)
         self.assertIn(topic_str, group_str_topic_str_offsets_dict_dict_dict[group_str])
@@ -969,7 +971,7 @@ class TestSingleStorageBase(unittest.TestCase):
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
-        s.create(topic_str, partitions=2, config={"retention.ms": 4711})
+        s.recreate(topic_str, partitions=2, config={"retention.ms": 4711})
         w = s.producer(topic_str, value_type="json")
         w.produce(self.snack_dict_list)
         w.close()

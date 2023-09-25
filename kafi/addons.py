@@ -48,15 +48,23 @@ class AddOns(Functional):
     def recreate(self, topic, partitions=None, **kwargs):
         topic_str = topic
         #
-        if partitions is None:
-            partitions_int = self.partitions(topic_str)[topic_str]
+        if self.exists(topic_str):
+            if partitions is None:
+                partitions_int = self.partitions(topic_str)[topic_str]
+            else:
+                partitions_int = partitions
+            #
+            old_config_dict = self.config(topic_str)[topic_str]
+            #
+            self.delete(topic_str)
+            #
+            return self.create(topic_str, partitions=partitions_int, config=old_config_dict, **kwargs)
         else:
-            partitions_int = partitions
-        #
-        old_config_dict = self.config(topic_str)[topic_str]
-        #
-        self.delete(topic_str)
-        #
-        return self.create(topic_str, partitions=partitions_int, config=old_config_dict, **kwargs)
+            if partitions is None:
+                partitions_int = 1
+            else:
+                partitions_int = partitions
+            #
+            return self.create(topic_str, partitions=partitions_int, **kwargs)
 
     retouch = recreate
