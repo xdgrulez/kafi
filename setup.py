@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from pathlib import Path
 
 this_directory = Path(__file__).parent
@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='kafi',
-    version='0.0.5',
+    version='0.0.7',
     description='Kafka and Files',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -14,7 +14,7 @@ setup(
     author='Ralph M. Debusmann',
     author_email='matthias.debusmann@gmail.com',
     license='Apache License 2.0',
-    packages=['kafi', 'kafi.fs', 'kafi.fs.azureblob', 'kafi.fs.local', 'kafi.fs.s3', 'kafi.kafka.cluster', 'kafi.kafka.restproxy'],
+    packages=find_packages(),
     install_requires=['azure-storage-blob',
                       'confluent_kafka>=2.2.0',
                       'fastavro',

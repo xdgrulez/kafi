@@ -1,2 +1,4 @@
 from kafi.kafi import *
-c = Cluster("public")
+c = Cluster("local")
+c.cat("transactions")
+
