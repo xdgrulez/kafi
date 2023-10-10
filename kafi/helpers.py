@@ -1,6 +1,6 @@
 import base64
 import binascii
-import datetime
+import dateutil.parser
 import json
 # import logging
 import requests
@@ -13,7 +13,7 @@ def get_millis():
 
 
 def to_millis(timestamp_str):
-    return datetime.datetime.fromisoformat(timestamp_str).timestamp()*1000
+    return int(dateutil.parser.isoparse(timestamp_str).timestamp()*1000)
 
 
 def is_interactive():
