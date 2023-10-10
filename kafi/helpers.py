@@ -1,5 +1,6 @@
 import base64
 import binascii
+import datetime
 import json
 # import logging
 import requests
@@ -9,6 +10,11 @@ import time
 
 def get_millis():
     return int(time.time()*1000)
+
+
+def to_millis(timestamp_str):
+    return datetime.datetime.fromisoformat(timestamp_str).timestamp()*1000
+
 
 def is_interactive():
     return hasattr(sys, 'ps1')
