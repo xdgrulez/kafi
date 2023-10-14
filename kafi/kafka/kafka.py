@@ -43,7 +43,7 @@ class Kafka(Storage):
             self.retention_ms(int(self.kafi_config_dict["retention.ms"]))
         #
         if "consume.timeout" not in self.kafi_config_dict:
-            self.consume_timeout(3.0)
+            self.consume_timeout(5.0)
         else:
             self.consume_timeout(float(self.kafi_config_dict["consume.timeout"]))
         #
@@ -58,12 +58,12 @@ class Kafka(Storage):
             self.session_timeout_ms(int(self.kafi_config_dict["session.timeout.ms"]))
         #
         if "block.num.retries" not in self.kafi_config_dict:
-            self.block_num_retries(50)
+            self.block_num_retries(10)
         else:
             self.block_num_retries(int(self.kafi_config_dict["block.num.retries"]))
         #
         if "block.interval" not in self.kafi_config_dict:
-            self.block_interval(0.1)
+            self.block_interval(0.5)
         else:
             self.block_interval(float(self.kafi_config_dict["block.interval"]))
         #
