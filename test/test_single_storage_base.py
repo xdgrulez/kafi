@@ -124,11 +124,11 @@ class TestSingleStorageBase(unittest.TestCase):
                 old_background_threads_str = old_broker_config_dict["background.threads"]
             else:
                 old_background_threads_str = 10
-            s.set_broker_config({"background.threads": 5}, broker_int)
+            s.broker_config(broker_int, {"background.threads": 5})
             time.sleep(0.5)
             new_background_threads_str = s.broker_config(broker_int)[broker_int]["background.threads"]
             self.assertEqual(new_background_threads_str, "5")
-            s.set_broker_config({"background.threads": old_background_threads_str}, broker_int)
+            s.broker_config(broker_int, {"background.threads": old_background_threads_str})
 
     # Groups
 
@@ -285,7 +285,7 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, type="str")
-        group_str_topic_str_offsets_dict_dict_dict = s.set_group_offsets({group_str: {topic_str: {0: 2}}})
+        group_str_topic_str_offsets_dict_dict_dict = s.group_offsets(group_str, {topic_str: {0: 2}})
         self.assertEqual(group_str_topic_str_offsets_dict_dict_dict, {group_str: {topic_str: {0: 2}}})
         [message_dict] = consumer.consume(n=1)
         consumer.commit()
@@ -304,7 +304,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.touch(topic_str)
         #
-        s.set_config(topic_str, {"retention.ms": "4711"})
+        s.config(topic_str, {"retention.ms": "4711"})
         new_retention_ms_str = s.config(topic_str)[topic_str]["retention.ms"]
         self.assertEqual(new_retention_ms_str, "4711")
 
@@ -395,7 +395,7 @@ class TestSingleStorageBase(unittest.TestCase):
             s.create(topic_str)
             partitions_int_1 = s.partitions(topic_str)[topic_str]
             self.assertEqual(partitions_int_1, 1)
-            s.set_partitions(topic_str, 2)
+            s.partitions(topic_str, 2)
         #
         partitions_int_2 = s.partitions(topic_str)[topic_str]
         self.assertEqual(partitions_int_2, 2)

@@ -129,84 +129,14 @@ class Kafka(Storage):
     def requests_num_retries(self, new_value=None): # int
         return self.get_set_config("requests.num.retries", new_value)
 
-    #
-
-    def topics(self, pattern=None, size=False, **kwargs):
-        return self.admin.topics(pattern, size, **kwargs)
-    
-    ls = topics
-
-    def l(self, pattern=None, size=True, **kwargs):
-        return self.admin.topics(pattern=pattern, size=size, **kwargs)
-
-    ll = l
-
-    def exists(self, topic):
-        topic_str = topic
-        #
-        return self.admin.topics(topic_str) != []
-    
-    # Topics
-
-    def watermarks(self, pattern, **kwargs):
-        return self.admin.watermarks(pattern, **kwargs)
-
-    def config(self, pattern):
-        return self.admin.config(pattern)
-
-    def set_config(self, pattern, config, **kwargs):
-        return self.admin.set_config(pattern, config, **kwargs)
-    
-    def create(self, topic, partitions=1, config={}, **kwargs):
-        return self.admin.create(topic, partitions, config, **kwargs)
-    
-    touch = create
-
-    def delete(self, pattern, **kwargs):
-        return self.admin.delete(pattern, **kwargs)
-
-    rm = delete
-
-    def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
-        return self.admin.offsets_for_times(pattern, partitions_timestamps, **kwargs)
-    
-    def partitions(self, pattern=None, verbose=False):
-        return self.admin.partitions(pattern, verbose)
-
-    def set_partitions(self, pattern, num_partitions, **kwargs):
-        return self.admin.set_partitions(pattern, num_partitions, **kwargs)
-    
-    def list_topics(self, pattern):
-        return self.admin.list_topics(pattern)
-
-    # Groups
-
-    def groups(self, pattern="*", state_pattern="*", state=False):
-        return self.admin.groups(pattern, state_pattern, state)
-    
-    def describe_groups(self, pattern="*", state_pattern="*"):
-        return self.admin.describe_groups(pattern, state_pattern)
-    
-    def delete_groups(self, pattern, state_pattern="*"):
-        return self.admin.delete_groups(pattern, state_pattern)
-    
-    def group_offsets(self, pattern, state_pattern="*"):
-        return self.admin.group_offsets(pattern, state_pattern)
-
-    def set_group_offsets(self, group_offsets):
-        return self.admin.set_group_offsets(group_offsets)
-
     # Brokers
 
     def brokers(self, pattern=None):
         return self.admin.brokers(pattern)
     
-    def broker_config(self, pattern=None):
-        return self.admin.broker_config(pattern)
+    def broker_config(self, pattern=None, config=None, **kwargs):
+        return self.admin.broker_config(pattern, config, **kwargs)
     
-    def set_broker_config(self, pattern, config, **kwargs):
-        return self.admin.set_broker_config(pattern, config, **kwargs)
-
     # ACLs
 
     def acls(self, restype="any", name=None, resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
@@ -217,14 +147,3 @@ class Kafka(Storage):
     
     def delete_acl(self, restype="any", name=None, resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
         return self.admin.delete_acl(restype, name, resource_pattern_type, principal, host, operation, permission_type)
-
-    # Open
-    def consumer(self, topics, **kwargs):
-        consumer = self.get_consumer(topics, **kwargs)
-        #
-        return consumer
-        
-    def producer(self, topic, **kwargs):
-        producer = self.get_producer(topic, **kwargs)
-        #
-        return producer

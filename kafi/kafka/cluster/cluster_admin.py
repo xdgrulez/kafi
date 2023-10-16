@@ -70,25 +70,19 @@ class ClusterAdmin(KafkaAdmin):
         #
         return broker_dict
 
-    def broker_config(self, pattern=None):
-        broker_dict = self.brokers(pattern)
-        #
-        broker_int_broker_config_dict = {broker_int: self.get_resource_config_dict(ResourceType.BROKER, str(broker_int)) for broker_int in broker_dict}
-        #
-        return broker_int_broker_config_dict
-
-    def set_broker_config(self, config, pattern=None, **kwargs):
+    def broker_config(self, pattern=None, config=None, **kwargs):
         config_dict = config
         test_bool = kwargs["test"] if "test" in kwargs else False
         #
         broker_dict = self.brokers(pattern)
         #
-        for broker_int in broker_dict:
-            self.set_resource_config_dict(ResourceType.BROKER, str(broker_int), config_dict, test=test_bool)
+        if config is not None:
+            for broker_int in broker_dict:
+                self.set_resource_config_dict(ResourceType.BROKER, str(broker_int), config_dict, test=test_bool)
         #
-        broker_int_broker_config_dict_dict = {broker_int: config_dict for broker_int in broker_dict}
+        broker_int_broker_config_dict = {broker_int: self.get_resource_config_dict(ResourceType.BROKER, str(broker_int)) for broker_int in broker_dict}
         #
-        return broker_int_broker_config_dict_dict
+        return broker_int_broker_config_dict
 
     # Broker/Topic Configuration
 
@@ -166,25 +160,25 @@ class ClusterAdmin(KafkaAdmin):
         #
         return group_str_state_str_dict if state else list(group_str_state_str_dict.keys())
 
-    def group_offsets(self, pattern, state_pattern="*"):
-        pattern_str_or_str_list = pattern
+    def group_offsets(self, pattern, group_offsets=None, state_pattern="*"):
+        group_offsets_dict = group_offsets
         #
-        group_str_list = self.groups(pattern_str_or_str_list, state_pattern)
-        if not group_str_list:
-            return {}
-        #
-        consumerGroupTopicPartitions_list = [_ConsumerGroupTopicPartitions(group_str) for group_str in group_str_list]
-        group_str_consumerGroupTopicPartitions_future_dict = self.adminClient.list_consumer_group_offsets(consumerGroupTopicPartitions_list)
-        #
-        group_offsets = group_str_consumerGroupTopicPartitions_future_dict_to_group_offsets(group_str_consumerGroupTopicPartitions_future_dict)
-        #
-        return group_offsets
-
-    def set_group_offsets(self, group_offsets):
-        consumerGroupTopicPartitions_list = group_offsets_to_consumerGroupTopicPartitions_list(group_offsets)
-        group_str_consumerGroupTopicPartitions_future_dict = self.adminClient.alter_consumer_group_offsets(consumerGroupTopicPartitions_list)
-        #
-        group_offsets = group_str_consumerGroupTopicPartitions_future_dict_to_group_offsets(group_str_consumerGroupTopicPartitions_future_dict)
+        if group_offsets_dict is not None:
+            group_str = pattern
+            #
+            consumerGroupTopicPartitions = group_str_group_offsets_to_consumerGroupTopicPartitions(group_str, group_offsets)
+            group_str_consumerGroupTopicPartitions_future_dict = self.adminClient.alter_consumer_group_offsets([consumerGroupTopicPartitions])
+            #
+            group_offsets = group_str_consumerGroupTopicPartitions_future_dict_to_group_offsets(group_str_consumerGroupTopicPartitions_future_dict)
+        else:
+            group_str_list = self.groups(pattern, state_pattern)
+            if not group_str_list:
+                return {}
+            #
+            consumerGroupTopicPartitions_list = [_ConsumerGroupTopicPartitions(group_str) for group_str in group_str_list]
+            group_str_consumerGroupTopicPartitions_future_dict = self.adminClient.list_consumer_group_offsets(consumerGroupTopicPartitions_list)
+            #
+            group_offsets = group_str_consumerGroupTopicPartitions_future_dict_to_group_offsets(group_str_consumerGroupTopicPartitions_future_dict)
         #
         return group_offsets
 
@@ -214,39 +208,32 @@ class ClusterAdmin(KafkaAdmin):
 
     #
 
-    def config(self, pattern):
-        pattern_str_or_str_list = pattern
+    def config(self, pattern, config=None, **kwargs):
+        config_dict = config
+        test_bool = kwargs["test"] if "test" in kwargs else False
         #
-        topic_str_list = self.list_topics(pattern_str_or_str_list)
+        topic_str_list = self.list_topics(pattern)
+        #
+        if config is not None:
+            for topic_str in topic_str_list:
+                self.set_resource_config_dict(ResourceType.TOPIC, topic_str, config_dict, test=test_bool)
         #
         topic_str_config_dict_dict = {topic_str: self.get_resource_config_dict(ResourceType.TOPIC, topic_str) for topic_str in topic_str_list}
         #
         return topic_str_config_dict_dict
 
-    def set_config(self, pattern, config, **kwargs):
-        pattern_str_or_str_list = pattern
-        config_dict = config
-        test_bool = kwargs["test"] if "test" in kwargs else False
-        #
-        topic_str_list = self.list_topics(pattern_str_or_str_list)
-        #
-        for topic_str in topic_str_list:
-            self.set_resource_config_dict(ResourceType.TOPIC, topic_str, config_dict, test=test_bool)
-        #
-        topic_str_key_str_value_str_tuple_dict = {topic_str: config_dict for topic_str in topic_str_list}
-        return topic_str_key_str_value_str_tuple_dict
-
     #
 
-    def create(self, topic, partitions=1, config={}, **kwargs):
+    def create(self, topic, partitions=1, replication=-1, config={}, **kwargs):
         topic_str = topic
         partitions_int = partitions
+        replication_int = replication
         config_dict = config
         block_bool = kwargs["block"] if "block" in kwargs else True
         #
         config_dict["retention.ms"] = config_dict["retention.ms"] if "retention.ms" in config_dict else self.storage_obj.retention_ms()
         #
-        newTopic = NewTopic(topic_str, partitions_int, config=config_dict)
+        newTopic = NewTopic(topic_str, partitions_int, replication_factor=replication_int, config=config_dict)
         self.adminClient.create_topics([newTopic])
         #
         if block_bool:
@@ -302,15 +289,25 @@ class ClusterAdmin(KafkaAdmin):
         #
         return topic_str_partition_int_offsets_int_dict_dict
 
-    def partitions(self, pattern=None, verbose=False):
+    def partitions(self, pattern=None, partitions=None, verbose=False, **kwargs):
         pattern_str_or_str_list = pattern
+        partitions_int = partitions
+        verbose_bool = verbose
+        test_bool = kwargs["test"] if "test" in kwargs else False
+        #
+        if partitions_int is not None:
+            topic_str_list = self.list_topics(pattern_str_or_str_list)
+            #
+            newPartitions_list = [NewPartitions(topic_str, partitions_int) for topic_str in topic_str_list]
+            topic_str_future_dict = self.adminClient.create_partitions(newPartitions_list, validate_only=test_bool)
+            #
+            for future in topic_str_future_dict.values():
+                future.result()
         #
         if pattern_str_or_str_list is None:
             pattern_str_or_str_list = ["*"]
         elif isinstance(pattern_str_or_str_list, str):
             pattern_str_or_str_list = [pattern_str_or_str_list]
-        #
-        verbose_bool = verbose
         #
         topic_str_topicMetadata_dict = self.adminClient.list_topics().topics
         #
@@ -325,23 +322,8 @@ class ClusterAdmin(KafkaAdmin):
             return topic_str_partition_int_partition_dict_dict_dict
         else:
             topic_str_partitions_int_dict = {topic_str: len(topic_str_topicMetadata_dict[topic_str].partitions) for topic_str in topic_str_topicMetadata_dict if any(fnmatch(topic_str, pattern_str) for pattern_str in pattern_str_or_str_list)}
+            #
             return topic_str_partitions_int_dict
-
-    def set_partitions(self, pattern, num_partitions, **kwargs):
-        pattern_str_or_str_list = pattern
-        partitions_int = num_partitions
-        test_bool = kwargs["test"] if "test" in kwargs else False
-        #
-        topic_str_list = self.list_topics(pattern_str_or_str_list)
-        #
-        newPartitions_list = [NewPartitions(topic_str, partitions_int) for topic_str in topic_str_list]
-        topic_str_future_dict = self.adminClient.create_partitions(newPartitions_list, validate_only=test_bool)
-        #
-        for future in topic_str_future_dict.values():
-            future.result()
-        #
-        topic_str_partitions_int_dict = {topic_str: partitions_int for topic_str in topic_str_list}
-        return topic_str_partitions_int_dict
 
     def watermarks(self, pattern, **kwargs):
         timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
@@ -401,16 +383,15 @@ def group_str_consumerGroupTopicPartitions_future_dict_to_group_offsets(group_st
     #
     return group_offsets
 
-
-def group_offsets_to_consumerGroupTopicPartitions_list(group_offsets):
-    consumerGroupTopicPartitions_list = []
-    for group_str, topic_offsets in group_offsets.items():
-        topicPartition_list = []
-        for topic_str, partition_offsets in topic_offsets.items():
-            for partition_int, offset_int in partition_offsets.items():
-                topicPartition_list.append(TopicPartition(topic_str, partition_int, offset_int))
-        consumerGroupTopicPartitions_list.append(_ConsumerGroupTopicPartitions(group_str, topicPartition_list))
-    return consumerGroupTopicPartitions_list
+def group_str_group_offsets_to_consumerGroupTopicPartitions(group_str, group_offsets):
+    topicPartition_list = []
+    for topic_str, partition_offsets in group_offsets.items():
+        for partition_int, offset_int in partition_offsets.items():
+            topicPartition_list.append(TopicPartition(topic_str, partition_int, offset_int))
+    #
+    consumerGroupTopicPartitions = _ConsumerGroupTopicPartitions(group_str, topicPartition_list)
+    #
+    return consumerGroupTopicPartitions
 
 
 def consumerGroupDescription_to_group_description_dict(consumerGroupDescription):

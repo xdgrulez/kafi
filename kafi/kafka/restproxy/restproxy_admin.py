@@ -90,11 +90,21 @@ class RestProxyAdmin(KafkaAdmin):
         #
         return broker_dict
 
-    def broker_config(self, pattern=None):
+    def broker_config(self, pattern=None, config=None, **kwargs):
+        config_dict = config
+        #
         broker_dict = self.brokers(pattern)
         #
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
+        if config_dict is not None:
+            url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/broker-configs:alter"
+            headers_dict = {"Content-Type": "application/json"}
+            #
+            dict_list = [{"name": key_str, "value": value_str} for key_str, value_str in config_dict.items()]
+            payload_dict = {"data": dict_list}
+            post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+        #        
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/broker-configs"
         headers_dict = {"Content-Type": "application/json"}
         response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
@@ -110,23 +120,6 @@ class RestProxyAdmin(KafkaAdmin):
         broker_int_broker_config_dict = {broker_int: cluster_config_dict for broker_int in broker_dict}
         #
         return broker_int_broker_config_dict
-
-    def set_broker_config(self, config, pattern=None, **kwargs):
-        config_dict = config
-        broker_dict = self.brokers(pattern)
-        #
-        (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
-        #
-        url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/broker-configs:alter"
-        headers_dict = {"Content-Type": "application/json"}
-        #
-        dict_list = [{"name": key_str, "value": value_str} for key_str, value_str in config_dict.items()]
-        payload_dict = {"data": dict_list}
-        post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
-        #
-        broker_int_broker_config_dict_dict = {broker_int: config_dict for broker_int in broker_dict}
-        #
-        return broker_int_broker_config_dict_dict
 
     # Groups
 
@@ -211,10 +204,22 @@ class RestProxyAdmin(KafkaAdmin):
 
     # Topics
 
-    def config(self, pattern_str_or_str_list):
+    def config(self, pattern, config=None, **kwargs):
+        config_dict = config
+        #
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
-        topic_str_list = self.list_topics(pattern_str_or_str_list)
+        topic_str_list = self.list_topics(pattern)
+        #
+        if config_dict is not None:
+            for topic_str in topic_str_list:
+                url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{topic_str}/configs:alter"
+                headers_dict = {"Content-Type": "application/json"}
+                #
+                key_str_value_str_dict_list = [{"name": config_key_str, "value": config_value_str} for config_key_str, config_value_str in config_dict.items()]
+                payload_dict = {"data": key_str_value_str_dict_list}
+                #
+                post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
         #
         def kafkaTopicConfigList_dict_to_config_dict(kafkaTopicConfigList_dict):
             config_dict = {}
@@ -233,23 +238,6 @@ class RestProxyAdmin(KafkaAdmin):
         #
         return topic_str_config_dict_dict
     
-    def set_config(self, pattern_str_or_str_list, config_dict, **kwargs):
-        (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
-        #
-        topic_str_list = self.list_topics(pattern_str_or_str_list)
-        #
-        topic_str_config_dict_dict = {}
-        for topic_str in topic_str_list:
-            url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{topic_str}/configs:alter"
-            headers_dict = {"Content-Type": "application/json"}
-            key_str_value_str_dict_list = [{"name": config_key_str, "value": config_value_str} for config_key_str, config_value_str in config_dict.items()]
-            payload_dict = {"data": key_str_value_str_dict_list}
-            post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
-            #
-            topic_str_config_dict_dict[topic_str] = config_dict
-        #
-        return topic_str_config_dict_dict
-
     #
 
     def create(self, topic_str, partitions=1, config={}, **kwargs):

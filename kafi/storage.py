@@ -204,6 +204,77 @@ class Storage(Shell, Files, AddOns):
         #
         return schemaRegistry
 
+    #
+
+    # Topics
+
+    def topics(self, pattern=None, size=False, **kwargs):
+        return self.admin.topics(pattern, size, **kwargs)
+    
+    ls = topics
+
+    def l(self, pattern=None, size=True, **kwargs):
+        return self.admin.topics(pattern=pattern, size=size, **kwargs)
+
+    ll = l
+
+    def exists(self, topic):
+        topic_str = topic
+        #
+        return self.admin.topics(topic_str) != []
+
+    #
+
+    def watermarks(self, pattern, **kwargs):
+        return self.admin.watermarks(pattern, **kwargs)
+
+    def config(self, pattern, config=None, **kwargs):
+        return self.admin.config(pattern, config, **kwargs)
+
+    def create(self, topic, partitions=1, **kwargs):
+        return self.admin.create(topic, partitions, **kwargs)
+    
+    touch = create
+
+    def delete(self, pattern, **kwargs):
+        return self.admin.delete(pattern, **kwargs)
+
+    rm = delete
+
+    def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
+        return self.admin.offsets_for_times(pattern, partitions_timestamps, **kwargs)
+
+    def partitions(self, pattern=None, num_partitions=None, verbose=False, **kwargs):
+        return self.admin.partitions(pattern, num_partitions, verbose, **kwargs)
+
+    # Groups
+
+    def groups(self, pattern="*", state_pattern="*", state=False):
+        return self.admin.groups(pattern, state_pattern, state)
+    
+    def describe_groups(self, pattern="*", state_pattern="*"):
+        return self.admin.describe_groups(pattern, state_pattern)
+    
+    def delete_groups(self, pattern, state_pattern="*"):
+        return self.admin.delete_groups(pattern, state_pattern)
+    
+    rm_groups = delete_groups
+
+    def group_offsets(self, pattern, group_offsets=None, state_pattern="*"):
+        return self.admin.group_offsets(pattern, group_offsets, state_pattern)
+
+    #
+
+    def consumer(self, topic, **kwargs):
+        consumer = self.get_consumer(topic, **kwargs)
+        #
+        return consumer
+    
+    def producer(self, topic, **kwargs):
+        producer = self.get_producer(topic, **kwargs)
+        #
+        return producer
+
     # Helpers
 
     def get_key_value_type_tuple(self, **kwargs):

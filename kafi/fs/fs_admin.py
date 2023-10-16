@@ -37,30 +37,20 @@ class FSAdmin(StorageAdmin):
 
     #
 
-    def config(self, pattern):
-        topic_str_list = self.list_topics(pattern)
-        #
-        topic_str_config_dict_dict = {topic_str: self.get_config(topic_str) for topic_str in topic_str_list}
-        #
-        return topic_str_config_dict_dict
-
-    def set_config(self, pattern, config, **kwargs):
+    def config(self, pattern, config=None, **kwargs):
         config_dict = config
         #
         topic_str_list = self.list_topics(pattern)
         #
-        for topic_str in topic_str_list:
-            metadata_dict = self.get_metadata(topic_str)
-            metadata_dict["config"] = config_dict
-            self.set_metadata(topic_str, metadata_dict)
+        if config_dict is not None:
+            for topic_str in topic_str_list:
+                metadata_dict = self.get_metadata(topic_str)
+                metadata_dict["config"] = config_dict
+                self.set_metadata(topic_str, metadata_dict)
         #
-        topic_str_config_dict_dict = {topic_str: config_dict for topic_str in topic_str_list}
+        topic_str_config_dict_dict = {topic_str: self.get_config(topic_str) for topic_str in topic_str_list}
+        #
         return topic_str_config_dict_dict
-
-    #
-
-    def exists(self, topic_or_file_str):
-        return self.list_topics(topic_or_file_str) != []
 
     #
 
@@ -131,27 +121,22 @@ class FSAdmin(StorageAdmin):
 
     #
 
-    def partitions(self, pattern=None, verbose=False):
+    def partitions(self, pattern=None, partitions=None, verbose=False, **kwargs):
+        partitions_int = partitions
+        #
         topic_str_list = self.list_topics(pattern)
+        #
+        if partitions_int is not None:
+            for topic_str in topic_str_list:
+                metadata_dict = self.get_metadata(topic_str)
+                #
+                metadata_dict["partitions"] = partitions_int
+                #
+                self.set_metadata(topic_str, metadata_dict)
+                #
+                topic_str_partitions_int_dict[topic_str] = partitions_int
         #
         topic_str_partitions_int_dict = {topic_str: self.get_partitions(topic_str) for topic_str in topic_str_list}
-        #
-        return topic_str_partitions_int_dict
-
-    def set_partitions(self, pattern, num_partitions, **kwargs):
-        partitions_int = num_partitions
-        #
-        topic_str_list = self.list_topics(pattern)
-        #
-        topic_str_partitions_int_dict = {}
-        for topic_str in topic_str_list:
-            metadata_dict = self.get_metadata(topic_str)
-            #
-            metadata_dict["partitions"] = partitions_int
-            #
-            self.set_metadata(topic_str, metadata_dict)
-            #
-            topic_str_partitions_int_dict[topic_str] = partitions_int
         #
         return topic_str_partitions_int_dict
 
@@ -300,19 +285,17 @@ class FSAdmin(StorageAdmin):
             group_str_list = [group_str for group_str, _ in group_str_state_str_tuple_list]
             return group_str_list
 
-    def group_offsets(self, pattern, state_pattern="*"):
-        group_str_list = self.groups(pattern, state_pattern)
-        #
-        group_str_topic_str_offsets_dict_dict_dict = {group_str: self.get_group_dict(group_str)["offsets"] for group_str in group_str_list}
-        #
-        return group_str_topic_str_offsets_dict_dict_dict
-
-    def set_group_offsets(self, group_offsets):
+    def group_offsets(self, pattern, group_offsets=None, state_pattern="*"):
         group_str_topic_str_offsets_dict_dict_dict = group_offsets
         #
-        for group_str, topic_str_offsets_dict_dict in group_str_topic_str_offsets_dict_dict_dict.items():
-            new_group_dict = {"offsets": topic_str_offsets_dict_dict}
-            self.set_group_dict(group_str, new_group_dict)
+        group_str_list = self.groups(pattern, state_pattern)
+        #
+        if group_str_topic_str_offsets_dict_dict_dict is not None:
+            for group_str, topic_str_offsets_dict_dict in group_str_topic_str_offsets_dict_dict_dict.items():
+                new_group_dict = {"offsets": topic_str_offsets_dict_dict}
+                self.set_group_dict(group_str, new_group_dict)        
+        #
+        group_str_topic_str_offsets_dict_dict_dict = {group_str: self.get_group_dict(group_str)["offsets"] for group_str in group_str_list}
         #
         return group_str_topic_str_offsets_dict_dict_dict
 
