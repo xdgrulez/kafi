@@ -164,7 +164,7 @@ class RestProxyAdmin(KafkaAdmin):
         #
         return group_str_state_str_dict if state_bool else list(group_str_state_str_dict.keys())
 
-    def group_offsets(self, pattern, state_pattern="*"):
+    def group_offsets(self, pattern, group_offsets=None, state_pattern="*"):
         pattern_str_list = [pattern] if isinstance(pattern, str) else pattern
         state_pattern_str_list = [state_pattern] if isinstance(pattern, str) else state_pattern
         #
@@ -284,7 +284,7 @@ class RestProxyAdmin(KafkaAdmin):
         #
         return filtered_topic_str_list
 
-    def partitions(self, pattern=None, verbose=False):
+    def partitions(self, pattern=None, partitions=None, verbose=False, **kwargs):
         pattern_str_or_str_list = pattern
         if pattern_str_or_str_list is None:
             pattern_str_or_str_list = ["*"]

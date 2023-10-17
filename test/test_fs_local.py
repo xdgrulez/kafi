@@ -38,3 +38,6 @@ class Test(TestSingleStorageBase):
 
     def test_brokers(self):
         pass
+
+    def test_compact(self):
+        pass

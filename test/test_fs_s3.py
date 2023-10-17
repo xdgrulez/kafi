@@ -38,5 +38,5 @@ class Test(TestSingleStorageBase):
     def test_brokers(self):
         pass
 
-    def test_offsets_for_times(self):
+    def test_compact(self):
         pass

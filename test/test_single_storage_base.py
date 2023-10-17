@@ -651,6 +651,34 @@ class TestSingleStorageBase(unittest.TestCase):
         value_str_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(value_str_list, self.snack_str_list)
 
+    def test_compact(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        if not self.is_ccloud():
+            s = self.get_storage()
+            #
+            topic_str = self.create_test_topic_name()
+            s.create(topic_str, config={"cleanup.policy": "compact", "max.compaction.lag.ms": 100, "min.cleanable.dirty.ratio": 0.0000000001, "segment.ms": 100, "delete.retention.ms": 100})
+            #
+            pr = s.producer(topic_str)
+            for i in range(0, 100):
+                if i % 2 == 0:
+                    pr.produce(i, key="even")
+                else:
+                    pr.produce(i, key="odd")
+            pr.flush()
+            #
+            (n_int1, _, _) = s.wc(topic_str)
+            self.assertEqual(n_int1, 100)
+            pr.produce(100, key="even")
+            time.sleep(6)
+            pr.produce(101, key="odd")
+            pr.close()
+            #
+            (n_int2, _, _) = s.wc(topic_str)
+            self.assertEqual(n_int2, 4)
+
     def test_cluster_settings(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return

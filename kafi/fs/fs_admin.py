@@ -57,7 +57,7 @@ class FSAdmin(StorageAdmin):
     def create(self, topic, partitions=1, config={}, **kwargs):
         topic_str = topic
         #
-        if self.exists(topic_str):
+        if self.list_topics(topic_str) != []:
             raise Exception(f"Topic \"{topic_str}\" already exists.")
         #
         config_dict = config
@@ -127,6 +127,7 @@ class FSAdmin(StorageAdmin):
         topic_str_list = self.list_topics(pattern)
         #
         if partitions_int is not None:
+            topic_str_partitions_int_dict = {}
             for topic_str in topic_str_list:
                 metadata_dict = self.get_metadata(topic_str)
                 #
@@ -286,14 +287,14 @@ class FSAdmin(StorageAdmin):
             return group_str_list
 
     def group_offsets(self, pattern, group_offsets=None, state_pattern="*"):
-        group_str_topic_str_offsets_dict_dict_dict = group_offsets
+        topic_str_offsets_dict_dict = group_offsets
         #
         group_str_list = self.groups(pattern, state_pattern)
         #
-        if group_str_topic_str_offsets_dict_dict_dict is not None:
-            for group_str, topic_str_offsets_dict_dict in group_str_topic_str_offsets_dict_dict_dict.items():
+        if topic_str_offsets_dict_dict is not None:
+            for group_str in group_str_list:
                 new_group_dict = {"offsets": topic_str_offsets_dict_dict}
-                self.set_group_dict(group_str, new_group_dict)        
+                self.set_group_dict(group_str, new_group_dict)
         #
         group_str_topic_str_offsets_dict_dict_dict = {group_str: self.get_group_dict(group_str)["offsets"] for group_str in group_str_list}
         #
