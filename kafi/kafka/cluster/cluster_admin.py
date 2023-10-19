@@ -202,9 +202,15 @@ class ClusterAdmin(KafkaAdmin):
             #
             num_retries_int += 1
             if num_retries_int >= self.storage_obj.block_num_retries():
-                break
+                exception_str = f"Retried {self.storage_obj.block_num_retries()} times (interval: {self.storage_obj.block_interval()}) waiting for the confirmation of the "
+                if exists_bool:
+                    exception_str += f"creation of topic {topic_str}"
+                else:
+                    exception_str += f"deletion of topic {topic_str}"
+                #
+                raise Exception(exception_str)
+            #
             time.sleep(self.storage_obj.block_interval())
-        return False
 
     #
 
