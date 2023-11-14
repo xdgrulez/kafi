@@ -65,4 +65,6 @@ class ClusterProducer(KafkaProducer):
             #
             self.written_counter_int += 1
         #
+        self.flush()
+        #
         return self.written_counter_int
