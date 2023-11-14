@@ -1,14 +1,14 @@
 kafka:
-  bootstrap.servers: ${KASHPY_KAFKA_SERVER}
+  bootstrap.servers: ${KAFI_KAFKA_SERVER}
   security.protocol: SASL_SSL
   sasl.mechanisms: PLAIN
-  sasl.username: ${KASHPY_KAFKA_USERNAME}
-  sasl.password: ${KASHPY_KAFKA_PASSWORD}
+  sasl.username: ${KAFI_KAFKA_USERNAME}
+  sasl.password: ${KAFI_KAFKA_PASSWORD}
   
 schema_registry:
-  schema.registry.url: ${KASHPY_SCHEMA_REGISTRY_URL}
+  schema.registry.url: ${KAFI_SCHEMA_REGISTRY_URL}
   basic.auth.credentials.source: USER_INFO
-  basic.auth.user.info: ${KASHPY_SCHEMA_REGISTRY_USER_INFO}
+  basic.auth.user.info: ${KAFI_SCHEMA_REGISTRY_USER_INFO}
 
 kafi:
   flush.num.messages: 10000

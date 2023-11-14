@@ -132,13 +132,15 @@ class Storage(Shell, Files, AddOns):
         if not home_str:
             home_str = "."
         #
-        configs_path_str = f"{home_str}/configs/{self.dir_str}"
-        if os.path.exists(f"{configs_path_str}/{config_str}.yaml"):
-            config_dict = YamlLoader(f"{configs_path_str}/{config_str}.yaml").load()
-        elif os.path.exists(f"{configs_path_str}/{self.config_str}.yml"):
-            config_dict = YamlLoader(f"{configs_path_str}/{config_str}.yml").load()
-        else:
-            raise Exception(f"No configuration file \"{config_str}.yaml\" or \"{config_str}.yml\" found in \"{configs_path_str}\" directory (hint: use KAFI_HOME environment variable to set the kafi home directory).")
+        config_dict = None
+        configs_path_str_list = [f"{home_str}/configs/{self.dir_str}", f"{home_str}/configs", f"{home_str}"]
+        for configs_path_str in configs_path_str_list:
+            if os.path.exists(f"{configs_path_str}/{config_str}.yaml"):
+                config_dict = YamlLoader(f"{configs_path_str}/{config_str}.yaml").load()
+            elif os.path.exists(f"{configs_path_str}/{self.config_str}.yml"):
+                config_dict = YamlLoader(f"{configs_path_str}/{config_str}.yml").load()
+        if config_dict is None:
+            raise Exception(f"No configuration file \"{config_str}.yaml\" or \"{config_str}.yml\" found in \"{configs_path_str_list}\" (hint: you can use KAFI_HOME environment variable to set the kafi home directory).")
         #
         for mandatory_section_str in self.mandatory_section_str_list:
             if mandatory_section_str not in config_dict:
