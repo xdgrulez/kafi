@@ -63,6 +63,7 @@ class ClusterProducer(KafkaProducer):
             timestamp_int = timestamp[1] if isinstance(timestamp, tuple) else timestamp
             #
             self.producer.produce(self.topic_str, value_str_or_bytes, key_str_or_bytes, partition=partition_int, timestamp=timestamp_int, headers=headers_str_bytes_tuple_list, on_delivery=self.on_delivery_function)
+            self.producer.poll(0)
             #
             self.written_counter_int += 1
             #
