@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='kafi',
-    version='0.0.12',
+    version='0.0.13',
     description='Kafka and Files',
     long_description=long_description,
     long_description_content_type='text/markdown',
