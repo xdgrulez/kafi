@@ -9,9 +9,9 @@ ALL_MESSAGES = -1
 #
 
 class Shell(Functional):
-    def cat(self, topic, n=ALL_MESSAGES, **kwargs):
+    def cat(self, topic, n=ALL_MESSAGES, cat_function=lambda x: x, **kwargs):
         def map_function(message_dict):
-            return message_dict
+            return cat_function(message_dict)
         #
         return self.map(topic, map_function, n, **kwargs)
 

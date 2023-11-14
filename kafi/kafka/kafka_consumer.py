@@ -38,6 +38,7 @@ class KafkaConsumer(StorageConsumer):
                     topic_str_offsets_dict_dict[message_dict["topic"]] = {}
                 #
                 offsets_dict = topic_str_offsets_dict_dict[message_dict["topic"]]
+                #
                 offsets_dict[message_dict["partition"]] = message_dict["offset"] + 1
                 #
                 if break_function(acc, message_dict):
