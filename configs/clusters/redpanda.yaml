@@ -1,9 +1,9 @@
 kafka:
-  bootstrap.servers: ${KASHPY_KAFKA_SERVER}
+  bootstrap.servers: ${KAFI_KAFKA_SERVER}
   security.protocol: sasl_plaintext
   sasl.mechanisms: SCRAM-SHA-256
-  sasl.username: ${KASHPY_KAFKA_USERNAME}
-  sasl.password: ${KASHPY_KAFKA_PASSWORD}
+  sasl.username: ${KAFI_KAFKA_USERNAME}
+  sasl.password: ${KAFI_KAFKA_PASSWORD}
 
 kafi:
   flush.num.messages: 10000
