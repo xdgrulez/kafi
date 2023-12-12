@@ -293,6 +293,31 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         consumer.close()
 
+    def test_lags(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str, partitions=1)
+        producer = s.producer(topic_str, type="str")
+        producer.produce("message 1")
+        producer.produce("message 2")
+        producer.close()
+        #
+        group_str = self.create_test_group_name()
+        consumer = s.consumer(topic_str, group=group_str, type="str")
+        consumer.consume(n=1)
+        consumer.commit()
+        lags_dict1 = s.lags(group_str, topic_str)
+        self.assertEqual(lags_dict1[group_str][topic_str][0], 1)
+        consumer.consume(n=1)
+        consumer.commit()
+        lags_dict2 = s.lags(group_str, topic_str)
+        self.assertEqual(lags_dict2[group_str][topic_str][0], 0)
+        consumer.close()
+
     # Topics
 
     def test_config_set_config(self):
