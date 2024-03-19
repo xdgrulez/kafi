@@ -670,9 +670,8 @@ class TestSingleStorageBase(unittest.TestCase):
         # self.assertEqual(n_int2, 3)
         #
         group_str2 = self.create_test_group_name()
-        (message_dict_list, n_int1) = s.cat(topic_str1, group=group_str2, value_type="str", n=3)
+        message_dict_list = s.cat(topic_str1, group=group_str2, value_type="str", n=3)
         self.assertEqual(3, len(message_dict_list))
-        self.assertEqual(3, n_int1)
         value_str_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(value_str_list, self.snack_str_list)
 
@@ -745,9 +744,8 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        (message_dict_list1, n_int1) = s.cat(topic_str, group=group_str1, type="str")
+        message_dict_list1 = s.cat(topic_str, group=group_str1, type="str")
         self.assertEqual(3, len(message_dict_list1))
-        self.assertEqual(3, n_int1)
         value_str_list1 = [message_dict["value"] for message_dict in message_dict_list1]
         self.assertEqual(value_str_list1, self.snack_str_list)
         #
@@ -755,9 +753,8 @@ class TestSingleStorageBase(unittest.TestCase):
             self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
             #
             group_str2 = self.create_test_group_name()
-            (message_dict_list2, n_int2) = s.cat(topic_str, group=group_str2, type="str", offsets={0:1}, n=1)
+            message_dict_list2 = s.cat(topic_str, group=group_str2, type="str", offsets={0:1}, n=1)
             self.assertEqual(1, len(message_dict_list2))
-            self.assertEqual(1, n_int2)
             self.assertEqual(message_dict_list2[0]["value"], self.snack_str_list[1])
             self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
 
@@ -775,9 +772,8 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        (message_dict_list1, n_int1) = s.head(topic_str, group=group_str1, type="json", n=3)
+        message_dict_list1 = s.head(topic_str, group=group_str1, type="json", n=3)
         self.assertEqual(3, len(message_dict_list1))
-        self.assertEqual(3, n_int1)
         value_dict_list1 = [message_dict["value"] for message_dict in message_dict_list1]
         self.assertEqual(value_dict_list1, self.snack_dict_list)
         #
@@ -785,9 +781,8 @@ class TestSingleStorageBase(unittest.TestCase):
             self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
             #
             group_str2 = self.create_test_group_name()
-            (message_dict_list2, n_int2) = s.head(topic_str, group=group_str2, offsets={0:1}, type="json", n=1)
+            message_dict_list2 = s.head(topic_str, group=group_str2, offsets={0:1}, type="json", n=1)
             self.assertEqual(1, len(message_dict_list2))
-            self.assertEqual(1, n_int2)
             self.assertEqual(message_dict_list2[0]["value"], self.snack_dict_list[1])
             self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
 
@@ -805,9 +800,8 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        (message_dict_list1, n_int1) = s.tail(topic_str, group=group_str1, type="json", n=3)
+        message_dict_list1 = s.tail(topic_str, group=group_str1, type="json", n=3)
         self.assertEqual(3, len(message_dict_list1))
-        self.assertEqual(3, n_int1)
         value_dict_list1 = [message_dict["value"] for message_dict in message_dict_list1]
         self.assertEqual(value_dict_list1, self.snack_dict_list)
         #
@@ -815,9 +809,8 @@ class TestSingleStorageBase(unittest.TestCase):
             self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
             #
             group_str2 = self.create_test_group_name()
-            (message_dict_list2, n_int2) = s.tail(topic_str, group=group_str2, type="json", n=1)
+            message_dict_list2 = s.tail(topic_str, group=group_str2, type="json", n=1)
             self.assertEqual(1, len(message_dict_list2))
-            self.assertEqual(1, n_int2)
             self.assertEqual(message_dict_list2[0]["value"], self.snack_dict_list[2])
             self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
 
@@ -848,9 +841,8 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         if not s.__class__.__name__ == "RestProxy":
             group_str2 = self.create_test_group_name()
-            (message_dict_list2, n_int2) = s.cat(topic_str2, group=group_str2, type="json", n=1)
+            message_dict_list2 = s.cat(topic_str2, group=group_str2, type="json", n=1)
             self.assertEqual(1, len(message_dict_list2))
-            self.assertEqual(1, n_int2)
             self.assertEqual(message_dict_list2[0]["value"], self.snack_ish_dict_list[0])
             self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
 
@@ -976,9 +968,8 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(2, written_n_int)
         #
         group_str2 = self.create_test_group_name()
-        (message_dict_list, n_int) = s.cat(topic_str2, group=group_str2, type="json", n=2)
+        message_dict_list = s.cat(topic_str2, group=group_str2, type="json", n=2)
         self.assertEqual(2, len(message_dict_list))
-        self.assertEqual(2, n_int)
         self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
         self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
 
@@ -1008,9 +999,8 @@ class TestSingleStorageBase(unittest.TestCase):
         s.from_df(df, topic_str2)
         #
         group_str2 = self.create_test_group_name()
-        (message_dict_list, n_int2) = s.cat(topic_str2, group=group_str2, n=3, type="json")
+        message_dict_list = s.cat(topic_str2, group=group_str2, n=3, type="json")
         self.assertEqual(3, len(message_dict_list))
-        self.assertEqual(3, n_int2)
         self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
         self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
         self.assertEqual(80.0, message_dict_list[2]["value"]["calories"])

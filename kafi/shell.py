@@ -13,7 +13,8 @@ class Shell(Functional):
         def map_function(message_dict):
             return cat_function(message_dict)
         #
-        return self.map(topic, map_function, n, **kwargs)
+        (message_dict_list, _) = self.map(topic, map_function, n, **kwargs)
+        return message_dict_list
 
     def head(self, topic, n=10, **kwargs):
         return self.cat(topic, n, **kwargs)
@@ -29,7 +30,8 @@ class Shell(Functional):
         offsets_dict = {partition_int: -n_int for partition_int in range(partitions_int)}
         kwargs["offsets"] = offsets_dict
         #
-        return self.map(topic, map_function, n, **kwargs)
+        (message_dict_list, _) = self.map(topic, map_function, n, **kwargs)
+        return message_dict_list
 
     #
 

@@ -45,29 +45,34 @@ class AddOns(Functional):
 
     #
 
-    def recreate(self, pattern, partitions=None, **kwargs):
-        topic_str_list = self.admin.list_topics(pattern)
+    def recreate(self, topic, partitions=None, config={}, **kwargs):
+        topic_str = topic
         #
-        for topic_str in topic_str_list:
-            if self.exists(topic_str):
-                if partitions is None:
-                    partitions_int = self.partitions(topic_str)[topic_str]
-                else:
-                    partitions_int = partitions
-                #
-                old_config_dict = self.config(topic_str)[topic_str]
-                #
-                self.delete(topic_str)
-                #
-                self.create(topic_str, partitions=partitions_int, config=old_config_dict, **kwargs)
+        if self.exists(topic_str):
+            if partitions is None:
+                partitions_int = self.partitions(topic_str)[topic_str]
             else:
-                if partitions is None:
-                    partitions_int = 1
+                partitions_int = partitions
+            #
+            old_config_dict = self.config(topic_str)[topic_str]
+            config_dict = {}
+            for key_str, value_str in old_config_dict.items():
+                if key_str in config:
+                    config_dict[key_str] = config[key_str]
                 else:
-                    partitions_int = partitions
-                #
-                self.create(topic_str, partitions=partitions_int, **kwargs)
+                    config_dict[key_str] = value_str
+            #
+            self.delete(topic_str)
+            #
+            self.create(topic_str, partitions=partitions_int, config=config_dict, **kwargs)
+        else:
+            if partitions is None:
+                partitions_int = 1
+            else:
+                partitions_int = partitions
+            #
+            self.create(topic_str, partitions=partitions_int, config=config, **kwargs)
         #
-        return topic_str_list
+        return topic_str
 
     retouch = recreate

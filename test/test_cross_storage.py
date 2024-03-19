@@ -552,21 +552,21 @@ def test_cp(test_obj, storage1, storage2):
     if storage1.__class__.__name__ == "RestProxy":
         # Need to use the native Kafka API here since the RestProxy V2 consumer does not support timestamps.
         c = Cluster("local")
-        (message_dict_list1, n_int1) = c.cat(topic_str1, group=group_str3, type=type_str, n=3*3)
+        message_dict_list1 = c.cat(topic_str1, group=group_str3, type=type_str, n=3*3)
     else:
-        (message_dict_list1, n_int1) = storage1.cat(topic_str1, group=group_str3, type=type_str, n=3*3)
+        message_dict_list1 = storage1.cat(topic_str1, group=group_str3, type=type_str, n=3*3)
     #
-    test_obj.assertEqual(3*3, n_int1)
+    test_obj.assertEqual(3*3, len(message_dict_list1))
     #
     group_str4 = test_obj.create_test_group_name(storage1)
     if storage1.__class__.__name__ == "RestProxy":
         # Need to use the native Kafka API here since the RestProxy V2 consumer does not support timestamps.
         c = Cluster("local")
-        (message_dict_list2, n_int2) = c.cat(topic_str3, group=group_str4, type=type_str, n=3*3)
+        message_dict_list2 = c.cat(topic_str3, group=group_str4, type=type_str, n=3*3)
     else:
-        (message_dict_list2, n_int2) = storage1.cat(topic_str3, group=group_str4, type=type_str, n=3*3)
+        message_dict_list2 = storage1.cat(topic_str3, group=group_str4, type=type_str, n=3*3)
     #
-    test_obj.assertEqual(3*3, n_int2)
+    test_obj.assertEqual(3*3, len(message_dict_list2))
     #
     storage1_topic1_timestamp_set = set([message_dict["timestamp"] for message_dict in message_dict_list1])
     storage1_topic3_timestamp_set = set([message_dict["timestamp"] for message_dict in message_dict_list2])
@@ -589,9 +589,8 @@ def test_cp(test_obj, storage1, storage2):
     test_obj.assertEqual(3*3, written_n_int3)
     #
     group_str6 = test_obj.create_test_group_name(storage1)
-    (message_dict_list3, n_int3) = storage2.cat(topic_str5, group=group_str6, type="json", n=3*3)
+    message_dict_list3 = storage2.cat(topic_str5, group=group_str6, type="json", n=3*3)
     test_obj.assertEqual(3*3, len(message_dict_list3))
-    test_obj.assertEqual(3*3, n_int3)
     #
     # Has the mapping been done properly?
     for message_dict in message_dict_list3:
@@ -658,9 +657,8 @@ def test_from_to_file(test_obj, storage1, storage2):
         storage1.from_file(storage2, file_str, topic_str2)
         #
         group_str2 = test_obj.create_test_group_name(storage1)
-        (message_dict_list, n_int2) = storage1.cat(topic_str2, group=group_str2, n=3, type="json")
+        message_dict_list = storage1.cat(topic_str2, group=group_str2, n=3, type="json")
         test_obj.assertEqual(3, len(message_dict_list))
-        test_obj.assertEqual(3, n_int2)
         test_obj.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
         test_obj.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
         test_obj.assertEqual(80.0, message_dict_list[2]["value"]["calories"])
