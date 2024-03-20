@@ -258,7 +258,7 @@ class Storage(Shell, Files, AddOns):
     def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
         return self.admin.offsets_for_times(pattern, partitions_timestamps, **kwargs)
 
-    def partitions(self, pattern=None, partitions=None, verbose=False, **kwargs):
+    def partitions(self, pattern, partitions=None, verbose=False, **kwargs):
         return self.admin.partitions(pattern, partitions, verbose, **kwargs)
 
     # Groups

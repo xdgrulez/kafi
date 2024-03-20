@@ -46,7 +46,7 @@ class FSProducer(StorageProducer):
         key_list = key if isinstance(key, list) else [key for _ in value_list]
         #
         timestamp_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
-        headers_list = headers if isinstance(headers, list) and len(headers) == len(value_list) else [headers for _ in value_list]
+        headers_list = headers if isinstance(headers, list) and all(self.storage_obj.is_headers(headers1) for headers1 in headers) and len(headers) == len(value_list) else [headers for _ in value_list]
         headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         partition_int_list = partitions if isinstance(partitions, list) else [partitions for _ in value_list]
         #
