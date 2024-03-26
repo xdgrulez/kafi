@@ -1,5 +1,5 @@
 * "repeat last message", produce mit ganzem Message-Record
-
+* empty topic (evtl. sogar mit Timestamp/Offset)
 * clean up fs groups after offsets.retention.minutes (default: 24h) after last update (explicit call at first?)
 * offsets with REST Proxy? Geht es vielleicht doch?
 * set default value for key_type/value_type etc. in kash-section
