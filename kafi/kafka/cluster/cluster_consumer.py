@@ -21,7 +21,7 @@ class ClusterConsumer(KafkaConsumer):
         self.consumer_config_dict["enable.auto.commit"] = self.enable_auto_commit_bool        
         #
         if "config" in kwargs:
-            for key_str, value in kwargs["config"]:
+            for key_str, value in kwargs["config"].items():
                 consumer_config_dict[key_str] = value
         #
         self.producer = Consumer(consumer_config_dict)

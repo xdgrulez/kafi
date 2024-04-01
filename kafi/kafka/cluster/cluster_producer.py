@@ -20,7 +20,7 @@ class ClusterProducer(KafkaProducer):
         producer_config_dict = cluster_obj.kafka_config_dict.copy()
         #
         if "config" in kwargs:
-            for key_str, value in kwargs["config"]:
+            for key_str, value in kwargs["config"].items():
                 producer_config_dict[key_str] = value
         #
         self.producer = Producer(producer_config_dict)
