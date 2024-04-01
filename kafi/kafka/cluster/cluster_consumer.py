@@ -12,14 +12,20 @@ class ClusterConsumer(KafkaConsumer):
     def __init__(self, cluster_obj, *topics, **kwargs):
         super().__init__(cluster_obj, *topics, **kwargs)
         #
-        # Consumer Config
+        # Consumer config
         #
-        self.consumer_config_dict.update(cluster_obj.kafka_config_dict)
+        consumer_config_dict = cluster_obj.kafka_config_dict.copy()
+        #
         self.consumer_config_dict["group.id"] = self.group_str
         self.consumer_config_dict["session.timeout.ms"] = cluster_obj.session_timeout_ms()
-        self.consumer_config_dict["enable.auto.commit"] = self.enable_auto_commit_bool
+        self.consumer_config_dict["enable.auto.commit"] = self.enable_auto_commit_bool        
         #
-        self.consumer = Consumer(self.consumer_config_dict)
+        consumer_config_key_str_list = ["group.id", "group.instance.id", "partition.assignment.strategy", "session.timeout.ms", "heartbeat.interval.ms", "group.protocol.type", "coordinator.query.interval.ms", "max.poll.interval.ms", "enable.auto.commit", "auto.commit.interval.ms", "enable.auto.offset.store", "queued.min.messages", "queued.max.messages.kbytes", "fetch.wait.max.ms", "fetch.queue.backoff.ms", "fetch.message.max.bytes", "max.partition.fetch.bytes", "fetch.max.bytes", "fetch.min.bytes", "fetch.error.backoff.ms", "offset.store.method", "isolation.level", "enable.partition.eof", "check.crcs"]
+        for consumer_config_key_str in consumer_config_key_str_list:
+            if consumer_config_key_str in kwargs:
+                consumer_config_dict[consumer_config_key_str] = kwargs[consumer_config_key_str]
+        #
+        self.producer = Consumer(consumer_config_dict)
         #
         self.subscribe()
 
