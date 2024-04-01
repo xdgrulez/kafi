@@ -17,13 +17,13 @@ class ClusterProducer(KafkaProducer):
         #
         # Producer config
         #
-        config_dict = cluster_obj.kafka_config_dict.copy()
-        producer_config_key_str_list = ["transactional.id", "transaction.timeout.ms", "enable.gapless.guarantee", "queue.buffering.max.messages", "queue.buffering.max.kbytes", "queue.buffering.max.ms", "linger.ms", "message.send.max.retries", "retries", "retry.backoff.ms", "retry.backoff.max.ms", "queue.buffering.backpressure.threshold", "compression.codec", "compression.type", "batch.num.messages", "batch.size", "delivery.report.only.error", "sticky.partitioning.linger.ms"]
-        for producer_config_key_str in producer_config_key_str_list:
-            if producer_config_key_str in kwargs:
-                config_dict[producer_config_key_str] = kwargs[producer_config_key_str]
+        producer_config_dict = cluster_obj.kafka_config_dict.copy()
         #
-        self.producer = Producer(config_dict)
+        if "config" in kwargs:
+            for key_str, value in kwargs["config"]:
+                producer_config_dict[key_str] = value
+        #
+        self.producer = Producer(producer_config_dict)
 
     def __del__(self):
         self.flush()
