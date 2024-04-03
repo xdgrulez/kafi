@@ -1,6 +1,11 @@
 from kafi.serializer import Serializer
 from kafi.schemaregistry import SchemaRegistry
 
+# Constants
+
+CURRENT_TIME = 0
+RD_KAFKA_PARTITION_UA = -1
+
 class StorageProducer(Serializer):
     def __init__(self, storage_obj, topic, **kwargs):
         self.storage_obj = storage_obj
@@ -14,6 +19,8 @@ class StorageProducer(Serializer):
         self.keep_partitions_bool = kwargs["keep_partitions"] if "keep_partitions" in kwargs else False
         #
         self.keep_timestamps_bool = kwargs["keep_timestamps"] if "keep_timestamps" in kwargs else False
+        #
+        self.keep_headers_bool = kwargs["keep_headers"] if "keep_headers" in kwargs else True
         #
         self.written_counter_int = 0
         #
@@ -31,11 +38,11 @@ class StorageProducer(Serializer):
         #
         key_list = [message_dict["key"] for message_dict in message_dict_list]
         #
-        partition_list = [message_dict["partition"] for message_dict in message_dict_list]
+        partition_list = [message_dict["partition"] for message_dict in message_dict_list] if self.keep_partitions_bool else [RD_KAFKA_PARTITION_UA for _ in message_dict_list]
         #
-        timestamp_list = [message_dict["timestamp"] for message_dict in message_dict_list]
+        timestamp_list = [message_dict["timestamp"] for message_dict in message_dict_list] if self.keep_timestamps_bool else [CURRENT_TIME for _ in message_dict_list]
         #
-        headers_list = [message_dict["headers"] for message_dict in message_dict_list]
+        headers_list = [message_dict["headers"] for message_dict in message_dict_list] if self.keep_headers_bool else [None for _ in message_dict_list]
         #
         return self.produce(value_list, key=key_list, partition=partition_list, timestamp=timestamp_list, headers=headers_list, **kwargs)
 

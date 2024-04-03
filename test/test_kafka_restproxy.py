@@ -42,6 +42,9 @@ class Test(TestSingleStorageBase):
     def test_set_group_offsets(self):
         pass
 
+    def test_lags(self):
+        pass
+
     def test_offsets_for_times(self):
         pass
 

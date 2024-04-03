@@ -14,17 +14,13 @@ class ClusterConsumer(KafkaConsumer):
         #
         # Consumer config
         #
-        consumer_config_dict = cluster_obj.kafka_config_dict.copy()
+        self.consumer_config_dict.update(cluster_obj.kafka_config_dict)
         #
         self.consumer_config_dict["group.id"] = self.group_str
         self.consumer_config_dict["session.timeout.ms"] = cluster_obj.session_timeout_ms()
-        self.consumer_config_dict["enable.auto.commit"] = self.enable_auto_commit_bool        
+        self.consumer_config_dict["enable.auto.commit"] = self.enable_auto_commit_bool
         #
-        if "config" in kwargs:
-            for key_str, value in kwargs["config"].items():
-                consumer_config_dict[key_str] = value
-        #
-        self.producer = Consumer(consumer_config_dict)
+        self.consumer = Consumer(self.consumer_config_dict)
         #
         self.subscribe()
 

@@ -185,7 +185,7 @@ class Storage(Shell, Files, AddOns):
 
 
     def is_headers(self, headers):
-        return self.is_headers_tuple_list(headers) or self.is_headers_dict(headers)
+        return headers == None or self.is_headers_tuple_list(headers) or self.is_headers_dict(headers)
 
     def headers_to_headers_str_bytes_tuple_list(self, headers):
         if headers is None:
