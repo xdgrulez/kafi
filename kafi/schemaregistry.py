@@ -1,5 +1,7 @@
 from confluent_kafka.schema_registry import Schema, SchemaRegistryClient
 
+from kafi.helpers import pattern_match
+
 class SchemaRegistry:
     def __init__(self, schema_registry_config_dict, kafi_config_dict):
         self.schema_registry_config_dict = schema_registry_config_dict
@@ -66,10 +68,12 @@ class SchemaRegistry:
         #
         return registeredSchema_dict
 
-    def get_subjects(self):
+    def get_subjects(self, pattern=None):
         subject_name_str_list = self.schemaRegistryClient.get_subjects()
         #
-        return subject_name_str_list
+        filtered_subject_name_str_list = pattern_match(subject_name_str_list, pattern)
+        #
+        return filtered_subject_name_str_list
 
     def delete_subject(self, subject_name, permanent=False):
         subject_name_str = subject_name

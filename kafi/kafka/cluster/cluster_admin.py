@@ -1,6 +1,7 @@
 from fnmatch import fnmatch
 import time
 
+from kafi.helpers import pattern_match
 from kafi.kafka.kafka_admin import KafkaAdmin
 
 from confluent_kafka import Consumer, TopicPartition
@@ -260,7 +261,7 @@ class ClusterAdmin(KafkaAdmin):
     def list_topics(self, pattern=None):
         topic_str_list = list(self.adminClient.list_topics().topics.keys())
         #
-        filtered_topic_str_list = self.pattern_match(topic_str_list, pattern)
+        filtered_topic_str_list = pattern_match(topic_str_list, pattern)
         #
         return filtered_topic_str_list
 
