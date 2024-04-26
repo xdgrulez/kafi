@@ -23,19 +23,25 @@ class Files(Pandas):
         data_bytesIO = io.BytesIO()
         #
         if suffix_str == ".csv":
-            df.to_csv(data_bytesIO)
+            index_bool = kwargs["index"] if "index" in kwargs else True
+            df.to_csv(data_bytesIO, index=index_bool)
         elif suffix_str == ".feather":
             df.to_feather(data_bytesIO)
         elif suffix_str == ".json":
+            index_bool = kwargs["index"] if "index" in kwargs else None
             df.to_json(data_bytesIO, orient="records")
         elif suffix_str == ".orc":
-            df.to_orc(data_bytesIO)
+            index_bool = kwargs["index"] if "index" in kwargs else None
+            df.to_orc(data_bytesIO, index=index_bool)
         elif suffix_str == ".parquet":
-            df.to_parquet(data_bytesIO)
+            index_bool = kwargs["index"] if "index" in kwargs else None
+            df.to_parquet(data_bytesIO, index=index_bool)
         elif suffix_str == ".xlsx":
-            df.to_excel(data_bytesIO)
+            index_bool = kwargs["index"] if "index" in kwargs else True
+            df.to_excel(data_bytesIO, index=index_bool)
         elif suffix_str == ".xml":
-            df.to_xml(data_bytesIO)
+            index_bool = kwargs["index"] if "index" in kwargs else True
+            df.to_xml(data_bytesIO, index=index_bool)
         #
         data_bytes = data_bytesIO.getvalue()
         file_abs_path_str = fs_obj.admin.get_file_abs_path_str(file_str)
