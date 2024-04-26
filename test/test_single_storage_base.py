@@ -698,7 +698,7 @@ class TestSingleStorageBase(unittest.TestCase):
             (n_int1, _, _) = s.wc(topic_str)
             self.assertEqual(n_int1, 100)
             pr.produce(100, key="even")
-            time.sleep(10)
+            time.sleep(20)
             pr.produce(101, key="odd")
             pr.close()
             #
