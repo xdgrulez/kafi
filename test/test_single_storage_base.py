@@ -43,6 +43,8 @@ class TestSingleStorageBase(unittest.TestCase):
         self.headers_str_str_tuple_list = [("header_field1", "header_value1"), ("header_field2", "header_value2")]
         self.headers_str_str_dict = {"header_field1": "header_value1", "header_field2": "header_value2"}
         #
+        self.nested_json_str_list = [{"state": "Florida", "shortname": "FL", "info": {"governor": "Rick Scott"}, "counties": [{"name": "Dade", "population": 12345}, {"name": "Broward", "population": 40000}, {"name": "Palm Beach", "population": 60000}]}, {"state": "Ohio", "shortname": "OH", "info": {"governor": "John Kasich"}, "counties": [{"name": "Summit", "population": 1234}, {"name": "Cuyahoga", "population": 1337}]}]
+        #
         self.topic_str_list = []
         self.group_str_list = []
         #
@@ -1004,6 +1006,40 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
         self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
         self.assertEqual(80.0, message_dict_list[2]["value"]["calories"])
+
+    def test_explode(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str1 = self.create_test_topic_name()
+        s.create(topic_str1)
+        producer = s.producer(topic_str1, type="json")
+        producer.produce(self.nested_json_str_list)
+        producer.close()
+        #
+        group_str1 = self.create_test_group_name()
+        df1 = s.to_df(topic_str1, group=group_str1, type="json")
+        self.assertTrue(len(df1), 2)
+        self.assertTrue(df1.iloc[0]["state"], "Florida")
+        self.assertTrue(df1.iloc[1]["state"], "Ohio")
+        self.assertTrue(isinstance(df1.iloc[0]["counties"], list))
+        self.assertTrue(isinstance(df1.iloc[1]["counties"], list))
+        #
+        group_str2 = self.create_test_group_name()
+        df2 = s.to_df(topic_str1, group=group_str2, type="json", explode=True)
+        self.assertTrue(len(df2), 5)
+        self.assertTrue(df2.iloc[0]["state"], "Florida")
+        self.assertTrue(df2.iloc[1]["state"], "Florida")
+        self.assertTrue(df2.iloc[2]["state"], "Florida")
+        self.assertTrue(df2.iloc[3]["state"], "Ohio")
+        self.assertTrue(df2.iloc[4]["state"], "Ohio")
+        self.assertTrue(df2.iloc[0]["info.governor"], "Rick Scott")
+        self.assertTrue(df2.iloc[1]["counties.name"], "Broward")
+        self.assertTrue(df2.iloc[2]["counties.population"], "60000")
+        self.assertTrue(df2.iloc[3]["shortname"], "OH")
+        self.assertTrue(df2.iloc[4]["counties.population"], "1337")
 
     # Add-Ons
 

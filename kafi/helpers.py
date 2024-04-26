@@ -3,8 +3,10 @@ import binascii
 import datetime
 import dateutil.parser
 from fnmatch import fnmatch
+from functools import reduce
 import json
 # import logging
+import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter, Retry
 import sys
@@ -229,3 +231,25 @@ def pattern_match(input_str_list, pattern_str_or_str_list):
     output_topic_str_list.sort()
     #
     return output_topic_str_list
+
+
+def explode_normalize(df):
+    def explode(df, col_str):
+        df = df.explode(col_str)
+        #
+        if isinstance(df.iloc[0][col_str], list):
+            df = explode(df, col_str)
+        elif isinstance(df.iloc[0][col_str], object):
+            df_child = pd.json_normalize(df[col_str])
+            df_child.columns = [f'{col_str}.{child_col_str}' for child_col_str in df_child.columns]
+            df = pd.concat([df.loc[:, ~df.columns.isin([col_str])].reset_index(drop=True), df_child], axis=1)
+        #
+        return df
+    #
+    col_str_list = [col_str for col_str in df.columns if isinstance(df.iloc[0][col_str], list)]
+    if len(col_str_list) < 1:
+        return df
+    #
+    df = reduce(explode, col_str_list, df)
+    #
+    return df

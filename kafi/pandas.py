@@ -1,4 +1,7 @@
+import pandas as pd
+
 from kafi.functional import Functional
+from kafi.helpers import explode_normalize
 
 # Constants
 
@@ -8,11 +11,12 @@ ALL_MESSAGES = -1
 
 class Pandas(Functional):
     def to_df(self, topic, n=ALL_MESSAGES, **kwargs):
-        import pandas as pd
         #
-
         def foldl_function(acc, message_dict):
-            df = pd.DataFrame.from_records([message_dict["value"]])
+            # df = pd.DataFrame.from_records([message_dict["value"]])
+            df = pd.json_normalize(message_dict["value"])
+            if "explode" in kwargs and kwargs["explode"] == True:
+                df = explode_normalize(df)
             #
             acc = pd.concat([acc, df], ignore_index=True)
             #
