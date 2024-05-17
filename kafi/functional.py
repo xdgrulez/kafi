@@ -59,7 +59,6 @@ class Functional:
     #
 
     def flatmap_to(self, topic, target_storage, target_topic, flatmap_function, n=ALL_MESSAGES, **kwargs):
-        n_int = n
         progress_num_messages_int = self.progress_num_messages()
         verbose_int = self.verbose()
         #
@@ -95,9 +94,8 @@ class Functional:
         (_, batch_message_dict_list, written_progress_message_counter_int) = produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
         #
         if len(batch_message_dict_list) > 0:
-            batch_message_dict_list1 = batch_message_dict_list[:n_int % produce_batch_size_int]
-            target_producer.produce_list(batch_message_dict_list1, **target_kwargs)
-            written_progress_message_counter_int += len(batch_message_dict_list1)
+            target_producer.produce_list(batch_message_dict_list, **target_kwargs)
+            written_progress_message_counter_int += len(batch_message_dict_list)
         #
         target_producer.close()
         #

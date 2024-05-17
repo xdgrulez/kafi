@@ -854,7 +854,7 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         group_str2 = self.create_test_group_name()
         (consume_n_int1, written_n_int1) = s.cp(topic_str1, s, topic_str3, group=group_str2, source_type="json", target_type="json", consume_batch_size=3, map_function=map_ish, n=5)
-        self.assertEqual(6, consume_n_int1)
+        self.assertEqual(5, consume_n_int1)
         self.assertEqual(5, written_n_int1)
 
     def test_wc(self):
