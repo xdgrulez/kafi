@@ -41,29 +41,31 @@ class Serializer:
             #
             return payload_dict
         #
-
-        if type_str.lower() in ["bytes", "str", "json"]:
-            serialized_payload_bytes = to_bytes(payload)
-        elif type_str.lower() in ["pb", "protobuf"]:
-            schema = get_schema()
-            generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
-            protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistry.schemaRegistryClient, {"use.deprecated.format": False})
-            payload_dict = payload_to_payload_dict()
-            protobuf_message = generalizedProtocolMessageType()
-            ParseDict(payload_dict, protobuf_message)
-            serialized_payload_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))
-        elif type_str.lower() == "avro":
-            schema = get_schema()
-            avroSerializer = AvroSerializer(self.schemaRegistry.schemaRegistryClient, schema)
-            payload_dict = payload_to_payload_dict()
-            serialized_payload_bytes = avroSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
-        elif type_str.lower() in ["jsonschema", "json_sr"]:
-            schema = get_schema()
-            jSONSerializer = JSONSerializer(schema, self.schemaRegistry.schemaRegistryClient)
-            payload_dict = payload_to_payload_dict()
-            serialized_payload_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
+        if payload_dict == None:
+            serialized_payload_bytes = None
         else:
-            raise Exception("Only \"bytes\", \"str\", \"json\", \"avro\", \"protobuf\" (\"pb\") and \"jsonschema\" (\"json_sr\") supported.")
+            if type_str.lower() in ["bytes", "str", "json"]:
+                serialized_payload_bytes = to_bytes(payload)
+            elif type_str.lower() in ["pb", "protobuf"]:
+                schema = get_schema()
+                generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
+                protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistry.schemaRegistryClient, {"use.deprecated.format": False})
+                payload_dict = payload_to_payload_dict()
+                protobuf_message = generalizedProtocolMessageType()
+                ParseDict(payload_dict, protobuf_message)
+                serialized_payload_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))
+            elif type_str.lower() == "avro":
+                schema = get_schema()
+                avroSerializer = AvroSerializer(self.schemaRegistry.schemaRegistryClient, schema)
+                payload_dict = payload_to_payload_dict()
+                serialized_payload_bytes = avroSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
+            elif type_str.lower() in ["jsonschema", "json_sr"]:
+                payload_dict = payload_to_payload_dict()
+                schema = get_schema()
+                jSONSerializer = JSONSerializer(schema, self.schemaRegistry.schemaRegistryClient)
+                serialized_payload_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
+            else:
+                raise Exception("Only \"bytes\", \"str\", \"json\", \"avro\", \"protobuf\" (\"pb\") and \"jsonschema\" (\"json_sr\") supported.")
         #
         return serialized_payload_bytes
 
