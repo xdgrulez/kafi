@@ -41,7 +41,7 @@ class Serializer:
             #
             return payload_dict
         #
-        if payload_dict == None:
+        if payload == None:
             serialized_payload_bytes = None
         else:
             if type_str.lower() in ["bytes", "str", "json"]:
