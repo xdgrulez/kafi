@@ -828,6 +828,7 @@ class TestSingleStorageBase(unittest.TestCase):
         producer = s.producer(topic_str1, value_type="json")
         producer.produce(self.snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
         producer.produce(self.snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
+        producer.produce(self.snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
         producer.close()
         #
         topic_str2 = self.create_test_topic_name()
@@ -848,14 +849,15 @@ class TestSingleStorageBase(unittest.TestCase):
             self.assertEqual(1, len(message_dict_list2))
             self.assertEqual(message_dict_list2[0]["value"], self.snack_ish_dict_list[0])
             self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
-        # test edge case: n % consumer_batch_size > 0, n > consumer_batch_size, source topic length > n (e.g. source topic length = 100000, n = 42700, consumer_batch_size = 1000)
+        # test that the consumer does not consume too many messages (the former bug occurred when: n % consumer_batch_size > 0, n > consumer_batch_size * 2, source topic length > n (e.g. source topic length = 100000, n = 42700, consumer_batch_size = 1000))
         topic_str3 = self.create_test_topic_name()
         s.create(topic_str3)
         #
         group_str2 = self.create_test_group_name()
+        (consume_n_int1, written_n_int1) = s.cp(topic_str1, s, topic_str3, group=group_str2, source_type="json", target_type="json", consume_batch_size=3, map_function=map_ish, n=7)
         (consume_n_int1, written_n_int1) = s.cp(topic_str1, s, topic_str3, group=group_str2, source_type="json", target_type="json", consume_batch_size=3, map_function=map_ish, n=5)
-        self.assertEqual(5, consume_n_int1)
-        self.assertEqual(5, written_n_int1)
+        self.assertEqual(7, consume_n_int1)
+        self.assertEqual(7, written_n_int1)
 
     def test_wc(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
