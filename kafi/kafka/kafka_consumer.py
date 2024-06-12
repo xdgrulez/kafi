@@ -18,8 +18,6 @@ class KafkaConsumer(StorageConsumer):
         if n_int == 0:
             return initial_acc
         #
-        enable_auto_commit_bool = self.enable_auto_commit_bool
-        #
         consume_batch_size_int = kwargs["consume_batch_size"] if "consume_batch_size" in kwargs else self.storage_obj.consume_batch_size()
         if n != ALL_MESSAGES and consume_batch_size_int > n_int:
             consume_batch_size_int = n_int
@@ -55,7 +53,7 @@ class KafkaConsumer(StorageConsumer):
                     break_bool = True
                     break
             #
-            if not enable_auto_commit_bool and self.storage_obj.commit_after_processing():
+            if not self.enable_auto_commit_bool and self.storage_obj.commit_after_processing():
                 self.commit(topic_str_offsets_dict_dict)
             #
             if break_bool:
