@@ -88,29 +88,37 @@ class Shell(Functional):
 
     #
 
-    def grep_fun(self, topic, match_function, n=ALL_MESSAGES, **kwargs):
-        def flatmap_function(message_dict):
+    def grep_fun(self, topic, match_function, n=ALL_MESSAGES, matches=ALL_MESSAGES, **kwargs):
+        def foldl_function(acc, message_dict):
+            (matching_message_dict_acc_list, matches_acc_int) = acc
             if match_function(message_dict):
                 if self.verbose() > 0:
                     partition_int = message_dict["partition"]
                     offset_int = message_dict["offset"]
                     print(f"Found matching message on partition {partition_int}, offset {offset_int}.")
-                return [message_dict]
+                #
+                matching_message_dict_acc_list += [message_dict]
+                matches_acc_int += 1
+                if matches_int != -1 and matches_acc_int >= matches_int:
+                    raise Exception(f"Stopped after {matches_int} matches.")
+                return (matching_message_dict_acc_list, matches_acc_int)
             else:
-                return []
+                return (matching_message_dict_acc_list, matches_acc_int)
         #
-        (matching_message_dict_list, message_counter_int) = self.flatmap(topic, flatmap_function, n=n, **kwargs)
+        matches_int = matches
+        #
+        ((matching_message_dict_list, _), message_counter_int) = self.foldl(topic, foldl_function, ([], 0), n=n, **kwargs)
         #
         return matching_message_dict_list, len(matching_message_dict_list), message_counter_int
 
-    def grep(self, topic, re_pattern_str, n=ALL_MESSAGES, **kwargs):
+    def grep(self, topic, re_pattern_str, n=ALL_MESSAGES, results=ALL_MESSAGES, **kwargs):
         def match_function(message_dict):
             pattern = re.compile(re_pattern_str)
             key_str = str(message_dict["key"])
             value_str = str(message_dict["value"])
             return pattern.match(key_str) is not None or pattern.match(value_str) is not None
         #
-        return self.grep_fun(topic, match_function, n=n, **kwargs)
+        return self.grep_fun(topic, match_function, n=n, results=results, **kwargs)
 
     def stat(self, topic, **kwargs):
         return self.cat(topic, **kwargs)[1]
