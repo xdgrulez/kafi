@@ -47,6 +47,8 @@ class ClusterProducer(KafkaProducer):
         timestamp = kwargs["timestamp"] if "timestamp" in kwargs else CURRENT_TIME
         headers = kwargs["headers"] if "headers" in kwargs else None
         #
+        flush_bool = kwargs["flush"] if "flush" in kwargs else True
+        #
         value_list = value if isinstance(value, list) else [value]
         #
         key_list = key if isinstance(key, list) else [key for _ in value_list]
@@ -69,6 +71,7 @@ class ClusterProducer(KafkaProducer):
             #
             self.written_counter_int += 1
         #
-        self.flush()
+        if flush_bool:
+            self.flush()
         #
         return self.written_counter_int
