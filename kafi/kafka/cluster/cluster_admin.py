@@ -7,6 +7,12 @@ from kafi.kafka.kafka_admin import KafkaAdmin
 from confluent_kafka import Consumer, TopicPartition
 from confluent_kafka.admin import AclBinding, AclBindingFilter, AclOperation, AclPermissionType, AdminClient, ConfigResource, _ConsumerGroupState, _ConsumerGroupTopicPartitions, NewPartitions, NewTopic, ResourcePatternType, ResourceType
 
+#
+
+OFFSET_END = -1
+
+#
+
 class ClusterAdmin(KafkaAdmin):
     def __init__(self, cluster_obj, **kwargs):
         super().__init__(cluster_obj, **kwargs)
@@ -340,6 +346,31 @@ class ClusterAdmin(KafkaAdmin):
             partition_int_offsets_tuple_dict = {partition_int: consumer.get_watermark_offsets(TopicPartition(topic_str, partition=partition_int), timeout_float) for partition_int in range(partitions_int)}
             topic_str_partition_int_offsets_tuple_dict_dict[topic_str] = partition_int_offsets_tuple_dict
         return topic_str_partition_int_offsets_tuple_dict_dict
+
+    def delete_records(self, pattern_or_offsets, **kwargs):
+        request_timeout_float = kwargs["request_timeout"] if "request_timeout" in kwargs else None
+        operation_timeout_float = kwargs["operation_timeout"] if "operation_timeout" in kwargs else None
+        #
+        topicPartition_list = []
+        if isinstance(pattern_or_offsets, dict):
+            topic_str_offsets_dict_dict = pattern_or_offsets
+            topicPartition_list = [TopicPartition(topic_str, partition_int, offset_int) for topic_str, offsets_dict in topic_str_offsets_dict_dict.items() for partition_int, offset_int in offsets_dict.items()]
+        else:
+            pattern = pattern_or_offsets
+            topic_str_list = self.list_topics(pattern)
+            for topic_str in topic_str_list:
+                partitions_int = self.partitions(topic_str)[topic_str]
+                for partition_int in range(0, partitions_int):
+                    topicPartition_list.append(TopicPartition(topic_str, partition_int, OFFSET_END))
+        #
+        if request_timeout_float is not None and operation_timeout_float is not None:
+            self.adminClient.delete_records(topicPartition_list, request_timeout=request_timeout_float, operation_timeout=operation_timeout_float)
+        elif request_timeout_float is not None and operation_timeout_float is None:
+            self.adminClient.delete_records(topicPartition_list, request_timeout=request_timeout_float)
+        elif request_timeout_float is None and operation_timeout_float is not None:
+            self.adminClient.delete_records(topicPartition_list, operation_timeout=operation_timeout_float)
+        else:
+            self.adminClient.delete_records(topicPartition_list)
 
 # helpers
 

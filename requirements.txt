@@ -1,4 +1,4 @@
-confluent_kafka>=2.2.0
+confluent_kafka>=2.5.0
 fastavro
 grpcio-tools
 jsonschema

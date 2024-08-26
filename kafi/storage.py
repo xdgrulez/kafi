@@ -230,6 +230,9 @@ class Storage(Shell, Files, AddOns):
     def watermarks(self, pattern, **kwargs):
         return self.admin.watermarks(pattern, **kwargs)
 
+    def delete_records(self, pattern_or_offsets, **kwargs):
+        return self.admin.delete_records(pattern_or_offsets, **kwargs)
+
     def lags(self, group_pattern, topic_pattern, **kwargs):
       group_offsets = self.admin.group_offsets(group_pattern)
       topic_str_partition_int_offsets_tuple_dict_dict = self.admin.watermarks(topic_pattern, **kwargs)

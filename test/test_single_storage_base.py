@@ -15,6 +15,9 @@ from kafi.helpers import *
 #
 
 OFFSET_INVALID = -1001
+OFFSET_END = -1
+
+#
 
 class TestSingleStorageBase(unittest.TestCase):
     def setUp(self):
@@ -698,7 +701,7 @@ class TestSingleStorageBase(unittest.TestCase):
             (n_int1, _, _) = s.wc(topic_str)
             self.assertEqual(n_int1, 100)
             pr.produce(100, key="even")
-            time.sleep(20)
+            time.sleep(10)
             pr.produce(101, key="odd")
             pr.close()
             #
@@ -729,6 +732,44 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         config_str_config_dict_dict = s.configs(verbose=True)
         self.assertIn("local", config_str_config_dict_dict)
+
+    def test_delete_records(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        if s.__class__.__name__ == "Cluster":
+            topic_str = self.create_test_topic_name()
+            s.create(topic_str)
+            w = s.producer(topic_str, value_type="str")
+            w.produce(self.snack_str_list)
+            w.close()
+            #
+            n_int = s.l(topic_str)[topic_str]
+            self.assertEqual(n_int, 3)
+            #
+            offsets = topic_str
+            s.delete_records(offsets)
+            time.sleep(1)
+            n_int = s.l(topic_str)[topic_str]
+            self.assertEqual(n_int, 0)
+            ###
+            topic_str = self.create_test_topic_name()
+            s.create(topic_str)
+            w = s.producer(topic_str, value_type="str")
+            w.produce(self.snack_str_list)
+            w.close()
+            #
+            n_int = s.l(topic_str)[topic_str]
+            self.assertEqual(n_int, 3)
+            #
+            offsets = {topic_str: {0: 2}}
+            s.delete_records(offsets)
+            i = 0
+            time.sleep(1)
+            n_int = s.l(topic_str)[topic_str]
+            self.assertEqual(n_int, 1)
 
     # Shell
 
