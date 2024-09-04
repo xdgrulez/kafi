@@ -7,3 +7,5 @@ What can *Kafi* do for you?
 * it is useful for data scientists for building asynchronous data pipelines, or for synchronously bringing files from local disk, S3 or Azure Blob Storage to Kafka and vice versa etc.
 
 *Kafi* is the successor of [kash.py](https://github.com/xdgrulez/kash.py) which is the successor of [streampunk](https://github.com/xdgrulez/streampunk).
+
+Documentation coming soon...
