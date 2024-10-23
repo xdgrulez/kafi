@@ -345,6 +345,7 @@ class ClusterAdmin(KafkaAdmin):
             partitions_int = self.partitions(topic_str)[topic_str]
             partition_int_offsets_tuple_dict = {partition_int: consumer.get_watermark_offsets(TopicPartition(topic_str, partition=partition_int), timeout_float) for partition_int in range(partitions_int)}
             topic_str_partition_int_offsets_tuple_dict_dict[topic_str] = partition_int_offsets_tuple_dict
+        consumer.close()
         return topic_str_partition_int_offsets_tuple_dict_dict
 
     def delete_records(self, pattern_or_offsets, **kwargs):

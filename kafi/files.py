@@ -23,7 +23,7 @@ class Files(Pandas):
         data_bytesIO = io.BytesIO()
         #
         if suffix_str == ".csv":
-            index_bool = kwargs["index"] if "index" in kwargs else True
+            index_bool = kwargs["index"] if "index" in kwargs else False
             df.to_csv(data_bytesIO, index=index_bool)
         elif suffix_str == ".feather":
             df.to_feather(data_bytesIO)
@@ -37,10 +37,10 @@ class Files(Pandas):
             index_bool = kwargs["index"] if "index" in kwargs else None
             df.to_parquet(data_bytesIO, index=index_bool)
         elif suffix_str == ".xlsx":
-            index_bool = kwargs["index"] if "index" in kwargs else True
+            index_bool = kwargs["index"] if "index" in kwargs else False
             df.to_excel(data_bytesIO, index=index_bool)
         elif suffix_str == ".xml":
-            index_bool = kwargs["index"] if "index" in kwargs else True
+            index_bool = kwargs["index"] if "index" in kwargs else False
             df.to_xml(data_bytesIO, index=index_bool)
         #
         data_bytes = data_bytesIO.getvalue()
