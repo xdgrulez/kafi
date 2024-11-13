@@ -1,6 +1,22 @@
+* cat mit map_function fixen?
+* bessere Fehlermeldung, wenn (lokales) Topic nicht existiert
+
+* Doku:
+1. Config
+  Kafka (Cluster, RestProxy)
+  FS (Local, S3, AzureBlob)
+2. High-level
+  shell (cat, grep, cp (auch Cluster-übergreifend)...)
+  pandas
+3. Low-level
+  produce
+  consume
+  map
+  flatmap
+  foldl...
+* Perftest - vielleicht analog zu AK-Distro?
+* Nervende Meldungen (Telemetry, Consumer...) weg
 * Fehlermeldung GroupAuthorization + TopicAuthorization bei foldl abfangen und anzeigen
-
-
 * "repeat last message", produce mit ganzem Message-Record
 * empty topic (evtl. sogar mit Timestamp/Offset)
 * clean up fs groups after offsets.retention.minutes (default: 24h) after last update (explicit call at first?)
