@@ -8,4 +8,7 @@ What can *Kafi* do for you?
 
 *Kafi* is the successor of [kash.py](https://github.com/xdgrulez/kash.py) which is the successor of [streampunk](https://github.com/xdgrulez/streampunk).
 
-Documentation coming soon...
+Documentation coming soon... for now, please use the kash.py documentation and the help function from Python...
+
+Here is a presentation I gave at Current 2024 (Sep 24) and Zürich Apache Kafka Meetup (Nov 24) about Kafi: https://github.com/xdgrulez/cur24 You can also find a recording of the Current 2024 session here: https://www.confluent.io/resources/generic/current-2024-recap/
+
