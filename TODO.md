@@ -1,3 +1,6 @@
+* "repeat last message", produce mit ganzem Message-Record
+ * empty topic (evtl. sogar mit Timestamp/Offset)
+ * clean up fs groups after offsets.retention.minutes (default: 24h) after last update (explicit call at first?)
 * cat mit map_function fixen?
 * bessere Fehlermeldung, wenn (lokales) Topic nicht existiert
 
