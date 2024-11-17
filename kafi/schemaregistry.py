@@ -80,7 +80,7 @@ class SchemaRegistry:
                 basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
                 auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
             #
-            subject_name_str_list = get(url_str, headers_dict, auth_str_tuple)
+            subject_name_str_list = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple)
         else:
             subject_name_str_list = self.schemaRegistryClient.get_subjects()
         #
