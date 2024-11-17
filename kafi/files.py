@@ -12,7 +12,10 @@ ALL_MESSAGES = -1
 #x = [{"name": "cookie", "calories": 500.0, "colour": "brown"}, {"name": "cake", "calories": 260.0, "colour": "white"}, {"name": "timtam", "calories": 80.0, "colour": "chocolate"}]
 
 class Files(Pandas):
-    def to_file(self, topic, fs_obj, file, n=ALL_MESSAGES, **kwargs):
+    def topic_to_file(self, topic, fs_obj, file, n=ALL_MESSAGES, **kwargs):
+        if not fs_obj.__class__.__bases__[0].__name__== "FS":
+            raise Exception("The target must be a file system.")
+        #
         file_str = file
         #
         suffix_str = pathlib.Path(file_str).suffix
@@ -49,9 +52,11 @@ class Files(Pandas):
         #
         return len(df)
 
-    def from_file(self, fs_obj, file, topic, n=ALL_MESSAGES, **kwargs):
+    def file_to_topic(self, file, storage_obj, topic, n=ALL_MESSAGES, **kwargs):
+        if not self.__class__.__bases__[0].__name__== "FS":
+            raise Exception("The source must be a file system.")
+        #
         import pandas as pd
-        import numpy as np
         #
         file_str = file
         #
@@ -59,8 +64,8 @@ class Files(Pandas):
         if suffix_str not in [".csv", ".feather", ".json", ".orc", ".parquet", ".xlsx", ".xml"]:
             raise Exception("Only \".csv\", \".feather\", \".json\", \".orc\", \".parquet\", \".xlsx\" and \".xml\" supported.")
         #
-        file_abs_path_str = fs_obj.admin.get_file_abs_path_str(file_str)
-        data_bytes = fs_obj.admin.read_bytes(file_abs_path_str)
+        file_abs_path_str = self.admin.get_file_abs_path_str(file_str)
+        data_bytes = self.admin.read_bytes(file_abs_path_str)
         data_bytesIO = io.BytesIO(data_bytes)
         #
         if suffix_str == ".csv":
@@ -78,4 +83,4 @@ class Files(Pandas):
         elif suffix_str == ".xml":
             df = pd.read_xml(data_bytesIO)
         #
-        return self.from_df(df, topic, n, **kwargs)
+        return storage_obj.from_df(df, topic, n, **kwargs)

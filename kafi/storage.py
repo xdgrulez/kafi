@@ -21,7 +21,7 @@ class Storage(Shell, Files, AddOns):
         #
         self.schema_registry_config_dict = self.config_dict["schema_registry"] if "schema_registry" in self.config_dict else {}
         #
-        self.schemaRegistry = None
+        self.sr = None
         #
         self.kafi_config_dict = self.config_dict["kafi"] if "kafi" in self.config_dict else self.config_dict["kash"] if "kash" in self.config_dict else {}
         #
@@ -79,9 +79,9 @@ class Storage(Shell, Files, AddOns):
         #
         #
         if "schema.registry.url" in self.schema_registry_config_dict:
-            self.schemaRegistry = self.get_schemaRegistry()
+            self.sr = self.get_schemaRegistry()
         else:
-            self.schemaRegistry = None
+            self.sr = None
 
     #
 

@@ -24,7 +24,7 @@ class Serializer:
             if schema_str is None:
                 if schema_id_int is None:
                     raise Exception("Please provide a schema or schema ID for the " + ("key" if key_bool else "value") + ".")
-                schema = self.schemaRegistry.schemaRegistryClient.get_schema(schema_id_int)
+                schema = self.sr.schemaRegistryClient.get_schema(schema_id_int)
             else:
                 schema = schema_str
             #
@@ -49,20 +49,20 @@ class Serializer:
             elif type_str.lower() in ["pb", "protobuf"]:
                 schema = get_schema()
                 generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
-                protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistry.schemaRegistryClient, {"use.deprecated.format": False})
+                protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.sr.schemaRegistryClient, {"use.deprecated.format": False})
                 payload_dict = payload_to_payload_dict()
                 protobuf_message = generalizedProtocolMessageType()
                 ParseDict(payload_dict, protobuf_message)
                 serialized_payload_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() == "avro":
                 schema = get_schema()
-                avroSerializer = AvroSerializer(self.schemaRegistry.schemaRegistryClient, schema)
+                avroSerializer = AvroSerializer(self.sr.schemaRegistryClient, schema)
                 payload_dict = payload_to_payload_dict()
                 serialized_payload_bytes = avroSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() in ["jsonschema", "json_sr"]:
                 payload_dict = payload_to_payload_dict()
                 schema = get_schema()
-                jSONSerializer = JSONSerializer(schema, self.schemaRegistry.schemaRegistryClient)
+                jSONSerializer = JSONSerializer(schema, self.sr.schemaRegistryClient)
                 serialized_payload_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
             else:
                 raise Exception("Only \"bytes\", \"str\", \"json\", \"avro\", \"protobuf\" (\"pb\") and \"jsonschema\" (\"json_sr\") supported.")
@@ -76,9 +76,9 @@ class Serializer:
         if schema_hash_int in self.schema_hash_int_generalizedProtocolMessageType_dict:
             generalizedProtocolMessageType = self.schema_hash_int_generalizedProtocolMessageType_dict[schema_hash_int]
         else:
-            subject_name_str = self.schemaRegistry.create_subject_name_str(topic_str, key_bool)
-            schema_dict = self.schemaRegistry.create_schema_dict(schema_str, "PROTOBUF")
-            schema_id_int = self.schemaRegistry.register_schema(subject_name_str, schema_dict, normalize_schemas)
+            subject_name_str = self.sr.create_subject_name_str(topic_str, key_bool)
+            schema_dict = self.sr.create_schema_dict(schema_str, "PROTOBUF")
+            schema_id_int = self.sr.register_schema(subject_name_str, schema_dict, normalize_schemas)
             #
             generalizedProtocolMessageType = self.schema_id_int_and_schema_str_to_generalizedProtocolMessageType(schema_id_int, schema_str)
             #

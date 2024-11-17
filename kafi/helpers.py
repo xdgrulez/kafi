@@ -40,7 +40,7 @@ def ppretty(dict):
 def create_session(retries_int):
     # logging.basicConfig(level=logging.DEBUG)
     session = requests.Session()
-    retry = Retry(total=retries_int, backoff_factor=1, status_forcelist=[500, 502, 503, 504, 404], allowed_methods=None)
+    retry = Retry(total=retries_int, backoff_factor=1, status_forcelist=[500, 502, 503, 504], allowed_methods=None)
     adapter = HTTPAdapter(max_retries=retry)
     session.mount('http://', adapter)
     session.mount('https://', adapter)
@@ -60,8 +60,9 @@ def get(url_str, headers_dict, payload_dict=None, auth_str_tuple=None, retries=0
     else:
         response_dict = {"response": response.text}
     #
-    if "error_code" in response_dict and response_dict["error_code"] > 400:
-        raise Exception(response_dict["message"])
+    if isinstance(response_dict, dict):
+        if "error_code" in response_dict and response_dict["error_code"] > 400:
+            raise Exception(response_dict["message"])
     #
     if response.ok:
         return response_dict
@@ -77,8 +78,9 @@ def delete(url_str, headers_dict, auth_str_tuple=None, retries=10):
     else:
         response_dict = {"response": response.text}
     #
-    if "error_code" in response_dict and response_dict["error_code"] > 400:
-        raise Exception(response_dict["message"])
+    if isinstance(response_dict, dict):
+        if "error_code" in response_dict and response_dict["error_code"] > 400:
+            raise Exception(response_dict["message"])
     #
     if response.ok:
         return response_dict
@@ -96,9 +98,10 @@ def post(url_str, headers_dict, payload_dict_or_generator, auth_str_tuple=None, 
     if is_json(response.text):
         response_dict = response.json()
         #
-        if "error_code" in response_dict and response_dict["error_code"] > 400:
-            raise Exception(response_dict["message"])
-        #
+        if isinstance(response_dict, dict):
+            if "error_code" in response_dict and response_dict["error_code"] > 400:
+                raise Exception(response_dict["message"])
+            #
         if response.ok:
             return response_dict
         else:
@@ -108,8 +111,9 @@ def post(url_str, headers_dict, payload_dict_or_generator, auth_str_tuple=None, 
         response_dict_list = json.loads(response_text_list)
         #
         for response_dict in response_dict_list:
-            if "error_code" in response_dict and response_dict["error_code"] > 400:
-                raise Exception(response_dict["message"])
+            if isinstance(response_dict, dict):
+                if "error_code" in response_dict and response_dict["error_code"] > 400:
+                    raise Exception(response_dict["message"])
         #
         if response.ok:
             return response_dict_list

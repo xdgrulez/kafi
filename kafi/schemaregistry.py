@@ -1,6 +1,6 @@
 from confluent_kafka.schema_registry import Schema, SchemaRegistryClient
 
-from kafi.helpers import pattern_match
+from kafi.helpers import pattern_match, get, delete
 
 class SchemaRegistry:
     def __init__(self, schema_registry_config_dict, kafi_config_dict):
@@ -68,8 +68,21 @@ class SchemaRegistry:
         #
         return registeredSchema_dict
 
-    def get_subjects(self, pattern=None):
-        subject_name_str_list = self.schemaRegistryClient.get_subjects()
+    def get_subjects(self, pattern=None, deleted=False):
+        deleted_bool = deleted
+        #
+        if deleted_bool:
+            url_str = f"{self.schema_registry_config_dict['schema.registry.url']}/subjects?deleted=true"
+            headers_dict = {"Accept": "application/json"}
+            auth_str_tuple = None
+            #
+            if "basic.auth.credentials.source" in self.schema_registry_config_dict and self.schema_registry_config_dict["basic.auth.credentials.source"] == "USER_INFO":
+                basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
+                auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
+            #
+            subject_name_str_list = get(url_str, headers_dict, auth_str_tuple)
+        else:
+            subject_name_str_list = self.schemaRegistryClient.get_subjects()
         #
         filtered_subject_name_str_list = pattern_match(subject_name_str_list, pattern)
         #
@@ -103,15 +116,27 @@ class SchemaRegistry:
     def get_versions(self, subject_name):
         subject_name_str = subject_name
         #
-        schema_id_int_list = self.schemaRegistryClient.get_versions(subject_name_str)
+        version_int_list = self.schemaRegistryClient.get_versions(subject_name_str)
         #
-        return schema_id_int_list
+        return version_int_list
 
-    def delete_version(self, subject_name, version):
+    def delete_version(self, subject_name, version, permanent=False):
         subject_name_str = subject_name
         version_int = version
+        permanent_bool = permanent
         #
-        schema_id_int = self.schemaRegistryClient.delete_version(subject_name_str, version_int)
+        if permanent_bool:
+            url_str = f"{self.schema_registry_config_dict['schema.registry.url']}/subjects/{subject_name_str}/versions/{version_int}?permanent=true"
+            headers_dict = {"Accept": "application/json"}
+            auth_str_tuple = None
+            #
+            if "basic.auth.credentials.source" in self.schema_registry_config_dict and self.schema_registry_config_dict["basic.auth.credentials.source"] == "USER_INFO":
+                basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
+                auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
+            #
+            schema_id_int = delete(url_str, headers_dict, auth_str_tuple)
+        else:
+            schema_id_int = self.schemaRegistryClient.delete_version(subject_name_str, version_int)
         #
         return schema_id_int
 

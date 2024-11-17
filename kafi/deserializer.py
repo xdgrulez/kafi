@@ -64,10 +64,10 @@ class Deserializer:
             return None
         #
         schema_id_int = int.from_bytes(bytes[1:5], "big")
-        schema_dict = self.schemaRegistry.get_schema(schema_id_int)
+        schema_dict = self.sr.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
         #
-        avroDeserializer = AvroDeserializer(self.schemaRegistry.schemaRegistryClient, schema_str)
+        avroDeserializer = AvroDeserializer(self.sr.schemaRegistryClient, schema_str)
         dict = avroDeserializer(bytes, None)
         return dict
 
@@ -76,7 +76,7 @@ class Deserializer:
             return None
         #
         schema_id_int = int.from_bytes(bytes[1:5], "big")
-        schema_dict = self.schemaRegistry.get_schema(schema_id_int)
+        schema_dict = self.sr.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
         #
         jsonDeserializer = JSONDeserializer(schema_str)
@@ -86,7 +86,7 @@ class Deserializer:
     # Helpers
 
     def schema_id_int_to_generalizedProtocolMessageType_protobuf_schema_str_tuple(self, schema_id_int):
-        schema_dict = self.schemaRegistry.get_schema(schema_id_int)
+        schema_dict = self.sr.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
         #
         generalizedProtocolMessageType = self.schema_id_int_and_schema_str_to_generalizedProtocolMessageType(schema_id_int, schema_str)

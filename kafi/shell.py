@@ -9,10 +9,7 @@ ALL_MESSAGES = -1
 #
 
 class Shell(Functional):
-    def cat(self, topic, n=ALL_MESSAGES, cat_function=lambda x: x, **kwargs):
-        def map_function(message_dict):
-            return cat_function(message_dict)
-        #
+    def cat(self, topic, n=ALL_MESSAGES, map_function=lambda x: x, **kwargs):
         (message_dict_list, _) = self.map(topic, map_function, n, **kwargs)
         return message_dict_list
 
@@ -35,8 +32,11 @@ class Shell(Functional):
 
     #
 
-    def cp(self, source_topic, target_storage, target_topic, map_function=lambda x: x, n=ALL_MESSAGES, **kwargs):
-        return self.map_to(source_topic, target_storage, target_topic, map_function, n, **kwargs)
+    def cp(self, source_topic, target_storage, target_topic, map_function=lambda x: x, n=ALL_MESSAGES, flatmap_function=None, **kwargs):
+        if flatmap_function is not None:
+            return self.flatmap_to(source_topic, target_storage, target_topic, flatmap_function, n, **kwargs)
+        else:
+            return self.map_to(source_topic, target_storage, target_topic, map_function, n, **kwargs)
 
     #
 

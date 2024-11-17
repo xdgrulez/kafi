@@ -27,9 +27,9 @@ class StorageProducer(Serializer):
         self.schema_hash_int_generalizedProtocolMessageType_dict = {}
         #
         if "schema.registry.url" in self.storage_obj.schema_registry_config_dict:
-            self.schemaRegistry = SchemaRegistry(self.storage_obj.schema_registry_config_dict, self.storage_obj.kafi_config_dict)
+            self.sr = SchemaRegistry(self.storage_obj.schema_registry_config_dict, self.storage_obj.kafi_config_dict)
         else:
-            self.schemaRegistry = None
+            self.sr = None
 
     #
 

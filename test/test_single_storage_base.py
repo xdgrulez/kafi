@@ -894,8 +894,12 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str3 = self.create_test_topic_name()
         s.create(topic_str3)
         #
+        def flatmap_ish(message_dict):
+            message_dict["value"]["colour"] += "ish"
+            return [message_dict]
+        #
         group_str2 = self.create_test_group_name()
-        (consume_n_int1, written_n_int1) = s.cp(topic_str1, s, topic_str3, group=group_str2, source_type="json", target_type="json", consume_batch_size=3, map_function=map_ish, n=7)
+        (consume_n_int1, written_n_int1) = s.cp(topic_str1, s, topic_str3, group=group_str2, source_type="json", target_type="json", consume_batch_size=3, flatmap_function=flatmap_ish, n=7)
         self.assertEqual(7, consume_n_int1)
         self.assertEqual(7, written_n_int1)
 
