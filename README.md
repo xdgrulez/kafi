@@ -44,9 +44,9 @@ local:
 
 Kafi is looking for these YAML files in:
 1. the local directory (`.`) or the directory set in `KAFI_HOME` (if set)
-2. the `configs/<storage type>/<storage>` sub-directory of 1.
+2. the `configs/<storage type>/<storage>` sub-directory of 1 (`.` or `KAFI_HOME`).
 
-Within Kafi, you can refer to these files by their name without the `.yml` or `.yaml` suffix.
+Within Kafi, you can refer to these files by their name without the `.yml` or `.yaml` suffix, e.g. `local` for `local.yaml`.
 
 You can also use environment variables within the YAML files, e.g.:
 ```
@@ -63,7 +63,7 @@ schema_registry:
   basic.auth.user.info: ${KAFI_SCHEMA_REGISTRY_USER_INFO}
 ```
 
-We provide example YAML files in this GitHub repository under `configs`, e.g. for Confluent Cloud (Kafka), S3 (files), Azure Blob Storage (files) etc.
+We provide example YAML files in this GitHub repository under `configs`, e.g. for Confluent Cloud and Redpanda (real Kafka), and local disk, S3 and Azure Blob Storage (emulated Kafka, files).
 
 # Use Cases
 
@@ -71,7 +71,7 @@ What can Kafi be for you?
 
 ## An Alternative to the Existing CLI Tools
 
-I initially started development on Kafi because I was not a big fan of the CLI tools available for working with Kafka. Hence, one way Kafi help you is to act as an alternative to these tools, e.g. those from the Apache Kafka distribution.
+I initially started development on Kafi because I was not a big fan of the existing Kafka CLI tools. Hence, one way Kafi can help you is to act as an alternative to these tools, e.g. those from the Apache Kafka distribution.
 
 To get started, just enter your Python interpreter, import Kafi and create a `Cluster` object (e.g. pointing to your local Kafka cluster):
 
@@ -81,6 +81,8 @@ c = Cluster("local")
 ```
 
 ### Create Topics
+
+Now you can create topics with a shell-inspired command:
 
 ```
 c.touch("my_topic")
@@ -94,6 +96,8 @@ kafka-topics --bootstrap-server localhost:9092 --topic my_topic --create
 
 ### List Topics
 
+Or list topics:
+
 ```
 c.ls()
 ```
@@ -105,6 +109,8 @@ kafka-topics --bootstrap-server localhost:9092 --list
 ```
 
 ### Produce Messages
+
+Produce messages:
 
 ```
 p = c.producer("my_topic")
@@ -120,6 +126,8 @@ kafka-console-producer --bootstrap-server localhost:9092 --topic my_topic --prop
 ```
 
 ### Consume Messages
+
+And consume them:
 
 ```
 c.cat("my_topic")
@@ -157,7 +165,7 @@ c.filter("my_topic", type="bytes", filter_function=lambda x: x["value"][0] != 0)
 
 ### Delete Records
 
-Kafi supports all of the not-too-specific AdminClient methods of `confluent_kafka`, so you can use it to do (and automate) all kinds of configuration tasks. For example deleting the first 100 messages of a topic:
+Kafi supports all of the not-too-specific AdminClient methods of [confluent_kafka](https://github.com/confluentinc/confluent-kafka-python), so you can use it to do (and automate) all kinds of configuration tasks. For example deleting the first 100 messages of a topic:
 
 ```
 c.delete_records({"my_topic": {0: 100}})
@@ -169,7 +177,7 @@ c.delete_records({"my_topic": {0: 100}})
 c.watermarks("my_topic")
 ```
 
-etc. etc.
+etc.
 
 ### Collect all Schemas Used in a Topic
 
@@ -191,12 +199,12 @@ for id in ids:
 
 ## A Simple Non-stateful Stream Processor
 
-You can use Kafi as a simple non-stateful stream processing tool.
+You can also use Kafi as a simple non-stateful stream processing tool.
 
 
 ### Copy Topics
 
-You can use Kafi to just copy topics like this[^2]:
+You can use Kafi to just copy topics[^2]:
 
 ```
 c.cp("my_topic", c, "my_copied_topic")
@@ -204,7 +212,7 @@ c.cp("my_topic", c, "my_copied_topic")
 
 ### Map
 
-In the example below, in our `map_function`, we add 42 the "bla" fields or all messages from the input topic `my_topic` and write the processed messages to the output topic `my_mapped_topic`:
+In the example below, we use a *single message transform*. In our `map_function`, we add 42 the "bla" fields or all messages from the input topic `my_topic` and write the processed messages to the output topic `my_mapped_topic`:
 
 ```
 def plus_42(x):
@@ -216,7 +224,7 @@ c.cp("my_topic", c, "my_mapped_topic", map_function=plus_42)
 
 ### FlatMap
 
-You can also use Kafi for filtering (or exploding) using a `flatmap` function. Here, we only keep those messages from the input topic `my_topic` where "bla" equals 4711. Only those messages are written to the output topic `my_flatmapped_topic`:
+You can also use Kafi for filtering (or exploding) using its `flatmap` functionality. In the example below, we only keep those messages from the input topic `my_topic` where "bla" equals 4711. Only those messages are written to the output topic `my_flatmapped_topic`:
 
 ```
 def filter_out_4711(x):
@@ -293,11 +301,13 @@ c.kafka_to_file("my_topic", l, "my_topic.parquet")
 
 ### Bring a Parquet File back to Kafka
 
-The other way round...
+The other way round:
 
 ```
 l.file_to_kafka("my_topic.parquet", c, "my_topic")
 ```
+
+---
 
 [^1]: "Kafi" stands for "(Ka)fka and (fi)les". And, "Kafi" is the Swiss word for a coffee or a coffee place. *Kafi* is the successor of [kash.py](https://github.com/xdgrulez/kash.py) which is the successor of [streampunk](https://github.com/xdgrulez/streampunk).
 
