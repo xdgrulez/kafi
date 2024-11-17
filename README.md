@@ -311,4 +311,4 @@ l.file_to_kafka("my_topic.parquet", c, "my_topic")
 
 [^1]: "Kafi" stands for "(Ka)fka and (fi)les". And, "Kafi" is the Swiss word for a coffee or a coffee place. *Kafi* is the successor of [kash.py](https://github.com/xdgrulez/kash.py) which is the successor of [streampunk](https://github.com/xdgrulez/streampunk).
 
-[^2] Please note that you need to set the `consume_timeout` to `-1` on the source cluster for Kafi to always wait for new messages: `c.consume_timeout(-1)`.
+[^2]: Please note that you need to set the `consume_timeout` to `-1` on the source cluster for Kafi to always wait for new messages: `c.consume_timeout(-1)`.
