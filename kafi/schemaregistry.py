@@ -92,7 +92,18 @@ class SchemaRegistry:
         subject_name_str = subject_name
         permanent_bool = permanent
         #
-        schema_id_int_list = self.schemaRegistryClient.delete_subject(subject_name_str, permanent_bool)
+        if permanent_bool:
+            url_str = f"{self.schema_registry_config_dict['schema.registry.url']}/subjects/{subject_name_str}?permanent=true"
+            headers_dict = {"Accept": "application/json"}
+            auth_str_tuple = None
+            #
+            if "basic.auth.credentials.source" in self.schema_registry_config_dict and self.schema_registry_config_dict["basic.auth.credentials.source"] == "USER_INFO":
+                basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
+                auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
+            #
+            schema_id_int_list = delete(url_str, headers_dict, auth_str_tuple)
+        else:
+            schema_id_int_list = self.schemaRegistryClient.delete_subject(subject_name_str, permanent_bool)
         #
         return schema_id_int_list
 
