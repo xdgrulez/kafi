@@ -201,7 +201,6 @@ for id in ids:
 
 You can also use Kafi as a simple non-stateful stream processing tool.
 
-
 ### Copy Topics
 
 You can use Kafi to just copy topics[^2]:
@@ -274,7 +273,7 @@ cluster.cp("my_topic", s3, "my_topic_backup", type="bytes")
 
 ## A Bridge from Kafka to Files
 
-If you are e.g. a data scientist, Kafi can play the role of a bridge between Kafka and files for you. Based on Pandas, it allows you to e.g. transform Kafka topics into all kinds of file formats:
+If you are e.g. a data scientist, Kafi can play the role of a bridge between Kafka and files for you. Based on Pandas, it allows you to e.g. transform Kafka topics into Pandas dataframes and vice versa, and similarly for all kinds of file formats:
 * CSV
 * Feather
 * JSON
@@ -283,12 +282,28 @@ If you are e.g. a data scientist, Kafi can play the role of a bridge between Kaf
 * Excel
 * XML
 
+### Get a Snapshot of a Topic as a Pandas Dataframe
+
+This is as simple as:
+
+```
+df = c.topic_to_df("my_topic")
+```
+
+### Write a Pandas Dataframe to a Kafka Topic
+
+The other way round:
+
+```
+c.df_to_topic(df, "my_topic")
+```
+
 ### Get a Snapshot of a Topic as an Excel File
 
 This is as simple as:
 
 ```
-c.kafka_to_file("my_topic", l, "my_topic.xlsx")
+c.topic_to_file("my_topic", l, "my_topic.xlsx")
 ```
 
 ### Get a Snapshot of a Topic as a Parquet File
@@ -296,7 +311,7 @@ c.kafka_to_file("my_topic", l, "my_topic.xlsx")
 Similar:
 
 ```
-c.kafka_to_file("my_topic", l, "my_topic.parquet")
+c.topic_to_file("my_topic", l, "my_topic.parquet")
 ```
 
 ### Bring a Parquet File back to Kafka
@@ -304,7 +319,7 @@ c.kafka_to_file("my_topic", l, "my_topic.parquet")
 The other way round:
 
 ```
-l.file_to_kafka("my_topic.parquet", c, "my_topic")
+l.file_to_topic("my_topic.parquet", c, "my_topic")
 ```
 
 ---

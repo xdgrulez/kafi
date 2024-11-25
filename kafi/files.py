@@ -22,7 +22,7 @@ class Files(Pandas):
         if suffix_str not in [".csv", ".feather", ".json", ".orc", ".parquet", ".xlsx", ".xml"]:
             raise Exception("Only \".csv\", \".feather\", \".json\", \".orc\", \".parquet\", \".xlsx\" and \".xml\" supported.")
         #
-        df = self.to_df(topic, n, **kwargs)
+        df = self.topic_to_df(topic, n, **kwargs)
         data_bytesIO = io.BytesIO()
         #
         if suffix_str == ".csv":
@@ -83,4 +83,4 @@ class Files(Pandas):
         elif suffix_str == ".xml":
             df = pd.read_xml(data_bytesIO)
         #
-        return storage_obj.from_df(df, topic, n, **kwargs)
+        return storage_obj.df_to_topic(df, topic, n, **kwargs)

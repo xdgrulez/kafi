@@ -10,7 +10,7 @@ ALL_MESSAGES = -1
 #
 
 class Pandas(Functional):
-    def to_df(self, topic, n=ALL_MESSAGES, **kwargs):
+    def topic_to_df(self, topic, n=ALL_MESSAGES, **kwargs):
         #
         def foldl_function(acc, message_dict):
             # df = pd.DataFrame.from_records([message_dict["value"]])
@@ -27,7 +27,7 @@ class Pandas(Functional):
         #
         return df
 
-    def from_df(self, df, topic, n=ALL_MESSAGES, **kwargs):
+    def df_to_topic(self, df, topic, n=ALL_MESSAGES, **kwargs):
         n_int = n
         #
 

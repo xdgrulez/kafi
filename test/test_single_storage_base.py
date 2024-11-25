@@ -1045,7 +1045,7 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        df = s.to_df(topic_str1, group=group_str1, type="json")
+        df = s.topic_to_df(topic_str1, group=group_str1, type="json")
         self.assertTrue(len(df), 3)
         self.assertTrue(df.iloc[1]["name"], "cake")
         self.assertTrue(df.iloc[1]["calories"], 260.0)
@@ -1053,7 +1053,7 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str2 = self.create_test_topic_name()
         s.create(topic_str2)
-        s.from_df(df, topic_str2)
+        s.df_to_topic(df, topic_str2)
         #
         group_str2 = self.create_test_group_name()
         message_dict_list = s.cat(topic_str2, group=group_str2, n=3, type="json")
@@ -1075,7 +1075,7 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        df1 = s.to_df(topic_str1, group=group_str1, type="json")
+        df1 = s.topic_to_df(topic_str1, group=group_str1, type="json")
         self.assertTrue(len(df1), 2)
         self.assertTrue(df1.iloc[0]["state"], "Florida")
         self.assertTrue(df1.iloc[1]["state"], "Ohio")
@@ -1083,7 +1083,7 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertTrue(isinstance(df1.iloc[1]["counties"], list))
         #
         group_str2 = self.create_test_group_name()
-        df2 = s.to_df(topic_str1, group=group_str2, type="json", explode=True)
+        df2 = s.topic_to_df(topic_str1, group=group_str2, type="json", explode=True)
         self.assertTrue(len(df2), 5)
         self.assertTrue(df2.iloc[0]["state"], "Florida")
         self.assertTrue(df2.iloc[1]["state"], "Florida")
