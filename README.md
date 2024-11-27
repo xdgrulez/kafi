@@ -17,10 +17,12 @@ Kafi also fully supports the Schema Registry API, including full support for Avr
 
 Kafi is fun to use either in the interactive Python interpreter (acting a bit like a shell), or inside your Python (micro-)service code, and - it's the ideal tool for Kafka in your Jupyter notebooks :-)
 
-This "README" is split into:
+This "README" is split into a basic part:
 * [Installation](#installation)
 * [Basic Configuration](#basic-configuration)
 * [Use Cases](#use-cases)
+
+...and a more detailed part:
 * [Full Configuration](#full-configuration)
 * [More on Producing Messages](#more-on-producing-messages)
 * [More on Consuming Messages](#more-on-consuming-messages)
