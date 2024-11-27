@@ -27,11 +27,6 @@ class Kafka(Storage):
         #
         # cluster config kafi section
         #
-        if "flush.num.messages" not in self.kafi_config_dict:
-            self.flush_num_messages(10000)
-        else:
-            self.flush_num_messages(int(self.kafi_config_dict["flush.num.messages"]))
-        #
         if "flush.timeout" not in self.kafi_config_dict:
             self.flush_timeout(-1.0)
         else:
@@ -46,11 +41,6 @@ class Kafka(Storage):
             self.consume_timeout(5.0)
         else:
             self.consume_timeout(float(self.kafi_config_dict["consume.timeout"]))
-        #
-        if "enable.auto.commit" not in self.kafi_config_dict:
-            self.enable_auto_commit(True)
-        else:
-            self.enable_auto_commit(bool(self.kafi_config_dict["enable.auto.commit"]))
         #
         if "session.timeout.ms" not in self.kafi_config_dict:
             self.session_timeout_ms(45000)
@@ -89,10 +79,7 @@ class Kafka(Storage):
         else:
             self.requests_num_retries(int(self.kafi_config_dict["requests.num.retries"]))
 
-    #
-
-    def flush_num_messages(self, new_value=None): # int
-        return self.get_set_config("flush.num.messages", new_value)
+    # Cluster
 
     def flush_timeout(self, new_value=None): # float
         return self.get_set_config("flush.timeout", new_value)
@@ -115,7 +102,7 @@ class Kafka(Storage):
     def block_interval(self, new_value=None): # float
         return self.get_set_config("block.interval", new_value)
 
-    #
+    # RestProxy
 
     def fetch_min_bytes(self, new_value=None): # int
         return self.get_set_config("fetch.min.bytes", new_value)

@@ -47,7 +47,7 @@ class ClusterProducer(KafkaProducer):
         timestamp = kwargs["timestamp"] if "timestamp" in kwargs else CURRENT_TIME
         headers = kwargs["headers"] if "headers" in kwargs else None
         #
-        flush_bool = kwargs["flush"] if "flush" in kwargs else True
+        flush_bool = kwargs["flush"] if "flush" in kwargs else False
         #
         value_list = value if isinstance(value, list) else [value]
         #

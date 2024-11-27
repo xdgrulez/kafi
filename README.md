@@ -15,6 +15,8 @@ Emulated Kafka is e.g. useful for debugging, as there is need to run an addition
 
 Kafi also fully supports the Schema Registry API, including full support for Avro, Protobuf and JSONSchema.
 
+Kafi is fun to use either in the interactive Python interpreter (acting a bit like a shell), or inside your Python (micro-)service code, and - it's the ideal tool for Kafka in your Jupyter notebooks.
+
 # Installation
 
 Kafi is on PyPI. Hence:
@@ -326,52 +328,6 @@ You can specify the serialization/deserialization types as follows:
 * `value_type`/`value_schema`/`value_schema_id`: Type/schema/schema ID for the value
 * `type`: Same type for both the key and the value
 
-## A Debug Tool
-
-Kafi can help you debugging and fixing bugs on Kafka. Here are some examples.
-
-### Check for Missing Magic Byte
-
-A typical reoccurring problem is that at the beginning of their development, producers forget to use a proper serializer and the first bunch of messages on dev are not e.g. JSONSchema-serialized. This is how you can find the first N messages in a topic that do not start with the *magic byte* 0:
-
-```
-c.filter("my_topic", type="bytes", filter_function=lambda x: x["value"][0] != 0)
-```
-
-### Delete Records
-
-Kafi supports all of the not-too-specific AdminClient methods of [confluent_kafka](https://github.com/confluentinc/confluent-kafka-python), so you can use it to do (and automate) all kinds of configuration tasks. For example deleting the first 100 messages of a topic:
-
-```
-c.delete_records({"my_topic": {0: 100}})
-```
-
-...and then to get the watermarks of a topic:
-
-```
-c.watermarks("my_topic")
-```
-
-etc.
-
-### Collect all Schemas Used in a Topic
-
-Kafi has full support for the Schema Registry API. Hence, you can list, create, delete and update subjects/schemas etc.
-
-The following Kafi code snippet collects the list of schema IDs used in a topic and prints out the corresponding schemas retrieved from the Schema Registry:
-
-```
-def collect_ids(acc, x):
-  id = int.from_bytes(x["value"][1:5], "big")
-  acc.add(id)
-  return acc
-
-(ids, _) = c.foldl("my_topic", collect_ids, set(), type="bytes")
-
-for id in ids:
-  print(c.sr.get_schema(id))
-```
-
 ## Use the Schema Registry API
 
 You can also use Kafi to directly interact with the Schema Registry API. Here are some examples.
@@ -636,12 +592,242 @@ l = Local("local")
 l.file_to_topic("topic_json.parquet", c, "topic_json_from_parquet")
 ```
 
+## A Powerful Debug Tool
+
+Because Kafi is just a Python library integrated into the Python ecosystem, it can be a powerful tool for debugging and fixing bugs - for developers and Kafka administrators alike. Here are some examples.
+
+### Check for Missing Magic Byte
+
+A typical reoccurring problem is that at the beginning of their development, producers forget to use a proper serializer and the first bunch of messages on dev are not e.g. JSONSchema-serialized. This is how you can find the first N messages in a topic that do not start with the *magic byte* 0:
+
+```
+c.filter("my_topic", type="bytes", filter_function=lambda x: x["value"][0] != 0)
+```
+
+### Delete Records
+
+Kafi supports all of the not-too-specific AdminClient methods of [confluent_kafka](https://github.com/confluentinc/confluent-kafka-python), so you can use it to do (and automate) all kinds of configuration tasks. For example deleting the first 100 messages of a topic:
+
+```
+c.delete_records({"my_topic": {0: 100}})
+```
+
+...and then to get the watermarks of a topic:
+
+```
+c.watermarks("my_topic")
+```
+
+etc.
+
+### Collect all Schemas Used in a Topic
+
+The following Kafi code snippet collects the list of schema IDs used in a topic and prints out the corresponding schemas retrieved from the Schema Registry:
+
+```
+def collect_ids(acc, x):
+  id = int.from_bytes(x["value"][1:5], "big")
+  acc.add(id)
+  return acc
+
+(ids, _) = c.foldl("my_topic", collect_ids, set(), type="bytes")
+
+for id in ids:
+  print(c.sr.get_schema(id))
+```
+
+## Full Configuration
+
+Kafi looks for its YAML configuration files inside the five `configs` sub directories:
+
+* `configs`
+  * `azureblobs` (Kafka emulation/files: Azure Blob Storage)
+  * `clusters` (Real Kafka, Kafka API)
+  * `locals` (Kafka emulation/files: local file system)
+  * `restproxies` (Real Kafka, Kafka REST Proxy API)
+  * `s3s` (Kafka emulation/files: S3)
+
+You can also place your configuration file just in the current directory. If you set the `KAFI_HOME` environment variable, the directory specified there becomes the starting point for Kafi's search for configuration files.
+
+In Kafi one configuration file corresponds to a "connection" to a so-called *storage* (Kafka API, Kafka REST Proxy API, Local file system, S3 and Azure Blob Storage). Each storage has one section that only makes sense for itself:
+
+* Kafka API: `kafka`
+* Kafka REST Proxy API: `rest_proxy`
+* Local file system: `local`
+* S3: `s3`
+* Azure Blob Storage: `azure_blob`
+
+In addition, the storages can all have one or two of the following sections:
+* `schema_registry` (Schema Registry configuration)
+* `kafi` (additional configuration items)
+
+Please also have a look at the example YAML files in the GitHub repo for further illustration.
+
+### General
+
+The following configuration items are shared across all *storages* (defaults in brackets):
+
+* `schema_registry`
+  * `schema.registry.url`
+  * `basic.auth.credentials.source`
+  * `basic.auth.user.info`
+
+* `kafi`
+  * `progress.num.messages` (`1000`)
+  * `consume.batch.size` (`1000`)
+  * `produce.batch.size` (`1000`)
+  * `verbose` (`1` if run in the interactive Python interpreter, `0` if not)
+  * `auto.offset.reset` (`earliest`)
+  * `consumer.group.prefix` (`""`)
+  * `enable.auto.commit` (`false`)
+  * `commit.after.processing` (`true`)
+  * `key.type` (`str`)
+  * `value.type` (`json`)
+
+### Real Kafka
+
+#### Kafka API
+
+* `kafka`
+  * `bootstrap.servers`
+  * `security.protocol`
+  * `sasl.mechanisms`
+  * `sasl.username`
+  * `sasl.password`
+  * `log_level`(`3` if run in the interactive Python interpreter, `6` if not))
+  * etc. [librdkafka configuration](https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md)
+
+* `kafi`
+  * `flush.timeout` (`-1.0`)
+  * `retention.ms` (`604800000`)
+  * `consume.timeout` (`5.0`)
+  * `session.timeout.ms` (`45000`)
+  * `block.num.retries` (`10`)
+  * `block.interval` (`0.5`)
+
+#### Kafka REST Proxy API
+
+* `rest_proxy`:
+  * `rest.proxy.url`
+  * `basic.auth.user.info`
+
+* `kafi`:
+  * `fetch.min.bytes` (`-1`)
+  * `consumer.request.timeout.ms` (`1000`)
+  * `consume.num.attempts` (`3`)
+  * `requests.num.retries` (`10`)
+
+### Kafka Emulation/files
+
+#### Local File System
+
+* `local`:
+  * `root.dir` (`.`)
+
+#### S3
+
+* `s3`:
+  * `endpoint`
+  * `access.key`
+  * `secret.key`
+  * `bucket.name` (`test`)
+  * `root.dir` (`""`)
+
+#### Azure Blob Storage
+
+* `azure_blob`:
+  * `connection.string`
+  * `container.name` (`test`)
+  * `root.dir` (`""`)
+
+## More on Producing Messages
+
+To streamline its syntax, Kafi employs a number of defaults/assumptions. All of them can of course be overridden.
+
+Look at the following code from above:
+
+```
+p = c.producer("topic_json")
+p.produce({"bla": 123}, key="123")
+p.produce({"bla": 456}, key="456")
+p.produce({"bla": 789}, key="789")
+p.close()
+```
+
+Kafi uses the following defaults/assumptions here. First, for setting up the producer object:
+* The maximum batch size for producing is set to the corresponding value `produce.batch.size` in the `kafi` section of the configuration file, e.g. `1000` in `clusters/local.yaml`.
+* The flush timeout for `flush` calls to the Kafka API is set to the corresponding value `flush.timeout` in the `kafi` section of the configuration file, e.g. `-1.0` in `clusters/local.yaml`.
+* The default key type is set to the corresponding value `key.type` in the `kafi` section of the configuration file, e.g. `str` in `clusters/local.yaml`. It can also be overridden with the `key_type` kwargs parameter.
+* The default value type is set to the corresponding value `value.type` in the `kafi` section of the configuration file, e.g. `json` in `clusters/local.yaml`. It can also be overridden with the `value_type` kwargs parameter.
+* No delivery callback function is called. This can be overridden with the `delivery_function` kwargs parameter.
+
+Then, for each individual `produce` call:
+* there are no headers (you can add headers using the `headers` kwargs parameter).
+* the target partition is any (=-1) (you can set the target partition explicitly using the `partition` kwargs parameter).
+* the timestamp is set automatically using the `CURRENT_TIME` setting (=0) (you can set the timestamp to a specfic value using the `timestamp` kwargs parameter).
+* after producing each message, the producer does not call `flush` from the Kafka API (you can control this behavior using the `flush` kwargs parameter).
+
+The call could also be written out as follows, assuming the values from the example configuration file `clusters/local.yaml`:
+
+```
+c.produce_batch_size(1000)
+c.flush_timeout(-1.0)
+c.key_type("str")
+c.value_type("json")
+p = c.producer("topic_json", delivery_function=None)
+p.produce({"bla": 123}, key="123", headers=None, partition=-1, timestamp=0, flush=False)
+p.produce({"bla": 456}, key="456", headers=None, partition=-1, timestamp=0, flush=False)
+p.produce({"bla": 789}, key="789", headers=None, partition=-1, timestamp=0, flush=False)
+p.close()
+```
+
+## More on Consuming Messages
+
+For consuming messages, Kafi also makes use of a number of defaults/assumptions.
+
+To illustrate this, look at the following call:
+
+```
+c.cat("topic_json")
+```
+
+Kafi uses the following defaults/assumptions here. For one, `cat` hides the implicit creation of a consumer object. Then, for setting up the consumer:
+* It implicitly creates a new consumer group based on the current timestamp.
+* `auto.offset.reset` is set to the corresponding value `auto.offset.reset` in the `kafi` section of the configuration file, e.g. `earliest` in `clusters/local.yaml`.
+* `session.timeout.ms` is set to the corresponding value `session.timeout.ms` in the `kafi` section of the configuration file, e.g. `45000` milliseconds in `clusters/local.yaml`.
+* `enable.auto.commit` is set to the corresponding value `enable.auto.commit` in the `kafi` section of the configuration file, e.g. `false` in `clusters/local.yaml`.
+* The consume timeout is set to the corresponding value `consume.timeout` in the `kafi` section of the configuration file, e.g. `1.0` (for 1 second) in `clusters/local.yaml`. If you set this to -1, Kafi will "wait forever", as in a typical neverending consumer loop.
+* The consumer group prefix is set to the corresponding value `consumer.group.prefix` in the `kafi` section of the configuration file, e.g. `""` in `clusters/local.yaml`.
+* the maximum batch size for consuming is set to the corresponding value `consume.batch.size` in the `kafi` section of the configuration file, e.g. `1000` in `clusters/local.yaml`.
+* The default key type is set to the corresponding value `key.type` in the `kafi` section of the configuration file, e.g. `str` in `clusters/local.yaml`. It can also be overridden with the `key_type` kwargs parameter.
+* The default value type is set to the corresponding value `value.type` in the `kafi` section of the configuration file, e.g. `json` in `clusters/local.yaml`. It can also be overridden with the `value_type` kwargs parameter.
+
+And for the `consume` calls:
+* It attempts to read infinitely many messages (parameter `n=-1`)
+
+The call could also be written out as follows, assuming that the current timestamp is `1732669768728` and the values from the example configuration file `clusters/local.yaml`:
+
+```
+c.auto_offset_reset("earliest")
+c.session_timeout_ms(45000)
+c.enable_auto_commit(False)
+c.consume_timeout(1.0)
+c.consumer_group_prefix("")
+c.consume_batch_size(1000)
+c.key_type("str")
+c.value_type("json")
+co = c.consumer("topic_json", group="1732669768728")
+co.consume(n=-1)
+co.close()
+```
+
+Thus, you can freely change these settings either in your configuration file or, like here, in the code (using the accessor methods, e.g. `auto_offset_reset` for the `auto.offset.reset` configuration item).
+
 More documentation coming soon :)
 
-* Consumer Group handling
-* Additional configuration
 * How does the "Kafka emulation" work?
-* List all methods/functions including all the kwargs, sorted by class/module + the defaults
+* List all methods/functions including all the kwargs + the defaults, sorted by class/module 
+* add Python help texts for everything
 
 ---
 

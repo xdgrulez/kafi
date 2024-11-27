@@ -1,8 +1,6 @@
-* Schema Registry: Patterns benutzen können
-* bessere Fehlermeldung, wenn (lokales) Topic nicht existiert
-* Fehlermeldung GroupAuthorization + TopicAuthorization bei foldl abfangen und anzeigen
-* offsets with REST Proxy? Geht es vielleicht doch?
-* Perftest - vielleicht analog zu AK-Distro?
+* Schema Registry: support patterns
+* better error handling (e.g. if topic does not yet exists and auto creation is off, GroupAuthorization, TopicAuthorization...)
+* add Perftest?
 
 # Methods
 

@@ -44,7 +44,7 @@ class FS(Storage, Files):
                 self.root_dir(str(self.s3_config_dict["root.dir"]))
             #
             if "bucket.name" not in self.s3_config_dict:
-                self.bucket_name("minio-test-bucket")
+                self.bucket_name("test")
             else:
                 self.bucket_name(str(self.s3_config_dict["bucket.name"]))
         else:
