@@ -15,7 +15,15 @@ Emulated Kafka is e.g. useful for debugging, as there is need to run an addition
 
 Kafi also fully supports the Schema Registry API, including full support for Avro, Protobuf and JSONSchema.
 
-Kafi is fun to use either in the interactive Python interpreter (acting a bit like a shell), or inside your Python (micro-)service code, and - it's the ideal tool for Kafka in your Jupyter notebooks.
+Kafi is fun to use either in the interactive Python interpreter (acting a bit like a shell), or inside your Python (micro-)service code, and - it's the ideal tool for Kafka in your Jupyter notebooks :-)
+
+This "README" is split into:
+* [Installation](#installation)
+* [Basic Configuration](#basic-configuration)
+* [Use Cases](#use-cases)
+* [Full Configuration](#full-configuration)
+* [More on Producing Messages](#more-on-producing-messages)
+* [More on Consuming Messages](#more-on-consuming-messages)
 
 # Installation
 
@@ -25,7 +33,7 @@ Kafi is on PyPI. Hence:
 pip install kafi
 ```
 
-# Configuration
+# Basic Configuration
 
 Kafi is configured using YAML files. As an example, here is a YAML file for a local Kafka installation, including Schema Registry:
 
@@ -46,7 +54,7 @@ local:
 
 Kafi is looking for these YAML files in:
 1. the local directory (`.`) or the directory set in `KAFI_HOME` (if set)
-2. the `configs/<storage type>/<storage>` sub-directory of 1 (`.` or `KAFI_HOME`).
+2. the `configs/<storage type>/<storage config>` sub-directory of 1 (`.` or `KAFI_HOME`). Here, `storage_type` is either `azblobs`, `clusters`, `locals`, `restproxies` or `s3s` and `storage_config` is your configuration file (in Kafi, a connection to one of its back-ends is called *storage*) 
 
 Within Kafi, you can refer to these files by their name without the `.yml` or `.yaml` suffix, e.g. `local` for `local.yaml`.
 
@@ -77,6 +85,8 @@ We provide example YAML files in this GitHub repository under `configs`:
   * local file system: `locals/local.yaml`
   * S3: `s3s/local.yaml`
   * Azure Blob Storage: `azureblobs/local.yaml`
+
+More details on configuring Kafi can be found [here](#full-configuration).
 
 # Use Cases
 
@@ -328,7 +338,7 @@ You can specify the serialization/deserialization types as follows:
 * `value_type`/`value_schema`/`value_schema_id`: Type/schema/schema ID for the value
 * `type`: Same type for both the key and the value
 
-## Use the Schema Registry API
+## A Convenient Tool for Schema Registry Administration
 
 You can also use Kafi to directly interact with the Schema Registry API. Here are some examples.
 
@@ -636,18 +646,7 @@ for id in ids:
   print(c.sr.get_schema(id))
 ```
 
-## Full Configuration
-
-Kafi looks for its YAML configuration files inside the five `configs` sub directories:
-
-* `configs`
-  * `azureblobs` (Kafka emulation/files: Azure Blob Storage)
-  * `clusters` (Real Kafka, Kafka API)
-  * `locals` (Kafka emulation/files: local file system)
-  * `restproxies` (Real Kafka, Kafka REST Proxy API)
-  * `s3s` (Kafka emulation/files: S3)
-
-You can also place your configuration file just in the current directory. If you set the `KAFI_HOME` environment variable, the directory specified there becomes the starting point for Kafi's search for configuration files.
+# Full Configuration
 
 In Kafi one configuration file corresponds to a "connection" to a so-called *storage* (Kafka API, Kafka REST Proxy API, Local file system, S3 and Azure Blob Storage). Each storage has one section that only makes sense for itself:
 
@@ -663,7 +662,7 @@ In addition, the storages can all have one or two of the following sections:
 
 Please also have a look at the example YAML files in the GitHub repo for further illustration.
 
-### General
+## General
 
 The following configuration items are shared across all *storages* (defaults in brackets):
 
@@ -684,9 +683,9 @@ The following configuration items are shared across all *storages* (defaults in 
   * `key.type` (`str`)
   * `value.type` (`json`)
 
-### Real Kafka
+## Real Kafka
 
-#### Kafka API
+### Kafka API
 
 * `kafka`
   * `bootstrap.servers`
@@ -705,7 +704,7 @@ The following configuration items are shared across all *storages* (defaults in 
   * `block.num.retries` (`10`)
   * `block.interval` (`0.5`)
 
-#### Kafka REST Proxy API
+### Kafka REST Proxy API
 
 * `rest_proxy`:
   * `rest.proxy.url`
@@ -717,14 +716,14 @@ The following configuration items are shared across all *storages* (defaults in 
   * `consume.num.attempts` (`3`)
   * `requests.num.retries` (`10`)
 
-### Kafka Emulation/files
+## Kafka Emulation/files
 
-#### Local File System
+### Local File System
 
 * `local`:
   * `root.dir` (`.`)
 
-#### S3
+### S3
 
 * `s3`:
   * `endpoint`
@@ -733,14 +732,14 @@ The following configuration items are shared across all *storages* (defaults in 
   * `bucket.name` (`test`)
   * `root.dir` (`""`)
 
-#### Azure Blob Storage
+### Azure Blob Storage
 
 * `azure_blob`:
   * `connection.string`
   * `container.name` (`test`)
   * `root.dir` (`""`)
 
-## More on Producing Messages
+# More on Producing Messages
 
 To streamline its syntax, Kafi employs a number of defaults/assumptions. All of them can of course be overridden.
 
@@ -781,7 +780,7 @@ p.produce({"bla": 789}, key="789", headers=None, partition=-1, timestamp=0, flus
 p.close()
 ```
 
-## More on Consuming Messages
+# More on Consuming Messages
 
 For consuming messages, Kafi also makes use of a number of defaults/assumptions.
 
