@@ -524,15 +524,6 @@ c.cp("topic_json", c, "topic_json_flatmapped", flatmap_function=filter_out_456)
 (3, 1)
 ```
 
-### How to Set the Serialization/Deserialization Types for Stream Processing
-
-This works analogously to setting the serialization/deserialization types above - you just add the prefixes `source_` and `target_`:
-* `source_key_type`/`source_key_schema`/`source_key_schema_id`: Type/schema/schema ID for the key of the source topic
-* `source_value_type`/`source_value_schema`/`source_value_schema_id`: Type/schema/schema ID for the value of the source topic
-* `source_type`: Same type for both the key and the value of the source topic
-
-...and analogously for `target_`.
-
 ### A Simple MirrorMaker
 
 The input and output topics can be on any cluster - i.e., you can easily do simple stream processing *across clusters*. In a sense, Kafi thus allows you to easily spin up your own simple MirrorMaker (below, `c1` is the source cluster, and `c2` the target):
@@ -542,6 +533,15 @@ c1 = Cluster("cluster1")
 c2 = Cluster("cluster2")
 c1.cp("my_topic_on_cluster1", c2, "my_topic_on_cluster2")
 ```
+
+### How to Set the Serialization/Deserialization Types for Stream Processing
+
+This works analogously to setting the serialization/deserialization types above - you just add the prefixes `source_` and `target_`:
+* `source_key_type`/`source_key_schema`/`source_key_schema_id`: Type/schema/schema ID for the key of the source topic
+* `source_value_type`/`source_value_schema`/`source_value_schema_id`: Type/schema/schema ID for the value of the source topic
+* `source_type`: Same type for both the key and the value of the source topic
+
+...and analogously for `target_`.
 
 ## A Backup Tool
 
@@ -637,6 +637,11 @@ l.file_to_topic("topic_json.parquet", c, "topic_json_from_parquet")
 ```
 
 More documentation coming soon :)
+
+* Consumer Group handling
+* Additional configuration
+* How does the "Kafka emulation" work?
+* List all methods/functions including all the kwargs, sorted by class/module + the defaults
 
 ---
 
