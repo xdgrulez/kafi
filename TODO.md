@@ -1,3 +1,4 @@
+* Schema Registry: Patterns benutzen können
 * bessere Fehlermeldung, wenn (lokales) Topic nicht existiert
 * Fehlermeldung GroupAuthorization + TopicAuthorization bei foldl abfangen und anzeigen
 * offsets with REST Proxy? Geht es vielleicht doch?

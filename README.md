@@ -6,14 +6,14 @@ Kafi supports two main modes:
 * Real Kafka
   * Kafka API via [confluent_kafka](https://github.com/confluentinc/confluent-kafka-python)
   * Kafka REST Proxy API
-* Emulated Kafka
+* Emulated Kafka/files
   * local file system
   * S3
   * Azure Blob Storage
 
-Emulated Kafka is e.g. useful for debugging, as there is need to run an additional Kafka cluster. It can also be used to download snapshots of Kafka topics or doing backups.
+Emulated Kafka is e.g. useful for debugging, as there is need to run an additional Kafka cluster. It can also be used to download snapshots of Kafka topics or to do backups.
 
-Kafi also supports the Schema Registry API, including full support for Avro, Protobuf and JSONSchema.
+Kafi also fully supports the Schema Registry API, including full support for Avro, Protobuf and JSONSchema.
 
 # Installation
 
@@ -25,7 +25,7 @@ pip install kafi
 
 # Configuration
 
-Kafi is configured using YAML files. As an example, here is a YAML file for a local real Kafka installation, including Schema Registry:
+Kafi is configured using YAML files. As an example, here is a YAML file for a local Kafka installation, including Schema Registry:
 
 ```
 kafka:
@@ -48,7 +48,7 @@ Kafi is looking for these YAML files in:
 
 Within Kafi, you can refer to these files by their name without the `.yml` or `.yaml` suffix, e.g. `local` for `local.yaml`.
 
-You can also use environment variables within the YAML files, e.g.:
+You can also use environment variables in the YAML files, e.g.:
 ```
 kafka:
   bootstrap.servers: ${KAFI_KAFKA_SERVER}
@@ -63,7 +63,18 @@ schema_registry:
   basic.auth.user.info: ${KAFI_SCHEMA_REGISTRY_USER_INFO}
 ```
 
-We provide example YAML files in this GitHub repository under `configs`, e.g. for Confluent Cloud and Redpanda (real Kafka), and local disk, S3 and Azure Blob Storage (emulated Kafka, files).
+We provide example YAML files in this GitHub repository under `configs`:
+* Real Kafka
+  * Kafka API:
+    * Local Kafka installation: `clusters/local.yaml`
+    * Confluent Cloud: `clusters/ccloud.yaml`
+    * Redpanda: `clusters/redpanda.yaml`
+  * Kafka REST Proxy API:
+    * Local Kafka/REST Proxy installation: `restproxies/local.yaml`
+* Emulated Kafka/files
+  * local file system: `locals/local.yaml`
+  * S3: `s3s/local.yaml`
+  * Azure Blob Storage: `azureblobs/local.yaml`
 
 # Use Cases
 
@@ -71,7 +82,7 @@ What can Kafi be for you?
 
 ## An Alternative to the Existing CLI Tools
 
-I initially started development on Kafi because I was not a big fan of the existing Kafka CLI tools. Hence, one way Kafi can help you is to act as an alternative to these tools, e.g. those from the Apache Kafka distribution.
+I initially started development on Kafi because I was not a big fan of the existing Kafka CLI tools. Hence, one way Kafi can help you is to act as an alternative to these tools, e.g. those from the Apache Kafka distribution. Just have a look.
 
 To get started, just enter your Python interpreter, import Kafi and create a `Cluster` object (e.g. pointing to your local Kafka cluster):
 
@@ -85,18 +96,18 @@ c = Cluster("local")
 Now you can create topics with a shell-inspired command:
 
 ```
-c.touch("my_topic")
+c.touch("topic_json")
 ```
 
 instead of:
 
 ```
-kafka-topics --bootstrap-server localhost:9092 --topic my_topic --create
+kafka-topics --bootstrap-server localhost:9092 --topic topic_json --create
 ```
 
 ### List Topics
 
-Or list topics:
+You can list topics:
 
 ```
 c.ls()
@@ -110,19 +121,28 @@ kafka-topics --bootstrap-server localhost:9092 --list
 
 ### Produce Messages
 
-Produce messages:
+Produce messages (pure JSON without schema):
 
 ```
-p = c.producer("my_topic")
+p = c.producer("topic_json")
 p.produce({"bla": 123}, key="123")
+p.produce({"bla": 456}, key="456")
+p.produce({"bla": 789}, key="789")
 p.close()
 ```
 
 instead of:
 
 ```
-kafka-console-producer --bootstrap-server localhost:9092 --topic my_topic --property "parse.key=true" --property "key.separator=:"
-> 123:{"bla": 123}
+kafka-console-producer \
+  --bootstrap-server localhost:9092 \
+  --topic topic_json \
+  --property parse.key=true \
+  --property key.separator=':'
+
+123:{"bla": 123}
+456:{"bla": 456}
+789:{"bla": 789}
 ```
 
 ### Consume Messages
@@ -130,26 +150,181 @@ kafka-console-producer --bootstrap-server localhost:9092 --topic my_topic --prop
 And consume them:
 
 ```
-c.cat("my_topic")
+c.cat("topic_json")
+
+[{'topic': 'topic_json', 'headers': None, 'partition': 0, 'offset': 0, 'timestamp': (1, 1732660705555), 'key': '123', 'value': {'bla': 123}}, {'topic': 'snacks_json', 'headers': None, 'partition': 0, 'offset': 1, 'timestamp': (1, 1732660710565), 'key': '456', 'value': {'bla': 456}}, {'topic': 'snacks_json', 'headers': None, 'partition': 0, 'offset': 2, 'timestamp': (1, 1732660714166), 'key': '789', 'value': {'bla': 789}}]
 ```
 
 instead of:
 
 ```
-kafka-console-consumer --bootstrap-server localhost:9092 --topic my_topic --from-beginning
+kafka-console-consumer \
+  --bootstrap-server localhost:9092 \
+  --topic topic_json \
+  --from-beginning
+
+{"bla": 123}
+{"bla": 456}
+{"bla": 789}
+^CProcessed a total of 3 messages
+```
+
+### Produce Messages Using a Schema
+
+#### Avro
+
+Producing messages with a schema is as effortless as possible with Kafi. Here is a simple example using an Avro schema:
+
+```
+t = "topic_avro"
+s = """
+{
+    "type": "record",
+    "name": "myrecord",
+    "fields": [
+        {
+            "name": "bla",
+            "type": "int"
+        }
+    ]
+}
+"""
+p = c.producer(t, value_type="avro", value_schema=s)
+p.produce({"bla": 123}, key="123")
+p.produce({"bla": 456}, key="456")
+p.produce({"bla": 789}, key="789")
+p.close()
+```
+
+instead of:
+
+```
+kafka-avro-console-producer \
+  --broker-list localhost:9092 \
+  --topic topic_avro \
+  --property schema.registry.url=http://localhost:8081 \
+  --property key.serializer=org.apache.kafka.common.serialization.StringSerializer \
+  --property value.schema='{"type":"record","name":"myrecord","fields":[{"name":"bla","type":"int"}]}' \
+  --property parse.key=true \
+  --property key.separator=':'
+
+123:{"bla": 123}
+456:{"bla": 456}
+789:{"bla": 789}
+```
+
+
+#### Protobuf
+
+```
+t = "topic_protobuf"
+s = """
+message value {
+    required int32 bla = 1;
+}
+"""
+p = c.producer(t, value_type="protobuf", value_schema=s)
+p.produce({"bla": 123}, key="123")
+p.produce({"bla": 456}, key="456")
+p.produce({"bla": 789}, key="789")
+p.close()
+```
+
+instead of:
+
+```
+kafka-protobuf-console-producer \
+  --broker-list localhost:9092 \
+  --topic topic_protobuf \
+  --property schema.registry.url=http://localhost:8081 \
+  --property key.serializer=org.apache.kafka.common.serialization.StringSerializer \
+  --property value.schema='message value { required int32 bla = 1; }' \
+  --property parse.key=true \
+  --property key.separator=':'
+
+123:{"bla": 123}
+456:{"bla": 456}
+789:{"bla": 789}
+```
+
+#### JSONSchema
+
+```
+t = "topic_jsonschema"
+s = """
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "myrecord",
+    "properties": {
+      "bla": {
+        "type": "integer"
+      }
+    },
+    "required": ["bla"],
+    "additionalProperties": false
+  }
+"""
+p = c.producer(t, value_type="jsonschema", value_schema=s)
+p.produce({"bla": 123}, key="123")
+p.produce({"bla": 456}, key="456")
+p.produce({"bla": 789}, key="789")
+p.close()
+```
+
+instead of:
+
+```
+kafka-json-schema-console-producer \
+  --broker-list localhost:9092 \
+  --topic topic_protobuf \
+  --property schema.registry.url=http://localhost:8081 \
+  --property key.serializer=org.apache.kafka.common.serialization.StringSerializer \
+  --property value.schema='{ "$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "title": "myrecord", "properties": { "bla": { "type": "integer" } }, "required": ["bla"], "additionalProperties": false }' \
+  --property parse.key=true \
+  --property key.separator=':'
+
+123:{"bla": 123}
+456:{"bla": 456}
+789:{"bla": 789}
 ```
 
 ### Search Messages
 
 ```
-c.grep("my_topic", ".*bla.*")
+c.grep("topic_avro", ".*456.*", value_type="avro")
+
+([{'topic': 'topic_avro', 'headers': None, 'partition': 0, 'offset': 1, 'timestamp': (1, 1732666578986), 'key': '456', 'value': {'bla': 456}}], 1, 3)
 ```
 
 instead of:
 
 ```
-kafka-console-consumer --bootstrap-server localhost:9092 --topic my_topic --from-beginning | grep bla
+kafka-avro-console-consumer \
+  --bootstrap-server localhost:9092 \
+  --property schema.registry.url=http://localhost:8081 \
+  --topic topic_avro \
+  --from-beginning \
+  | grep 456
+
+{"bla":456}
+^CProcessed a total of 3 message
 ```
+
+### Supported Serialization/Deserialization Types
+
+The supported types are:
+* `bytes`: Pure bytes
+* `str`: String (Default for keys)
+* `json`: Pure JSON (Default for values)
+* `avro`: Avro (requires Schema Registry)
+* `protobuf` or `pb`: Protobuf (requires Schema Registry)
+* `jsonschema` or `json_sr`: JSONSchema (requires Schema Registry)
+
+You can specify the serialization/deserialization types as follows:
+* `key_type`/`key_schema`/`key_schema_id`: Type/schema/schema ID for the key
+* `value_type`/`value_schema`/`value_schema_id`: Type/schema/schema ID for the value
+* `type`: Same type for both the key and the value
 
 ## A Debug Tool
 
@@ -197,6 +372,70 @@ for id in ids:
   print(c.sr.get_schema(id))
 ```
 
+## Use the Schema Registry API
+
+You can also use Kafi to directly interact with the Schema Registry API. Here are some examples.
+
+### Get Subjects
+
+```
+c.sr.get_subjects()
+
+['topic_avro-value', 'topic_jsonschema-value', 'topic_protobuf-value']
+```
+
+### Delete a Subject
+
+First soft-delete:
+
+```
+c.sr.delete_subject("topic_avro-value")
+
+[1]
+```
+
+Then list the subjects again:
+
+```
+c.sr.get_subjects()
+
+['topic_jsonschema-value', 'topic_protobuf-value']
+```
+
+List also the soft-deleted subjects:
+
+```
+c.sr.get_subjects(deleted=True)
+
+['topic_avro-value', 'topic_jsonschema-value', 'topic_protobuf-value']
+```
+
+Then hard-delete the subject:
+
+```
+c.sr.delete_subject("topic_avro-value", permanent=True)
+
+[1]
+```
+
+And check whether it is really gone:
+
+```
+c.sr.get_subjects(deleted=True)
+
+['topic_jsonschema-value', 'topic_protobuf-value']
+```
+
+### Get the Latest Version of a Subject
+
+```
+c.sr.get_latest_version("topic_jsonschema-value")
+
+{'schema_id': 3, 'schema': {'schema_str': '{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","title":"myrecord","properties":{"bla":{"type":"integer"}},"required":["bla"],"additionalProperties":false}', 'schema_type': 'JSON'}, 'subject': 'topic_jsonschema-value', 'version': 1}
+```
+
+etc.
+
 ## A Simple Non-stateful Stream Processor
 
 You can also use Kafi as a simple non-stateful stream processing tool.
@@ -206,40 +445,101 @@ You can also use Kafi as a simple non-stateful stream processing tool.
 You can use Kafi to just copy topics[^2]:
 
 ```
-c.cp("my_topic", c, "my_copied_topic")
+c.cp("topic_json", c, "topic_json_copy")
+
+(3, 3)
+```
+
+Of course you can also use schemas here, e.g. you could convert a Protobuf topic to a pure JSON topic:
+
+```
+c.cp("topic_protobuf", c, "topic_avro_json_copy", source_value_type="protobuf")
+
+(3, 3)
+```
+
+...or copy a pure JSON topic to an Avro topic:
+
+```
+s = """
+{
+    "type": "record",
+    "name": "myrecord",
+    "fields": [
+        {
+            "name": "bla",
+            "type": "int"
+        }
+    ]
+}
+"""
+c.cp("topic_json", c, "topic_json_avro_copy", target_value_type="avro", target_value_schema=s)
+
+(3, 3)
 ```
 
 ### Map
 
-In the example below, we use a *single message transform*. In our `map_function`, we add 42 the "bla" fields or all messages from the input topic `my_topic` and write the processed messages to the output topic `my_mapped_topic`:
+In the example below, we use a *single message transform*. In our `map_function`, we add 42 the "bla" fields or all messages from the input topic `topic_json` and write the processed messages to the output topic `topic_json_mapped`:
 
 ```
 def plus_42(x):
   x["value"]["bla"] += 42
   return x
 
-c.cp("my_topic", c, "my_mapped_topic", map_function=plus_42)
+c.cp("topic_json", c, "topic_json_mapped", map_function=plus_42)
+
+(3, 3)
+```
+
+...and look at the result:
+
+```
+c.cat("topic_json_mapped")
+
+[{'topic': 'topic_json_mapped', 'headers': None, 'partition': 0, 'offset': 0, 'timestamp': (1, 1732668466442), 'key': '123', 'value': {'bla': 165}}, {'topic': 'topic_json_mapped', 'headers': None, 'partition': 0, 'offset': 1, 'timestamp': (1, 1732668466442), 'key': '456', 'value': {'bla': 498}}, {'topic': 'topic_json_mapped', 'headers': None, 'partition': 0, 'offset': 2, 'timestamp': (1, 1732668466442), 'key': '789', 'value': {'bla': 831}}]
+```
+
+Of course, all that also works seamlessly with schemas, for example:
+
+```
+c.cp("topic_protobuf", c, "topic_protobuf_json_mapped", map_function=plus_42, source_value_type="protobuf")
+
+(3, 3)
 ```
 
 ### FlatMap
 
-You can also use Kafi for filtering (or exploding) using its `flatmap` functionality. In the example below, we only keep those messages from the input topic `my_topic` where "bla" equals 4711. Only those messages are written to the output topic `my_flatmapped_topic`:
+You can also use Kafi for filtering (or exploding) using its `flatmap` functionality. In the example below, we only keep those messages from the input topic `topic_json` where "bla" equals 4711. Only those messages are written to the output topic `topic_json_flatmapped`:
 
 ```
-def filter_out_4711(x):
-  if x["value"]["bla"] == 4711:
+def filter_out_456(x):
+  if x["value"]["bla"] == 456:
     return [x]
   else:
     return []
 
-c.cp("my_topic", c, "my_flatmapped_topic", flatmap_function=filter_out_4711)
+c.cp("topic_json", c, "topic_json_flatmapped", flatmap_function=filter_out_456)
+
+(3, 1)
 ```
+
+### How to Set the Serialization/Deserialization Types for Stream Processing
+
+This works analogously to setting the serialization/deserialization types above - you just add the prefixes `source_` and `target_`:
+* `source_key_type`/`source_key_schema`/`source_key_schema_id`: Type/schema/schema ID for the key of the source topic
+* `source_value_type`/`source_value_schema`/`source_value_schema_id`: Type/schema/schema ID for the value of the source topic
+* `source_type`: Same type for both the key and the value of the source topic
+
+...and analogously for `target_`.
 
 ### A Simple MirrorMaker
 
 The input and output topics can be on any cluster - i.e., you can easily do simple stream processing *across clusters*. In a sense, Kafi thus allows you to easily spin up your own simple MirrorMaker (below, `c1` is the source cluster, and `c2` the target):
 
 ```
+c1 = Cluster("cluster1")
+c2 = Cluster("cluster2")
 c1.cp("my_topic_on_cluster1", c2, "my_topic_on_cluster2")
 ```
 
@@ -252,6 +552,8 @@ You can also use Kafi as a backup tool - using its built-in "Kafka emulation".
 In the example, the source (``cluster``) is a real Kafka cluster and the target (``localfs``) is Kafi's Kafka emulation on your local file system. Kafi's Kafka emulation keeps all the Kafka metadata (keys, values, headers, timestamps) such that you can later easily restore the backed-up topics without losing data. We set the type to "bytes" to have a 1:1 carbon copy of the data in our backup (no deserialization/serialization).
 
 ```
+cluster = Cluster("cluster")
+localfs = Local("local")
 cluster.cp("my_topic", localfs, "my_topic_backup", type="bytes")
 ```
 
@@ -287,7 +589,13 @@ If you are e.g. a data scientist, Kafi can play the role of a bridge between Kaf
 This is as simple as:
 
 ```
-df = c.topic_to_df("my_topic")
+df = c.topic_to_df("topic_protobuf", value_type="protobuf")
+df
+
+   bla
+0  123
+1  456
+2  789
 ```
 
 ### Write a Pandas Dataframe to a Kafka Topic
@@ -295,7 +603,10 @@ df = c.topic_to_df("my_topic")
 The other way round:
 
 ```
-c.df_to_topic(df, "my_topic")
+c.df_to_topic(df, "topic_json_from_df")
+c.cat("topic_json_from_df)
+
+[{'topic': 'topic_json_from_df', 'headers': None, 'partition': 0, 'offset': 0, 'timestamp': (1, 1732669665739), 'key': None, 'value': {'bla': 123}}, {'topic': 'topic_json_from_df', 'headers': None, 'partition': 0, 'offset': 1, 'timestamp': (1, 1732669666743), 'key': None, 'value': {'bla': 456}}, {'topic': 'topic_json_from_df', 'headers': None, 'partition': 0, 'offset': 2, 'timestamp': (1, 1732669666744), 'key': None, 'value': {'bla': 789}}]
 ```
 
 ### Get a Snapshot of a Topic as an Excel File
@@ -303,7 +614,8 @@ c.df_to_topic(df, "my_topic")
 This is as simple as:
 
 ```
-c.topic_to_file("my_topic", l, "my_topic.xlsx")
+l = Local("local")
+c.topic_to_file("topic_json", l, "topic_json.xlsx")
 ```
 
 ### Get a Snapshot of a Topic as a Parquet File
@@ -311,7 +623,8 @@ c.topic_to_file("my_topic", l, "my_topic.xlsx")
 Similar:
 
 ```
-c.topic_to_file("my_topic", l, "my_topic.parquet")
+l = Local("local")
+c.topic_to_file("topic_json", l, "topic_json.parquet")
 ```
 
 ### Bring a Parquet File back to Kafka
@@ -319,8 +632,11 @@ c.topic_to_file("my_topic", l, "my_topic.parquet")
 The other way round:
 
 ```
-l.file_to_topic("my_topic.parquet", c, "my_topic")
+l = Local("local")
+l.file_to_topic("topic_json.parquet", c, "topic_json_from_parquet")
 ```
+
+More documentation coming soon :)
 
 ---
 

@@ -73,8 +73,8 @@ class RestProxyProducer(KafkaProducer):
             #
             if self.value_schema_id_int is not None:
                 payload_dict = {"value": {"schema_id": self.value_schema_id_int, "data": value}}
-            elif self.value_schema_str is not None:
-                payload_dict = {"value": {"type": type_str, "schema": self.value_schema_str, "data": value}}
+            elif self.value_schema_str_or_dict is not None:
+                payload_dict = {"value": {"type": type_str, "schema": self.value_schema_str_or_dict, "data": value}}
             else:
                 payload_dict = {"value": {"type": type_str, "data": value}}
             #
@@ -103,8 +103,8 @@ class RestProxyProducer(KafkaProducer):
                 #
                 if self.key_schema_id_int is not None:
                     payload_dict["key"] = {"schema_id": self.key_schema_id_int, "data": key}
-                elif self.key_schema_str is not None:
-                    payload_dict["key"] = {"type": type_str, "schema": self.key_schema_str, "data": key}
+                elif self.key_schema_str_or_dict is not None:
+                    payload_dict["key"] = {"type": type_str, "schema": self.key_schema_str_or_dict, "data": key}
                 else:
                     payload_dict["key"] = {"type": type_str, "data": key}
             #

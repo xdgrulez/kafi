@@ -16,19 +16,22 @@ from kafi.helpers import to_bytes
 class Serializer:
     def serialize(self, payload, key_bool, normalize_schemas=False):
         type_str = self.key_type_str if key_bool else self.value_type_str
-        schema_str = self.key_schema_str if key_bool else self.value_schema_str
+        schema_str_or_dict = self.key_schema_str_or_dict if key_bool else self.value_schema_str_or_dict
         schema_id_int = self.key_schema_id_int if key_bool else self.value_schema_id_int
         messageField = MessageField.KEY if key_bool else MessageField.VALUE
         #
-        def get_schema():
-            if schema_str is None:
+        def get_schema_str():
+            if schema_str_or_dict is None:
                 if schema_id_int is None:
                     raise Exception("Please provide a schema or schema ID for the " + ("key" if key_bool else "value") + ".")
-                schema = self.sr.schemaRegistryClient.get_schema(schema_id_int)
+                schema_str = self.sr.schemaRegistryClient.get_schema(schema_id_int)
             else:
-                schema = schema_str
+                if isinstance(schema_str_or_dict, str):
+                    schema_str = schema_str_or_dict
+                elif isinstance(schema_str_or_dict, dict):
+                    schema_str = json.dumps(schema_str_or_dict)
             #
-            return schema
+            return schema_str
         #
 
         def payload_to_payload_dict():
@@ -47,7 +50,7 @@ class Serializer:
             if type_str.lower() in ["bytes", "str", "json"]:
                 serialized_payload_bytes = to_bytes(payload)
             elif type_str.lower() in ["pb", "protobuf"]:
-                schema = get_schema()
+                schema = get_schema_str()
                 generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
                 protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.sr.schemaRegistryClient, {"use.deprecated.format": False})
                 payload_dict = payload_to_payload_dict()
@@ -55,13 +58,13 @@ class Serializer:
                 ParseDict(payload_dict, protobuf_message)
                 serialized_payload_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() == "avro":
-                schema = get_schema()
+                schema = get_schema_str()
                 avroSerializer = AvroSerializer(self.sr.schemaRegistryClient, schema)
                 payload_dict = payload_to_payload_dict()
                 serialized_payload_bytes = avroSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() in ["jsonschema", "json_sr"]:
                 payload_dict = payload_to_payload_dict()
-                schema = get_schema()
+                schema = get_schema_str()
                 jSONSerializer = JSONSerializer(schema, self.sr.schemaRegistryClient)
                 serialized_payload_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
             else:
