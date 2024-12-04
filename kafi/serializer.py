@@ -11,9 +11,13 @@ from confluent_kafka.serialization import MessageField, SerializationContext
 
 from google.protobuf.json_format import ParseDict
 
+from kafi.schemaregistry import SchemaRegistry
 from kafi.helpers import to_bytes
 
-class Serializer:
+class Serializer(SchemaRegistry):
+    def __init__(self, schema_registry_config_dict):
+        super().__init__(schema_registry_config_dict)
+
     def serialize(self, payload, key_bool, normalize_schemas=False):
         type_str = self.key_type_str if key_bool else self.value_type_str
         schema_str_or_dict = self.key_schema_str_or_dict if key_bool else self.value_schema_str_or_dict
@@ -24,7 +28,7 @@ class Serializer:
             if schema_str_or_dict is None:
                 if schema_id_int is None:
                     raise Exception("Please provide a schema or schema ID for the " + ("key" if key_bool else "value") + ".")
-                schema_str = self.sr.schemaRegistryClient.get_schema(schema_id_int)
+                schema_str = self.schemaRegistryClient.get_schema(schema_id_int)
             else:
                 if isinstance(schema_str_or_dict, str):
                     schema_str = schema_str_or_dict
@@ -52,20 +56,20 @@ class Serializer:
             elif type_str.lower() in ["pb", "protobuf"]:
                 schema = get_schema_str()
                 generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
-                protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.sr.schemaRegistryClient, {"use.deprecated.format": False})
+                protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistryClient, {"use.deprecated.format": False})
                 payload_dict = payload_to_payload_dict()
                 protobuf_message = generalizedProtocolMessageType()
                 ParseDict(payload_dict, protobuf_message)
                 serialized_payload_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() == "avro":
                 schema = get_schema_str()
-                avroSerializer = AvroSerializer(self.sr.schemaRegistryClient, schema)
+                avroSerializer = AvroSerializer(self.schemaRegistryClient, schema)
                 payload_dict = payload_to_payload_dict()
                 serialized_payload_bytes = avroSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() in ["jsonschema", "json_sr"]:
                 payload_dict = payload_to_payload_dict()
                 schema = get_schema_str()
-                jSONSerializer = JSONSerializer(schema, self.sr.schemaRegistryClient)
+                jSONSerializer = JSONSerializer(schema, self.schemaRegistryClient)
                 serialized_payload_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
             else:
                 raise Exception("Only \"bytes\", \"str\", \"json\", \"avro\", \"protobuf\" (\"pb\") and \"jsonschema\" (\"json_sr\") supported.")
@@ -79,9 +83,9 @@ class Serializer:
         if schema_hash_int in self.schema_hash_int_generalizedProtocolMessageType_dict:
             generalizedProtocolMessageType = self.schema_hash_int_generalizedProtocolMessageType_dict[schema_hash_int]
         else:
-            subject_name_str = self.sr.create_subject_name_str(topic_str, key_bool)
-            schema_dict = self.sr.create_schema_dict(schema_str, "PROTOBUF")
-            schema_id_int = self.sr.register_schema(subject_name_str, schema_dict, normalize_schemas)
+            subject_name_str = self.create_subject_name_str(topic_str, key_bool)
+            schema_dict = self.create_schema_dict(schema_str, "PROTOBUF")
+            schema_id_int = self.register_schema(subject_name_str, schema_dict, normalize_schemas)
             #
             generalizedProtocolMessageType = self.schema_id_int_and_schema_str_to_generalizedProtocolMessageType(schema_id_int, schema_str)
             #

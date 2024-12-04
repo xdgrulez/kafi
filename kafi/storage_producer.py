@@ -1,5 +1,4 @@
 from kafi.serializer import Serializer
-from kafi.schemaregistry import SchemaRegistry
 
 # Constants
 
@@ -9,6 +8,8 @@ RD_KAFKA_PARTITION_UA = -1
 class StorageProducer(Serializer):
     def __init__(self, storage_obj, topic, **kwargs):
         self.storage_obj = storage_obj
+        #
+        super().__init__(storage_obj.schema_registry_config_dict)
         #
         self.topic_str = topic
         #
@@ -25,11 +26,6 @@ class StorageProducer(Serializer):
         self.written_counter_int = 0
         #
         self.schema_hash_int_generalizedProtocolMessageType_dict = {}
-        #
-        if "schema.registry.url" in self.storage_obj.schema_registry_config_dict:
-            self.sr = SchemaRegistry(self.storage_obj.schema_registry_config_dict, self.storage_obj.kafi_config_dict)
-        else:
-            self.sr = None
 
     #
 

@@ -26,6 +26,9 @@ This "README" is split into a basic part:
 * [Full Configuration](#full-configuration)
 * [More on Producing Messages](#more-on-producing-messages)
 * [More on Consuming Messages](#more-on-consuming-messages)
+* [Architecture](#architecture)
+* [Kafka Emulation](#kafka-emulation)
+* [All Methods](#all-methods)
 
 # Installation
 
@@ -347,7 +350,7 @@ You can also use Kafi to directly interact with the Schema Registry API. Here ar
 ### Get Subjects
 
 ```
-c.sr.get_subjects()
+c.get_subjects()
 
 ['topic_avro-value', 'topic_jsonschema-value', 'topic_protobuf-value']
 ```
@@ -357,7 +360,7 @@ c.sr.get_subjects()
 First soft-delete:
 
 ```
-c.sr.delete_subject("topic_avro-value")
+c.delete_subject("topic_avro-value")
 
 [1]
 ```
@@ -365,7 +368,7 @@ c.sr.delete_subject("topic_avro-value")
 Then list the subjects again:
 
 ```
-c.sr.get_subjects()
+c.get_subjects()
 
 ['topic_jsonschema-value', 'topic_protobuf-value']
 ```
@@ -373,7 +376,7 @@ c.sr.get_subjects()
 List also the soft-deleted subjects:
 
 ```
-c.sr.get_subjects(deleted=True)
+c.get_subjects(deleted=True)
 
 ['topic_avro-value', 'topic_jsonschema-value', 'topic_protobuf-value']
 ```
@@ -381,7 +384,7 @@ c.sr.get_subjects(deleted=True)
 Then hard-delete the subject:
 
 ```
-c.sr.delete_subject("topic_avro-value", permanent=True)
+c.delete_subject("topic_avro-value", permanent=True)
 
 [1]
 ```
@@ -389,7 +392,7 @@ c.sr.delete_subject("topic_avro-value", permanent=True)
 And check whether it is really gone:
 
 ```
-c.sr.get_subjects(deleted=True)
+c.get_subjects(deleted=True)
 
 ['topic_jsonschema-value', 'topic_protobuf-value']
 ```
@@ -397,7 +400,7 @@ c.sr.get_subjects(deleted=True)
 ### Get the Latest Version of a Subject
 
 ```
-c.sr.get_latest_version("topic_jsonschema-value")
+c.get_latest_version("topic_jsonschema-value")
 
 {'schema_id': 3, 'schema': {'schema_str': '{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","title":"myrecord","properties":{"bla":{"type":"integer"}},"required":["bla"],"additionalProperties":false}', 'schema_type': 'JSON'}, 'subject': 'topic_jsonschema-value', 'version': 1}
 ```
@@ -645,7 +648,7 @@ def collect_ids(acc, x):
 (ids, _) = c.foldl("my_topic", collect_ids, set(), type="bytes")
 
 for id in ids:
-  print(c.sr.get_schema(id))
+  print(c.get_schema(id))
 ```
 
 # Full Configuration
@@ -824,14 +827,130 @@ co.close()
 
 Thus, you can freely change these settings either in your configuration file or, like here, in the code (using the accessor methods, e.g. `auto_offset_reset` for the `auto.offset.reset` configuration item).
 
-More documentation coming soon :)
+# Architecture
 
-* How does the "Kafka emulation" work?
-* List all methods/functions including all the kwargs + the defaults, sorted by class/module 
-* add Python help texts for everything
+This section is about the architecture of Kafi.
+
+## Storage
+
+Essentially, Kafi is built on the concept of a "Storage". There are two kinds of Storages:
+* Kafka (real Kafka: Kafka API or Kafka REST Proxy API)
+* FS (file system: local file system, S3 or Azure Blob Storage)
+
+The `Storage` class inherits from:
+* `Shell`: Shell-like commands like `cat`, `head`, `tail`, `cp`...
+* `Files`: Copying Kafka topics to files (`topic_to_file`) and vice versa (`file_to_topic`)
+* `AddOns`: Higher-level add-on methods (`compact`, `compact_to`, `recreate`)
+* `SchemaRegistry`: Schema Registry API
+
+The classes `Shell`, `Files` and `AddOns` inherit from the class `Functional` which offers functional methods (`foldl`, `flatmap`, `map`, `filter`, `foreach`, `zip_foldl`, `foldl_to`, `flatmap_to`, `map_to`, `filter_to`, `zip_foldl_to`)
+
+`Files` inherits indirectly from `Functional` through `Pandas` which allows to copy topics to Pandas dataframes (`topic_to_df`) and vice versa (`df_to_topic`).
+
+```mermaid
+---
+title: Kafi class diagram (Storage)
+---
+classDiagram
+    Functional <|-- Shell
+    Functional <|-- AddOns
+    Functional <|-- Pandas
+
+    Pandas <|-- Files
+
+    Shell <|-- Storage
+    Files <|-- Storage
+    AddOns <|-- Storage
+    SchemaRegistry <|-- Storage
+
+    Storage <|-- Kafka
+    Kafka <|-- Cluster
+    Kafka <|-- RestProxy
+
+    Storage <|-- FS
+    FS <|-- Local
+    FS <|-- S3
+    FS <|-- AzureBlob
+```
+
+## StorageConsumer
+
+`StorageConsumer` is the base class for consuming records. It inherits from `Deserializer`, which in turn inherits from `SchemaRegistry`.
+
+The individual storages have their own implementations.
+
+```mermaid
+---
+title: Kafi class diagram (Consumer)
+---
+classDiagram
+    SchemaRegistry <|-- Deserializer
+    
+    Deserializer <|-- StorageConsumer
+
+    StorageConsumer <|-- KafkaConsumer
+    KafkaConsumer <|-- ClusterConsumer
+    KafkaConsumer <|-- RestProxyConsumer
+
+    StorageConsumer <|-- FSConsumer
+    FSConsumer <|-- LocalConsumer
+    FSConsumer <|-- S3Consumer
+    FSConsumer <|-- AzureBlobConsumer
+```
+
+## StorageProducer
+
+`StorageProducer` is the base class for producing records. It inherits from `Serializer`, which in turn inherits from `SchemaRegistry`.
+
+The individual storages have their own implementations.
+
+```mermaid
+---
+title: Kafi class diagram (Producer)
+---
+classDiagram
+    SchemaRegistry <|-- Serializer
+
+    Serializer <|-- StorageProducer
+
+    StorageProducer <|-- KafkaProducer
+    KafkaProducer <|-- ClusterProducer
+    KafkaProducer <|-- RestProxyProducer
+
+    StorageProducer <|-- FSProducer
+    FSProducer <|-- LocalProducer
+    FSProducer <|-- S3Producer
+    FSProducer <|-- AzureBlobProducer
+```
+
+## StorageAdmin
+
+`StorageAdmin` is the base class for administrative methods (e.g. for the Kafka API, the implementation is based on the Kafka Admin Client API).
+
+```mermaid
+---
+title: Kafi class diagram (Admin)
+---
+classDiagram
+    StorageAdmin <|-- KafkaAdmin
+    KafkaAdmin <|-- ClusterAdmin
+    KafkaAdmin <|-- RestProxyAdmin
+
+    StorageAdmin <|-- FSAdmin
+    FSAdmin <|-- LocalAdmin
+    FSAdmin <|-- S3Admin
+    FSAdmin <|-- AzureBlobAdmin
+```
+
+# Kafka Emulation
+
+...
+
+# All Methods
+
+...
 
 ---
 
 [^1]: "Kafi" stands for "(Ka)fka and (fi)les". And, "Kafi" is the Swiss word for a coffee or a coffee place. *Kafi* is the successor of [kash.py](https://github.com/xdgrulez/kash.py) which is the successor of [streampunk](https://github.com/xdgrulez/streampunk).
-
 [^2]: Please note that you need to set the `consume_timeout` to `-1` on the source cluster for Kafi to always wait for new messages: `c.consume_timeout(-1)`.

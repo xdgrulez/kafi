@@ -9,7 +9,12 @@ from confluent_kafka.schema_registry.json_schema import JSONDeserializer
 from confluent_kafka.schema_registry.protobuf import ProtobufDeserializer
 from google.protobuf.json_format import MessageToDict
 
-class Deserializer:
+from kafi.schemaregistry import SchemaRegistry
+
+class Deserializer(SchemaRegistry):
+    def __init__(self, schema_registry_config_dict):
+        super().__init__(schema_registry_config_dict)
+
     def deserialize(self, payload_bytes, type_str):
         if type_str.lower() == "bytes":
             deserialized_payload = self.bytes_to_bytes(payload_bytes)
@@ -64,10 +69,10 @@ class Deserializer:
             return None
         #
         schema_id_int = int.from_bytes(bytes[1:5], "big")
-        schema_dict = self.sr.get_schema(schema_id_int)
+        schema_dict = self.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
         #
-        avroDeserializer = AvroDeserializer(self.sr.schemaRegistryClient, schema_str)
+        avroDeserializer = AvroDeserializer(self.schemaRegistryClient, schema_str)
         dict = avroDeserializer(bytes, None)
         return dict
 
@@ -76,7 +81,7 @@ class Deserializer:
             return None
         #
         schema_id_int = int.from_bytes(bytes[1:5], "big")
-        schema_dict = self.sr.get_schema(schema_id_int)
+        schema_dict = self.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
         #
         jsonDeserializer = JSONDeserializer(schema_str)
@@ -86,7 +91,7 @@ class Deserializer:
     # Helpers
 
     def schema_id_int_to_generalizedProtocolMessageType_protobuf_schema_str_tuple(self, schema_id_int):
-        schema_dict = self.sr.get_schema(schema_id_int)
+        schema_dict = self.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
         #
         generalizedProtocolMessageType = self.schema_id_int_and_schema_str_to_generalizedProtocolMessageType(schema_id_int, schema_str)

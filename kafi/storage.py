@@ -10,7 +10,7 @@ from kafi.addons import AddOns
 from kafi.schemaregistry import SchemaRegistry
 from kafi.helpers import bytes_or_str_to_bytes, is_interactive
 
-class Storage(Shell, Files, AddOns):
+class Storage(Shell, Files, AddOns, SchemaRegistry):
     def __init__(self, dir_str, config_str, mandatory_section_str_list, optional_section_str_list):
         self.dir_str = dir_str
         self.config_str = config_str
@@ -21,9 +21,10 @@ class Storage(Shell, Files, AddOns):
         #
         self.schema_registry_config_dict = self.config_dict["schema_registry"] if "schema_registry" in self.config_dict else {}
         #
-        self.sr = None
-        #
         self.kafi_config_dict = self.config_dict["kafi"] if "kafi" in self.config_dict else self.config_dict["kash"] if "kash" in self.config_dict else {}
+        #
+        if "schema.registry.url" in self.schema_registry_config_dict:
+            SchemaRegistry.__init__(self, self.schema_registry_config_dict)
         #
         if "progress.num.messages" not in self.kafi_config_dict:
             self.progress_num_messages(1000)
@@ -75,13 +76,6 @@ class Storage(Shell, Files, AddOns):
             self.value_type("json")
         else:
             self.value_type(str(self.kafi_config_dict["value.type"]))
-        #
-        #
-        #
-        if "schema.registry.url" in self.schema_registry_config_dict:
-            self.sr = self.get_schemaRegistry()
-        else:
-            self.sr = None
 
     #
 
@@ -198,15 +192,6 @@ class Storage(Shell, Files, AddOns):
             raise Exception("Type error: Headers must either be a list of tuples of strings and bytes, or a dictionary of strings and bytes.")
         #
         return headers_str_bytes_tuple_list
-
-    #
-
-    def get_schemaRegistry(self):
-        schemaRegistry = SchemaRegistry(self.schema_registry_config_dict, self.kafi_config_dict)
-        #
-        return schemaRegistry
-
-    #
 
     # Topics
 

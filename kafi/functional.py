@@ -7,26 +7,27 @@ ALL_MESSAGES = -1
 class Functional:
     def foldl(self, topic, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         verbose_int = self.verbose()
+        #
         progress_num_messages_int = self.progress_num_messages()
         #
         consumer = self.consumer(topic, **kwargs)
         #
-        def foldl_function1(acc_progress_message_counter_int_tuple, message_dict):
-            (acc, progress_message_counter_int) = acc_progress_message_counter_int_tuple
+        def foldl_function1(acc_consume_message_counter_int_tuple, message_dict):
+            (acc, consume_message_counter_int) = acc_consume_message_counter_int_tuple
             #
             acc = foldl_function(acc, message_dict)
             #
-            progress_message_counter_int += 1
-            if verbose_int > 0 and progress_message_counter_int % progress_num_messages_int == 0:
-                print(f"Read: {progress_message_counter_int}")
+            consume_message_counter_int += 1
+            if verbose_int > 0 and consume_message_counter_int % progress_num_messages_int == 0:
+                print(f"Read: {consume_message_counter_int}")
             #
-            return (acc, progress_message_counter_int)
+            return (acc, consume_message_counter_int)
         #
-        result_progress_message_counter_int_tuple = consumer.foldl(foldl_function1, (initial_acc, 0), n, **kwargs)
+        acc_consume_message_counter_int_tuple = consumer.foldl(foldl_function1, (initial_acc, 0), n, **kwargs)
         #
         consumer.close()
         #
-        return result_progress_message_counter_int_tuple
+        return acc_consume_message_counter_int_tuple
 
     #
 
@@ -58,28 +59,33 @@ class Functional:
 
     #
 
-    def flatmap_to(self, topic, target_storage, target_topic, flatmap_function, n=ALL_MESSAGES, **kwargs):
-        progress_num_messages_int = self.progress_num_messages()
+    def foldl_to(self, topic, target_storage, target_topic, foldl_to_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         verbose_int = self.verbose()
         #
+        progress_num_messages_int = self.progress_num_messages()
+        #
 
-        def foldl_function(produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, message_dict):
-            (produce_batch_size_int, batch_message_dict_list, progress_message_counter_int) = produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
+        def foldl_to_function1(acc_consume_message_counter_int_produce_batch_size_int_produce_batch_message_dict_list_produce_message_counter_int_tuple, message_dict):
+            (acc, consume_message_counter_int, produce_batch_size_int, produce_batch_message_dict_list, produce_message_counter_int) = acc_consume_message_counter_int_produce_batch_size_int_produce_batch_message_dict_list_produce_message_counter_int_tuple
             #
-            message_dict_list = flatmap_function(message_dict)
+            (acc, message_dict_list) = foldl_to_function(acc, message_dict)
             #
-            batch_message_dict_list += message_dict_list
+            consume_message_counter_int += 1
+            if verbose_int > 0 and consume_message_counter_int % progress_num_messages_int == 0:
+                print(f"Read: {consume_message_counter_int}")
             #
-            if len(batch_message_dict_list) == produce_batch_size_int:
-                target_producer.produce_list(batch_message_dict_list, **target_kwargs)
+            produce_batch_message_dict_list += message_dict_list
+            #
+            if len(produce_batch_message_dict_list) == produce_batch_size_int:
+                target_producer.produce_list(produce_batch_message_dict_list, **target_kwargs)
                 #
-                progress_message_counter_int += len(batch_message_dict_list)
-                if verbose_int > 0 and progress_message_counter_int % progress_num_messages_int == 0:
-                    print(f"Written: {progress_message_counter_int}")
+                produce_message_counter_int += len(produce_batch_message_dict_list)
+                if verbose_int > 0 and produce_message_counter_int % progress_num_messages_int == 0:
+                    print(f"Written: {produce_message_counter_int}")
                 #
-                return (produce_batch_size_int, [], progress_message_counter_int)
+                return (acc, consume_message_counter_int, produce_batch_size_int, [], produce_message_counter_int)
             else:
-                return (produce_batch_size_int, batch_message_dict_list, progress_message_counter_int)
+                return (acc, consume_message_counter_int, produce_batch_size_int, produce_batch_message_dict_list, produce_message_counter_int)
 
         #
         source_kwargs = self.get_source_kwargs(**kwargs)
@@ -88,18 +94,28 @@ class Functional:
         #
         produce_batch_size_int = kwargs["produce_batch_size"] if "produce_batch_size" in kwargs else target_storage.produce_batch_size()
         #
+        consumer = self.consumer(topic, **source_kwargs)
+        #
         target_producer = target_storage.producer(target_topic, **target_kwargs)
         #
-        (produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple, consume_message_counter_int) = self.foldl(topic, foldl_function, (produce_batch_size_int, [], 0), n, **source_kwargs)
-        (_, batch_message_dict_list, written_progress_message_counter_int) = produce_batch_size_int_batch_message_dict_list_progress_message_counter_int_tuple
+        (acc, consume_message_counter_int, _, produce_batch_message_dict_list, produce_message_counter_int) = consumer.foldl(foldl_to_function1, (initial_acc, 0, produce_batch_size_int, [], 0), n, **kwargs)
         #
-        if len(batch_message_dict_list) > 0:
-            target_producer.produce_list(batch_message_dict_list, **target_kwargs)
-            written_progress_message_counter_int += len(batch_message_dict_list)
+        consumer.close()
+        #
+        if len(produce_batch_message_dict_list) > 0:
+            target_producer.produce_list(produce_batch_message_dict_list, **target_kwargs)
+            produce_message_counter_int += len(produce_batch_message_dict_list)
         #
         target_producer.close()
         #
-        return (consume_message_counter_int, written_progress_message_counter_int)
+        return (acc, consume_message_counter_int, produce_message_counter_int)
+
+    def flatmap_to(self, topic, target_storage, target_topic, flatmap_function, n=ALL_MESSAGES, **kwargs):
+        def foldl_to_function(_, message_dict):
+            return (None, flatmap_function(message_dict))
+        #
+        (_, consume_message_counter_int, produce_message_counter_int) = self.foldl_to(topic, target_storage, target_topic, foldl_to_function, None, n, **kwargs)
+        return (consume_message_counter_int, produce_message_counter_int)
 
     def map_to(self, topic, target_storage, target_topic, map_function, n=ALL_MESSAGES, **kwargs):
         def flatmap_function(message_dict):
@@ -117,6 +133,9 @@ class Functional:
 
     def zip_foldl(self, topic1, storage2, topic2, zip_foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         n_int = n
+        #
+        verbose_int = self.verbose()
+        progress_num_messages_int = self.progress_num_messages()
         #
         consume_batch_size_int = kwargs["consume_batch_size"] if "consume_batch_size" in kwargs else self.consume_batch_size()
         if consume_batch_size_int > n_int:
@@ -155,7 +174,7 @@ class Functional:
                 break
             num_messages_int1 = len(message_dict_list1)
             message_counter_int1 += num_messages_int1
-            if self.verbose() > 0 and message_counter_int1 % self.progress_num_messages() == 0:
+            if verbose_int > 0 and message_counter_int1 % progress_num_messages_int == 0:
                 print(f"Read (storage 1): {message_counter_int1}")
             #
             consume_batch_size_int2 = num_messages_int1 if num_messages_int1 < consume_batch_size_int else consume_batch_size_int
@@ -168,7 +187,7 @@ class Functional:
                 break
             num_messages_int2 = len(message_dict_list2)
             message_counter_int2 += num_messages_int2
-            if self.verbose() > 0 and message_counter_int2 % self.progress_num_messages() == 0:
+            if verbose_int > 0 and message_counter_int2 % progress_num_messages_int == 0:
                 print(f"Read (storage 2): {message_counter_int2}")
             #
             if num_messages_int1 != num_messages_int2:
@@ -189,6 +208,110 @@ class Functional:
         #
         consumer1.close()
         consumer2.close()
+        #
+        return acc, message_counter_int1, message_counter_int2
+
+    #
+
+    def zip_foldl_to(self, topic1, storage2, topic2, target_storage, target_topic, zip_foldl_to_function, initial_acc, n=ALL_MESSAGES, **kwargs):
+        n_int = n
+        #
+        verbose_int = self.verbose()
+        progress_num_messages_int = self.progress_num_messages()
+        #
+        consume_batch_size_int = kwargs["consume_batch_size"] if "consume_batch_size" in kwargs else self.consume_batch_size()
+        if consume_batch_size_int > n_int:
+            consume_batch_size_int = n_int
+        #
+        break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
+        #
+        kwargs1 = kwargs.copy()
+        kwargs1["group"] = kwargs1["group1"] if "group1" in kwargs1 else None
+        kwargs1["offsets"] = kwargs1["offsets1"] if "offsets1" in kwargs1 else None
+        kwargs1["key_type"] = kwargs1["key_type1"] if "key_type1" in kwargs1 else "bytes"
+        kwargs1["value_type"] = kwargs1["value_type1"] if "value_type1" in kwargs1 else "bytes"
+        kwargs1["type"] = kwargs1["type1"] if "type1" in kwargs1 else "bytes"
+        #
+        kwargs2 = kwargs.copy()
+        kwargs2["group"] = kwargs2["group2"] if "group2" in kwargs2 else None
+        kwargs2["offsets"] = kwargs2["offsets2"] if "offsets2" in kwargs2 else None
+        kwargs2["key_type"] = kwargs2["key_type2"] if "key_type2" in kwargs2 else "bytes"
+        kwargs2["value_type"] = kwargs2["value_type2"] if "value_type2" in kwargs2 else "bytes"
+        kwargs2["type"] = kwargs2["type2"] if "type2" in kwargs2 else "bytes"
+        #
+        target_kwargs = self.get_target_kwargs(**kwargs)
+        #
+        produce_batch_size_int = kwargs["produce_batch_size"] if "produce_batch_size" in kwargs else target_storage.produce_batch_size()
+        #
+        consumer1 = self.consumer(topic1, **kwargs1)
+        consumer2 = storage2.consumer(topic2, **kwargs2)
+        #
+        target_producer = target_storage.producer(target_topic, **target_kwargs)
+        #
+        message_counter_int1 = 0
+        message_counter_int2 = 0
+        acc = initial_acc
+        break_bool = False
+        batch_message_dict_list = []
+        progress_message_counter_int = 0
+        while True:
+            message_dict_list1 = []
+            while True:
+                message_dict_list1 += consumer1.consume(n=consume_batch_size_int)
+                if not message_dict_list1 or consume_batch_size_int == ALL_MESSAGES or len(message_dict_list1) == consume_batch_size_int:
+                    break
+            if not message_dict_list1:
+                break
+            num_messages_int1 = len(message_dict_list1)
+            message_counter_int1 += num_messages_int1
+            if verbose_int > 0 and message_counter_int1 % progress_num_messages_int == 0:
+                print(f"Read (storage 1): {message_counter_int1}")
+            #
+            consume_batch_size_int2 = num_messages_int1 if num_messages_int1 < consume_batch_size_int else consume_batch_size_int
+            message_dict_list2 = []
+            while True:
+                message_dict_list2 += consumer2.consume(n=consume_batch_size_int2)
+                if not message_dict_list2 or consume_batch_size_int2 == ALL_MESSAGES or len(message_dict_list2) == consume_batch_size_int2:
+                    break
+            if not message_dict_list2:
+                break
+            num_messages_int2 = len(message_dict_list2)
+            message_counter_int2 += num_messages_int2
+            if verbose_int > 0 and message_counter_int2 % progress_num_messages_int == 0:
+                print(f"Read (storage 2): {message_counter_int2}")
+            #
+            if num_messages_int1 != num_messages_int2:
+                break
+            #
+            for message_dict1, message_dict2 in zip(message_dict_list1, message_dict_list2):
+                if break_function(message_dict1, message_dict2):
+                    break_bool = True
+                    break
+                (acc, message_dict_list) = zip_foldl_to_function(acc, message_dict1, message_dict2)
+            #
+            if break_bool:
+                break
+            #!
+            batch_message_dict_list += message_dict_list
+            #
+            if len(batch_message_dict_list) == produce_batch_size_int:
+                target_producer.produce_list(batch_message_dict_list, **target_kwargs)
+                #
+                progress_message_counter_int += len(batch_message_dict_list)
+                if verbose_int > 0 and progress_message_counter_int % progress_num_messages_int == 0:
+                    print(f"Written: {progress_message_counter_int}")
+                #
+                batch_message_dict_list = []
+            #
+            if n_int != ALL_MESSAGES:
+                if message_counter_int1 >= n_int:
+                    break
+        #
+        consumer1.close()
+        consumer2.close()
+        #
+        target_producer.close()
+        #
         return acc, message_counter_int1, message_counter_int2
 
     #

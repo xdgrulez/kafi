@@ -3,9 +3,8 @@ from confluent_kafka.schema_registry import Schema, SchemaRegistryClient
 from kafi.helpers import pattern_match, get, delete
 
 class SchemaRegistry:
-    def __init__(self, schema_registry_config_dict, kafi_config_dict):
+    def __init__(self, schema_registry_config_dict):
         self.schema_registry_config_dict = schema_registry_config_dict
-        self.kafi_config_dict = kafi_config_dict
         #
         if self.schema_registry_config_dict is not None:
             self.schemaRegistryClient = self.get_schemaRegistryClient()

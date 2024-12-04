@@ -1,10 +1,11 @@
 from kafi.deserializer import Deserializer
-from kafi.schemaregistry import SchemaRegistry
 from kafi.helpers import get_millis
 
 class StorageConsumer(Deserializer):
     def __init__(self, storage_obj, *topics, **kwargs):
         self.storage_obj = storage_obj
+        #
+        super().__init__(storage_obj.schema_registry_config_dict)
         #
         # Get topics to subscribe to.
         self.topic_str_list = list(topics)
@@ -28,11 +29,6 @@ class StorageConsumer(Deserializer):
         self.enable_auto_commit_bool = kwargs["enable.auto.commit"] if "enable.auto.commit" in kwargs else storage_obj.enable_auto_commit()
         #
         self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict = {}
-        #
-        if "schema.registry.url" in self.storage_obj.schema_registry_config_dict:
-            self.sr = SchemaRegistry(self.storage_obj.schema_registry_config_dict, self.storage_obj.kafi_config_dict)
-        else:
-            self.sr = None
 
     #
 
