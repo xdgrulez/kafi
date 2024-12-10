@@ -2,6 +2,7 @@
 * better error handling (e.g. if topic does not yet exists and auto creation is off, GroupAuthorization, TopicAuthorization...)
 * add Perftest?
 * local topic consume performance
+* debug mode - e.g. show all HTTPS calls (and also confluent_kafka, Local, S3, AzureBlob)
 
 # Methods
 

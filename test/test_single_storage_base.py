@@ -612,7 +612,7 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, type="str")
-        consumer.consume(n=1)
+        consumer.consume(n=3)
         offsets_dict = consumer.offsets()
         #
         if s.__class__.__name__ == "RestProxy":
@@ -620,13 +620,26 @@ class TestSingleStorageBase(unittest.TestCase):
         else:
             self.assertEqual(offsets_dict[topic_str][0], OFFSET_INVALID)
         #
-        consumer.commit()
+        consumer.commit({topic_str: {0: 1}})
+        # 
         offsets_dict1 = consumer.offsets()
+        offsets_dict2 = s.group_offsets(group_str)[group_str]
+        self.assertEqual(offsets_dict1, offsets_dict2)
+        self.assertEqual(offsets_dict1[topic_str][0], 1)
         #
-        if s.__class__.__name__ == "RestProxy":
-            self.assertEqual(offsets_dict1[topic_str][0], 3)
-        else:
-            self.assertEqual(offsets_dict1[topic_str][0], 1)
+        consumer.commit({0: 2})
+        #
+        offsets_dict1 = consumer.offsets()
+        offsets_dict2 = s.group_offsets(group_str)[group_str]
+        self.assertEqual(offsets_dict1, offsets_dict2)
+        self.assertEqual(offsets_dict1[topic_str][0], 2)
+        #
+        consumer.commit()
+        #
+        offsets_dict1 = consumer.offsets()
+        offsets_dict2 = s.group_offsets(group_str)[group_str]
+        self.assertEqual(offsets_dict1, offsets_dict2)
+        self.assertEqual(offsets_dict1[topic_str][0], 3)
         #
         consumer.close()
     

@@ -126,8 +126,8 @@ class RestProxyProducer(KafkaProducer):
             for x in payload_dict_list:
                 yield x
         payload_dict_generator = g()
-
-        post(url_str, headers_dict, payload_dict_generator, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
+        #
+        post(url_str, headers_dict, payload_dict_generator, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
         self.written_counter_int += len(payload_dict_list)
         #

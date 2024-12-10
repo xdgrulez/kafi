@@ -29,7 +29,7 @@ class RestProxyAdmin(KafkaAdmin):
         if host is not None:
             payload_dict["host"] = host 
         #
-        response_dict = get(url_str, headers_dict, payload_dict=payload_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+        response_dict = get(url_str, headers_dict, payload_dict=payload_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         kafkaAcl_dict_list = response_dict["data"]
         #
         dict_list = [kafkaAcl_dict_to_dict(kafkaAcl_dict) for kafkaAcl_dict in kafkaAcl_dict_list]
@@ -49,7 +49,7 @@ class RestProxyAdmin(KafkaAdmin):
         if host is not None:
             payload_dict["host"] = host 
         #
-        post(url_str, headers_dict, payload_dict=payload_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+        post(url_str, headers_dict, payload_dict=payload_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
 
     def delete_acl(self, restype="any", name=None, resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
@@ -63,7 +63,7 @@ class RestProxyAdmin(KafkaAdmin):
             url_str += f"&host={host}"         
         #
         headers_dict = {"Content-Type": "application/json"}
-        response_dict = delete(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+        response_dict = delete(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         kafkaAcl_dict_list = response_dict["data"]
         #
         dict_list = [kafkaAcl_dict_to_dict(kafkaAcl_dict) for kafkaAcl_dict in kafkaAcl_dict_list]
@@ -83,7 +83,7 @@ class RestProxyAdmin(KafkaAdmin):
         #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/brokers"
         headers_dict = {"Content-Type": "application/json"}
-        response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+        response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         kafkaBroker_dict_list = response_dict["data"]
         #
         broker_dict = {kafkaBroker_dict["broker_id"]: kafkaBroker_dict["host"] + ":" + str(kafkaBroker_dict["port"]) for kafkaBroker_dict in kafkaBroker_dict_list if any(fnmatch(str(kafkaBroker_dict["broker_id"]), pattern_str) for pattern_str in pattern_str_list)}
@@ -103,11 +103,11 @@ class RestProxyAdmin(KafkaAdmin):
             #
             dict_list = [{"name": key_str, "value": value_str} for key_str, value_str in config_dict.items()]
             payload_dict = {"data": dict_list}
-            post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+            post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #        
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/broker-configs"
         headers_dict = {"Content-Type": "application/json"}
-        response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+        response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         kafkaClusterConfig_dict_list = response_dict["data"]
         #
         cluster_config_dict = {}
@@ -136,7 +136,7 @@ class RestProxyAdmin(KafkaAdmin):
         for group_str, group_description_dict in group_str_group_description_dict_dict.items():
             url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/consumer-groups/{group_str}/consumers"
             headers_dict = {"Content-Type": "application/json"}
-            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
             kafkaConsumer_dict_list = response_dict["data"]
             #
             dict_list = [{"member_id": kafkaConsumer_dict["consumer_id"], "client_id": kafkaConsumer_dict["client_id"], "host": kafkaConsumer_dict["cluster_id"], "group_instance_id": kafkaConsumer_dict["instance_id"]} for kafkaConsumer_dict in kafkaConsumer_dict_list]
@@ -144,7 +144,7 @@ class RestProxyAdmin(KafkaAdmin):
                 consumer_id_str = dict["member_id"]
                 url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/consumer-groups/{group_str}/consumers/{consumer_id_str}/assignments"
                 headers_dict = {"Content-Type": "application/json"}
-                response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+                response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
                 kafkaConsumerAssignment_dict_list = response_dict["data"]
                 #
                 dict["topic_partitions"] = [{"error": None, "metadata": None, "offset": None, "partition": kafkaConsumerAssignment_dict["partition_id"], "topic": kafkaConsumerAssignment_dict["topic_name"]} for kafkaConsumerAssignment_dict in kafkaConsumerAssignment_dict_list]
@@ -178,7 +178,7 @@ class RestProxyAdmin(KafkaAdmin):
         headers_dict = {"Content-Type": "application/json"}
         for group_str in group_str_list:
             url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/consumer-groups/{group_str}/lags"
-            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
             kafkaConsumerLag_dict_list = response_dict["data"]
             #
             if group_str in group_offsets:
@@ -219,7 +219,7 @@ class RestProxyAdmin(KafkaAdmin):
                 key_str_value_str_dict_list = [{"name": config_key_str, "value": config_value_str} for config_key_str, config_value_str in config_dict.items()]
                 payload_dict = {"data": key_str_value_str_dict_list}
                 #
-                post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+                post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
         def kafkaTopicConfigList_dict_to_config_dict(kafkaTopicConfigList_dict):
             config_dict = {}
@@ -234,7 +234,7 @@ class RestProxyAdmin(KafkaAdmin):
             return config_dict
 
         #
-        topic_str_config_dict_dict = {topic_str: kafkaTopicConfigList_dict_to_config_dict(get(f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{topic_str}/configs", None, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())) for topic_str in topic_str_list}
+        topic_str_config_dict_dict = {topic_str: kafkaTopicConfigList_dict_to_config_dict(get(f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{topic_str}/configs", None, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)) for topic_str in topic_str_list}
         #
         return topic_str_config_dict_dict
     
@@ -252,7 +252,7 @@ class RestProxyAdmin(KafkaAdmin):
         headers_dict = {"Content-Type": "application/json"}
         configs_dict_list = [{"name": config_key_str, "value": config_value_str} for config_key_str, config_value_str in config_dict.items()]
         payload_dict = {"topic_name": topic_str, "partitions_count": partitions_int, "configs": configs_dict_list}
-        post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+        post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
         return topic_str
 
@@ -265,7 +265,7 @@ class RestProxyAdmin(KafkaAdmin):
             for topic_str in topic_str_list:
                 url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{topic_str}"
                 headers_dict = {"Content-Type": "application/json"}
-                delete(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+                delete(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
         return topic_str_list
 
@@ -276,7 +276,7 @@ class RestProxyAdmin(KafkaAdmin):
         #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics"
         headers_dict = {"Content-Type": "application/json"}
-        response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+        response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         kafkaTopic_dict_list = response_dict["data"]
         topic_str_list = [kafkaTopic_dict["topic_name"] for kafkaTopic_dict in kafkaTopic_dict_list]
         #
@@ -297,7 +297,7 @@ class RestProxyAdmin(KafkaAdmin):
         #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics"
         headers_dict = {"Content-Type": "application/json"}
-        response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+        response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         kafkaTopic_dict_list = response_dict["data"]
         #
         topic_str_partitions_int_dict = {kafkaTopic_dict["topic_name"]: kafkaTopic_dict["partitions_count"] for kafkaTopic_dict in kafkaTopic_dict_list if any(fnmatch(kafkaTopic_dict["topic_name"], pattern_str) for pattern_str in pattern_str_or_str_list)}
@@ -309,7 +309,7 @@ class RestProxyAdmin(KafkaAdmin):
                 for partition_int in range(topic_str_partitions_int_dict[topic_str]):
                     url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{topic_str}/partitions/{partition_int}/replicas"
                     headers_dict = {"Content-Type": "application/json"}
-                    response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+                    response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
                     kafkaReplica_dict_list = response_dict["data"]
                     #
                     if partition_int in partition_int_partition_dict_dict:
@@ -360,7 +360,7 @@ class RestProxyAdmin(KafkaAdmin):
             for partition_int in range(partitions_int):
                 url_str = f"{rest_proxy_url_str}/topics/{topic_str}/partitions/{partition_int}/offsets"
                 headers_dict = {"Content-Type": "application/vnd.kafka.v2+json"}
-                response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+                response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
                 topic_str_partition_int_offsets_tuple_dict_dict[topic_str][partition_int] = (response_dict["beginning_offset"], response_dict["end_offset"])
         #
         return topic_str_partition_int_offsets_tuple_dict_dict
@@ -374,11 +374,11 @@ class RestProxyAdmin(KafkaAdmin):
         #
         if len(pattern_str_list) == 1 and not(is_pattern(pattern_str_list[0])):
             url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/consumer-groups/{pattern_str_list[0]}"
-            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
             kafkaConsumerGroup_dict_list = [response_dict]
         else:
             url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/consumer-groups"
-            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.restproxy_obj.requests_num_retries())
+            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
             kafkaConsumerGroup_dict_list = response_dict["data"]
         #
         return kafkaConsumerGroup_dict_list

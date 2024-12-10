@@ -78,20 +78,20 @@ class ClusterConsumer(KafkaConsumer):
         if offsets is not None:
             str_or_int = list(offsets.keys())[0]
             if isinstance(str_or_int, str):
-                offsets_dict = offsets
+                topic_str_offsets_dict_dict = offsets
             elif isinstance(str_or_int, int):
-                offsets_dict = {topic_str: offsets for topic_str in self.topic_str_list}
+                topic_str_offsets_dict_dict = {topic_str: offsets for topic_str in self.topic_str_list}
             #
-            offsets_topicPartition_list = [TopicPartition(topic_str, partition_int, offset_int) for topic_str, offsets in offsets_dict.items() for partition_int, offset_int in offsets.items()]
+            offsets_topicPartition_list = [TopicPartition(topic_str, partition_int, offset_int) for topic_str, offsets in topic_str_offsets_dict_dict.items() for partition_int, offset_int in offsets.items()]
             #
             commit_topicPartition_list = self.consumer.commit(offsets=offsets_topicPartition_list, asynchronous=asynchronous_bool)
             #
-            offsets_dict = topicPartition_list_to_offsets_dict(commit_topicPartition_list)
+            topic_str_offsets_dict_dict = topicPartition_list_to_offsets_dict(commit_topicPartition_list)
         else:
-            self.consumer.commit()
-            offsets_dict = {}
+            self.consumer.commit() # always returns None in this branch
+            topic_str_offsets_dict_dict = {}
         #
-        return offsets_dict
+        return topic_str_offsets_dict_dict
 
     def offsets(self, **kwargs):
         timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
@@ -99,9 +99,9 @@ class ClusterConsumer(KafkaConsumer):
         assignment_topicPartition_list = self.consumer.assignment()
         committed_topicPartition_list = self.consumer.committed(assignment_topicPartition_list, timeout=timeout_float)
         #
-        offsets_dict = topicPartition_list_to_offsets_dict(committed_topicPartition_list)
+        topic_str_offsets_dict_dict = topicPartition_list_to_offsets_dict(committed_topicPartition_list)
         #
-        return offsets_dict
+        return topic_str_offsets_dict_dict
 
     def memberid(self):
         member_id_str = self.consumer.memberid()

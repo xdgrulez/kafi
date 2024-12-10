@@ -12,11 +12,13 @@ class KafkaConsumer(StorageConsumer):
 
     #
 
-    def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
+    def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
         n_int = n
         #
         if n_int == 0:
             return initial_acc
+        #
+        commit_after_processing_bool = self.storage_obj.commit_after_processing() if commit_after_processing is None else commit_after_processing
         #
         consume_batch_size_int = kwargs["consume_batch_size"] if "consume_batch_size" in kwargs else self.storage_obj.consume_batch_size()
         if n != ALL_MESSAGES and consume_batch_size_int > n_int:
@@ -53,7 +55,7 @@ class KafkaConsumer(StorageConsumer):
                     break_bool = True
                     break
             #
-            if not self.enable_auto_commit_bool and self.storage_obj.commit_after_processing():
+            if not self.enable_auto_commit_bool and commit_after_processing_bool:
                 self.commit(topic_str_offsets_dict_dict)
             #
             if break_bool:
@@ -63,10 +65,10 @@ class KafkaConsumer(StorageConsumer):
 
     #
 
-    def consume(self, n=ALL_MESSAGES):
+    def consume(self, n=ALL_MESSAGES, **kwargs):
         def foldl_function(message_dict_list, message_dict):
             message_dict_list.append(message_dict)
             #
             return message_dict_list
         #
-        return self.foldl(foldl_function, [], n)
+        return self.foldl(foldl_function, [], n, commit_after_processing=False, **kwargs)

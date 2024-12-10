@@ -26,8 +26,10 @@ class FSConsumer(StorageConsumer):
     
     #
   
-    def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
+    def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
         n_int = n
+        #
+        commit_after_processing_bool = self.storage_obj.commit_after_processing() if commit_after_processing is None else commit_after_processing
         #
         auto_offset_reset_str = self.consumer_config_dict["auto.offset.reset"]
         #
@@ -112,7 +114,7 @@ class FSConsumer(StorageConsumer):
                         #
                         message_counter_int += 1
                         #
-                        if not self.enable_auto_commit_bool and self.storage_obj.commit_after_processing():
+                        if not self.enable_auto_commit_bool and commit_after_processing_bool:
                             # Only commit once the message has been processed if enable.auto.commit == False and commit.after.processing == True
                             self.commit()
                     #
@@ -146,12 +148,16 @@ class FSConsumer(StorageConsumer):
         if offsets is None:
             new_group_dict = {"offsets": self.next_topic_str_offsets_dict_dict}
             #
-            topic_str_group_str_offsets_dict_dict_dict = {topic_str: {self.group_str: self.next_topic_str_offsets_dict_dict[topic_str]} for topic_str in self.topic_str_list}
+            topic_str_offsets_dict_dict = {topic_str: self.next_topic_str_offsets_dict_dict[topic_str] for topic_str in self.topic_str_list}
         else:
-            topic_str_group_str_offsets_dict_dict_dict = offsets
+            str_or_int = list(offsets.keys())[0]
+            if isinstance(str_or_int, str):
+                topic_str_offsets_dict_dict = offsets
+            elif isinstance(str_or_int, int):
+                topic_str_offsets_dict_dict = {topic_str: offsets for topic_str in self.topic_str_list}
             #
-            new_group_dict = {"offsets": {topic_str: group_str_offsets_dict_dict[self.group_str] for topic_str, group_str_offsets_dict_dict in topic_str_group_str_offsets_dict_dict_dict.items()}}
+            new_group_dict = {"offsets": topic_str_offsets_dict_dict}
         #
         self.storage_obj.admin.set_group_dict(self.group_str, new_group_dict)
         #
-        return topic_str_group_str_offsets_dict_dict_dict
+        return topic_str_offsets_dict_dict

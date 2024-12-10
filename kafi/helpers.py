@@ -48,13 +48,23 @@ def create_session(retries_int):
     return session
 
 
-def get(url_str, headers_dict, payload_dict=None, auth_str_tuple=None, retries=0):
-    session = create_session(retries)
+def get(url_str, headers_dict, payload_dict=None, auth_str_tuple=None, retries_int=0, debug_bool=False):
+    session = create_session(retries_int)
+    #
     if payload_dict is None:
+        if debug_bool:
+            print(f"GET Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\n")
+        #
         response = session.get(url_str, headers=headers_dict, auth=auth_str_tuple)
     else:
+        if debug_bool:
+            print(f"GET Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\nPayload: {payload_dict}")
+        #
         response = session.get(url_str, headers=headers_dict, json=payload_dict, auth=auth_str_tuple)
     #
+    if debug_bool:
+        print(f"GET Response\n-\n{response.text}\n")
+    #
     if is_json(response.text):
         response_dict = response.json()
     else:
@@ -70,9 +80,17 @@ def get(url_str, headers_dict, payload_dict=None, auth_str_tuple=None, retries=0
         raise Exception(response_dict)
 
 
-def delete(url_str, headers_dict, auth_str_tuple=None, retries=10):
-    session = create_session(retries)
+def delete(url_str, headers_dict, auth_str_tuple=None, retries_int=10, debug_bool=False):
+    session = create_session(retries_int)
+    #
+    if debug_bool:
+        print(f"DELETE Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\n")
+    #
     response = session.delete(url_str, headers=headers_dict, auth=auth_str_tuple)
+    #
+    if debug_bool:
+        print(f"DELETE Response\n-\n{response.text}\n")
+    #
     if is_json(response.text):
         response_dict = response.json()
     else:
@@ -88,12 +106,22 @@ def delete(url_str, headers_dict, auth_str_tuple=None, retries=10):
         raise Exception(response_dict)
 
 
-def post(url_str, headers_dict, payload_dict_or_generator, auth_str_tuple=None, retries=10):
-    session = create_session(retries)
+def post(url_str, headers_dict, payload_dict_or_generator, auth_str_tuple=None, retries_int=10, debug_bool=False):
+    session = create_session(retries_int)
+    #
     if isinstance(payload_dict_or_generator, dict):
+        if debug_bool:
+            print(f"POST Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\nPayload: {payload_dict_or_generator}\n")
+        #
         response = session.post(url_str, headers=headers_dict, json=payload_dict_or_generator, auth=auth_str_tuple)
     else:
+        if debug_bool:
+            print(f"POST Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\nPayload: (generator)\n")
+        #
         response = session.post(url_str, headers=headers_dict, data=payload_dict_or_generator, auth=auth_str_tuple)
+    #
+    if debug_bool:
+        print(f"POST Response\n-\n{response.text}\n")
     #
     if is_json(response.text):
         response_dict = response.json()

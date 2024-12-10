@@ -79,7 +79,7 @@ class SchemaRegistry:
                 basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
                 auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
             #
-            subject_name_str_list = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple)
+            subject_name_str_list = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, debug_bool=self.verbose() >= 2)
         else:
             subject_name_str_list = self.schemaRegistryClient.get_subjects()
         #
@@ -100,7 +100,7 @@ class SchemaRegistry:
                 basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
                 auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
             #
-            schema_id_int_list = delete(url_str, headers_dict, auth_str_tuple)
+            schema_id_int_list = delete(url_str, headers_dict, auth_str_tuple, debug_bool=self.verbose() >= 2)
         else:
             schema_id_int_list = self.schemaRegistryClient.delete_subject(subject_name_str, permanent_bool)
         #
@@ -144,7 +144,7 @@ class SchemaRegistry:
                 basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
                 auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
             #
-            schema_id_int = delete(url_str, headers_dict, auth_str_tuple)
+            schema_id_int = delete(url_str, headers_dict, auth_str_tuple, debug_bool=self.verbose() >= 2)
         else:
             schema_id_int = self.schemaRegistryClient.delete_version(subject_name_str, version_int)
         #

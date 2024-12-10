@@ -26,7 +26,7 @@ class StorageConsumer(Deserializer):
             for key_str, value in kwargs["config"].items():
                 self.consumer_config_dict[key_str] = value
         #
-        self.enable_auto_commit_bool = kwargs["enable.auto.commit"] if "enable.auto.commit" in kwargs else storage_obj.enable_auto_commit()
+        self.enable_auto_commit_bool = kwargs["enable_auto_commit"] if "enable_auto_commit" in kwargs else storage_obj.enable_auto_commit()
         #
         self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict = {}
 

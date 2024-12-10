@@ -47,13 +47,13 @@ class RestProxyConsumer(KafkaConsumer):
         #
         payload_dict1 = {"format": type_str}
         payload_dict1.update(self.consumer_config_dict)
-        response_dict1 = post(url_str1, headers_dict1, payload_dict1, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
+        response_dict1 = post(url_str1, headers_dict1, payload_dict1, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         self.instance_id_str = response_dict1["instance_id"]
         #
         url_str2 = f"{rest_proxy_url_str}/consumers/{self.group_str}/instances/{self.instance_id_str}/subscription"
         headers_dict2 = {"Content-Type": "application/vnd.kafka.v2+json"}
         payload_dict2 = {"topics": self.topic_str_list}
-        post(url_str2, headers_dict2, payload_dict2, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
+        post(url_str2, headers_dict2, payload_dict2, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
         return self.topic_str_list, self.group_str
     
@@ -62,7 +62,7 @@ class RestProxyConsumer(KafkaConsumer):
         #
         url_str = f"{rest_proxy_url_str}/consumers/{self.group_str}/instances/{self.instance_id_str}/subscription"
         headers_dict = {"Content-Type": "application/vnd.kafka.v2+json"}
-        delete(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
+        delete(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
         return self.topic_str_list, self.group_str
 
@@ -73,7 +73,7 @@ class RestProxyConsumer(KafkaConsumer):
         #
         url_str = f"{rest_proxy_url_str}/consumers/{self.group_str}/instances/{self.instance_id_str}"
         headers_dict = {"Content-Type": "application/vnd.kafka.v2+json"}
-        delete(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
+        delete(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
         return self.topic_str_list, self.group_str
 
@@ -123,7 +123,7 @@ class RestProxyConsumer(KafkaConsumer):
         #
         message_dict_list = []
         for _ in range(0, self.storage_obj.consume_num_attempts()):
-            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
+            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
             #
             message_dict_list += [{"headers": None, "topic": rest_message_dict["topic"], "partition": rest_message_dict["partition"], "offset": rest_message_dict["offset"], "timestamp": None, "key": decode(rest_message_dict["key"], True), "value": decode(rest_message_dict["value"], False)} for rest_message_dict in response_dict]
         #
@@ -145,36 +145,36 @@ class RestProxyConsumer(KafkaConsumer):
             payload_dict = {"offsets": rest_offsets_dict_list}
         #
         url_str = f"{rest_proxy_url_str}/consumers/{self.group_str}/instances/{self.instance_id_str}/offsets"
-        response_dict = post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
+        post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
-        return response_dict
+        return {}
 
     def offsets(self):
         (rest_proxy_url_str, auth_str_tuple) = self.storage_obj.get_url_str_auth_str_tuple_tuple()
         #
         url_str1 = f"{rest_proxy_url_str}/consumers/{self.group_str}/instances/{self.instance_id_str}/assignments"
         headers_dict1 = {"Accept": "application/vnd.kafka.v2+json"}
-        response_dict1 = get(url_str1, headers_dict1, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
+        response_dict1 = get(url_str1, headers_dict1, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
         url_str2 = f"{rest_proxy_url_str}/consumers/{self.group_str}/instances/{self.instance_id_str}/offsets"
         headers_dict2 = {"Content-Type": "application/vnd.kafka.v2+json"}
-        response_dict2 = get(url_str2, headers_dict2, response_dict1, auth_str_tuple=auth_str_tuple, retries=self.storage_obj.requests_num_retries())
+        response_dict2 = get(url_str2, headers_dict2, response_dict1, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         #
-        offsets_dict = {}
+        topic_str_offsets_dict_dict = {}
         for rest_topic_partition_offset_dict in response_dict2["offsets"]:
             topic_str = rest_topic_partition_offset_dict["topic"]
             partition_int = rest_topic_partition_offset_dict["partition"]
             offset_int = rest_topic_partition_offset_dict["offset"]
             #
-            if topic_str in offsets_dict:
-                offsets_dict = offsets_dict[topic_str]
-            else:
-                offsets_dict = {}
-            offsets_dict[partition_int] = offset_int
+            if topic_str not in topic_str_offsets_dict_dict:
+                topic_str_offsets_dict_dict[topic_str] = {}
             #
-            offsets_dict[topic_str] = offsets_dict
+            if partition_int not in topic_str_offsets_dict_dict[topic_str]:
+                topic_str_offsets_dict_dict[topic_str] = {}
+            #
+            topic_str_offsets_dict_dict[topic_str][partition_int] = offset_int
         #
-        return offsets_dict
+        return topic_str_offsets_dict_dict
 
 #
 
@@ -185,5 +185,5 @@ def offsets_dict_to_rest_offsets_dict_list(offsets_dict, topic_str_list):
     elif isinstance(str_or_int, int):
         topic_str_offsets_dict_dict = {topic_str: offsets_dict for topic_str in topic_str_list}
     #
-    rest_offsets_dict_list = [{"topic": topic_str, "partition": partition_int, "offset": offset_int} for topic_str, offsets_dict in topic_str_offsets_dict_dict.items() for partition_int, offset_int in offsets_dict.items()]
+    rest_offsets_dict_list = [{"topic": topic_str, "partition": partition_int, "offset": offset_int - 1} for topic_str, offsets_dict in topic_str_offsets_dict_dict.items() for partition_int, offset_int in offsets_dict.items()]
     return rest_offsets_dict_list
