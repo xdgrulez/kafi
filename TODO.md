@@ -1,6 +1,7 @@
 * Schema Registry: support patterns
 * better error handling (e.g. if topic does not yet exists and auto creation is off, GroupAuthorization, TopicAuthorization...)
 * add Perftest?
+* local topic consume performance
 
 # Methods
 
