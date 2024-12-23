@@ -285,3 +285,31 @@ def explode_normalize(df):
     df = reduce(explode, col_str_list, df)
     #
     return df
+
+
+def zip2(list1, list2):
+    i = 0
+    j = 0
+    zipped_list = []
+ 
+    while True:
+        if len(list1) >= len(list2):
+            if i < len(list1):
+                zipped_list.append((list1[i], list2[j]))
+                i += 1
+                j += 1
+            else:
+                break
+            if j >= len(list2):
+                j = 0
+        else:
+            if j < len(list2):
+                zipped_list.append((list1[i], list2[j]))
+                i += 1
+                j += 1
+            else:
+                break
+            if i >= len(list1):
+                i = 0
+    
+    return zipped_list

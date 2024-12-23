@@ -99,9 +99,9 @@ class FSConsumer(StorageConsumer):
                 for message_bytes in message_bytes_list:
                     message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
                     #
-                    message_dict["key"] = self.deserialize(message_dict["key"], self.topic_str_key_type_str_dict[message_dict["topic"]])
+                    message_dict["key"] = self.deserialize(message_dict["key"], self.topic_str_key_type_str_dict[message_dict["topic"]], topic_str=topic_str, key_bool=True)
                     #
-                    message_dict["value"] = self.deserialize(message_dict["value"], self.topic_str_value_type_str_dict[message_dict["topic"]])
+                    message_dict["value"] = self.deserialize(message_dict["value"], self.topic_str_value_type_str_dict[message_dict["topic"]], topic_str=topic_str, key_bool=False)
                     #
                     partition_int = message_dict["partition"]
                     self.next_topic_str_offsets_dict_dict[topic_str][partition_int] = message_dict["offset"] + 1

@@ -7,6 +7,7 @@ import tempfile
 from confluent_kafka.schema_registry.avro import AvroDeserializer
 from confluent_kafka.schema_registry.json_schema import JSONDeserializer
 from confluent_kafka.schema_registry.protobuf import ProtobufDeserializer
+from confluent_kafka.serialization import MessageField, SerializationContext
 from google.protobuf.json_format import MessageToDict
 
 from kafi.schemaregistry import SchemaRegistry
@@ -15,7 +16,7 @@ class Deserializer(SchemaRegistry):
     def __init__(self, schema_registry_config_dict):
         super().__init__(schema_registry_config_dict)
 
-    def deserialize(self, payload_bytes, type_str):
+    def deserialize(self, payload_bytes, type_str, topic_str, key_bool):
         if type_str.lower() == "bytes":
             deserialized_payload = self.bytes_to_bytes(payload_bytes)
         elif type_str.lower() == "str":
@@ -23,11 +24,11 @@ class Deserializer(SchemaRegistry):
         elif type_str.lower() == "json":
             deserialized_payload = self.bytes_to_dict(payload_bytes)
         elif type_str.lower() in ["protobuf", "pb"]:
-            deserialized_payload = self.bytes_protobuf_to_dict(payload_bytes)
+            deserialized_payload = self.bytes_protobuf_to_dict(payload_bytes, topic_str, key_bool)
         elif type_str.lower() == "avro":
-            deserialized_payload = self.bytes_avro_to_dict(payload_bytes)
+            deserialized_payload = self.bytes_avro_to_dict(payload_bytes, topic_str, key_bool)
         elif type_str.lower() in ["jsonschema", "json_sr"]:
-            deserialized_payload = self.bytes_jsonschema_to_dict(payload_bytes)
+            deserialized_payload = self.bytes_jsonschema_to_dict(payload_bytes, topic_str, key_bool)
         else:
             raise Exception("Only \"str\", \"bytes\", \"json\", \"protobuf\" (\"pb\"), \"avro\" and \"jsonschema\" (\"json_sr\") supported.")
         #
@@ -48,7 +49,7 @@ class Deserializer(SchemaRegistry):
         #
         return json.loads(bytes)
 
-    def bytes_protobuf_to_dict(self, bytes):
+    def bytes_protobuf_to_dict(self, bytes, topic_str, key_bool):
         if bytes is None:
             return None
         #
@@ -60,11 +61,12 @@ class Deserializer(SchemaRegistry):
             self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int] = (generalizedProtocolMessageType, protobuf_schema_str)
         #
         protobufDeserializer = ProtobufDeserializer(generalizedProtocolMessageType, {"use.deprecated.format": False})
-        protobuf_message = protobufDeserializer(bytes, None)
+        serializationContext = SerializationContext(topic_str, MessageField.KEY if key_bool else MessageField.VALUE)
+        protobuf_message = protobufDeserializer(bytes, serializationContext)
         dict = MessageToDict(protobuf_message)
         return dict
 
-    def bytes_avro_to_dict(self, bytes):
+    def bytes_avro_to_dict(self, bytes, topic_str, key_bool):
         if bytes is None:
             return None
         #
@@ -73,10 +75,11 @@ class Deserializer(SchemaRegistry):
         schema_str = schema_dict["schema_str"]
         #
         avroDeserializer = AvroDeserializer(self.schemaRegistryClient, schema_str)
-        dict = avroDeserializer(bytes, None)
+        serializationContext = SerializationContext(topic_str, MessageField.KEY if key_bool else MessageField.VALUE)
+        dict = avroDeserializer(bytes, serializationContext)
         return dict
 
-    def bytes_jsonschema_to_dict(self, bytes):
+    def bytes_jsonschema_to_dict(self, bytes, topic_str, key_bool):
         if bytes is None:
             return None
         #
@@ -85,7 +88,8 @@ class Deserializer(SchemaRegistry):
         schema_str = schema_dict["schema_str"]
         #
         jsonDeserializer = JSONDeserializer(schema_str)
-        dict = jsonDeserializer(bytes, None)
+        serializationContext = SerializationContext(topic_str, MessageField.KEY if key_bool else MessageField.VALUE)
+        dict = jsonDeserializer(bytes, serializationContext)
         return dict
 
     # Helpers

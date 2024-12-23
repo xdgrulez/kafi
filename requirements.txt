@@ -1,7 +1,5 @@
-confluent_kafka>=2.5.0
-fastavro
+confluent_kafka[avro,json,protobuf,schemaregistry]
 grpcio-tools
-jsonschema
 piny
 requests
 # Azure Blob Storage

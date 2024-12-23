@@ -3,6 +3,8 @@
 * add Perftest?
 * local topic consume performance
 * debug mode - e.g. show all HTTPS calls (and also confluent_kafka, Local, S3, AzureBlob)
+* support schemaregistry-rules (confluent_kafka 2.7.0)
+* SR: remove custom API calls for missing ones in ck 2.6.x (and check whether 2.7.0 supports all it should...)
 
 # Methods
 

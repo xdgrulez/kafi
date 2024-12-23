@@ -76,3 +76,32 @@ class AddOns(Functional):
         return topic_str
 
     retouch = recreate
+
+    def join_to(self, source_topic1, source_storage2, source_topic2, target_storage, target_topic, get_key_function1, get_key_function2, projection_function, join="left", n=ALL_MESSAGES, **kwargs):
+        join_str = join
+        #
+        def zip_foldl_to_function(acc, message_dict1, message_dict2):
+            print(message_dict1["value"])
+            print(message_dict2["value"])
+            print("===")
+            (index_dict1, index_dict2) = acc
+            #
+            key1 = get_key_function1(message_dict1)
+            key2 = get_key_function2(message_dict2)
+            #
+            index_dict1[key1] = message_dict1
+            index_dict2[key2] = message_dict2
+            #
+            join_dict = {}
+            if join_str == "left":
+                for key in index_dict1:
+                    if key in index_dict2:
+                        join_dict[key1] = projection_function(index_dict1[key1], index_dict2[key1])
+                #
+                if join_dict == {}:
+                    return ((index_dict1, index_dict2), [message_dict1])
+                else:
+                    return ((index_dict1, index_dict2), [join_dict[key1]])
+            #
+
+        return self.zip_foldl_to(source_topic1, source_storage2, source_topic2, target_storage, target_topic, zip_foldl_to_function, ({}, {}), n=n, **kwargs)

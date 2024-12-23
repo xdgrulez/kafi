@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='kafi',
-    version='0.0.27',
+    version='0.0.28',
     description='Kafka and Files',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -15,12 +15,8 @@ setup(
     author_email='matthias.debusmann@gmail.com',
     license='Apache License 2.0',
     packages=find_packages(),
-    install_requires=['azure-storage-blob',
-                      'confluent_kafka>=2.5.0',
-                      'fastavro',
+    install_requires=['confluent_kafka[avro,json,protobuf,schemaregistry]',
                       'grpcio-tools',
-                      'jsonschema',
-                      'minio',
                       'piny',
                       'requests',
                       'azure-storage-blob',

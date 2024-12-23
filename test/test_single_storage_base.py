@@ -48,6 +48,8 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         self.nested_json_str_list = [{"state": "Florida", "shortname": "FL", "info": {"governor": "Rick Scott"}, "counties": [{"name": "Dade", "population": 12345}, {"name": "Broward", "population": 40000}, {"name": "Palm Beach", "population": 60000}]}, {"state": "Ohio", "shortname": "OH", "info": {"governor": "John Kasich"}, "counties": [{"name": "Summit", "population": 1234}, {"name": "Cuyahoga", "population": 1337}]}]
         #
+        self.snack_countries_str_list = ['{"name": "timtam", "country": "Australia"}', '{"name": "cookie", "country": "US"}']
+        #
         self.topic_str_list = []
         self.group_str_list = []
         #
@@ -955,7 +957,7 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         group_str1 = self.create_test_group_name()
         group_str2 = self.create_test_group_name()
-        (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = s.diff(topic_str1, s, topic_str2, group1=group_str1, group2=group_str2, type1="json", type2="json", n=3)
+        (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = s.diff(topic_str1, s, topic_str2, source1_group=group_str1, source2_group=group_str2, source1_type="json", source2_type="json", n=3)
         self.assertEqual(3, len(message_dict_message_dict_tuple_list))
         self.assertEqual(3, message_counter_int1)
         self.assertEqual(3, message_counter_int2)
@@ -1142,3 +1144,39 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         partitions_int2 = s.partitions(topic_str)[topic_str]
         self.assertEqual(2, partitions_int2)
+
+    # def test_join(self):
+    #     if self.__class__.__name__ == "TestSingleStorageBase":
+    #         return
+    #     #
+    #     s = self.get_storage()
+    #     #
+    #     topic_str1 = self.create_test_topic_name()
+    #     s.create(topic_str1)
+    #     producer = s.producer(topic_str1, type="json")
+    #     producer.produce(self.snack_str_list)
+    #     producer.close()
+    #     #
+    #     topic_str2 = self.create_test_topic_name()
+    #     s.create(topic_str2)
+    #     producer = s.producer(topic_str2, type="json")
+    #     producer.produce(self.snack_countries_str_list)
+    #     producer.close()
+    #     #
+    #     topic_str3 = self.create_test_topic_name()
+    #     s.create(topic_str3)
+    #     #
+    #     def get_key_function(message_dict):
+    #         return message_dict["value"]["name"]
+    #     #
+    #     def projection_function(message_dict1, message_dict2):
+    #         message_dict = dict(message_dict1)
+    #         message_dict["value"] = message_dict1["value"] | message_dict2["value"]
+    #         return message_dict
+    #     #
+    #     group_str1 = self.create_test_group_name()
+    #     x = s.join_to(topic_str1, s, topic_str2, s, topic_str3, get_key_function1=get_key_function, get_key_function2=get_key_function, projection_function=projection_function, join="left", group=group_str1)
+    #     #
+    #     y = s.cat(topic_str3)
+    #     for z in y:
+    #         print(z["value"])

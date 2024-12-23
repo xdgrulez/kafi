@@ -628,7 +628,7 @@ def test_diff(test_obj, storage1, storage2):
     time.sleep(0.1)
     group_str2 = test_obj.create_test_group_name(storage2)
     #
-    (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = storage1.diff(topic_str1, storage2, topic_str2, group1=group_str1, group2=group_str2, type1="json", type2="json", n=3, consume_batch_size=3)
+    (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = storage1.diff(topic_str1, storage2, topic_str2, source1_group=group_str1, source2_group=group_str2, source1_type="json", source2_type="json", n=3, consume_batch_size=3)
     test_obj.assertEqual(3, len(message_dict_message_dict_tuple_list))
     test_obj.assertEqual(3, message_counter_int1)
     test_obj.assertEqual(3, message_counter_int2)
