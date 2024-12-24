@@ -55,10 +55,10 @@ class SchemaRegistry:
         schema_id_int = self.schemaRegistryClient.register_schema(subject_name_str, schema1, normalize_schemas=normalize_bool)
         return schema_id_int
 
-    def lookup_schema(self, subject_name, schema, normalize_schemas=False):
+    def lookup_schema(self, subject_name, schema, normalize=False):
         subject_name_str = subject_name
         schema_dict = schema
-        normalize_schemas_bool = normalize_schemas
+        normalize_schemas_bool = normalize
         #
         schema1 = Schema(schema_dict["schema_str"], schema_dict["schema_type"]) # TODO: support references
         #
@@ -82,7 +82,7 @@ class SchemaRegistry:
             subject_name_str_list = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, debug_bool=self.verbose() >= 2)
         else:
             subject_name_str_list = self.schemaRegistryClient.get_subjects()
-        #
+        
         filtered_subject_name_str_list = pattern_match(subject_name_str_list, pattern)
         #
         return filtered_subject_name_str_list
@@ -91,18 +91,7 @@ class SchemaRegistry:
         subject_name_str = subject_name
         permanent_bool = permanent
         #
-        if permanent_bool:
-            url_str = f"{self.schema_registry_config_dict['schema.registry.url']}/subjects/{subject_name_str}?permanent=true"
-            headers_dict = {"Accept": "application/json"}
-            auth_str_tuple = None
-            #
-            if "basic.auth.credentials.source" in self.schema_registry_config_dict and self.schema_registry_config_dict["basic.auth.credentials.source"] == "USER_INFO":
-                basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
-                auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
-            #
-            schema_id_int_list = delete(url_str, headers_dict, auth_str_tuple, debug_bool=self.verbose() >= 2)
-        else:
-            schema_id_int_list = self.schemaRegistryClient.delete_subject(subject_name_str, permanent_bool)
+        schema_id_int_list = self.schemaRegistryClient.delete_subject(subject_name_str, permanent_bool)
         #
         return schema_id_int_list
 
@@ -154,7 +143,8 @@ class SchemaRegistry:
         subject_name_str = subject_name
         level_str = level
         #
-        set_level_str = self.schemaRegistryClient.set_compatibility(subject_name_str, level_str)
+        set_level_dict = self.schemaRegistryClient.set_compatibility(subject_name_str, level_str)
+        set_level_str = set_level_dict["compatibility"]
         #
         return set_level_str
 

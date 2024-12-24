@@ -37,9 +37,14 @@ class TestSingleStorageBase(unittest.TestCase):
             snack_dict1["colour"] += "ish"
             self.snack_ish_dict_list.append(snack_dict1)
         #
-        self.avro_schema_str = '{ "type": "record", "name": "myrecord", "fields": [{"name": "name",  "type": "string" }, {"name": "calories", "type": "float" }, {"name": "colour", "type": "string" }] }'
+        self.avro_schema_str = '{ "type": "record", "name": "myrecord", "fields": [{"name": "name",  "type": "string" }, {"name": "calories", "type": "float" }, {"type": "string", "name": "colour" }] }'
+        self.avro_schema_normalized_str = '{"type":"record","name":"myrecord","fields":[{"name":"name","type":"string"},{"name":"calories","type":"float"},{"name":"colour","type":"string"}]}'
         self.protobuf_schema_str = 'message Snack { required string name = 1; required float calories = 2; optional string colour = 3; }'
-        self.jsonschema_schema_str = '{ "title": "abc", "definitions" : { "record:myrecord" : { "type" : "object", "required" : [ "name", "calories" ], "additionalProperties" : false, "properties" : { "name" : {"type" : "string"}, "calories" : {"type" : "number"}, "colour" : {"type" : "string"} } } }, "$ref" : "#/definitions/record:myrecord" }'
+        self.jsonschema_schema_str = '{ "title": "abc", "type": "object", "required": [ "name", "calories" ], "additionalProperties": false, "properties": { "name": { "type": "string" }, "calories": { "type": "number" }, "colour": { "type": "string" } } }'
+        self.jsonschema_schema_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"abc","type":"object"}'
+        self.jsonschema_schema_one_less_field_str = '{"title":"abc","type":"object","required":["name"],"additionalProperties":false,"properties":{"name":{"type":"string"},"colour":{"type":"string"}}}'
+        self.jsonschema_schema_one_more_field_str = '{"title":"abc","type":"object","required":["name","calories"],"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string", "default": ""}}}'
+        self.jsonschema_schema_one_more_field_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"country":{"default":"","type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"abc","type":"object"}'
         #
         self.headers_str_bytes_tuple_list = [("header_field1", b"header_value1"), ("header_field2", b"header_value2")]
         self.headers_str_bytes_dict = {"header_field1": b"header_value1", "header_field2": b"header_value2"}
@@ -1044,6 +1049,212 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(2, len(message_dict_list))
         self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
         self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
+
+    # Schema Registry
+
+    def test_sr_one_version(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str = self.create_test_topic_name()
+        #
+        key_subject_name_str = s.create_subject_name_str(topic_str, True)
+        key_schema_dict = s.create_schema_dict(self.avro_schema_str, "AVRO")
+        key_schema_id_int = s.register_schema(key_subject_name_str, key_schema_dict, normalize=True)
+        #
+        key_registeredSchema_dict = s.lookup_schema(key_subject_name_str, key_schema_dict)
+        self.assertEqual(key_registeredSchema_dict["schema_id"], key_schema_id_int)
+        self.assertEqual(key_registeredSchema_dict["subject"], key_subject_name_str)
+        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.avro_schema_normalized_str)
+        self.assertEqual(key_registeredSchema_dict["schema"]["schema_type"], "AVRO")
+        #
+        key_schema_dict1 = s.get_schema(key_schema_id_int)
+        self.assertEqual(key_schema_dict1["schema_str"], self.avro_schema_normalized_str.replace(" ", ""))
+        #
+        #
+        #
+        value_subject_name_str = s.create_subject_name_str(topic_str, False)
+        value_schema_dict = s.create_schema_dict(self.protobuf_schema_str, "PROTOBUF")
+        value_schema_id_int = s.register_schema(value_subject_name_str, value_schema_dict, normalize=False)
+        #
+        value_registeredSchema_dict = s.lookup_schema(value_subject_name_str, value_schema_dict)
+        self.assertEqual(value_registeredSchema_dict["schema_id"], value_schema_id_int)
+        self.assertEqual(value_registeredSchema_dict["subject"], value_subject_name_str)
+        self.assertEqual(value_registeredSchema_dict["schema"]["schema_str"].replace("\n", "").replace("  ", " ").replace(";}", "; }"), self.protobuf_schema_str)
+        self.assertEqual(value_registeredSchema_dict["schema"]["schema_type"], "PROTOBUF")
+        #
+        value_schema_dict1 = s.get_schema(value_schema_id_int)
+        self.assertEqual(value_schema_dict1["schema_str"].replace("\n", "").replace("  ", " ").replace(";}", "; }"), self.protobuf_schema_str)
+        #
+        #
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*")
+        self.assertEqual(len(subject_name_str_list), 2)
+        self.assertIn(key_subject_name_str, subject_name_str_list)
+        self.assertIn(value_subject_name_str, subject_name_str_list)
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*", deleted=True)
+        self.assertEqual(len(subject_name_str_list), 2)
+        self.assertIn(key_subject_name_str, subject_name_str_list)
+        self.assertIn(value_subject_name_str, subject_name_str_list)
+        #
+        try:
+            s.delete_subject(key_subject_name_str, permanent=True)
+        except Exception as e:
+            self.assertEqual(str(e), f"Subject '{key_subject_name_str}' was not deleted first before being permanently deleted (HTTP status code 404, SR code 40405)")
+        #
+        version_int_list = s.delete_subject(key_subject_name_str, permanent=False)
+        self.assertEqual(version_int_list[0], 1)
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*", deleted=False)
+        self.assertEqual(len(subject_name_str_list), 1)
+        self.assertNotIn(key_subject_name_str, subject_name_str_list)
+        self.assertIn(value_subject_name_str, subject_name_str_list)
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*", deleted=True)
+        self.assertEqual(len(subject_name_str_list), 2)
+        self.assertIn(key_subject_name_str, subject_name_str_list)
+        self.assertIn(value_subject_name_str, subject_name_str_list)
+        #
+        #
+        #
+        version_int_list = s.delete_subject(key_subject_name_str, permanent=True)
+        self.assertEqual(version_int_list[0], 1)
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*", deleted=False)
+        self.assertEqual(len(subject_name_str_list), 1)
+        self.assertNotIn(key_subject_name_str, subject_name_str_list)
+        self.assertIn(value_subject_name_str, subject_name_str_list)
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*", deleted=True)
+        self.assertEqual(len(subject_name_str_list), 1)
+        self.assertNotIn(key_subject_name_str, subject_name_str_list)
+        self.assertIn(value_subject_name_str, subject_name_str_list)
+        #
+        #
+        #
+        version_int_list = s.delete_subject(value_subject_name_str, permanent=False)
+        self.assertEqual(version_int_list[0], 1)
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*", deleted=False)
+        self.assertEqual(len(subject_name_str_list), 0)
+        self.assertNotIn(key_subject_name_str, subject_name_str_list)
+        self.assertNotIn(value_subject_name_str, subject_name_str_list)
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*", deleted=True)
+        self.assertEqual(len(subject_name_str_list), 1)
+        self.assertNotIn(key_subject_name_str, subject_name_str_list)
+        self.assertIn(value_subject_name_str, subject_name_str_list)
+        #
+        #
+        #
+        version_int_list = s.delete_subject(value_subject_name_str, permanent=True)
+        self.assertEqual(version_int_list[0], 1)
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*", deleted=False)
+        self.assertEqual(len(subject_name_str_list), 0)
+        self.assertNotIn(key_subject_name_str, subject_name_str_list)
+        self.assertNotIn(value_subject_name_str, subject_name_str_list)
+        #
+        subject_name_str_list = s.get_subjects(topic_str + "*", deleted=True)
+        self.assertEqual(len(subject_name_str_list), 0)
+        self.assertNotIn(key_subject_name_str, subject_name_str_list)
+        self.assertNotIn(value_subject_name_str, subject_name_str_list)
+
+    def test_sr_two_versions(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str = self.create_test_topic_name()
+        #
+        key_subject_name_str = s.create_subject_name_str(topic_str, True)
+        key_schema_dict = s.create_schema_dict(self.jsonschema_schema_str, "JSON")
+        key_schema_id_int = s.register_schema(key_subject_name_str, key_schema_dict, normalize=True)
+        #
+        try:
+            s.lookup_schema(key_subject_name_str, key_schema_dict, normalize=False)
+        except Exception as e:
+            self.assertEqual(str(e), "Schema not found (HTTP status code 404, SR code 40403)")
+        #
+        key_registeredSchema_dict = s.lookup_schema(key_subject_name_str, key_schema_dict, normalize=True)
+        self.assertEqual(key_registeredSchema_dict["schema_id"], key_schema_id_int)
+        self.assertEqual(key_registeredSchema_dict["subject"], key_subject_name_str)
+        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_normalized_str)
+        self.assertEqual(key_registeredSchema_dict["schema"]["schema_type"], "JSON")
+        #
+        #
+        #
+        try:
+            s.get_compatibility(key_subject_name_str)
+        except Exception as e:
+            self.assertEqual(str(e), f"Subject '{key_subject_name_str}' does not have subject-level compatibility configured (HTTP status code 404, SR code 40408)")
+        #
+        set_level_str = s.set_compatibility(key_subject_name_str, "BACKWARD")
+        self.assertEqual(set_level_str, "BACKWARD")
+        #
+        level_str = s.get_compatibility(key_subject_name_str)
+        self.assertEqual(level_str, "BACKWARD")
+        #
+        key_schema_one_less_field_dict = s.create_schema_dict(self.jsonschema_schema_one_less_field_str, "JSON")
+        is_compatible_bool = s.test_compatibility(key_subject_name_str, key_schema_one_less_field_dict, version="latest")
+        self.assertFalse(is_compatible_bool)
+        #
+        key_schema_one_more_field_dict = s.create_schema_dict(self.jsonschema_schema_one_more_field_str, "JSON")
+        is_compatible_bool = s.test_compatibility(key_subject_name_str, key_schema_one_more_field_dict, version="latest")
+        self.assertTrue(is_compatible_bool)
+        #
+        #
+        #
+        key_schema_id_int1 = s.register_schema(key_subject_name_str, key_schema_one_more_field_dict, normalize=True)
+        self.assertGreater(key_schema_id_int1, key_schema_id_int)
+        #
+        key_registeredSchema_dict1 = s.get_latest_version(key_subject_name_str)
+        self.assertEqual(key_registeredSchema_dict1["schema_id"], key_schema_id_int1)
+        self.assertEqual(key_registeredSchema_dict1["subject"], key_subject_name_str)
+        self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_str)
+        self.assertEqual(key_registeredSchema_dict1["schema"]["schema_type"], "JSON")
+        #
+        key_registeredSchema_dict1 = s.get_version(key_subject_name_str, 2)
+        self.assertEqual(key_registeredSchema_dict1["schema_id"], key_schema_id_int1)
+        self.assertEqual(key_registeredSchema_dict1["subject"], key_subject_name_str)
+        self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_str)
+        self.assertEqual(key_registeredSchema_dict1["schema"]["schema_type"], "JSON")
+        #
+        key_registeredSchema_dict = s.get_version(key_subject_name_str, 1)
+        self.assertEqual(key_registeredSchema_dict["schema_id"], key_schema_id_int)
+        self.assertEqual(key_registeredSchema_dict["subject"], key_subject_name_str)
+        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_normalized_str)
+        self.assertEqual(key_registeredSchema_dict["schema"]["schema_type"], "JSON")
+        #
+        version_int_list = s.get_versions(key_subject_name_str)
+        self.assertEqual(version_int_list, [1, 2])
+        #
+        try:
+            s.delete_version(key_subject_name_str, 1, permanent=True)
+        except Exception as e:
+            self.assertEqual(str(e), f"Subject '{key_subject_name_str}' Version 1 was not deleted first before being permanently deleted")
+        #
+        version_int = s.delete_version(key_subject_name_str, 1, permanent=False)
+        self.assertEqual(version_int, 1)
+        #
+        version_int_list = s.get_versions(key_subject_name_str)
+        self.assertEqual(version_int_list, [2])
+        #
+        key_schema_dict = s.get_schema(key_schema_id_int)
+        self.assertEqual(key_schema_dict["schema_str"], self.jsonschema_schema_normalized_str)
+        self.assertEqual(key_schema_dict["schema_type"], "JSON")
+        #
+        version_int = s.delete_version(key_subject_name_str, 1, permanent=True)
+        self.assertEqual(version_int, 1)
+        #
+        version_int_list = s.delete_subject(key_subject_name_str, permanent=False)
+        self.assertEqual(version_int_list, [2])
+        version_int_list = s.delete_subject(key_subject_name_str, permanent=True)
+        self.assertEqual(version_int_list, [2])
 
     # Pandas
 
