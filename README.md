@@ -407,9 +407,9 @@ c.get_latest_version("topic_jsonschema-value")
 
 etc.
 
-## A Simple Non-stateful Stream Processor
+## A Very Basic Stream Processor
 
-You can also use Kafi as a simple non-stateful stream processing tool.
+You can also use Kafi as a very basic stream processing tool.
 
 ### Copy Topics
 
@@ -449,7 +449,7 @@ c.cp("topic_json", c, "topic_json_avro_copy", target_value_type="avro", target_v
 (3, 3)
 ```
 
-### Map
+### Copy + Map (=Map_To)
 
 In the example below, we use a *single message transform*. In our `map_function`, we add 42 the "bla" fields or all messages from the input topic `topic_json` and write the processed messages to the output topic `topic_json_mapped`:
 
@@ -479,7 +479,7 @@ c.cp("topic_protobuf", c, "topic_protobuf_json_mapped", map_function=plus_42, so
 (3, 3)
 ```
 
-### FlatMap
+### Copy + FlatMap (=FlatMap_To)
 
 You can also use Kafi for filtering (or exploding) using its `flatmap` functionality. In the example below, we only keep those messages from the input topic `topic_json` where "bla" equals 4711. Only those messages are written to the output topic `topic_json_flatmapped`:
 
@@ -504,6 +504,80 @@ c1 = Cluster("cluster1")
 c2 = Cluster("cluster2")
 c1.cp("my_topic_on_cluster1", c2, "my_topic_on_cluster2")
 ```
+
+### Basic Indexed Joins
+
+Kafi also supports basic indexed joins of two topics to another topic.
+
+For example, consider two topics `snacks` on `storage1` (e.g. a Kafka cluster) and `snacks_countries` on `storage2`. `snacks` contains messages with the following values:
+
+```
+{"name": "cookie", "calories": 500.0, "colour": "brown"}
+
+{"name": "cake", "calories": 260.0, "colour": "white"}
+
+{"name": "timtam", "calories": 80.0, "colour": "chocolate"}
+```
+
+`snacks_calories`, in turn, contains the values depicted below:
+
+```
+{"snack_name": "timtam", "country": "Australia"}
+
+{"snack_name": "cookie", "country": "US"}
+```
+
+With Kafi, you can e.g. do an inner join of the two input topics into a target topic `snacks_join` on `storage3` as follows:
+
+```
+storage1.join_to("snacks", storage2, "snacks_countries", storage3, "snacks_join", get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="inner")
+```
+
+For a join in Kafi, you need to provide three functions:
+* `get_key_function1`: Get the key of the message from the first/left input topic
+* `get_key_function2`: Get the key of the message from the second/right input topic
+* `projection_function`: Specify how to project two input messages whose key matches to the joined message
+
+For the example, the functions could be defined as follows. Here, the projection function is just the concatenation of the values of the two messages:
+```
+def get_key_function1(message_dict):
+    return message_dict["value"]["name"]
+
+def get_key_function2(message_dict):
+    return message_dict["value"]["snack_name"]
+
+def projection_function(message_dict1, message_dict2):
+    message_dict = dict(message_dict1)
+    message_dict["value"] = message_dict1["value"] | message_dict2["value"]
+    return message_dict
+```
+
+The result of the inner join on the target topic is:
+```
+{"name": "cookie", "calories": 500.0, "colour": "brown", "snack_name": "cookie", "country": "US"}
+{"name": "timtam", "calories": 80.0, "colour": "chocolate", "snack_name": "timtam", "country": "Australia"}
+```
+
+A left join (`join="left`) leads to this result:
+```
+{"name": "cookie", "calories": 500.0, "colour": "brown"}
+{"name": "cake", "calories": 260.0, "colour": "white"}
+{"name": "cookie", "calories": 500.0, "colour": "brown", "snack_name": "cookie", "country": "US"}
+{"name": "timtam", "calories": 80.0, "colour": "chocolate", "snack_name": "timtam", "country": "Australia"}
+```
+
+And a right join (`join="right"`):
+```
+{"snack_name": "timtam", "country": "Australia"}
+{"name": "cookie", "calories": 500.0, "colour": "brown", "snack_name": "cookie", "country": "US"}
+{"name": "timtam", "calories": 80.0, "colour": "chocolate", "snack_name": "timtam", "country": "Australia"}
+```
+
+Note that there is currently no functionality for using time windows, watermarks etc. - so in practice:
+
+* use inner joins only if both topics contain data which grows as much that it fits into memory
+* use left joins only if the first/left topic contains data which grows as much that it fits into memory
+* use right joins only if the second/right topic contains data which grows as much that it fits into memory
 
 ### How to Set the Serialization/Deserialization Types for Stream Processing
 
@@ -840,7 +914,7 @@ Essentially, Kafi is built on the concept of a "Storage". There are two kinds of
 The `Storage` class inherits from:
 * `Shell`: Shell-like commands like `cat`, `head`, `tail`, `cp`...
 * `Files`: Copying Kafka topics to files (`topic_to_file`) and vice versa (`file_to_topic`)
-* `AddOns`: Higher-level add-on methods (`compact`, `compact_to`, `recreate`)
+* `AddOns`: Higher-level add-on methods (`compact`, `compact_to`, `join`, `recreate`)
 * `SchemaRegistry`: Schema Registry API
 
 The classes `Shell`, `Files` and `AddOns` inherit from the class `Functional` which offers functional methods (`foldl`, `flatmap`, `map`, `filter`, `foreach`, `zip_foldl`, `foldl_to`, `flatmap_to`, `map_to`, `filter_to`, `zip_foldl_to`)

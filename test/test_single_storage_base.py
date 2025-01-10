@@ -53,7 +53,10 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         self.nested_json_str_list = [{"state": "Florida", "shortname": "FL", "info": {"governor": "Rick Scott"}, "counties": [{"name": "Dade", "population": 12345}, {"name": "Broward", "population": 40000}, {"name": "Palm Beach", "population": 60000}]}, {"state": "Ohio", "shortname": "OH", "info": {"governor": "John Kasich"}, "counties": [{"name": "Summit", "population": 1234}, {"name": "Cuyahoga", "population": 1337}]}]
         #
-        self.snack_countries_str_list = ['{"name": "timtam", "country": "Australia"}', '{"name": "cookie", "country": "US"}']
+        self.snack_countries_str_list = ['{"snack_name": "timtam", "country": "Australia"}', '{"snack_name": "cookie", "country": "US"}']
+        self.snack_inner_join_dict_list = [{"name": "cookie", "calories": 500.0, "colour": "brown", "snack_name": "cookie", "country": "US"}, {"name": "timtam", "calories": 80.0, "colour": "chocolate", "snack_name": "timtam", "country": "Australia"}]
+        self.snack_left_join_dict_list = [{"name": "cookie", "calories": 500.0, "colour": "brown"}, {"name": "cake", "calories": 260.0, "colour": "white"}, {"name": "cookie", "calories": 500.0, "colour": "brown", "snack_name": "cookie", "country": "US"}, {"name": "timtam", "calories": 80.0, "colour": "chocolate", "snack_name": "timtam", "country": "Australia"}]
+        self.snack_right_join_dict_list = [{'snack_name': 'timtam', 'country': 'Australia'}, {'snack_name': 'cookie', 'country': 'US'}, {'name': 'timtam', 'calories': 80.0, 'colour': 'chocolate', 'snack_name': 'timtam', 'country': 'Australia'}]
         #
         self.topic_str_list = []
         self.group_str_list = []
@@ -1356,38 +1359,71 @@ class TestSingleStorageBase(unittest.TestCase):
         partitions_int2 = s.partitions(topic_str)[topic_str]
         self.assertEqual(2, partitions_int2)
 
-    # def test_join(self):
-    #     if self.__class__.__name__ == "TestSingleStorageBase":
-    #         return
-    #     #
-    #     s = self.get_storage()
-    #     #
-    #     topic_str1 = self.create_test_topic_name()
-    #     s.create(topic_str1)
-    #     producer = s.producer(topic_str1, type="json")
-    #     producer.produce(self.snack_str_list)
-    #     producer.close()
-    #     #
-    #     topic_str2 = self.create_test_topic_name()
-    #     s.create(topic_str2)
-    #     producer = s.producer(topic_str2, type="json")
-    #     producer.produce(self.snack_countries_str_list)
-    #     producer.close()
-    #     #
-    #     topic_str3 = self.create_test_topic_name()
-    #     s.create(topic_str3)
-    #     #
-    #     def get_key_function(message_dict):
-    #         return message_dict["value"]["name"]
-    #     #
-    #     def projection_function(message_dict1, message_dict2):
-    #         message_dict = dict(message_dict1)
-    #         message_dict["value"] = message_dict1["value"] | message_dict2["value"]
-    #         return message_dict
-    #     #
-    #     group_str1 = self.create_test_group_name()
-    #     x = s.join_to(topic_str1, s, topic_str2, s, topic_str3, get_key_function1=get_key_function, get_key_function2=get_key_function, projection_function=projection_function, join="left", group=group_str1)
-    #     #
-    #     y = s.cat(topic_str3)
-    #     for z in y:
-    #         print(z["value"])
+    def test_join(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str1 = self.create_test_topic_name()
+        s.create(topic_str1)
+        producer = s.producer(topic_str1, type="json")
+        producer.produce(self.snack_str_list)
+        producer.close()
+        #
+        topic_str2 = self.create_test_topic_name()
+        s.create(topic_str2)
+        producer = s.producer(topic_str2, type="json")
+        producer.produce(self.snack_countries_str_list)
+        producer.close()
+        #
+        def get_key_function1(message_dict):
+            return message_dict["value"]["name"]
+        #
+        def get_key_function2(message_dict):
+            return message_dict["value"]["snack_name"]
+        #
+        def projection_function(message_dict1, message_dict2):
+            message_dict = dict(message_dict1)
+            message_dict["value"] = message_dict1["value"] | message_dict2["value"]
+            return message_dict
+        #
+        # inner join
+        #
+        topic_str3 = self.create_test_topic_name()
+        s.create(topic_str3)
+        #
+        group_str1 = self.create_test_group_name()
+        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str3, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="inner", group=group_str1)
+        self.assertEqual(3, n_int1)
+        self.assertEqual(2, n_int2)
+        self.assertEqual(2, n_int3)
+        #
+        message_dict_list1 = s.cat(topic_str3, group=group_str1)
+        self.assertEqual(self.snack_inner_join_dict_list, [message_dict["value"] for message_dict in message_dict_list1])
+        #
+        # left join
+        #
+        topic_str4 = self.create_test_topic_name()
+        s.create(topic_str4)
+        #
+        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str4, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="left", group=group_str1)
+        self.assertEqual(3, n_int1)
+        self.assertEqual(2, n_int2)
+        self.assertEqual(4, n_int3)
+        #
+        message_dict_list2 = s.cat(topic_str4, group=group_str1)
+        self.assertEqual(self.snack_left_join_dict_list, [message_dict["value"] for message_dict in message_dict_list2])
+        #
+        # right join
+        #
+        topic_str5 = self.create_test_topic_name()
+        s.create(topic_str5)
+        #
+        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str5, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="right", group=group_str1)
+        self.assertEqual(3, n_int1)
+        self.assertEqual(2, n_int2)
+        self.assertEqual(3, n_int3)
+        #
+        message_dict_list3 = s.cat(topic_str5, group=group_str1)
+        self.assertEqual(self.snack_right_join_dict_list, [message_dict["value"] for message_dict in message_dict_list3])
