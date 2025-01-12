@@ -63,21 +63,31 @@ class AddOns(Functional):
             out_message_dict_list = []
             # 1. deltaL join deltaR
             if key1 == key2:
+                # Match in deltaL join deltaR.
                 out_message_dict_list.append(projection_function(message_dict1, message_dict2))
             else:
                 # 2. deltaL join R
                 if key1 in index_dict2:
+                    # Match in deltaL join R.
                     out_message_dict_list.append(projection_function(message_dict1, index_dict2[key1]))
                 else:
+                    # Could not find key1 in index_dict2.
+                    # Only append to the output if the join type is "left"
                     if join_str == "left":
                         out_message_dict_list.append(message_dict1)
                 # 3. L join deltaR
                 if key2 in index_dict1:
+                    # Match in L join deltaR
                     out_message_dict_list.append(projection_function(index_dict1[key2], message_dict2))
                 else:
+                    # Could not find key2 in index_dict1.
+                    # Only append to the output if the join type is "right"
                     if join_str == "right":
                         out_message_dict_list.append(message_dict2)
-            #
+            # Depending on the join type, persist:
+            # * both sides (inner)
+            # * the left side (left)
+            # * the right side (right)
             if join_str == "inner":
                 index_dict1[key1] = message_dict1
                 index_dict2[key2] = message_dict2
