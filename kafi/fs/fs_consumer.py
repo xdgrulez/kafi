@@ -13,11 +13,19 @@ OFFSET_INVALID = -1001
 class FSConsumer(StorageConsumer):
     def __init__(self, fs_obj, *topics, **kwargs):
         super().__init__(fs_obj, *topics, **kwargs)
-        #
+        #  required for commit() without offsets.
+        # Initialize self.next_topic_str_offsets_dict_dict
         self.next_topic_str_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.storage_obj.admin.get_partitions(topic_str))} for topic_str in self.topic_str_list}
-        new_group_dict = {"offsets": self.next_topic_str_offsets_dict_dict, "state": "stable"}
-        self.storage_obj.admin.set_group_dict(self.group_str, new_group_dict)
-
+        # Initialize/update group dict file.
+        group_dict = self.storage_obj.admin.get_group_dict(self.group_str)
+        if group_dict == {}:
+            group_dict = {"offsets": {}, "state": "stable"}
+        for topic_str in self.topic_str_list:
+            if topic_str not in group_dict["offsets"]:
+                # if there are no offsets for the topic yet, use the defaults.
+                group_dict["offsets"][topic_str] = self.next_topic_str_offsets_dict_dict[topic_str]
+        self.storage_obj.admin.set_group_dict(self.group_str, group_dict)
+            
     #
 
     def close(self):

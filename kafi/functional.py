@@ -1,3 +1,4 @@
+import time
 from kafi.helpers import zip2
 
 # Constants

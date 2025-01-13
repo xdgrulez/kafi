@@ -282,6 +282,28 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         consumer.close()
 
+    def test_group_offsets_new_consumer(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        s.enable_auto_commit(False)
+        s.commit_after_processing(True)
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str)
+        producer = s.producer(topic_str, type="str")
+        producer.produce("message 1")
+        producer.produce("message 2")
+        producer.close()
+        #
+        time.sleep(1)
+        #
+        group_str = self.create_test_group_name()
+        x = s.cat(topic_str, group=group_str, type="str", n=1)
+        #
+        y = s.cat(topic_str, group=group_str, type="str", n=1)
+
     def test_set_group_offsets(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return
@@ -1364,7 +1386,9 @@ class TestSingleStorageBase(unittest.TestCase):
             return
         #
         s = self.get_storage()
-        #
+        # print(s.enable_auto_commit()) # Default: False
+        # print(s.commit_after_processing()) # Default: True
+        # #
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         producer = s.producer(topic_str1, type="json")
@@ -1394,36 +1418,62 @@ class TestSingleStorageBase(unittest.TestCase):
         s.create(topic_str3)
         #
         group_str1 = self.create_test_group_name()
-        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str3, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="inner", group=group_str1)
+        group_str2 = self.create_test_group_name()
+        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str3, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="inner", source1_group=group_str1, source2_group=group_str2, type="json")
         self.assertEqual(3, n_int1)
         self.assertEqual(2, n_int2)
         self.assertEqual(2, n_int3)
         #
-        message_dict_list1 = s.cat(topic_str3, group=group_str1)
+        group_str3 = self.create_test_group_name()
+        message_dict_list1 = s.cat(topic_str3, group=group_str3, type="json")
         self.assertEqual(self.snack_inner_join_dict_list, [message_dict["value"] for message_dict in message_dict_list1])
+        # print(f"topic1: {s.group_offsets(group_str1)[group_str1][topic_str1]}, topic2: {s.group_offsets(group_str1)[group_str1][topic_str1]}")
         #
         # left join
         #
         topic_str4 = self.create_test_topic_name()
         s.create(topic_str4)
         #
-        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str4, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="left", group=group_str1)
+        group_str1 = self.create_test_group_name()
+        group_str2 = self.create_test_group_name()
+        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str4, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="left", source1_group=group_str1, source2_group=group_str2, type="json")
         self.assertEqual(3, n_int1)
         self.assertEqual(2, n_int2)
         self.assertEqual(4, n_int3)
         #
-        message_dict_list2 = s.cat(topic_str4, group=group_str1)
+        group_str3 = self.create_test_group_name()
+        message_dict_list2 = s.cat(topic_str4, group=group_str3, type="json")
         self.assertEqual(self.snack_left_join_dict_list, [message_dict["value"] for message_dict in message_dict_list2])
+        # print(f"topic1: {s.group_offsets(group_str1)[group_str1][topic_str1]}, topic2: {s.group_offsets(group_str1)[group_str1][topic_str1]}")
         #
-        # right join
+        # right join (1. join="right")
         #
         topic_str5 = self.create_test_topic_name()
         s.create(topic_str5)
         #
-        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str5, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="right", group=group_str1)
+        group_str1 = self.create_test_group_name()
+        group_str2 = self.create_test_group_name()
+        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str5, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="right", source1_group=group_str1, source2_group=group_str2, type="json")
         self.assertEqual(3, n_int1)
         self.assertEqual(2, n_int2)
         self.assertEqual(3, n_int3)
         #
-        message_dict_list3 = s.cat(topic_str5, group=group_str1)
+        group_str3 = self.create_test_group_name()
+        message_dict_list3 = s.cat(topic_str5, group=group_str3, type="json")
+        self.assertEqual(self.snack_right_join_dict_list, [message_dict["value"] for message_dict in message_dict_list3])
+        #
+        # right join (2. join="left" + swapped arguments)
+        #
+        topic_str6 = self.create_test_topic_name()
+        s.create(topic_str6)
+        #
+        group_str1 = self.create_test_group_name()
+        group_str2 = self.create_test_group_name()
+        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str2, s, topic_str1, s, topic_str6, get_key_function1=get_key_function2, get_key_function2=get_key_function1, projection_function=projection_function, join="left", source1_group=group_str1, source2_group=group_str2, type="json")
+        self.assertEqual(2, n_int1)
+        self.assertEqual(3, n_int2)
+        self.assertEqual(3, n_int3)
+        #
+        group_str3 = self.create_test_group_name()
+        message_dict_list3 = s.cat(topic_str6, group=group_str3, type="json")
         self.assertEqual(self.snack_right_join_dict_list, [message_dict["value"] for message_dict in message_dict_list3])
