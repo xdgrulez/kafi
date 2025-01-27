@@ -1130,8 +1130,8 @@ class TestSingleStorageBase(unittest.TestCase):
         except Exception as e:
             self.assertEqual(str(e), f"Subject '{key_subject_name_str}' was not deleted first before being permanently deleted (HTTP status code 404, SR code 40405)")
         #
-        version_int_list = s.delete_subject(key_subject_name_str, permanent=False)
-        self.assertEqual(version_int_list[0], 1)
+        subject_name_str_version_int_list_dict = s.delete_subject(key_subject_name_str, permanent=False)
+        self.assertEqual(subject_name_str_version_int_list_dict[key_subject_name_str][0], 1)
         #
         subject_name_str_list = s.get_subjects(topic_str + "*", deleted=False)
         self.assertEqual(len(subject_name_str_list), 1)
@@ -1145,8 +1145,8 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         #
         #
-        version_int_list = s.delete_subject(key_subject_name_str, permanent=True)
-        self.assertEqual(version_int_list[0], 1)
+        subject_name_str_version_int_list_dict = s.delete_subject(key_subject_name_str, permanent=True)
+        self.assertEqual(subject_name_str_version_int_list_dict[key_subject_name_str][0], 1)
         #
         subject_name_str_list = s.get_subjects(topic_str + "*", deleted=False)
         self.assertEqual(len(subject_name_str_list), 1)
@@ -1160,8 +1160,8 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         #
         #
-        version_int_list = s.delete_subject(value_subject_name_str, permanent=False)
-        self.assertEqual(version_int_list[0], 1)
+        subject_name_str_version_int_list_dict = s.delete_subject(value_subject_name_str, permanent=False)
+        self.assertEqual(subject_name_str_version_int_list_dict[value_subject_name_str][0], 1)
         #
         subject_name_str_list = s.get_subjects(topic_str + "*", deleted=False)
         self.assertEqual(len(subject_name_str_list), 0)
@@ -1175,8 +1175,8 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         #
         #
-        version_int_list = s.delete_subject(value_subject_name_str, permanent=True)
-        self.assertEqual(version_int_list[0], 1)
+        subject_name_str_version_int_list_dict = s.delete_subject(value_subject_name_str, permanent=True)
+        self.assertEqual(subject_name_str_version_int_list_dict[value_subject_name_str][0], 1)
         #
         subject_name_str_list = s.get_subjects(topic_str + "*", deleted=False)
         self.assertEqual(len(subject_name_str_list), 0)
@@ -1262,6 +1262,7 @@ class TestSingleStorageBase(unittest.TestCase):
             s.delete_version(key_subject_name_str, 1, permanent=True)
         except Exception as e:
             self.assertEqual(str(e), f"Subject '{key_subject_name_str}' Version 1 was not deleted first before being permanently deleted")
+            # self.assertEqual(str(e), f"Subject '{key_subject_name_str}' Version 1 was not deleted first before being permanently deleted (HTTP status code 404, SR code 40407)")
         #
         version_int = s.delete_version(key_subject_name_str, 1, permanent=False)
         self.assertEqual(version_int, 1)
@@ -1276,10 +1277,10 @@ class TestSingleStorageBase(unittest.TestCase):
         version_int = s.delete_version(key_subject_name_str, 1, permanent=True)
         self.assertEqual(version_int, 1)
         #
-        version_int_list = s.delete_subject(key_subject_name_str, permanent=False)
-        self.assertEqual(version_int_list, [2])
-        version_int_list = s.delete_subject(key_subject_name_str, permanent=True)
-        self.assertEqual(version_int_list, [2])
+        subject_name_str_version_int_list_dict = s.delete_subject(key_subject_name_str, permanent=False)
+        self.assertEqual(subject_name_str_version_int_list_dict[key_subject_name_str], [2])
+        subject_name_str_version_int_list_dict = s.delete_subject(key_subject_name_str, permanent=True)
+        self.assertEqual(subject_name_str_version_int_list_dict[key_subject_name_str], [2])
 
     # Pandas
 
