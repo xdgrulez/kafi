@@ -87,13 +87,24 @@ class SchemaRegistry:
         #
         return filtered_subject_name_str_list
 
-    def delete_subject(self, subject_name, permanent=False):
-        subject_name_str = subject_name
+    def sls(self, pattern=None, deleted=False):
+        return self.get_subjects(pattern, deleted)
+
+    def delete_subject(self, pattern, permanent=False):
         permanent_bool = permanent
         #
-        schema_id_int_list = self.schemaRegistryClient.delete_subject(subject_name_str, permanent_bool)
+        subject_name_str_list = self.get_subjects(deleted=permanent_bool)
+        filtered_subject_name_str_list = pattern_match(subject_name_str_list, pattern)
         #
-        return schema_id_int_list
+        subject_name_str_schema_id_int_list_dict = {}
+        for subject_name_str in filtered_subject_name_str_list:
+            schema_id_int_list = self.schemaRegistryClient.delete_subject(subject_name_str, permanent_bool)
+            subject_name_str_schema_id_int_list_dict[subject_name_str] = schema_id_int_list
+        #
+        return subject_name_str_schema_id_int_list_dict
+
+    def srm(self, subject_name, permanent=False):
+        return self.delete_subject(subject_name, permanent)
 
     def get_latest_version(self, subject_name):
         subject_name_str = subject_name
@@ -148,12 +159,22 @@ class SchemaRegistry:
         #
         return set_level_str
 
+    def set_comp(self, subject_name, level):
+        return self.set_compatibility(subject_name, level)
+
+    #
+
     def get_compatibility(self, subject_name):
         subject_name_str = subject_name
         #
         level_str = self.schemaRegistryClient.get_compatibility(subject_name_str)
         #
         return level_str
+
+    def get_comp(self, subject_name):
+        return self.get_compatibility(subject_name)
+
+    #
 
     def test_compatibility(self, subject_name, schema, version="latest"):
         subject_name_str = subject_name
@@ -165,6 +186,9 @@ class SchemaRegistry:
         compatible_bool = self.schemaRegistryClient.test_compatibility(subject_name_str, schema1, version_str)
         #
         return compatible_bool
+
+    def test_comp(self, subject_name, schema, version="latest"):
+        return self.test_compatibility(subject_name, schema, version)
 
 #
 
