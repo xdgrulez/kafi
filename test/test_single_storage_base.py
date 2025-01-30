@@ -1237,6 +1237,10 @@ class TestSingleStorageBase(unittest.TestCase):
         key_schema_id_int1 = s.register_schema(key_subject_name_str, key_schema_one_more_field_dict, normalize=True)
         self.assertGreater(key_schema_id_int1, key_schema_id_int)
         #
+        key_schema_one_more_field_first_then_drop_it_again_dict = s.create_schema_dict(self.jsonschema_schema_str, "JSON")
+        is_compatible_bool = s.test_compatibility(key_subject_name_str, key_schema_one_more_field_first_then_drop_it_again_dict, version="latest")
+        self.assertFalse(is_compatible_bool)
+        #
         key_registeredSchema_dict1 = s.get_latest_version(key_subject_name_str)
         self.assertEqual(key_registeredSchema_dict1["schema_id"], key_schema_id_int1)
         self.assertEqual(key_registeredSchema_dict1["subject"], key_subject_name_str)
