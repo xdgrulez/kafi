@@ -23,8 +23,8 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         #
         self.kafi_config_dict = self.config_dict["kafi"] if "kafi" in self.config_dict else self.config_dict["kash"] if "kash" in self.config_dict else {}
         #
-        if "schema.registry.url" in self.schema_registry_config_dict:
-            SchemaRegistry.__init__(self, self.schema_registry_config_dict)
+        # if "schema.registry.url" in self.schema_registry_config_dict:
+        SchemaRegistry.__init__(self, self.schema_registry_config_dict)
         #
         if "progress.num.messages" not in self.kafi_config_dict:
             self.progress_num_messages(1000)

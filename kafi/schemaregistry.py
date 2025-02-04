@@ -6,10 +6,10 @@ class SchemaRegistry:
     def __init__(self, schema_registry_config_dict):
         self.schema_registry_config_dict = schema_registry_config_dict
         #
-        if self.schema_registry_config_dict is not None:
-            self.schemaRegistryClient = self.get_schemaRegistryClient()
-        else:
+        if self.schema_registry_config_dict == {}:
             self.schemaRegistryClient = None
+        else:
+            self.schemaRegistryClient = self.get_schemaRegistryClient()
 
     def get_schemaRegistryClient(self):
         dict = {}
