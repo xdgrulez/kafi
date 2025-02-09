@@ -102,6 +102,18 @@ class AddOns(Functional):
 
     #
 
+    def repeat(self, topic_str, n=1, **kwargs):
+        n_int = n
+        #
+        message_dict_list = self.tail(topic_str, type="bytes", n=n_int, **kwargs)
+        pr = self.producer(topic_str, type="bytes", **kwargs)
+        pr.produce_list(message_dict_list, **kwargs)
+        pr.close()
+        #
+        return message_dict_list
+
+    #
+
     def recreate(self, topic, partitions=None, config={}, **kwargs):
         topic_str = topic
         #

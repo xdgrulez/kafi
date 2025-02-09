@@ -811,7 +811,6 @@ class TestSingleStorageBase(unittest.TestCase):
             #
             offsets = {topic_str: {0: 2}}
             s.delete_records(offsets)
-            i = 0
             time.sleep(1)
             n_int = s.l(topic_str)[topic_str]
             self.assertEqual(n_int, 1)
@@ -1354,6 +1353,45 @@ class TestSingleStorageBase(unittest.TestCase):
 
     # Add-Ons
 
+    def test_repeat(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str)
+        producer = s.producer(topic_str, key_type="json", value_type="json")
+        producer.produce(self.snack_dict_list, key=self.snack_dict_list, headers=self.headers_str_str_dict)
+        producer.close()
+        #
+        n_int = s.watermarks(topic_str)[topic_str][0][1]
+        self.assertTrue(n_int, 3)
+        #
+        s.repeat(topic_str)
+        #
+        n_int = s.watermarks(topic_str)[topic_str][0][1]
+        self.assertTrue(n_int, 4)
+        #
+        message_dict_list = s.cat(topic_str, type="bytes", n=4)
+        self.assertEqual(message_dict_list[2]["key"], message_dict_list[3]["key"])
+        self.assertEqual(message_dict_list[2]["value"], message_dict_list[3]["value"])
+        self.assertEqual(message_dict_list[2]["headers"], message_dict_list[3]["headers"])
+        #
+        s.repeat(topic_str, 2, keep_headers=False)
+        #
+        n_int = s.watermarks(topic_str)[topic_str][0][1]
+        self.assertTrue(n_int, 6)
+        #
+        message_dict_list = s.cat(topic_str, type="bytes", n=6)
+        self.assertEqual(message_dict_list[2]["key"], message_dict_list[4]["key"])
+        self.assertEqual(message_dict_list[3]["key"], message_dict_list[5]["key"])
+        self.assertEqual(message_dict_list[2]["value"], message_dict_list[4]["value"])
+        self.assertEqual(message_dict_list[3]["value"], message_dict_list[5]["value"])
+        self.assertNotEqual(message_dict_list[2]["headers"], message_dict_list[4]["headers"])
+        self.assertNotEqual(message_dict_list[3]["headers"], message_dict_list[5]["headers"])
+
+
     def test_recreate(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return
@@ -1362,9 +1400,9 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.recreate(topic_str, partitions=2, config={"retention.ms": 4711})
-        w = s.producer(topic_str, value_type="json")
-        w.produce(self.snack_dict_list)
-        w.close()
+        producer = s.producer(topic_str, value_type="json")
+        producer.produce(self.snack_dict_list)
+        producer.close()
         #
         n_int1 = s.l(topic_str)[topic_str]
         self.assertEqual(3, n_int1)

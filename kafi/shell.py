@@ -24,7 +24,8 @@ class Shell(Functional):
             return message_dict
         #
         partitions_int = self.partitions(topic_str)[topic_str]
-        offsets_dict = {partition_int: -n_int for partition_int in range(partitions_int)}
+        watermarks_dict = self.watermarks(topic_str)[topic_str]
+        offsets_dict = {partition_int: watermarks_dict[partition_int][1]-n_int for partition_int in range(partitions_int)}
         kwargs["offsets"] = offsets_dict
         #
         (message_dict_list, _) = self.map(topic, map_function, n, **kwargs)
