@@ -103,8 +103,8 @@ class SchemaRegistry:
         #
         return subject_name_str_schema_id_int_list_dict
 
-    def srm(self, subject_name, permanent=False):
-        return self.delete_subject(subject_name, permanent)
+    def srm(self, pattern, permanent=False):
+        return self.delete_subject(pattern, permanent)
 
     def get_latest_version(self, subject_name):
         subject_name_str = subject_name

@@ -66,9 +66,21 @@ class ClusterConsumer(KafkaConsumer):
         #
         message_list = self.consumer.consume(n_int, self.storage_obj.consume_timeout())
         #
-        deserialized_message_dict_list = [{"topic": message.topic(), "headers": message.headers(), "partition": message.partition(), "offset": message.offset(), "timestamp": message.timestamp(), "key": self.deserialize(message.key(), self.topic_str_key_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=True), "value": self.deserialize(message.value(), self.topic_str_value_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=False)} for message in message_list]
+        message_dict_list = []
+        for message in message_list:
+            if message.error() is None:
+                message_dict = {"topic": message.topic(),
+                                "headers": message.headers(),
+                                "partition": message.partition(),
+                                "offset": message.offset(),
+                                "timestamp": message.timestamp(),
+                                "key": self.deserialize(message.key(), self.topic_str_key_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=True),
+                                "value": self.deserialize(message.value(), self.topic_str_value_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=False)}
+            else:
+                raise Exception(f"Error consuming topic(s) {self.topic_str_list}: {message.error().str()}")
+            message_dict_list.append(message_dict)
         #
-        return deserialized_message_dict_list
+        return message_dict_list
 
     #
 

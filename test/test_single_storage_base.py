@@ -1520,15 +1520,3 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str3 = self.create_test_group_name()
         message_dict_list3 = s.cat(topic_str6, group=group_str3, type="json")
         self.assertEqual(self.snack_right_join_dict_list, [message_dict["value"] for message_dict in message_dict_list3])
-
-    # def test_no_schema_registry_in_config(self):
-    #     if self.__class__.__name__ == "TestSingleStorageBase":
-    #         return
-    #     #
-    #     s = self.get_storage()
-    #     #
-    #     topic_str = self.create_test_topic_name()
-    #     #
-    #     producer = s.producer(topic_str)
-    #     producer.produce({"bla": 4711})
-    #     producer.close()
