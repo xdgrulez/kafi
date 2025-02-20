@@ -1520,3 +1520,56 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str3 = self.create_test_group_name()
         message_dict_list3 = s.cat(topic_str6, group=group_str3, type="json")
         self.assertEqual(self.snack_right_join_dict_list, [message_dict["value"] for message_dict in message_dict_list3])
+
+    def test_cp_group_offsets(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        # print(s.enable_auto_commit()) # Default: False
+        # print(s.commit_after_processing()) # Default: True
+        #
+        # Create topic with 3 partitions.
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str, partitions=3)
+        # Produce three messages to the individual partitions.
+        producer = s.producer(topic_str)
+        producer.produce(self.snack_str_list[0], partition=0)
+        producer.produce(self.snack_str_list[1], partition=1)
+        producer.produce(self.snack_str_list[2], partition=2)
+        producer.close()
+        # Create two consumer group names.
+        group_str1 = self.create_test_group_name()
+        group_str2 = self.create_test_group_name()
+        # Read topic with the first consumer group.
+        # Due to commit_after_processing=True, the sum of the offsets of the consumer group is 3.
+        s.cat(topic_str, group=group_str1)
+        group_str_topic_str_offsets_dict_dict_dict = s.group_offsets(group_str1)
+        partition_0_offset_int1 = group_str_topic_str_offsets_dict_dict_dict[group_str1][topic_str][0]
+        partition_1_offset_int1 = group_str_topic_str_offsets_dict_dict_dict[group_str1][topic_str][1]
+        partition_2_offset_int1 = group_str_topic_str_offsets_dict_dict_dict[group_str1][topic_str][2]
+        self.assertEqual(partition_0_offset_int1, 1)
+        self.assertEqual(partition_1_offset_int1, 1)
+        self.assertEqual(partition_2_offset_int1, 1)
+        # Produce three more messages.
+        producer = s.producer(topic_str)
+        producer.produce(self.snack_countries_str_list[0], partition=0)
+        producer.produce(self.snack_countries_str_list[0], partition=1)
+        producer.produce(self.snack_countries_str_list[0], partition=2)
+        producer.close()
+        # Copy consumer group offsets from the first to the second consumer group.
+        s.cp_group_offsets(topic_str, group_str1, group_str2)
+        group_str_topic_str_offsets_dict_dict_dict = s.group_offsets(group_str2)
+        partition_0_offset_int3 = group_str_topic_str_offsets_dict_dict_dict[group_str2][topic_str][0]
+        partition_1_offset_int3 = group_str_topic_str_offsets_dict_dict_dict[group_str2][topic_str][1]
+        partition_2_offset_int3 = group_str_topic_str_offsets_dict_dict_dict[group_str2][topic_str][2]
+        self.assertEqual(partition_0_offset_int3, 1)
+        self.assertEqual(partition_1_offset_int3, 1)
+        self.assertEqual(partition_2_offset_int3, 1)
+        # Read the topic with consumer group 2.
+        message_dict_list = s.cat(topic_str, group=group_str2, n=3)
+        self.assertEqual(len(message_dict_list), 3)
+        self.assertTrue(message_dict_list[0]["value"]["country"] == "Australia")
+        self.assertTrue(message_dict_list[1]["value"]["country"] == "Australia")
+        self.assertTrue(message_dict_list[2]["value"]["country"] == "Australia")
