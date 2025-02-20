@@ -151,7 +151,10 @@ class AddOns(Functional):
         source_group_str = source_group
         target_group_str = target_group
         # Initialize the second consumer group by consuming one message.
+        old_commit_after_processing_bool = self.commit_after_processing()
+        self.commit_after_processing(True)
         self.cat(topic_str, group=target_group_str, type="bytes", n=1)
+        self.commit_after_processing(old_commit_after_processing_bool)
         # Get the offsets of the source consumer group.
         source_group_offsets = self.group_offsets(source_group_str)
         source_offsets_dict = source_group_offsets[source_group_str][topic_str]

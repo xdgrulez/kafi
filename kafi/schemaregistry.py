@@ -90,6 +90,21 @@ class SchemaRegistry:
     def sls(self, pattern=None, deleted=False):
         return self.get_subjects(pattern, deleted)
 
+    def get_schema_versions(self, schema_id):
+        schema_id_int = schema_id
+        #
+        url_str = f"{self.schema_registry_config_dict['schema.registry.url']}/schemas/ids/{schema_id_int}/versions"
+        headers_dict = {"Accept": "application/json"}
+        auth_str_tuple = None
+        #
+        if "basic.auth.credentials.source" in self.schema_registry_config_dict and self.schema_registry_config_dict["basic.auth.credentials.source"] == "USER_INFO":
+            basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
+            auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
+        #
+        x = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, debug_bool=self.verbose() >= 2)
+        #
+        return x
+
     def delete_subject(self, pattern, permanent=False):
         permanent_bool = permanent
         #
