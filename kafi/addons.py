@@ -151,11 +151,11 @@ class AddOns(Functional):
         source_group_str = source_group
         target_group_str = target_group
         # Initialize the second consumer group by consuming one message.
-        self.cat(topic_str, group=target_group_str, n=1)
-        #
+        self.cat(topic_str, group=target_group_str, type="bytes", n=1)
+        # Get the offsets of the source consumer group.
         source_group_offsets = self.group_offsets(source_group_str)
         source_offsets_dict = source_group_offsets[source_group_str][topic_str]
+        # Set the offsets of the target consumer group.
         target_group_offsets = self.group_offsets(target_group, {topic_str: source_offsets_dict})
         #
         return target_group_offsets
-

@@ -914,7 +914,7 @@ Essentially, Kafi is built on the concept of a "Storage". There are two kinds of
 The `Storage` class inherits from:
 * `Shell`: Shell-like commands like `cat`, `head`, `tail`, `cp`...
 * `Files`: Copying Kafka topics to files (`topic_to_file`) and vice versa (`file_to_topic`)
-* `AddOns`: Higher-level add-on methods (`compact`, `compact_to`, `join`, `recreate`, `repeat`)
+* `AddOns`: Higher-level add-on methods (`compact`, `compact_to`, `join`, `recreate`, `repeat`, `cp_groups_offsets`)
 * `SchemaRegistry`: Schema Registry API
 
 The classes `Shell`, `Files` and `AddOns` inherit from the class `Functional` which offers functional methods (`foldl`, `flatmap`, `map`, `filter`, `foreach`, `zip_foldl`, `foldl_to`, `flatmap_to`, `map_to`, `filter_to`, `zip_foldl_to`)
