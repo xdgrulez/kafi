@@ -313,3 +313,13 @@ def zip2(list1, list2):
                 i = 0
     
     return zipped_list
+
+
+def s_id(payload_bytes):
+    if payload_bytes is not None and len(payload_bytes) > 5:
+        id_int = int.from_bytes(payload_bytes[1:5], "big")
+    else:
+        id_int = -1
+    #
+    return id_int
+

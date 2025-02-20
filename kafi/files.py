@@ -19,38 +19,46 @@ class Files(Pandas):
         file_str = file
         #
         suffix_str = pathlib.Path(file_str).suffix
-        if suffix_str not in [".csv", ".feather", ".json", ".orc", ".parquet", ".xlsx", ".xml"]:
-            raise Exception("Only \".csv\", \".feather\", \".json\", \".orc\", \".parquet\", \".xlsx\" and \".xml\" supported.")
+        if suffix_str not in [".csv", ".feather", ".json", ".orc", ".parquet", ".xlsx", ".xml", ".bytes"]:
+            raise Exception("Only \".csv\", \".feather\", \".json\", \".orc\", \".parquet\", \".xlsx\", \".xml\" and \".bytes\" supported.")
         #
-        df = self.topic_to_df(topic, n, **kwargs)
-        data_bytesIO = io.BytesIO()
+        if suffix_str == ".bytes":
+            message_dict_list = self.cat(topic, n, type="bytes", **kwargs)
+            data_bytes = b""
+            for message_dict in message_dict_list:
+                value_bytes = message_dict["value"]
+                data_bytes += value_bytes + b"\n"
+        else:
+            df = self.topic_to_df(topic, n, **kwargs)
+            data_bytesIO = io.BytesIO()
+            #
+            if suffix_str == ".csv":
+                index_bool = kwargs["index"] if "index" in kwargs else False
+                df.to_csv(data_bytesIO, index=index_bool)
+            elif suffix_str == ".feather":
+                df.to_feather(data_bytesIO)
+            elif suffix_str == ".json":
+                index_bool = kwargs["index"] if "index" in kwargs else None
+                df.to_json(data_bytesIO, orient="records")
+            elif suffix_str == ".orc":
+                index_bool = kwargs["index"] if "index" in kwargs else None
+                df.to_orc(data_bytesIO, index=index_bool)
+            elif suffix_str == ".parquet":
+                index_bool = kwargs["index"] if "index" in kwargs else None
+                df.to_parquet(data_bytesIO, index=index_bool)
+            elif suffix_str == ".xlsx":
+                index_bool = kwargs["index"] if "index" in kwargs else False
+                df.to_excel(data_bytesIO, index=index_bool)
+            elif suffix_str == ".xml":
+                index_bool = kwargs["index"] if "index" in kwargs else False
+                df.to_xml(data_bytesIO, index=index_bool)
+            #
+            data_bytes = data_bytesIO.getvalue()
         #
-        if suffix_str == ".csv":
-            index_bool = kwargs["index"] if "index" in kwargs else False
-            df.to_csv(data_bytesIO, index=index_bool)
-        elif suffix_str == ".feather":
-            df.to_feather(data_bytesIO)
-        elif suffix_str == ".json":
-            index_bool = kwargs["index"] if "index" in kwargs else None
-            df.to_json(data_bytesIO, orient="records")
-        elif suffix_str == ".orc":
-            index_bool = kwargs["index"] if "index" in kwargs else None
-            df.to_orc(data_bytesIO, index=index_bool)
-        elif suffix_str == ".parquet":
-            index_bool = kwargs["index"] if "index" in kwargs else None
-            df.to_parquet(data_bytesIO, index=index_bool)
-        elif suffix_str == ".xlsx":
-            index_bool = kwargs["index"] if "index" in kwargs else False
-            df.to_excel(data_bytesIO, index=index_bool)
-        elif suffix_str == ".xml":
-            index_bool = kwargs["index"] if "index" in kwargs else False
-            df.to_xml(data_bytesIO, index=index_bool)
-        #
-        data_bytes = data_bytesIO.getvalue()
         file_abs_path_str = fs_obj.admin.get_file_abs_path_str(file_str)
         fs_obj.admin.write_bytes(file_abs_path_str, data_bytes)
         #
-        return len(df)
+        return len(data_bytes)
 
     def file_to_topic(self, file, storage_obj, topic, n=ALL_MESSAGES, **kwargs):
         if not self.__class__.__bases__[0].__name__== "FS":
