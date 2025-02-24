@@ -67,10 +67,11 @@ class SchemaRegistry:
         #
         return registeredSchema_dict
 
-    def get_subjects(self, pattern=None, deleted=False):
+    def get_subjects(self, pattern=None, deleted=False, only_deleted=False):
         deleted_bool = deleted
+        only_deleted_bool = only_deleted
         #
-        if deleted_bool:
+        def get_subjects_deleted():
             url_str = f"{self.schema_registry_config_dict['schema.registry.url']}/subjects?deleted=true"
             headers_dict = {"Accept": "application/json"}
             auth_str_tuple = None
@@ -80,15 +81,26 @@ class SchemaRegistry:
                 auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
             #
             subject_name_str_list = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, debug_bool=self.verbose() >= 2)
+            #
+            return subject_name_str_list
+        #
+        if deleted_bool:
+            subject_name_str_list = get_subjects_deleted()
+        elif only_deleted_bool:
+            subject_name_str_list = get_subjects_deleted()
+            #
+            non_deleted_subject_name_str_list = self.schemaRegistryClient.get_subjects()
+            #
+            subject_name_str_list = [subject_name_str for subject_name_str in subject_name_str_list if subject_name_str not in non_deleted_subject_name_str_list]
         else:
             subject_name_str_list = self.schemaRegistryClient.get_subjects()
-        
+        #
         filtered_subject_name_str_list = pattern_match(subject_name_str_list, pattern)
         #
         return filtered_subject_name_str_list
 
-    def sls(self, pattern=None, deleted=False):
-        return self.get_subjects(pattern, deleted)
+    def sls(self, pattern=None, deleted=False, only_deleted=False):
+        return self.get_subjects(pattern, deleted, only_deleted)
 
     def get_schema_versions(self, schema_id):
         schema_id_int = schema_id
