@@ -158,12 +158,24 @@ class SchemaRegistry:
         #
         return version_int_list
 
+    # permanent=True is supported by confluent_kafka 2.8.0, but still has a bug...
     def delete_version(self, subject_name, version, permanent=False):
         subject_name_str = subject_name
         version_int = version
         permanent_bool = permanent
         #
-        schema_id_int = self.schemaRegistryClient.delete_version(subject_name_str, version_int, permanent=permanent_bool)
+        if permanent_bool:
+            url_str = f"{self.schema_registry_config_dict['schema.registry.url']}/subjects/{subject_name_str}/versions/{version_int}?permanent=true"
+            headers_dict = {"Accept": "application/json"}
+            auth_str_tuple = None
+            #
+            if "basic.auth.credentials.source" in self.schema_registry_config_dict and self.schema_registry_config_dict["basic.auth.credentials.source"] == "USER_INFO":
+                basic_auth_user_info_str = self.schema_registry_config_dict["basic.auth.user.info"]
+                auth_str_tuple = tuple(basic_auth_user_info_str.split(":"))
+            #
+            schema_id_int = delete(url_str, headers_dict, auth_str_tuple, debug_bool=self.verbose() >= 2)
+        else:
+            schema_id_int = self.schemaRegistryClient.delete_version(subject_name_str, version_int)
         #
         return schema_id_int
 
