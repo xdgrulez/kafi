@@ -72,7 +72,7 @@ class AzureBlobAdmin(FSAdmin):
         #
         data_bytes = data_str.encode("utf-8")
         #
-        blobClient.upload_blob(data_bytes, overwrite=True)        
+        blobClient.upload_blob(data_bytes, overwrite=True)
 
     #
 
