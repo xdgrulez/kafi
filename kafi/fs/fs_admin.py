@@ -90,9 +90,19 @@ class FSAdmin(StorageAdmin):
 
     def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
         pattern_str_or_str_list = pattern
-        partition_int_timestamp_int_dict = partitions_timestamps
         #
         topic_str_list = self.list_topics(pattern_str_or_str_list)
+        #
+        # partitions_timestamps can either be:
+        # * a dictionary mapping partitions to timestamps (if the first key is an integer)
+        # * a dictionary mapping topics to a dictionary mapping partitions to timestamps (if the first key is a string for multiple individual topics)
+        # => consolidate to the latter.
+        first_key_str_or_int = list(partitions_timestamps.keys())[0]
+        if isinstance(first_key_str_or_int, int):
+            partition_int_timestamp_int_dict = partitions_timestamps
+            topic_str_partition_int_timestamp_int_dict_dict = {topic_str: partition_int_timestamp_int_dict for topic_str in topic_str_list}
+        else:
+            topic_str_partition_int_timestamp_int_dict_dict = partitions_timestamps
         #
         topic_str_partition_int_offsets_int_dict_dict = {}
         for topic_str in topic_str_list:
@@ -101,7 +111,7 @@ class FSAdmin(StorageAdmin):
             abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_path_str(topic_str)
             #
             for partition_int in range(partitions_int):
-                rel_file_str = self.storage_obj.admin.find_partition_file_str_by_timestamp(topic_str, partition_int, partition_int_timestamp_int_dict[partition_int])
+                rel_file_str = self.storage_obj.admin.find_partition_file_str_by_timestamp(topic_str, partition_int, topic_str_partition_int_timestamp_int_dict_dict[topic_str][partition_int])
                 #
                 messages_bytes = self.storage_obj.admin.read_bytes(os.path.join(abs_topic_dir_str, "partitions", rel_file_str))
                 #
@@ -110,7 +120,7 @@ class FSAdmin(StorageAdmin):
                 for message_bytes in message_bytes_list:
                     message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
                     #
-                    if message_dict["timestamp"][1] >= partition_int_timestamp_int_dict[partition_int]:
+                    if message_dict["timestamp"][1] >= topic_str_partition_int_timestamp_int_dict_dict[topic_str][partition_int]:
                         if topic_str not in topic_str_partition_int_offsets_int_dict_dict:
                             topic_str_partition_int_offsets_int_dict_dict[topic_str] = {}
                         #

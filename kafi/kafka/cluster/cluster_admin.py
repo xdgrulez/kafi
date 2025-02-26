@@ -273,16 +273,25 @@ class ClusterAdmin(KafkaAdmin):
 
     def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
         pattern_str_or_str_list = pattern
-        partition_int_timestamp_int_dict = partitions_timestamps
         timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
         #
         topic_str_list = self.list_topics(pattern_str_or_str_list)
+        # partitions_timestamps can either be:
+        # * a dictionary mapping partitions to timestamps (if the first key is an integer)
+        # * a dictionary mapping topics to a dictionary mapping partitions to timestamps (if the first key is a string for multiple individual topics)
+        # => consolidate to the latter.
+        first_key_str_or_int = list(partitions_timestamps.keys())[0]
+        if isinstance(first_key_str_or_int, int):
+            partition_int_timestamp_int_dict = partitions_timestamps
+            topic_str_partition_int_timestamp_int_dict_dict = {topic_str: partition_int_timestamp_int_dict for topic_str in topic_str_list}
+        else:
+            topic_str_partition_int_timestamp_int_dict_dict = partitions_timestamps
         #
         topic_str_partition_int_offsets_int_dict_dict = {}
         for topic_str in topic_str_list:
             offsets_dict = {}
             #
-            topicPartition_list = [TopicPartition(topic_str, partition_int, timestamp_int) for partition_int, timestamp_int in partition_int_timestamp_int_dict.items()]
+            topicPartition_list = [TopicPartition(topic_str, partition_int, timestamp_int) for partition_int, timestamp_int in topic_str_partition_int_timestamp_int_dict_dict[topic_str].items()]
             if topicPartition_list:
                 config_dict = self.storage_obj.kafka_config_dict.copy()
                 config_dict["group.id"] = "dummy_group_id"

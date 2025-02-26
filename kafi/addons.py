@@ -146,6 +146,7 @@ class AddOns(Functional):
 
     retouch = recreate
 
+    #
 
     def cp_group_offsets(self, topic_str, source_group, target_group):
         source_group_str = source_group
@@ -162,3 +163,57 @@ class AddOns(Functional):
         target_group_offsets = self.group_offsets(target_group, {topic_str: source_offsets_dict})
         #
         return target_group_offsets
+
+    #
+
+    def message_size(self, topic_str, **kwargs):
+        def agg(partition_int_offset_int_size_int_tuple_dict_dict, message_dict):
+            partition_int = message_dict["partition"]
+            offset_int = message_dict["offset"]
+            key_bytes = message_dict["key"]
+            key_size_int = 0 if key_bytes is None else len(key_bytes)
+            value_bytes = message_dict["value"]
+            value_size_int = 0 if value_bytes is None else len(value_bytes)
+            #
+            if partition_int not in partition_int_offset_int_size_int_tuple_dict_dict:
+                partition_int_offset_int_size_int_tuple_dict_dict[partition_int] = {offset_int: None}
+            partition_int_offset_int_size_int_tuple_dict_dict[partition_int][offset_int] = (key_size_int, value_size_int)
+            return partition_int_offset_int_size_int_tuple_dict_dict
+        #
+        (partition_int_offset_int_size_int_tuple_dict_dict, n_int) = self.foldl(topic_str, agg, {}, type="bytes", **kwargs)
+        #
+        return partition_int_offset_int_size_int_tuple_dict_dict, n_int
+    
+    def message_size_stats(self, topic_str, **kwargs):
+        partition_int_offset_int_size_int_tuple_dict_dict, n_int = self.message_size(topic_str, **kwargs)
+        #
+        total_size_int = 0
+        max_dict = {}
+        min_dict = {}
+        for partition_int, offset_int_size_int_tuple_dict in partition_int_offset_int_size_int_tuple_dict_dict.items():
+            for offset_int, (key_size_int, value_size_int) in offset_int_size_int_tuple_dict.items():
+                size_int = key_size_int + value_size_int
+                #
+                total_size_int += size_int
+                #
+                if max_dict == {}:
+                    max_dict = {"size": size_int, "partition": partition_int, "offset": offset_int}
+                else:
+                    old_max_int = max_dict["size"]
+                    new_max_int = max(size_int, old_max_int)
+                    if new_max_int != old_max_int:
+                        max_dict = {"size": new_max_int, "partition": partition_int, "offset": offset_int}
+                #
+                if min_dict == {}:
+                    min_dict = {"size": size_int, "partition": partition_int, "offset": offset_int}
+                else:
+                    old_min_int = min_dict["size"]
+                    new_min_int = min(size_int, old_min_int)
+                    if new_min_int != old_min_int:
+                        min_dict = {"size": new_min_int, "partition": partition_int, "offset": offset_int}
+                #
+        #
+        stats_dict = {"messages": n_int, "total_size": total_size_int, "average_size": total_size_int/n_int, "max_size": max_dict, "min_size": min_dict}
+        #
+        return stats_dict
+

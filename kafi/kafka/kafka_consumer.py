@@ -37,12 +37,16 @@ class KafkaConsumer(StorageConsumer):
             #
             topic_str_offsets_dict_dict = {}
             for message_dict in message_dict_list:
-                if message_dict["topic"] not in topic_str_offsets_dict_dict:
-                    topic_str_offsets_dict_dict[message_dict["topic"]] = {}
+                topic_str = message_dict["topic"]
+                partition_int = message_dict["partition"]
+                offset_int = message_dict["offset"]
                 #
-                offsets_dict = topic_str_offsets_dict_dict[message_dict["topic"]]
+                if topic_str not in topic_str_offsets_dict_dict:
+                    topic_str_offsets_dict_dict[topic_str] = {}
                 #
-                offsets_dict[message_dict["partition"]] = message_dict["offset"] + 1
+                offsets_dict = topic_str_offsets_dict_dict[topic_str]
+                #
+                offsets_dict[partition_int] = offset_int + 1
                 #
                 if break_function(acc, message_dict):
                     break_bool = True
@@ -50,6 +54,10 @@ class KafkaConsumer(StorageConsumer):
                 #
                 acc = foldl_function(acc, message_dict)
                 message_counter_int += 1
+                #
+                if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict and offset_int == self.topic_str_end_offsets_dict_dict[topic_str][partition_int]:
+                    break_bool = True
+                    break
                 #
                 if n_int != ALL_MESSAGES and message_counter_int >= n_int:
                     break_bool = True

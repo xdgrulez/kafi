@@ -112,12 +112,13 @@ class FSConsumer(StorageConsumer):
                     message_dict["value"] = self.deserialize(message_dict["value"], self.topic_str_value_type_str_dict[message_dict["topic"]], topic_str=topic_str, key_bool=False)
                     #
                     partition_int = message_dict["partition"]
-                    self.next_topic_str_offsets_dict_dict[topic_str][partition_int] = message_dict["offset"] + 1
+                    offset_int = message_dict["offset"]
+                    self.next_topic_str_offsets_dict_dict[topic_str][partition_int] = offset_int + 1
                     if self.enable_auto_commit_bool:
                         # Commit immediately after reading the message if enable.auto.commit == True
                         self.commit()
                     #
-                    if message_dict["offset"] >= start_offsets_dict[partition_int]:
+                    if offset_int >= start_offsets_dict[partition_int]:
                         acc = foldl_function(acc, message_dict)
                         #
                         message_counter_int += 1
@@ -126,9 +127,11 @@ class FSConsumer(StorageConsumer):
                             # Only commit once the message has been processed if enable.auto.commit == False and commit.after.processing == True
                             self.commit()
                     #
-                    if n_int != ALL_MESSAGES:
-                        if message_counter_int >= n_int:
-                            return acc
+                    if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict and offset_int == self.topic_str_end_offsets_dict_dict[topic_str][partition_int]:
+                        return acc
+                    #
+                    if n_int != ALL_MESSAGES and message_counter_int >= n_int:
+                        return acc
         #
         return acc
 
