@@ -55,9 +55,11 @@ class KafkaConsumer(StorageConsumer):
                 acc = foldl_function(acc, message_dict)
                 message_counter_int += 1
                 #
-                if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict and offset_int == self.topic_str_end_offsets_dict_dict[topic_str][partition_int]:
-                    break_bool = True
-                    break
+                if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
+                    end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
+                    if all(offsets_dict[partition_int] > end_offset_int for partition_int, end_offset_int in end_offsets_dict.items() if partition_int in offsets_dict):
+                        break_bool = True
+                        break
                 #
                 if n_int != ALL_MESSAGES and message_counter_int >= n_int:
                     break_bool = True

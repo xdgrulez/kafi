@@ -127,8 +127,11 @@ class FSConsumer(StorageConsumer):
                             # Only commit once the message has been processed if enable.auto.commit == False and commit.after.processing == True
                             self.commit()
                     #
-                    if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict and offset_int == self.topic_str_end_offsets_dict_dict[topic_str][partition_int]:
-                        return acc
+                    if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
+                        end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
+                        offsets_dict = self.next_topic_str_offsets_dict_dict[topic_str]
+                        if all(offsets_dict[partition_int] > end_offset_int for partition_int, end_offset_int in end_offsets_dict.items() if partition_int in offsets_dict):
+                            return acc
                     #
                     if n_int != ALL_MESSAGES and message_counter_int >= n_int:
                         return acc
