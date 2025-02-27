@@ -47,7 +47,7 @@ class StorageConsumer(Deserializer):
                 topic_str_partitions_int_dict = self.storage_obj.partitions(topic_str_list)
                 topic_str_partition_int_timestamp_int_dict_dict = {topic_str: {partition_int: timestamp_int for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}
                 topic_str_offsets_dict_dict = self.storage_obj.offsets_for_times(topic_str_list, topic_str_partition_int_timestamp_int_dict_dict)
-                if self.storage_obj.verbose() > 1:
+                if self.storage_obj.verbose() > 0:
                     print(f"Offsets for {ts_key_str}:")
                     print(topic_str_offsets_dict_dict)
             else:
