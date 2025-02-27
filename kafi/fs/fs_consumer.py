@@ -119,6 +119,11 @@ class FSConsumer(StorageConsumer):
                         # Commit immediately after reading the message if enable.auto.commit == True
                         self.commit()
                     #
+                    if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
+                        end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
+                        if offset_int > end_offsets_dict[partition_int]:
+                            break
+                    #
                     if offset_int >= start_offsets_dict[partition_int]:
                         acc = foldl_function(acc, message_dict)
                         #
