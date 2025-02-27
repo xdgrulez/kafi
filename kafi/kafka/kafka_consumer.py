@@ -26,6 +26,9 @@ class KafkaConsumer(StorageConsumer):
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
         #
+        topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
+        topic_str_offsets_dict_dict = {topic_str: {partition_int: 0 for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}
+        #
         message_counter_int = 0
         #
         acc = initial_acc
@@ -35,14 +38,10 @@ class KafkaConsumer(StorageConsumer):
             if not message_dict_list:
                 break
             #
-            topic_str_offsets_dict_dict = {}
             for message_dict in message_dict_list:
                 topic_str = message_dict["topic"]
                 partition_int = message_dict["partition"]
                 offset_int = message_dict["offset"]
-                #
-                if topic_str not in topic_str_offsets_dict_dict:
-                    topic_str_offsets_dict_dict[topic_str] = {}
                 #
                 offsets_dict = topic_str_offsets_dict_dict[topic_str]
                 #
@@ -57,7 +56,7 @@ class KafkaConsumer(StorageConsumer):
                 #
                 if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
                     end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
-                    if all(offsets_dict[partition_int] > end_offset_int for partition_int, end_offset_int in end_offsets_dict.items() if partition_int in offsets_dict):
+                    if all(offsets_dict[partition_int] > end_offset_int for partition_int, end_offset_int in end_offsets_dict.items()):
                         break_bool = True
                         break
                 #

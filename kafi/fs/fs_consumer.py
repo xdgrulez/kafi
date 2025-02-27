@@ -15,7 +15,8 @@ class FSConsumer(StorageConsumer):
         super().__init__(fs_obj, *topics, **kwargs)
         #  required for commit() without offsets.
         # Initialize self.next_topic_str_offsets_dict_dict
-        self.next_topic_str_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.storage_obj.admin.get_partitions(topic_str))} for topic_str in self.topic_str_list}
+        self.topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
+        self.next_topic_str_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
         # Initialize/update group dict file.
         group_dict = self.storage_obj.admin.get_group_dict(self.group_str)
         if group_dict == {}:
@@ -45,7 +46,7 @@ class FSConsumer(StorageConsumer):
         acc = initial_acc
         rel_file_str_list = []
         for topic_str in self.topic_str_list:
-            partitions_int = self.storage_obj.admin.get_partitions(topic_str)
+            partitions_int = self.topic_str_partitions_int_dict[topic_str]
             #
             # Get start offsets.
             start_offsets_dict = self.topic_str_start_offsets_dict_dict[topic_str] if self.topic_str_start_offsets_dict_dict is not None and topic_str in self.topic_str_start_offsets_dict_dict else None
