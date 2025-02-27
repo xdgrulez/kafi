@@ -50,7 +50,7 @@ class KafkaConsumer(StorageConsumer):
                 if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
                     end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
                     if offset_int > end_offsets_dict[partition_int]:
-                        break
+                        continue
                 #
                 if break_function(acc, message_dict):
                     break_bool = True
