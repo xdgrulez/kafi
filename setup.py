@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='kafi',
-    version='0.0.51',
+    version='0.0.52',
     description='Kafka and Files',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -16,15 +16,15 @@ setup(
     license='Apache License 2.0',
     packages=find_packages(),
     install_requires=['confluent_kafka[avro,json,protobuf,schemaregistry]==2.8.0',
-                      'grpcio-tools',
-                      'piny',
-                      'requests',
-                      'azure-storage-blob',
-                      'minio',
-                      'lxml',
-                      'openpyxl',
-                      'pandas',
-                      'pyarrow'
+                      'grpcio-tools==1.69.0',
+                      'piny==1.1.0',
+                      'requests==2.32.3',
+                      'azure-storage-blob==12.24.0',
+                      'minio==7.2.14',
+                      'lxml==5.3.0',
+                      'openpyxl==3.1.5',
+                      'pandas==2.2.3',
+                      'pyarrow==18.1.0'
                       ],
     classifiers=[
         'Development Status :: 3 - Alpha',

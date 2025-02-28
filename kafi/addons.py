@@ -179,6 +179,11 @@ class AddOns(Functional):
         for topic_str, partitions_int in topic_str_partitions_int_dict.items():
             start_offsets_dict = self.offsets_for_times(topic_str, {partition_int: ts_int for partition_int in range(partitions_int)}, **kwargs)[topic_str]
             end_offsets_dict = self.offsets_for_times(topic_str, {partition_int: end_ts_int for partition_int in range(partitions_int)}, **kwargs)[topic_str]
+            if any(offset_int == -1 for offset_int in end_offsets_dict.values()):
+                partition_int_offsets_tuple_dict = self.watermarks(topic_str)[topic_str]
+                for partition_int, offset_int in end_offsets_dict.items():
+                    if offset_int == -1:
+                        end_offsets_dict[partition_int] = partition_int_offsets_tuple_dict[partition_int][1] - 1
             #
             messages_int = sum([(end_offset_int - start_offset_int) + 1 for start_offset_int, end_offset_int in zip(start_offsets_dict.values(), end_offsets_dict.values()) if start_offset_int != -1])
             #

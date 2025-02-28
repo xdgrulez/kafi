@@ -1,13 +1,13 @@
 confluent_kafka[avro,json,protobuf,schemaregistry]==2.8.0
-grpcio-tools
-piny
-requests
+grpcio-tools==1.69.0
+piny==1.1.0
+requests==2.32.3
 # Azure Blob Storage
-azure-storage-blob
+azure-storage-blob==12.24.0
 # MinIO/S3
-minio
+minio==7.2.14
 # Pandas
-lxml
-openpyxl
-pandas
-pyarrow
+lxml==5.3.0
+openpyxl==3.1.5
+pandas==2.2.3
+pyarrow==18.1.0
