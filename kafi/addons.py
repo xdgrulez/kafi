@@ -166,6 +166,28 @@ class AddOns(Functional):
 
     #
 
+    def offsets_diff(self, pattern, ts, end_ts, **kwargs):
+        ts_int = ts
+        end_ts_int = end_ts
+        #
+        if end_ts_int < ts_int:
+            raise Exception(f"End timestamp ({end_ts_int}) before start timestamp ({ts_int}).")
+        #
+        topic_str_partitions_int_dict = self.partitions(pattern, **kwargs)
+        #
+        topic_str_messages_int_dict = {}
+        for topic_str, partitions_int in topic_str_partitions_int_dict.items():
+            start_offsets_dict = self.offsets_for_times(topic_str, {partition_int: ts_int for partition_int in range(partitions_int)}, **kwargs)[topic_str]
+            end_offsets_dict = self.offsets_for_times(topic_str, {partition_int: end_ts_int for partition_int in range(partitions_int)}, **kwargs)[topic_str]
+            #
+            messages_int = sum([(end_offset_int - start_offset_int) + 1 for start_offset_int, end_offset_int in zip(start_offsets_dict.values(), end_offsets_dict.values()) if start_offset_int != -1])
+            #
+            topic_str_messages_int_dict[topic_str] = messages_int
+        #
+        return topic_str_messages_int_dict
+
+    #
+
     def message_size(self, topic_str, **kwargs):
         def agg(partition_int_offset_int_size_int_tuple_dict_dict, message_dict):
             partition_int = message_dict["partition"]

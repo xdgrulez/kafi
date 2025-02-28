@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='kafi',
-    version='0.0.50',
+    version='0.0.51',
     description='Kafka and Files',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -15,7 +15,7 @@ setup(
     author_email='matthias.debusmann@gmail.com',
     license='Apache License 2.0',
     packages=find_packages(),
-    install_requires=['confluent_kafka[avro,json,protobuf,schemaregistry]',
+    install_requires=['confluent_kafka[avro,json,protobuf,schemaregistry]==2.8.0',
                       'grpcio-tools',
                       'piny',
                       'requests',

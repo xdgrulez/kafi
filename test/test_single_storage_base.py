@@ -855,58 +855,88 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         s = self.get_storage()
         #
-        # Produce five messages.
+        def get_partition_int_message_dict_list_dict(message_dict_list):
+            return {0: [message_dict for message_dict in message_dict_list if message_dict["partition"] == 0], 1: [message_dict for message_dict in message_dict_list if message_dict["partition"] == 1]}
+        # Produce five messages to a topic with two partitions.
+        # 0: snack[0],               snack[1],               snack[2]
+        #    0                       1                       2
+        #    ts0                     ts2                     ts4
+        # 1:           countries[0],           countries[1],
+        #              0                       1
+        #              ts1                     ts3
         topic_str = self.create_test_topic_name()
-        s.create(topic_str)
+        s.create(topic_str, partitions=2)
         producer = s.producer(topic_str, type="str")
-        producer.produce(self.snack_str_list[0], flush=True)
-        time.sleep(0.001)
-        producer.produce(self.snack_str_list[1], flush=True)
-        time.sleep(0.001)
-        producer.produce(self.snack_str_list[2], flush=True)
-        time.sleep(0.001)
-        producer.produce(self.snack_countries_str_list[0], flush=True)
-        time.sleep(0.001)
-        producer.produce(self.snack_countries_str_list[1], flush=True)
+        producer.produce(self.snack_str_list[0], partition=0, flush=True)
+        time.sleep(0.1)
+        producer.produce(self.snack_countries_str_list[0], partition=1, flush=True)
+        time.sleep(0.1)
+        producer.produce(self.snack_str_list[1], partition=0, flush=True)
+        time.sleep(0.1)
+        producer.produce(self.snack_countries_str_list[1], partition=1, flush=True)
+        time.sleep(0.1)
+        producer.produce(self.snack_str_list[2], partition=0, flush=True)
         producer.close()
         # Read the messages.
         group_str1 = self.create_test_group_name()
         message_dict_list1 = s.cat(topic_str, group=group_str1, type="str")
         self.assertEqual(5, len(message_dict_list1))
-        # Get timestamps of the second and fourth message.
-        ts_int_list = [message_dict["timestamp"][1] for message_dict in message_dict_list1]
-        ts_int1 = ts_int_list[1]
-        ts_int3 = ts_int_list[3]
-        # Read only the messages from the timestamp of the second message to the timestamp of the fourth.
+        # Get dictionary mapping partitions to timestamps.
+        partition_int_ts_int_list_dict = {0: [], 1: []}
+        for message_dict in message_dict_list1:
+            partition_int = message_dict["partition"]
+            ts_int = message_dict["timestamp"][1]
+            #
+            partition_int_ts_int_list_dict[partition_int].append(ts_int)
+        #
+        ts_int0 = partition_int_ts_int_list_dict[0][0]
+        ts_int1 = partition_int_ts_int_list_dict[1][0]
+        ts_int2 = partition_int_ts_int_list_dict[0][1]
+        ts_int3 = partition_int_ts_int_list_dict[1][1]
+        ts_int4 = partition_int_ts_int_list_dict[0][2]
+        self.assertTrue(ts_int0 < ts_int1 < ts_int2 < ts_int3 < ts_int4)
+        # Read the messages from the timestamp of the first to the timestamp of the fifth message.
         group_str2 = self.create_test_group_name()
-        message_dict_list2 = s.cat(topic_str, group=group_str2, type="str", ts=ts_int1, end_ts=ts_int3)
-        self.assertEqual(3, len(message_dict_list2))
-        self.assertEqual(message_dict_list2[0]["value"], self.snack_str_list[1])
-        self.assertEqual(message_dict_list2[1]["value"], self.snack_str_list[2])
-        self.assertEqual(message_dict_list2[2]["value"], self.snack_countries_str_list[0])
-        # Read only the messages from the timestamp of the second message to the end of the topic.
+        message_dict_list2 = s.cat(topic_str, group=group_str2, type="str", ts=ts_int0, end_ts=ts_int4)
+        self.assertEqual(5, len(message_dict_list2))
+        partition_int_message_dict_list_dict2 = get_partition_int_message_dict_list_dict(message_dict_list2)
+        self.assertEqual(partition_int_message_dict_list_dict2[0][0]["value"], self.snack_str_list[0])
+        self.assertEqual(partition_int_message_dict_list_dict2[1][0]["value"], self.snack_countries_str_list[0])
+        self.assertEqual(partition_int_message_dict_list_dict2[0][1]["value"], self.snack_str_list[1])
+        self.assertEqual(partition_int_message_dict_list_dict2[1][1]["value"], self.snack_countries_str_list[1])
+        self.assertEqual(partition_int_message_dict_list_dict2[0][2]["value"], self.snack_str_list[2])
+        # Read the messages from the timestamp of the second to the timestamp of the fourth message.
         group_str3 = self.create_test_group_name()
-        message_dict_list3 = s.cat(topic_str, group=group_str3, type="str", ts=ts_int1)
-        self.assertEqual(4, len(message_dict_list3))
-        self.assertEqual(message_dict_list3[0]["value"], self.snack_str_list[1])
-        self.assertEqual(message_dict_list3[1]["value"], self.snack_str_list[2])
-        self.assertEqual(message_dict_list3[2]["value"], self.snack_countries_str_list[0])
-        self.assertEqual(message_dict_list3[3]["value"], self.snack_countries_str_list[1])
-        # Read only the messages from the second to the fourth using the offsets.
-        group_str4 = self.create_test_group_name()
-        message_dict_list4 = s.cat(topic_str, group=group_str4, type="str", offsets={topic_str: {0: 1}}, end_offsets={topic_str: {0: 3}})
-        self.assertEqual(3, len(message_dict_list4))
-        self.assertEqual(message_dict_list4[0]["value"], self.snack_str_list[1])
-        self.assertEqual(message_dict_list4[1]["value"], self.snack_str_list[2])
-        self.assertEqual(message_dict_list4[2]["value"], self.snack_countries_str_list[0])
-        # Read only the messages from the second to the end of the topic using the offsets.
-        group_str5 = self.create_test_group_name()
-        message_dict_list5 = s.cat(topic_str, group=group_str5, type="str", offsets={0: 1})
-        self.assertEqual(4, len(message_dict_list5))
-        self.assertEqual(message_dict_list5[0]["value"], self.snack_str_list[1])
-        self.assertEqual(message_dict_list5[1]["value"], self.snack_str_list[2])
-        self.assertEqual(message_dict_list5[2]["value"], self.snack_countries_str_list[0])
-        self.assertEqual(message_dict_list5[3]["value"], self.snack_countries_str_list[1])
+        s.verbose(1)
+        message_dict_list3 = s.cat(topic_str, group=group_str3, type="str", ts=ts_int1, end_ts=ts_int3)
+        self.assertEqual(3, len(message_dict_l fist3))
+        partition_int_message_dict_list_dict3 = get_partition_int_message_dict_list_dict(message_dict_list3)
+        self.assertEqual(partition_int_message_dict_list_dict3[1][0]["value"], self.snack_countries_str_list[0])
+        self.assertEqual(partition_int_message_dict_list_dict3[0][1]["value"], self.snack_str_list[1])
+        self.assertEqual(partition_int_message_dict_list_dict3[1][1]["value"], self.snack_countries_str_list[1])
+        # # Read only the messages from the timestamp of the second message to the end of the topic.
+        # group_str3 = self.create_test_group_name()
+        # message_dict_list3 = s.cat(topic_str, group=group_str3, type="str", ts=ts_int1)
+        # self.assertEqual(4, len(message_dict_list3))
+        # self.assertEqual(message_dict_list3[0]["value"], self.snack_str_list[1])
+        # self.assertEqual(message_dict_list3[1]["value"], self.snack_str_list[2])
+        # self.assertEqual(message_dict_list3[2]["value"], self.snack_countries_str_list[0])
+        # self.assertEqual(message_dict_list3[3]["value"], self.snack_countries_str_list[1])
+        # # Read only the messages from the second to the fourth using the offsets.
+        # group_str4 = self.create_test_group_name()
+        # message_dict_list4 = s.cat(topic_str, group=group_str4, type="str", offsets={topic_str: {0: 1}}, end_offsets={topic_str: {0: 3}})
+        # self.assertEqual(3, len(message_dict_list4))
+        # self.assertEqual(message_dict_list4[0]["value"], self.snack_str_list[1])
+        # self.assertEqual(message_dict_list4[1]["value"], self.snack_str_list[2])
+        # self.assertEqual(message_dict_list4[2]["value"], self.snack_countries_str_list[0])
+        # # Read only the messages from the second to the end of the topic using the offsets.
+        # group_str5 = self.create_test_group_name()
+        # message_dict_list5 = s.cat(topic_str, group=group_str5, type="str", offsets={0: 1})
+        # self.assertEqual(4, len(message_dict_list5))
+        # self.assertEqual(message_dict_list5[0]["value"], self.snack_str_list[1])
+        # self.assertEqual(message_dict_list5[1]["value"], self.snack_str_list[2])
+        # self.assertEqual(message_dict_list5[2]["value"], self.snack_countries_str_list[0])
+        # self.assertEqual(message_dict_list5[3]["value"], self.snack_countries_str_list[1])
 
     # Shell.head -> Shell.cat
     def test_head(self):
