@@ -166,39 +166,43 @@ class RestProxyAdmin(KafkaAdmin):
 
     def group_offsets(self, pattern, group_offsets=None, state_pattern="*"):
         pattern_str_list = [pattern] if isinstance(pattern, str) else pattern
+        group_offsets_dict = group_offsets
         state_pattern_str_list = [state_pattern] if isinstance(pattern, str) else state_pattern
         #
-        kafkaConsumerGroup_dict_list = self.get_kafkaConsumerGroup_dict_list(pattern_str_list)
-        #
-        group_str_list = [kafkaConsumerGroup_dict["consumer_group_id"] for kafkaConsumerGroup_dict in kafkaConsumerGroup_dict_list if any(fnmatch(kafkaConsumerGroup_dict["consumer_group_id"], pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(kafkaConsumerGroup_dict["state"], state_pattern_str.upper()) for state_pattern_str in state_pattern_str_list)]
-        #
-        (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
-        #
-        group_offsets = {}
-        headers_dict = {"Content-Type": "application/json"}
-        for group_str in group_str_list:
-            url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/consumer-groups/{group_str}/lags"
-            response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
-            kafkaConsumerLag_dict_list = response_dict["data"]
+        if group_offsets_dict is not None:
+            raise Exception(f"group_offsets() with group_offsets != None not supported for REST Proxy.")
+        else:
+            kafkaConsumerGroup_dict_list = self.get_kafkaConsumerGroup_dict_list(pattern_str_list)
             #
-            if group_str in group_offsets:
-                topic_str_offsets_dict_dict = group_offsets[group_str]
-            else:
-                topic_str_offsets_dict_dict = {}
+            group_str_list = [kafkaConsumerGroup_dict["consumer_group_id"] for kafkaConsumerGroup_dict in kafkaConsumerGroup_dict_list if any(fnmatch(kafkaConsumerGroup_dict["consumer_group_id"], pattern_str) for pattern_str in pattern_str_list) and any(fnmatch(kafkaConsumerGroup_dict["state"], state_pattern_str.upper()) for state_pattern_str in state_pattern_str_list)]
             #
-            for kafkaConsumerLag_dict in kafkaConsumerLag_dict_list:
-                topic_str = kafkaConsumerLag_dict["topic_name"]
-                partition_int = kafkaConsumerLag_dict["partition_id"]
-                offset_int = kafkaConsumerLag_dict["current_offset"]
-                if topic_str in topic_str_offsets_dict_dict:
-                    offsets_dict = topic_str_offsets_dict_dict[topic_str]
-                else:
-                    offsets_dict = {}
+            (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
+            #
+            group_offsets = {}
+            headers_dict = {"Content-Type": "application/json"}
+            for group_str in group_str_list:
+                url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/consumer-groups/{group_str}/lags"
+                response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
+                kafkaConsumerLag_dict_list = response_dict["data"]
                 #
-                offsets_dict[partition_int] = offset_int
-                topic_str_offsets_dict_dict[topic_str] = offsets_dict
-            #
-            group_offsets[group_str] = topic_str_offsets_dict_dict
+                if group_str in group_offsets:
+                    topic_str_offsets_dict_dict = group_offsets[group_str]
+                else:
+                    topic_str_offsets_dict_dict = {}
+                #
+                for kafkaConsumerLag_dict in kafkaConsumerLag_dict_list:
+                    topic_str = kafkaConsumerLag_dict["topic_name"]
+                    partition_int = kafkaConsumerLag_dict["partition_id"]
+                    offset_int = kafkaConsumerLag_dict["current_offset"]
+                    if topic_str in topic_str_offsets_dict_dict:
+                        offsets_dict = topic_str_offsets_dict_dict[topic_str]
+                    else:
+                        offsets_dict = {}
+                    #
+                    offsets_dict[partition_int] = offset_int
+                    topic_str_offsets_dict_dict[topic_str] = offsets_dict
+                #
+                group_offsets[group_str] = topic_str_offsets_dict_dict
         #
         return group_offsets
 

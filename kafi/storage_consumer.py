@@ -46,18 +46,21 @@ class StorageConsumer(Deserializer):
                 timestamp_int = kwargs[ts_key_str]
                 topic_str_partitions_int_dict = self.storage_obj.partitions(topic_str_list)
                 topic_str_partition_int_timestamp_int_dict_dict = {topic_str: {partition_int: timestamp_int for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}
-                topic_str_offsets_dict_dict = self.storage_obj.offsets_for_times(topic_str_list, topic_str_partition_int_timestamp_int_dict_dict)
+                topic_str_offsets_dict_dict = self.storage_obj.offsets_for_times(topic_str_list, topic_str_partition_int_timestamp_int_dict_dict, replace_not_found=True)
                 if self.storage_obj.verbose() > 0:
                     print(f"Offsets for {ts_key_str} ({timestamp_int}):")
                     print(topic_str_offsets_dict_dict)
             else:
                 topic_str_offsets_dict_dict = None
         # Check for any negative offsets - in that case, use current high watermark + negative offset as the offset.
+        # print(topic_str_offsets_dict_dict)
         if topic_str_offsets_dict_dict is not None:
             offset_int_list = sum({topic_str: list(offsets_dict.values()) for topic_str, offsets_dict in topic_str_offsets_dict_dict.items()}.values(), [])
             if any(offset_int < 0 for offset_int in offset_int_list):
                 topic_str_partition_int_offset_int_tuple_dict_dict = self.storage_obj.watermarks(topic_str_list)
-                topic_str_offsets_dict_dict = {topic_str: {partition_int: (topic_str_partition_int_offset_int_tuple_dict_dict[topic_str][partition_int][1] + offset_int if offset_int < 0 else offset_int) for partition_int, offset_int in offsets_dict.items()} for topic_str, offsets_dict in topic_str_offsets_dict_dict.items()}
+                topic_str_offsets_dict_dict = {topic_str: {partition_int: (topic_str_partition_int_offset_int_tuple_dict_dict[topic_str][partition_int][1] + offset_int if topic_str_partition_int_offset_int_tuple_dict_dict[topic_str][partition_int][1] > 0 else 0) for partition_int, offset_int in offsets_dict.items() if offset_int < 0} for topic_str, offsets_dict in topic_str_offsets_dict_dict.items()}
+        #
+        # print(topic_str_offsets_dict_dict)
         #
         return topic_str_offsets_dict_dict
 

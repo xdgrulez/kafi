@@ -271,23 +271,16 @@ class ClusterAdmin(KafkaAdmin):
         #
         return filtered_topic_str_list
 
-    def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
-        pattern_str_or_str_list = pattern
+    def offsets_for_times(self, pattern, partitions_timestamps, replace_not_found=False, **kwargs):
+        replace_not_found_bool = replace_not_found
+        #
         timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
         #
-        topic_str_list = self.list_topics(pattern_str_or_str_list)
-        # partitions_timestamps can either be:
-        # * a dictionary mapping partitions to timestamps (if the first key is an integer)
-        # * a dictionary mapping topics to a dictionary mapping partitions to timestamps (if the first key is a string for multiple individual topics)
-        # => consolidate to the latter.
-        first_key_str_or_int = list(partitions_timestamps.keys())[0]
-        if isinstance(first_key_str_or_int, int):
-            partition_int_timestamp_int_dict = partitions_timestamps
-            topic_str_partition_int_timestamp_int_dict_dict = {topic_str: partition_int_timestamp_int_dict for topic_str in topic_str_list}
-        else:
-            topic_str_partition_int_timestamp_int_dict_dict = partitions_timestamps
+        topic_str_list = self.list_topics(pattern)
         #
-        topic_str_partition_int_offsets_int_dict_dict = {}
+        topic_str_partition_int_timestamp_int_dict_dict = self.get_topic_str_partition_int_timestamp_int_dict_dict(topic_str_list, partitions_timestamps)
+        #
+        topic_str_offsets_dict_dict = {}
         for topic_str in topic_str_list:
             offsets_dict = {}
             #
@@ -301,9 +294,12 @@ class ClusterAdmin(KafkaAdmin):
                 for topicPartition in topicPartition_list1:
                     offsets_dict[topicPartition.partition] = topicPartition.offset
                 #
-                topic_str_partition_int_offsets_int_dict_dict[topic_str] = offsets_dict
+                topic_str_offsets_dict_dict[topic_str] = offsets_dict
         #
-        return topic_str_partition_int_offsets_int_dict_dict
+        if replace_not_found_bool:
+            topic_str_offsets_dict_dict = self.replace_not_found(topic_str_offsets_dict_dict)
+        #
+        return topic_str_offsets_dict_dict
 
     def partitions(self, pattern=None, partitions=None, verbose=False, **kwargs):
         pattern_str_or_str_list = pattern

@@ -88,46 +88,46 @@ class FSAdmin(StorageAdmin):
     
     #
 
-    def offsets_for_times(self, pattern, partitions_timestamps, **kwargs):
+    def offsets_for_times(self, pattern, partitions_timestamps, replace_not_found=False, **kwargs):
         pattern_str_or_str_list = pattern
+        replace_not_found_bool = replace_not_found
         #
         topic_str_list = self.list_topics(pattern_str_or_str_list)
         #
-        # partitions_timestamps can either be:
-        # * a dictionary mapping partitions to timestamps (if the first key is an integer)
-        # * a dictionary mapping topics to a dictionary mapping partitions to timestamps (if the first key is a string for multiple individual topics)
-        # => consolidate to the latter.
-        first_key_str_or_int = list(partitions_timestamps.keys())[0]
-        if isinstance(first_key_str_or_int, int):
-            partition_int_timestamp_int_dict = partitions_timestamps
-            topic_str_partition_int_timestamp_int_dict_dict = {topic_str: partition_int_timestamp_int_dict for topic_str in topic_str_list}
-        else:
-            topic_str_partition_int_timestamp_int_dict_dict = partitions_timestamps
+        topic_str_partition_int_timestamp_int_dict_dict = self.get_topic_str_partition_int_timestamp_int_dict_dict(topic_str_list, partitions_timestamps)
         #
-        topic_str_partition_int_offsets_int_dict_dict = {}
+        topic_str_offsets_dict_dict = {}
         for topic_str in topic_str_list:
+            offsets_dict = {}
+            #
             partitions_int = self.get_partitions(topic_str)
             #
-            abs_topic_dir_str = self.storage_obj.admin.get_topic_abs_path_str(topic_str)
+            topic_str_offsets_dict_dict[topic_str] = {partition_int: -1 for partition_int in range(partitions_int)}
+            offsets_dict = topic_str_offsets_dict_dict[topic_str]
+            #
+            abs_topic_dir_str = self.get_topic_abs_path_str(topic_str)
             #
             for partition_int in range(partitions_int):
-                rel_file_str = self.storage_obj.admin.find_partition_file_str_by_timestamp(topic_str, partition_int, topic_str_partition_int_timestamp_int_dict_dict[topic_str][partition_int])
+                rel_file_str = self.find_partition_file_str_by_timestamp(topic_str, partition_int, topic_str_partition_int_timestamp_int_dict_dict[topic_str][partition_int])
                 #
-                messages_bytes = self.storage_obj.admin.read_bytes(os.path.join(abs_topic_dir_str, "partitions", rel_file_str))
-                #
-                message_bytes_list = messages_bytes.split(b"\n")[:-1]
-                #
-                for message_bytes in message_bytes_list:
-                    message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
+                if rel_file_str == -1:
+                    offsets_dict[partition_int] = -1
+                else:
+                    messages_bytes = self.read_bytes(os.path.join(abs_topic_dir_str, "partitions", rel_file_str))
                     #
-                    if message_dict["timestamp"][1] >= topic_str_partition_int_timestamp_int_dict_dict[topic_str][partition_int]:
-                        if topic_str not in topic_str_partition_int_offsets_int_dict_dict:
-                            topic_str_partition_int_offsets_int_dict_dict[topic_str] = {}
+                    message_bytes_list = messages_bytes.split(b"\n")[:-1]
+                    #
+                    for message_bytes in message_bytes_list:
+                        message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
                         #
-                        topic_str_partition_int_offsets_int_dict_dict[topic_str][partition_int] = message_dict["offset"]
-                        break
+                        if message_dict["timestamp"][1] >= offsets_dict[partition_int]:
+                            offsets_dict[partition_int] = message_dict["offset"]
+                            break
         #
-        return topic_str_partition_int_offsets_int_dict_dict
+        if replace_not_found_bool:
+            topic_str_offsets_dict_dict = self.replace_not_found(topic_str_offsets_dict_dict)
+        #
+        return topic_str_offsets_dict_dict
 
     #
 
@@ -229,17 +229,34 @@ class FSAdmin(StorageAdmin):
         rel_file_str_list1 = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
         rel_file_str_list = [rel_file_str for rel_file_str in rel_file_str_list1 if int(rel_file_str.split(",")[0]) == partition_int]
         if rel_file_str_list == []:
-            return None
+            return -1
+        #
+        # Now find the first file in which the message with timestamp to_find_timestamp_int is contained :)
         rel_file_str_list.sort()
-        # Now find the first file in which the message with timestamp to_find_timestamp_int is be contained :)
         rel_file_str_start_timestamp_int_end_timestamp_int_tuple_dict = {rel_file_str: (int(rel_file_str.split(",")[3]), int(rel_file_str.split(",")[4])) for rel_file_str in rel_file_str_list}
+        # If to_find_timestamp < the minimum timestamp of the files => return the first file
+        min_start_timestamp_int = rel_file_str_start_timestamp_int_end_timestamp_int_tuple_dict[rel_file_str_list[0]][0]
+        if to_find_timestamp_int < min_start_timestamp_int:
+            return rel_file_str_list[0]
+        # If to_find_timestamp > the maximum timestamp of the files => return -1
+        max_end_timestamp_int = rel_file_str_start_timestamp_int_end_timestamp_int_tuple_dict[rel_file_str_list[-1]][1]
+        if to_find_timestamp_int > max_end_timestamp_int:
+            return -1
+        #
         found_rel_file_str = None
+        previous_end_timestamp_int = None
         for rel_file_str, start_timestamp_int_end_timestamp_int_tuple in rel_file_str_start_timestamp_int_end_timestamp_int_tuple_dict.items():
             (start_timestamp_int, end_timestamp_int) = start_timestamp_int_end_timestamp_int_tuple
             #
             if to_find_timestamp_int >= start_timestamp_int and to_find_timestamp_int <= end_timestamp_int:
                 found_rel_file_str = rel_file_str
                 break
+            #
+            if previous_end_timestamp_int is not None and to_find_timestamp_int >= previous_end_timestamp_int and to_find_timestamp_int <= end_timestamp_int:
+                found_rel_file_str = rel_file_str
+                break
+            #
+            previous_end_timestamp_int = end_timestamp_int
         #
         return found_rel_file_str
 

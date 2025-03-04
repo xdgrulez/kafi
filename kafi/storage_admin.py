@@ -52,3 +52,32 @@ class StorageAdmin():
                 topic_str_list = self.list_topics(pattern_str_or_str_list)
                 filtered_topic_str_list = pattern_match(topic_str_list, pattern_str_or_str_list)
                 return filtered_topic_str_list
+
+    #
+
+    # partitions_timestamps can either be:
+    # * a dictionary mapping partitions to timestamps (if the first key is an integer)
+    # * a dictionary mapping topics to a dictionary mapping partitions to timestamps (if the first key is a string for multiple individual topics)
+    # => consolidate to the latter.
+    def get_topic_str_partition_int_timestamp_int_dict_dict(self, topic_str_list, partitions_timestamps):
+        first_key_str_or_int = list(partitions_timestamps.keys())[0]
+        if isinstance(first_key_str_or_int, int):
+            partition_int_timestamp_int_dict = partitions_timestamps
+            topic_str_partition_int_timestamp_int_dict_dict = {topic_str: partition_int_timestamp_int_dict for topic_str in topic_str_list}
+        else:
+            topic_str_partition_int_timestamp_int_dict_dict = partitions_timestamps
+        #
+        return topic_str_partition_int_timestamp_int_dict_dict 
+
+    def replace_not_found(self, topic_str_offsets_dict_dict):
+        for topic_str, offsets_dict in topic_str_offsets_dict_dict.items():
+            if any(offset_int == -1 for offset_int in offsets_dict.values()):
+                partition_int_offsets_tuple_dict = self.storage_obj.watermarks(topic_str)[topic_str]
+                for partition_int, offset_int in offsets_dict.items():
+                    if offset_int == -1:
+                        high_watermark_int = partition_int_offsets_tuple_dict[partition_int][1]
+                        offsets_dict[partition_int] = high_watermark_int - 1 if high_watermark_int >= 0 else 0
+                #
+                topic_str_offsets_dict_dict[topic_str] = offsets_dict
+        #
+        return topic_str_offsets_dict_dict

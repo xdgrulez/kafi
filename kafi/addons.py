@@ -148,19 +148,25 @@ class AddOns(Functional):
 
     #
 
-    def cp_group_offsets(self, topic_str, source_group, target_group):
+    def cp_group_offsets(self, pattern, source_group, target_group):
         source_group_str = source_group
         target_group_str = target_group
-        # Initialize the second consumer group by consuming one message.
-        old_commit_after_processing_bool = self.commit_after_processing()
-        self.commit_after_processing(True)
-        self.cat(topic_str, group=target_group_str, type="bytes", n=1)
-        self.commit_after_processing(old_commit_after_processing_bool)
+        #
+        topic_str_list = self.admin.list_topics(pattern)
+        #
         # Get the offsets of the source consumer group.
         source_group_offsets = self.group_offsets(source_group_str)
-        source_offsets_dict = source_group_offsets[source_group_str][topic_str]
-        # Set the offsets of the target consumer group.
-        target_group_offsets = self.group_offsets(target_group, {topic_str: source_offsets_dict})
+        #
+        for topic_str in topic_str_list:
+            source_offsets_dict = source_group_offsets[source_group_str][topic_str]
+            # Consume one message with the target consumer group to bring it to life.
+            co = self.consumer(topic_str, group=target_group_str, type="bytes")
+            co.consume(n=1)
+            # Commit the source consumer group offsets to the target consumer group.
+            co.commit(source_offsets_dict)
+            co.close()
+        #
+        target_group_offsets = self.group_offsets(target_group)
         #
         return target_group_offsets
 
@@ -177,15 +183,13 @@ class AddOns(Functional):
         #
         topic_str_messages_int_dict = {}
         for topic_str, partitions_int in topic_str_partitions_int_dict.items():
-            start_offsets_dict = self.offsets_for_times(topic_str, {partition_int: ts_int for partition_int in range(partitions_int)}, **kwargs)[topic_str]
-            end_offsets_dict = self.offsets_for_times(topic_str, {partition_int: end_ts_int for partition_int in range(partitions_int)}, **kwargs)[topic_str]
-            if any(offset_int == -1 for offset_int in end_offsets_dict.values()):
-                partition_int_offsets_tuple_dict = self.watermarks(topic_str)[topic_str]
-                for partition_int, offset_int in end_offsets_dict.items():
-                    if offset_int == -1:
-                        end_offsets_dict[partition_int] = partition_int_offsets_tuple_dict[partition_int][1] - 1
+            start_offsets_dict = self.offsets_for_times(topic_str, {partition_int: ts_int for partition_int in range(partitions_int)}, replace_not_found=True, **kwargs)[topic_str]
+            end_offsets_dict = self.offsets_for_times(topic_str, {partition_int: end_ts_int for partition_int in range(partitions_int)}, replace_not_found=True, **kwargs)[topic_str]
             #
-            messages_int = sum([(end_offset_int - start_offset_int) + 1 for start_offset_int, end_offset_int in zip(start_offsets_dict.values(), end_offsets_dict.values()) if start_offset_int != -1])
+            # print(start_offsets_dict)
+            # print(end_offsets_dict)
+            #
+            messages_int = sum([(end_offset_int - start_offset_int) + 1 for start_offset_int, end_offset_int in zip(start_offsets_dict.values(), end_offsets_dict.values())])
             #
             topic_str_messages_int_dict[topic_str] = messages_int
         #
