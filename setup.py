@@ -15,7 +15,7 @@ setup(
     author_email='matthias.debusmann@gmail.com',
     license='Apache License 2.0',
     packages=find_packages(),
-    install_requires=['confluent_kafka[avro,json,protobuf,schemaregistry]==2.8.0',
+    install_requires=['confluent_kafka[avro,json,protobuf,schemaregistry]==2.8.2',
                       'grpcio-tools==1.69.0',
                       'piny==1.1.0',
                       'requests==2.32.3',
