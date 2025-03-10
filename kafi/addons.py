@@ -1,3 +1,5 @@
+import time
+
 from kafi.functional import Functional
 
 # Constants
@@ -157,16 +159,13 @@ class AddOns(Functional):
         # Get the offsets of the source consumer group.
         source_group_offsets = self.group_offsets(source_group_str)
         #
+        # Consume one message from eacg topic with the target consumer group to bring it to life.
         for topic_str in topic_str_list:
-            source_offsets_dict = source_group_offsets[source_group_str][topic_str]
-            # Consume one message with the target consumer group to bring it to life.
             co = self.consumer(topic_str, group=target_group_str, type="bytes")
             co.consume(n=1)
-            # Commit the source consumer group offsets to the target consumer group.
-            co.commit(source_offsets_dict)
             co.close()
         #
-        target_group_offsets = self.group_offsets(target_group)
+        target_group_offsets = self.group_offsets(target_group, source_group_offsets[source_group_str])
         #
         return target_group_offsets
 

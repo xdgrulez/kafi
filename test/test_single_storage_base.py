@@ -1647,25 +1647,29 @@ class TestSingleStorageBase(unittest.TestCase):
         # Create topic with 3 partitions.
         topic_str = self.create_test_topic_name()
         s.create(topic_str, partitions=3)
-        # Produce three messages to the individual partitions.
+        # Produce six messages to the individual partitions.
         producer = s.producer(topic_str)
+        producer.produce(self.snack_str_list[0], partition=0)
+        producer.produce(self.snack_str_list[1], partition=1)
+        producer.produce(self.snack_str_list[2], partition=2)
         producer.produce(self.snack_str_list[0], partition=0)
         producer.produce(self.snack_str_list[1], partition=1)
         producer.produce(self.snack_str_list[2], partition=2)
         producer.close()
         # Create two consumer group names.
         group_str1 = self.create_test_group_name()
+        time.sleep(0.1)
         group_str2 = self.create_test_group_name()
         # Read topic with the first consumer group.
         # Due to commit_after_processing=True, the sum of the offsets of the consumer group is 3.
-        s.cat(topic_str, group=group_str1, type="json")
-        group_str_topic_str_offsets_dict_dict_dict1 = s.group_offsets(group_str1)
+        s.cat(topic_str, group=group_str1, type="json", n=1)
+        group_str_topic_str_offsets_dict_dict_dict1 = s.group_offsets(group_str1, {topic_str: {0: 2, 1: 2, 2: 2}})
         partition_0_offset_int1 = group_str_topic_str_offsets_dict_dict_dict1[group_str1][topic_str][0]
         partition_1_offset_int1 = group_str_topic_str_offsets_dict_dict_dict1[group_str1][topic_str][1]
         partition_2_offset_int1 = group_str_topic_str_offsets_dict_dict_dict1[group_str1][topic_str][2]
-        self.assertEqual(partition_0_offset_int1, 1)
-        self.assertEqual(partition_1_offset_int1, 1)
-        self.assertEqual(partition_2_offset_int1, 1)
+        self.assertEqual(partition_0_offset_int1, 2)
+        self.assertEqual(partition_1_offset_int1, 2)
+        self.assertEqual(partition_2_offset_int1, 2)
         # Produce three more messages.
         producer = s.producer(topic_str)
         producer.produce(self.snack_countries_str_list[0], partition=0)
@@ -1678,9 +1682,9 @@ class TestSingleStorageBase(unittest.TestCase):
         partition_0_offset_int2 = group_str_topic_str_offsets_dict_dict_dict2[group_str2][topic_str][0]
         partition_1_offset_int2 = group_str_topic_str_offsets_dict_dict_dict2[group_str2][topic_str][1]
         partition_2_offset_int2 = group_str_topic_str_offsets_dict_dict_dict2[group_str2][topic_str][2]
-        self.assertEqual(partition_0_offset_int2, 1)
-        self.assertEqual(partition_1_offset_int2, 1)
-        self.assertEqual(partition_2_offset_int2, 1)
+        self.assertEqual(partition_0_offset_int2, 2)
+        self.assertEqual(partition_1_offset_int2, 2)
+        self.assertEqual(partition_2_offset_int2, 2)
         # Read the topic with consumer group 2.
         message_dict_list = s.cat(topic_str, group=group_str2, type="json", n=3)
         self.assertEqual(len(message_dict_list), 3)
