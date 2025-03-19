@@ -8,6 +8,12 @@ ALL_MESSAGES = -1
 
 #
 
+def default_projection_function(message_dict1, message_dict2):
+    message_dict = dict(message_dict1)
+    message_dict["value"] = message_dict1["value"] | message_dict2["value"]
+    return message_dict
+#
+
 class AddOns(Functional):
     def compact(self, topic, n=ALL_MESSAGES, **kwargs):
         def foldl_function(acc, message_dict):
@@ -47,7 +53,7 @@ class AddOns(Functional):
 
     #
 
-    def join_to(self, source_topic1, source_storage2, source_topic2, target_storage, target_topic, get_key_function1, get_key_function2, projection_function, join="left", n=ALL_MESSAGES, **kwargs):
+    def join_to(self, source_topic1, source_storage2, source_topic2, target_storage, target_topic, get_key_function1=lambda x: x["key"], get_key_function2=lambda x: x["key"], projection_function=default_projection_function, join="left", n=ALL_MESSAGES, **kwargs):
         join_str = join
         #
         if join_str not in ["inner", "left", "right"]:
@@ -246,4 +252,3 @@ class AddOns(Functional):
         stats_dict = {"messages": n_int, "total_size": total_size_int, "average_size": total_size_int/n_int, "max_size": max_dict, "min_size": min_dict}
         #
         return stats_dict
-

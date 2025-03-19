@@ -32,7 +32,9 @@ class FSConsumer(StorageConsumer):
     def close(self):
         new_group_dict = {"state": "empty"}
         self.storage_obj.admin.set_group_dict(self.group_str, new_group_dict)
-    
+        #
+        return self.topic_str_list
+
     #
   
     def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
