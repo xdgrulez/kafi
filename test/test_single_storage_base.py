@@ -1677,7 +1677,7 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.produce(self.snack_countries_str_list[0], partition=2)
         producer.close()
         # Copy consumer group offsets from the first to the second consumer group.
-        s.cp_group_offsets(topic_str, group_str1, group_str2)
+        s.cp_group_offsets(topic_str, group_str1, s, group_str2)
         group_str_topic_str_offsets_dict_dict_dict2 = s.group_offsets(group_str2)
         partition_0_offset_int2 = group_str_topic_str_offsets_dict_dict_dict2[group_str2][topic_str][0]
         partition_1_offset_int2 = group_str_topic_str_offsets_dict_dict_dict2[group_str2][topic_str][1]

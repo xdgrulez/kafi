@@ -150,7 +150,7 @@ class AddOns(Functional):
 
     #
 
-    def cp_group_offsets(self, pattern, source_group, target_group):
+    def cp_group_offsets(self, pattern, source_group, target_storage, target_group):
         source_group_str = source_group
         target_group_str = target_group
         #
@@ -161,11 +161,11 @@ class AddOns(Functional):
         #
         # Consume one message from eacg topic with the target consumer group to bring it to life.
         for topic_str in topic_str_list:
-            co = self.consumer(topic_str, group=target_group_str, type="bytes")
+            co = target_storage.consumer(topic_str, group=target_group_str, type="bytes")
             co.consume(n=1)
             co.close()
         #
-        target_group_offsets = self.group_offsets(target_group, source_group_offsets[source_group_str])
+        target_group_offsets = target_storage.group_offsets(target_group, source_group_offsets[source_group_str])
         #
         return target_group_offsets
 
