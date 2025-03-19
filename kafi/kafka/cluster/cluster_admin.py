@@ -21,7 +21,7 @@ class ClusterAdmin(KafkaAdmin):
 
     # ACLs
 
-    def acls(self, restype="any", name=None, resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
+    def acls(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
         resourceType = str_to_resourceType(restype)
         name_str = name
         resourcePatternType = str_to_resourcePatternType(resource_pattern_type)
@@ -35,7 +35,7 @@ class ClusterAdmin(KafkaAdmin):
         #
         return [aclBinding_to_dict(aclBinding) for aclBinding in aclBinding_list]
 
-    def create_acl(self, restype="any", name=None, resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
+    def create_acl(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
         resourceType = str_to_resourceType(restype)
         name_str = name
         resourcePatternType = str_to_resourcePatternType(resource_pattern_type)
@@ -49,7 +49,7 @@ class ClusterAdmin(KafkaAdmin):
         #
         return aclBinding_to_dict(aclBinding)
 
-    def delete_acl(self, restype="any", name=None, resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
+    def delete_acl(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
         resourceType = str_to_resourceType(restype)
         name_str = name
         resourcePatternType = str_to_resourcePatternType(resource_pattern_type)

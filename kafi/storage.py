@@ -254,13 +254,15 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
     def groups(self, pattern="*", state_pattern="*", state=False):
         return self.admin.groups(pattern, state_pattern, state)
     
+    gls = groups
+
     def describe_groups(self, pattern="*", state_pattern="*"):
         return self.admin.describe_groups(pattern, state_pattern)
     
     def delete_groups(self, pattern, state_pattern="*"):
         return self.admin.delete_groups(pattern, state_pattern)
     
-    rm_groups = delete_groups
+    grm = delete_groups
 
     def group_offsets(self, pattern, group_offsets=None, state_pattern="*"):
         return self.admin.group_offsets(pattern, group_offsets, state_pattern)

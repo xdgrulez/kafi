@@ -108,20 +108,6 @@ from kafi.kafi import *
 c = Cluster("local")
 ```
 
-### Create Topics
-
-Now you can create topics with a shell-inspired command:
-
-```
-c.touch("topic_json")
-```
-
-instead of:
-
-```
-kafka-topics --bootstrap-server localhost:9092 --topic topic_json --create
-```
-
 ### List Topics
 
 You can list topics:
@@ -134,6 +120,20 @@ instead of:
 
 ```
 kafka-topics --bootstrap-server localhost:9092 --list
+```
+
+### Create Topics
+
+Now you can create topics with a shell-inspired command:
+
+```
+c.touch("topic_json")
+```
+
+instead of:
+
+```
+kafka-topics --bootstrap-server localhost:9092 --topic topic_json --create
 ```
 
 ### Produce Messages
@@ -194,18 +194,18 @@ Producing messages with a schema is as effortless as possible with Kafi. Here is
 
 ```
 t = "topic_avro"
-s = """
-{
-    "type": "record",
-    "name": "myrecord",
-    "fields": [
-        {
-            "name": "bla",
-            "type": "int"
-        }
-    ]
-}
-"""
+  s = """
+  {
+      "type": "record",
+      "name": "myrecord",
+      "fields": [
+          {
+              "name": "bla",
+              "type": "int"
+          }
+      ]
+  }
+  """
 p = c.producer(t, value_type="avro", value_schema=s)
 p.produce({"bla": 123}, key="123")
 p.produce({"bla": 456}, key="456")

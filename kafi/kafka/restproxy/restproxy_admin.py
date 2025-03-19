@@ -35,7 +35,7 @@ class RestProxyAdmin(KafkaAdmin):
         dict_list = [kafkaAcl_dict_to_dict(kafkaAcl_dict) for kafkaAcl_dict in kafkaAcl_dict_list]
         return dict_list
 
-    def create_acl(self, restype="any", name=None, resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
+    def create_acl(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/acls"
