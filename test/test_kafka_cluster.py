@@ -15,7 +15,7 @@ class Test(TestSingleStorageBase):
     def setUp(self):
         super().setUp()
         self.principal_str = None
-        # self.principal_str = "User:admin"
+        # self.principal_str = "User:admin" # also set c = Cluster("ccloud") below if testing against Confluent Cloud
 
 
     def tearDown(self):
@@ -25,7 +25,7 @@ class Test(TestSingleStorageBase):
 
     def get_storage(self):
         c = Cluster("local")
-#        c = Cluster("ccloud")
+        # c = Cluster("ccloud") # also set self.principal_str above if testing against Confluent Cloud
         #
         return c
 

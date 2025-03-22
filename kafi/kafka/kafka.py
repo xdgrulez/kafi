@@ -126,11 +126,11 @@ class Kafka(Storage):
     
     # ACLs
 
-    def acls(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
-        return self.admin.acls(name, restype, resource_pattern_type, principal, host, operation, permission_type)
+    def acls(self, acl_dict={}):
+        return self.admin.acls(acl_dict)
 
-    def create_acl(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
-        return self.admin.create_acl(name, restype, resource_pattern_type, principal, host, operation, permission_type)
+    def create_acl(self, acl_dict):
+        return self.admin.create_acl(acl_dict)
     
-    def delete_acl(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
-        return self.admin.delete_acl(name, restype, resource_pattern_type, principal, host, operation, permission_type)
+    def delete_acls(self, acl_dict):
+        return self.admin.delete_acls(acl_dict)

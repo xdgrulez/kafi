@@ -15,59 +15,80 @@ class RestProxyAdmin(KafkaAdmin):
 
     # ACLs
 
-    def acls(self, restype="any", name=None, resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
+    def acls(self, acl_dict={}):
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/acls"
         headers_dict = {"Content-Type": "application/json"}
         #
-        payload_dict = {"resource_type": restype, "pattern_type": resource_pattern_type, "operation": operation, "permission": permission_type}
-        if name is not None:
-            payload_dict["resource_name"] = name
-        if principal is not None:
-            payload_dict["principal"] = principal
-        if host is not None:
-            payload_dict["host"] = host 
+        resource_type_str = acl_dict["resource_type"] if "resource_type" in acl_dict else None
+        name_str = acl_dict["name"] if "name" in acl_dict else None
+        pattern_type_str = acl_dict["pattern_type"] if "pattern_type" in acl_dict else None
+        principal_str = acl_dict["principal"] if "principal" in acl_dict else None
+        host_str = acl_dict["host"] if "host" in acl_dict else None
+        operation_str = acl_dict["operation"] if "operation" in acl_dict else None
+        permission_type_str = acl_dict["permission_type"] if "permission_type" in acl_dict else None
+        #
+        payload_dict = {}
+        if resource_type_str is not None:
+            payload_dict["resource_type"] = resource_type_str
+        if name_str is not None:
+            payload_dict["name"] = name_str
+        if pattern_type_str is not None:
+            payload_dict["pattern_type"] = pattern_type_str
+        if principal_str is not None:
+            payload_dict["principal"] = principal_str
+        if host_str is not None:
+            payload_dict["host"] = host_str
+        if operation_str is not None:
+            payload_dict["operation"] = operation_str
+        if permission_type_str is not None:
+            payload_dict["permission"] = permission_type_str
         #
         response_dict = get(url_str, headers_dict, payload_dict=payload_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         kafkaAcl_dict_list = response_dict["data"]
         #
-        dict_list = [kafkaAcl_dict_to_dict(kafkaAcl_dict) for kafkaAcl_dict in kafkaAcl_dict_list]
-        return dict_list
+        acl_dict_list = [kafkaAcl_dict_to_acl_dict(kafkaAcl_dict) for kafkaAcl_dict in kafkaAcl_dict_list]
+        return acl_dict_list
 
-    def create_acl(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
+    def create_acl(self, acl_dict):
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/acls"
         headers_dict = {"Content-Type": "application/json"}
         #
-        payload_dict = {"resource_type": restype.upper(), "pattern_type": resource_pattern_type.upper(), "operation": operation.upper(), "permission": permission_type.upper()}
-        if name is not None:
-            payload_dict["resource_name"] = name
-        if principal is not None:
-            payload_dict["principal"] = principal
-        if host is not None:
-            payload_dict["host"] = host 
+        payload_dict = {"resource_type": acl_dict["resource_type"].upper(), "resource_name": acl_dict["name"], "pattern_type": acl_dict["pattern_type"].upper(), "principal": acl_dict["principal"], "host": acl_dict["host"], "operation": acl_dict["operation"].upper(), "permission": acl_dict["permission_type"].upper()}
         #
-        post(url_str, headers_dict, payload_dict=payload_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
+        post(url_str, headers_dict, payload_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
+        #
+        return acl_dict
 
-    def delete_acl(self, restype="any", name=None, resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
+    def delete_acls(self, acl_dict):
         (rest_proxy_url_str, auth_str_tuple) = self.restproxy_obj.get_url_str_auth_str_tuple_tuple()
         #
-        url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/acls?resource_type={restype.upper()}&pattern_type={resource_pattern_type.upper()}&operation={operation.upper()}&permission={permission_type.upper()}"
-        if name is not None:
-            url_str += f"&resource_name={name}"
-        if principal is not None:
-            url_str += f"&principal={principal}"
-        if host is not None:
-            url_str += f"&host={host}"         
+        url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/acls?"
+        #
+        if "resource_type" in acl_dict and acl_dict["resource_type"] is not None:
+            url_str += f"&resource_type={acl_dict['resource_type'].upper()}"
+        if "name" in acl_dict and acl_dict["name"] is not None:
+            url_str += f"&resource_name={acl_dict['name']}"
+        if "pattern_type" in acl_dict and acl_dict["pattern_type"] is not None:
+            url_str += f"&pattern_type={acl_dict['pattern_type'].upper()}"
+        if "principal" in acl_dict and acl_dict["principal"] is not None:
+            url_str += f"&principal={acl_dict['principal']}"
+        if "host" in acl_dict and acl_dict["host"] is not None:
+            url_str += f"&host={acl_dict['host']}"
+        if "operation" in acl_dict and acl_dict["operation"] is not None:
+            url_str += f"&operation={acl_dict['operation'].upper()}"
+        if "permission_type" in acl_dict and acl_dict["permission_type"] is not None:
+            url_str += f"&permission={acl_dict['permission_type'].upper()}"
         #
         headers_dict = {"Content-Type": "application/json"}
         response_dict = delete(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.restproxy_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
         kafkaAcl_dict_list = response_dict["data"]
         #
-        dict_list = [kafkaAcl_dict_to_dict(kafkaAcl_dict) for kafkaAcl_dict in kafkaAcl_dict_list]
-        return dict_list
+        acl_dict_list = [kafkaAcl_dict_to_acl_dict(kafkaAcl_dict) for kafkaAcl_dict in kafkaAcl_dict_list]
+        return acl_dict_list
 
     # Brokers
 
@@ -389,12 +410,12 @@ class RestProxyAdmin(KafkaAdmin):
 
 #
 
-def kafkaAcl_dict_to_dict(kafkaAcl_dict):
-    dict = {"restype": kafkaAcl_dict["resource_type"],
-            "name": kafkaAcl_dict["resource_name"],
-            "resource_pattern_type": kafkaAcl_dict["pattern_type"],
-            "principal": kafkaAcl_dict["principal"],
-            "host": kafkaAcl_dict["host"],
-            "operation": kafkaAcl_dict["operation"],
-            "permission_type": kafkaAcl_dict["permission"]}
-    return dict
+def kafkaAcl_dict_to_acl_dict(kafkaAcl_dict):
+    acl_dict = {"resource_type": kafkaAcl_dict["resource_type"].lower(),
+                "name": kafkaAcl_dict["resource_name"],
+                "pattern_type": kafkaAcl_dict["pattern_type"].lower(),
+                "principal": kafkaAcl_dict["principal"],
+                "host": kafkaAcl_dict["host"],
+                "operation": kafkaAcl_dict["operation"].lower(),
+                "permission_type": kafkaAcl_dict["permission"].lower()}
+    return acl_dict

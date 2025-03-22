@@ -14,6 +14,7 @@ class Test(TestSingleStorageBase):
     def setUp(self):
         super().setUp()
         self.principal_str = None
+        # self.principal_str = "User:admin" # also comment out s = self.get_cluster() in test_single_storage_base.py if using the REST Proxy to Confluent Cloud
 
 
     def tearDown(self):

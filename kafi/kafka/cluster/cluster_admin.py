@@ -21,47 +21,26 @@ class ClusterAdmin(KafkaAdmin):
 
     # ACLs
 
-    def acls(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
-        resourceType = str_to_resourceType(restype)
-        name_str = name
-        resourcePatternType = str_to_resourcePatternType(resource_pattern_type)
-        principal_str = principal
-        host_str = host
-        aclOperation = str_to_aclOperation(operation)
-        aclPermissionType = str_to_aclPermissionType(permission_type)
+    def acls(self, acl_dict={}):
+        aclBindingFilter = acl_dict_to_aclBindingFilter(acl_dict)
         #
-        aclBindingFilter = AclBindingFilter(resourceType, name_str, resourcePatternType, principal_str, host_str, aclOperation, aclPermissionType)
         aclBinding_list = self.adminClient.describe_acls(aclBindingFilter).result()
         #
-        return [aclBinding_to_dict(aclBinding) for aclBinding in aclBinding_list]
+        return [aclBinding_to_acl_dict(aclBinding) for aclBinding in aclBinding_list]
 
-    def create_acl(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
-        resourceType = str_to_resourceType(restype)
-        name_str = name
-        resourcePatternType = str_to_resourcePatternType(resource_pattern_type)
-        principal_str = principal
-        host_str = host
-        aclOperation = str_to_aclOperation(operation)
-        aclPermissionType = str_to_aclPermissionType(permission_type)
+    def create_acl(self, acl_dict):
+        aclBinding = acl_dict_to_aclBinding(acl_dict)
         #
-        aclBinding = AclBinding(resourceType, name_str, resourcePatternType, principal_str, host_str, aclOperation, aclPermissionType)
         self.adminClient.create_acls([aclBinding])[aclBinding].result()
         #
-        return aclBinding_to_dict(aclBinding)
+        return aclBinding_to_acl_dict(aclBinding)
 
-    def delete_acl(self, name=None, restype="any", resource_pattern_type="any", principal=None, host=None, operation="any", permission_type="any"):
-        resourceType = str_to_resourceType(restype)
-        name_str = name
-        resourcePatternType = str_to_resourcePatternType(resource_pattern_type)
-        principal_str = principal
-        host_str = host
-        aclOperation = str_to_aclOperation(operation)
-        aclPermissionType = str_to_aclPermissionType(permission_type)
+    def delete_acls(self, acl_dict):
+        aclBindingFilter = acl_dict_to_aclBindingFilter(acl_dict)
         #
-        aclBindingFilter = AclBindingFilter(resourceType, name_str, resourcePatternType, principal_str, host_str, aclOperation, aclPermissionType)
         aclBinding_list = self.adminClient.delete_acls([aclBindingFilter])[aclBindingFilter].result()
         #
-        return [aclBinding_to_dict(aclBinding) for aclBinding in aclBinding_list]
+        return [aclBinding_to_acl_dict(aclBinding) for aclBinding in aclBinding_list]
 
     # Brokers
 
@@ -507,35 +486,59 @@ def str_to_consumerGroupState(consumerGroupState_str):
         return _ConsumerGroupState.EMPTY
 
 
-def str_to_resourceType(restype_str):
-    restype_str1 = restype_str.lower()
-    if restype_str1 == "unknown":
-        return ResourceType.UNKNOWN
-    elif restype_str1 == "any":
-        return ResourceType.ANY
-    elif restype_str1 == "topic":
-        return ResourceType.TOPIC
-    elif restype_str1 == "group":
-        return ResourceType.GROUP
-    elif restype_str1 == "broker":
-        return ResourceType.BROKER
+def topicMetadata_to_topic_dict(topicMetadata):
+    partitions_dict = {partition_int: partitionMetadata_to_partition_dict(partitionMetadata) for partition_int, partitionMetadata in topicMetadata.partitions.items()}
+    topic_dict = {"topic": topicMetadata.topic, "partitions": partitions_dict, "error": kafkaError_to_error_dict(topicMetadata.error)}
+    return topic_dict
 
 
-def str_to_resourcePatternType(resource_pattern_type_str):
-    resource_pattern_type_str1 = resource_pattern_type_str.lower()
-    if resource_pattern_type_str1 == "unknown":
-        return ResourcePatternType.UNKNOWN
-    elif resource_pattern_type_str1 == "any":
-        return ResourcePatternType.ANY
-    elif resource_pattern_type_str1 == "match":
-        return ResourcePatternType.MATCH
-    elif resource_pattern_type_str1 == "literal":
-        return ResourcePatternType.LITERAL
-    elif resource_pattern_type_str1 == "prefixed":
-        return ResourcePatternType.PREFIXED
+def partitionMetadata_to_partition_dict(partitionMetadata):
+    partition_dict = {"id": partitionMetadata.id, "leader": partitionMetadata.leader, "replicas": partitionMetadata.replicas, "isrs": partitionMetadata.isrs, "error": kafkaError_to_error_dict(partitionMetadata.error)}
+    return partition_dict
 
 
-def resourceType_to_str(resourceType):
+def kafkaError_to_error_dict(kafkaError):
+    error_dict = None
+    if kafkaError:
+        error_dict = {"code": kafkaError.code(), "fatal": kafkaError.fatal(), "name": kafkaError.name(), "retriable": kafkaError.retriable(), "str": kafkaError.str(), "txn_requires_abort": kafkaError.txn_requires_abort()}
+    return error_dict
+
+#
+# AclBinding
+#
+
+def acl_dict_to_aclBinding(acl_dict):
+    resourceType = resource_type_str_to_resourceType(acl_dict["resource_type"])
+    #
+    name_str = acl_dict["name"]
+    #
+    resourcePatternType = pattern_type_str_to_resourcePatternType(acl_dict["pattern_type"])
+    #
+    principal_str = acl_dict["principal"]
+    #
+    host_str = acl_dict["host"]
+    #
+    aclOperation = operation_str_to_aclOperation(acl_dict["operation"])
+    #
+    aclPermissionType = permission_type_str_to_aclPermissionType(acl_dict["permission_type"])
+    #
+    aclBinding = AclBinding(resourceType, name_str, resourcePatternType, principal_str, host_str, aclOperation, aclPermissionType)
+    #
+    return aclBinding
+
+
+def aclBinding_to_acl_dict(aclBinding):
+    acl_dict = {"resource_type": resourceType_to_resource_type_str(aclBinding.restype),
+            "name": aclBinding.name,
+            "pattern_type": resourcePatternType_to_pattern_type_str(aclBinding.resource_pattern_type),
+            "principal": aclBinding.principal,
+            "host": aclBinding.host,
+            "operation": aclOperation_to_operation_str(aclBinding.operation),
+            "permission_type": aclPermissionType_to_permission_type_str(aclBinding.permission_type)}
+    return acl_dict
+
+
+def resourceType_to_resource_type_str(resourceType):
     if resourceType == ResourceType.UNKNOWN:
         return "unknown"
     elif resourceType == ResourceType.ANY:
@@ -546,9 +549,13 @@ def resourceType_to_str(resourceType):
         return "group"
     elif resourceType == ResourceType.BROKER:
         return "broker"
-    
+    elif resourceType == ResourceType.TRANSACTIONAL_ID:
+        return "transactional_id"
+    else:
+        raise Exception(f"Unsupported ResourceType: {resourceType}")
 
-def resourcePatternType_to_str(resourcePatternType):
+
+def resourcePatternType_to_pattern_type_str(resourcePatternType):
     if resourcePatternType == ResourcePatternType.UNKNOWN:
         return "unknown"
     elif resourcePatternType == ResourcePatternType.ANY:
@@ -559,9 +566,11 @@ def resourcePatternType_to_str(resourcePatternType):
         return "literal"
     elif resourcePatternType == ResourcePatternType.PREFIXED:
         return "prefixed"
+    else:
+        raise Exception(f"Unsupported ResourcePatternType: {resourcePatternType}")
 
 
-def aclOperation_to_str(aclOperation):
+def aclOperation_to_operation_str(aclOperation):
     if aclOperation == AclOperation.UNKNOWN:
         return "unknown"
     elif aclOperation == AclOperation.ANY:
@@ -588,31 +597,81 @@ def aclOperation_to_str(aclOperation):
         return "alter_configs"
     elif aclOperation == AclOperation.IDEMPOTENT_WRITE:
         return "itempotent_write"
+    else:
+        raise Exception(f"Unsupported AclOperation: {aclOperation}")
 
 
-def aclPermissionType_to_str(aclPermissionType):
+def aclPermissionType_to_permission_type_str(aclPermissionType):
     if aclPermissionType == AclPermissionType.UNKNOWN:
-        return "UNKNOWN"
+        return "unknown"
     elif aclPermissionType == AclPermissionType.ANY:
-        return "ANY"
+        return "any"
     elif aclPermissionType == AclPermissionType.DENY:
-        return "DENY"
+        return "deny"
     elif aclPermissionType == AclPermissionType.ALLOW:
-        return "ALLOW"
+        return "allow"
+    else:
+        raise Exception(f"Unsupported AclPermissionType: {aclPermissionType}")
+
+#
+# AclBindingFilter
+#
+
+def acl_dict_to_aclBindingFilter(acl_dict):
+    resourceType = resource_type_str_to_resourceType(acl_dict["resource_type"]) if "resource_type" in acl_dict else ResourceType.ANY
+    #
+    name_str = acl_dict["name"] if "name" in acl_dict else None
+    #
+    resourcePatternType = pattern_type_str_to_resourcePatternType(acl_dict["pattern_type"]) if "pattern_type" in acl_dict else ResourcePatternType.ANY
+    #
+    principal_str = acl_dict["principal"] if "principal" in acl_dict else None
+    #
+    host_str = acl_dict["host"] if "host" in acl_dict else None
+    #
+    aclOperation = operation_str_to_aclOperation(acl_dict["operation"]) if "operation" in acl_dict else AclOperation.ANY
+    #
+    aclPermissionType = permission_type_str_to_aclPermissionType(acl_dict["permission_type"]) if "permission_type" in acl_dict else AclPermissionType.ANY
+    #
+    aclBindingFilter = AclBindingFilter(resourceType, name_str, resourcePatternType, principal_str, host_str, aclOperation, aclPermissionType)
+    #
+    return aclBindingFilter
 
 
-def aclBinding_to_dict(aclBinding):
-    dict = {"restype": resourceType_to_str(aclBinding.restype),
-            "name": aclBinding.name,
-            "resource_pattern_type": resourcePatternType_to_str(aclBinding.resource_pattern_type),
-            "principal": aclBinding.principal,
-            "host": aclBinding.host,
-            "operation": aclOperation_to_str(aclBinding.operation),
-            "permission_type": aclPermissionType_to_str(aclBinding.permission_type)}
-    return dict
+def resource_type_str_to_resourceType(resource_type_str):
+    resource_type_str1 = resource_type_str.lower()
+    if resource_type_str1 == "unknown":
+        return ResourceType.UNKNOWN
+    elif resource_type_str1 == "any":
+        return ResourceType.ANY
+    elif resource_type_str1 == "topic":
+        return ResourceType.TOPIC
+    elif resource_type_str1 == "group":
+        return ResourceType.GROUP
+    elif resource_type_str1 == "broker":
+        return ResourceType.BROKER
+    elif resource_type_str1 == "transactional_id":
+        return ResourceType.TRANSACTIONAL_ID
+    else:
+        raise Exception("Unsupported resource_type. Only \"unknown\", \"any\", \"topic\", \"group\", \"broker\" and \"transactional_id\" supported.")
 
 
-def str_to_aclOperation(operation_str):
+def pattern_type_str_to_resourcePatternType(pattern_type_str):
+    pattern_type_str1 = pattern_type_str.lower()
+    if pattern_type_str1 == "unknown":
+        return ResourcePatternType.UNKNOWN
+    elif pattern_type_str1 == "any":
+        return ResourcePatternType.ANY
+    elif pattern_type_str1 == "match":
+        return ResourcePatternType.MATCH
+    elif pattern_type_str1 == "literal":
+        return ResourcePatternType.LITERAL
+    elif pattern_type_str1 == "prefixed":
+        return ResourcePatternType.PREFIXED
+    else:
+        raise Exception("Unsupported pattern_type. Only \"unknown\", \"any\", \"match\", \"literal\" and \"prefixed\" supported.")
+
+
+def operation_str_to_aclOperation(operation_str):
     operation_str1 = operation_str.lower()
     if operation_str1 == "unknown":
         return AclOperation.UNKNOWN
@@ -640,9 +699,11 @@ def str_to_aclOperation(operation_str):
         return AclOperation.ALTER_CONFIGS
     elif operation_str1 == "itempotent_write":
         return AclOperation.IDEMPOTENT_WRITE
+    else:
+        raise Exception("Unsupported operation. Only \"unknown\", \"any\", \"all\", \"read\", \"write\", \"create\", \"delete\", \"alter\", \"describe\", \"cluster_action\", \"describe_configs\", \"alter_configs\" and \"idempotent_write\" supported.")
 
 
-def str_to_aclPermissionType(permission_type_str):
+def permission_type_str_to_aclPermissionType(permission_type_str):
     permission_type_str1 = permission_type_str.upper()
     if permission_type_str1 == "UNKNOWN":
         return AclPermissionType.UNKNOWN
@@ -652,21 +713,5 @@ def str_to_aclPermissionType(permission_type_str):
         return AclPermissionType.DENY
     elif permission_type_str1 == "ALLOW":
         return AclPermissionType.ALLOW
-
-
-def topicMetadata_to_topic_dict(topicMetadata):
-    partitions_dict = {partition_int: partitionMetadata_to_partition_dict(partitionMetadata) for partition_int, partitionMetadata in topicMetadata.partitions.items()}
-    topic_dict = {"topic": topicMetadata.topic, "partitions": partitions_dict, "error": kafkaError_to_error_dict(topicMetadata.error)}
-    return topic_dict
-
-
-def partitionMetadata_to_partition_dict(partitionMetadata):
-    partition_dict = {"id": partitionMetadata.id, "leader": partitionMetadata.leader, "replicas": partitionMetadata.replicas, "isrs": partitionMetadata.isrs, "error": kafkaError_to_error_dict(partitionMetadata.error)}
-    return partition_dict
-
-
-def kafkaError_to_error_dict(kafkaError):
-    error_dict = None
-    if kafkaError:
-        error_dict = {"code": kafkaError.code(), "fatal": kafkaError.fatal(), "name": kafkaError.name(), "retriable": kafkaError.retriable(), "str": kafkaError.str(), "txn_requires_abort": kafkaError.txn_requires_abort()}
-    return error_dict
+    else:
+        raise Exception("Unsupported permission_type. Only \"unknown\", \"any\", \"deny\" and \"allow\" supported")

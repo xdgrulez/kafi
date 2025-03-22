@@ -73,7 +73,8 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         if s.__class__.__name__ == "RestProxy":
             # Use the native Kafka API to delete groups and topics created for REST Proxy tests.
-            s = self.get_cluster()
+            s = self.get_cluster() # comment out if using the REST Proxy to Confluent Cloud
+            # pass
         #
         for group_str in self.group_str_list:
             try:
@@ -112,13 +113,26 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         if self.principal_str:
             s = self.get_storage()
+            #
             topic_str = self.create_test_topic_name()
             s.create(topic_str)
-            s.create_acl(restype="topic", name=topic_str, resource_pattern_type="literal", principal=self.principal_str, host="*", operation="read", permission_type="allow")
-            acl_dict_list = s.acls()
-            self.assertIn({"restype": "topic", "name": topic_str, "resource_pattern_type": "literal", 'principal': self.principal_str, 'host': '*', 'operation': 'read', 'permission_type': 'ALLOW'}, acl_dict_list)
-            s.delete_acl(restype="topic", name=topic_str, resource_pattern_type="literal", principal=self.principal_str, host="*", operation="read", permission_type="allow")
-            self.assertIn({"restype": "topic", "name": topic_str, "resource_pattern_type": "literal", 'principal': self.principal_str, 'host': '*', 'operation': 'read', 'permission_type': 'ALLOW'}, acl_dict_list)
+            #
+            acl_dict = {"resource_type": "topic", "name": topic_str, "pattern_type": "literal", "principal": self.principal_str, "host": "*",  "operation": "read", "permission_type": "allow"}
+            acl_dict1 = s.create_acl(acl_dict)
+            self.assertEqual(acl_dict, acl_dict1)
+            #
+            time.sleep(2)
+            #
+            acl_dict_list1 = s.acls(acl_dict)
+            self.assertIn({"resource_type": "topic", "name": topic_str, "pattern_type": "literal", 'principal': self.principal_str, 'host': '*', 'operation': 'read', 'permission_type': 'allow'}, acl_dict_list1)
+            #
+            acl_dict_list2 = s.delete_acls(acl_dict)
+            self.assertEqual([acl_dict], acl_dict_list2)
+            #
+            time.sleep(2)
+            #
+            acl_dict_list3 = s.acls()
+            self.assertNotIn(acl_dict, acl_dict_list3)
 
     # Brokers
     
@@ -1640,6 +1654,9 @@ class TestSingleStorageBase(unittest.TestCase):
             return
         #
         s = self.get_storage()
+        #
+        if s.__class__.__name__ == "RestProxy":
+            return
         #
         s.enable_auto_commit(False)
         s.commit_after_processing(True)
