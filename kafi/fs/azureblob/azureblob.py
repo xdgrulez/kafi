@@ -6,8 +6,8 @@ from kafi.fs.azureblob.azureblob_producer import AzureBlobProducer
 #
 
 class AzureBlob(FS):
-    def __init__(self, config_str):
-        super().__init__("azureblobs", config_str, ["azure_blob"], ["schema_registry"])
+    def __init__(self, config_str_or_dict):
+        super().__init__("azureblobs", config_str_or_dict, ["azure_blob"], ["schema_registry"])
     
     #
 

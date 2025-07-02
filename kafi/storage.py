@@ -8,16 +8,16 @@ from kafi.shell import Shell
 from kafi.files import Files
 from kafi.addons import AddOns
 from kafi.schemaregistry import SchemaRegistry
-from kafi.helpers import bytes_or_str_to_bytes, is_interactive
+from kafi.helpers import bytes_or_str_to_bytes, hash_dict, is_interactive
 
 class Storage(Shell, Files, AddOns, SchemaRegistry):
-    def __init__(self, dir_str, config_str, mandatory_section_str_list, optional_section_str_list):
+    def __init__(self, dir_str, config_str_or_dict, mandatory_section_str_list, optional_section_str_list):
         self.dir_str = dir_str
-        self.config_str = config_str
+        self.config_str = config_str_or_dict if isinstance(config_str_or_dict, str) else hash_dict(config_str_or_dict)
         self.mandatory_section_str_list = mandatory_section_str_list
         self.optional_section_str_list = optional_section_str_list
         #
-        self.config_dict = self.get_config_dict(config_str)
+        self.config_dict = config_str_or_dict if isinstance(config_str_or_dict, dict) else self.get_config_dict(config_str_or_dict)
         #
         self.schema_registry_config_dict = self.config_dict["schema_registry"] if "schema_registry" in self.config_dict else {}
         #
@@ -131,7 +131,7 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         for configs_path_str in configs_path_str_list:
             if os.path.exists(f"{configs_path_str}/{config_str}.yaml"):
                 config_dict = YamlLoader(f"{configs_path_str}/{config_str}.yaml").load()
-            elif os.path.exists(f"{configs_path_str}/{self.config_str}.yml"):
+            elif os.path.exists(f"{configs_path_str}/{config_str}.yml"):
                 config_dict = YamlLoader(f"{configs_path_str}/{config_str}.yml").load()
         if config_dict is None:
             raise Exception(f"No configuration file \"{config_str}.yaml\" or \"{config_str}.yml\" found in \"{configs_path_str_list}\" (hint: you can use KAFI_HOME environment variable to set the kafi home directory).")

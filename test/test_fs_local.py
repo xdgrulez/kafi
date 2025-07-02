@@ -23,7 +23,9 @@ class Test(TestSingleStorageBase):
     #
 
     def get_storage(self):
-        l = Local("local")
+        # l = Local("local")
+        l = Local({"local": {"root.dir": "/tmp"},
+                   "schema_registry": {"schema.registry.url": "http://localhost:8081"}})
         l.root_dir(self.path_str)
         #
         return l

@@ -7,8 +7,8 @@ from kafi.helpers import is_interactive
 # Cluster class
 
 class Cluster(Kafka):
-    def __init__(self, config_str):
-        super().__init__("clusters", config_str, ["kafka"], ["schema_registry"])
+    def __init__(self, config_str_or_dict):
+        super().__init__("clusters", config_str_or_dict, ["kafka"], ["schema_registry"])
         #
         # If not set already in the config, set librdkafka log level to:
         # * 3 ("Error") if interactive (=in the interpreter)

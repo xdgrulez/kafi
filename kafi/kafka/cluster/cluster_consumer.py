@@ -25,7 +25,9 @@ class ClusterConsumer(KafkaConsumer):
         #
         self.consumer = Consumer(self.consumer_config_dict)
         #
-        self.subscribe()
+        list_any_tuple = self.subscribe()
+        if cluster_obj.verbose() > 0:
+            print(list_any_tuple)
 
     def __del__(self):
         self.close()

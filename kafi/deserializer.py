@@ -103,7 +103,7 @@ class Deserializer(SchemaRegistry):
         return generalizedProtocolMessageType, schema_str
 
     def schema_id_int_and_schema_str_to_generalizedProtocolMessageType(self, schema_id_int, schema_str):
-        path_str = f"/{tempfile.gettempdir()}/kafi/clusters/{self.storage_obj.config_str}"
+        path_str = f"/{tempfile.gettempdir()}/kafi/protobuf/{self.storage_obj.config_str}"
         os.makedirs(path_str, exist_ok=True)
         file_str = f"schema_{schema_id_int}.proto"
         file_path_str = f"{path_str}/{file_str}"
