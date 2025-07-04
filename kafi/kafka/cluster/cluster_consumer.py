@@ -79,7 +79,7 @@ class ClusterConsumer(KafkaConsumer):
                                 "key": self.deserialize(message.key(), self.topic_str_key_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=True),
                                 "value": self.deserialize(message.value(), self.topic_str_value_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=False)}
             else:
-                raise Exception(f"Error consuming topic(s) {self.topic_str_list}: {message.error().str()}")
+                raise Exception(f"Error consuming topic(s) {self.topic_str_list}: {message.error().str()}, topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}")
             message_dict_list.append(message_dict)
         #
         return message_dict_list

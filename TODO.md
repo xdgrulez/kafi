@@ -1,3 +1,4 @@
+* Support for Serializer/Deserializer-Confs 
 * do not list internal _topics
 * "string" as an alias for "str"
 * Schema Registry: support patterns
