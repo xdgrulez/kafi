@@ -77,7 +77,7 @@ class ClusterConsumer(KafkaConsumer):
                     raise Exception(f"Error deserializing message key: topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}")
                 #
                 try:
-                    value_deserialized_payload = self.deserialize(message.value(), self.topic_str_key_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=False)
+                    value_deserialized_payload = self.deserialize(message.value(), self.topic_str_value_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=False)
                 except Exception as e:
                     raise Exception(f"Error deserializing message value: topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}")
                 #                
