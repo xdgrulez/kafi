@@ -21,7 +21,7 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         #
         self.schema_registry_config_dict = self.config_dict["schema_registry"] if "schema_registry" in self.config_dict else {}
         #
-        self.kafi_config_dict = self.config_dict["kafi"] if "kafi" in self.config_dict else self.config_dict["kash"] if "kash" in self.config_dict else {}
+        self.kafi_config_dict = self.config_dict["kafi"] if "kafi" in self.config_dict else {}
         #
         # if "schema.registry.url" in self.schema_registry_config_dict:
         SchemaRegistry.__init__(self, self.schema_registry_config_dict)
@@ -76,6 +76,11 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
             self.value_type("json")
         else:
             self.value_type(str(self.kafi_config_dict["value.type"]))
+        #
+        if "cluster.kind" not in self.kafi_config_dict:
+            self.cluster_kind("kafka")
+        else:
+            self.cluster_kind(str(self.kafi_config_dict["cluster.kind"]))
 
     #
 
@@ -109,6 +114,8 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
     def value_type(self, new_value=None): # str
         return self.get_set_config("value.type", new_value)
 
+    def cluster_kind(self, new_value=None): # str
+        return self.get_set_config("cluster.kind", new_value)
     #
 
     def get_set_config(self, config_key_str, new_value=None, dict=None):

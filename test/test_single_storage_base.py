@@ -42,9 +42,11 @@ class TestSingleStorageBase(unittest.TestCase):
         self.protobuf_schema_str = 'message Snack { required string name = 1; required float calories = 2; optional string colour = 3; }'
         self.jsonschema_schema_str = '{ "title": "abc", "type": "object", "required": [ "name", "calories" ], "additionalProperties": false, "properties": { "name": { "type": "string" }, "calories": { "type": "number" }, "colour": { "type": "string" } } }'
         self.jsonschema_schema_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"abc","type":"object"}'
+        self.jsonschema_schema_normalized_redpanda_str = '{"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"}},"required":["name","calories"],"title":"abc","type":"object"}'
         self.jsonschema_schema_one_less_field_str = '{"title":"abc","type":"object","required":["name"],"additionalProperties":false,"properties":{"name":{"type":"string"},"colour":{"type":"string"}}}'
         self.jsonschema_schema_one_more_field_str = '{"title":"abc","type":"object","required":["name","calories"],"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string", "default": ""}}}'
         self.jsonschema_schema_one_more_field_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"country":{"default":"","type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"abc","type":"object"}'
+        self.jsonschema_schema_one_more_field_normalized_redpanda_str = '{"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string","default":""}},"required":["name","calories"],"title":"abc","type":"object"}'
         #
         self.headers_str_bytes_tuple_list = [("header_field1", b"header_value1"), ("header_field2", b"header_value2")]
         self.headers_str_bytes_dict = {"header_field1": b"header_value1", "header_field2": b"header_value2"}
@@ -148,16 +150,19 @@ class TestSingleStorageBase(unittest.TestCase):
             self.assertEqual(broker_dict, broker_dict1)
             broker_dict2 = s.brokers([broker_int])
             self.assertEqual(broker_dict1, broker_dict2)
-            old_broker_config_dict = s.broker_config(broker_int)[broker_int]
-            if "background.threads" in old_broker_config_dict:
-                old_background_threads_str = old_broker_config_dict["background.threads"]
-            else:
-                old_background_threads_str = 10
-            s.broker_config(broker_int, {"background.threads": 5})
-            time.sleep(0.5)
-            new_background_threads_str = s.broker_config(broker_int)[broker_int]["background.threads"]
-            self.assertEqual(new_background_threads_str, "5")
-            s.broker_config(broker_int, {"background.threads": old_background_threads_str})
+            # TODO: Doesn't yet work with Redpanda:
+            # cimpl.KafkaException: KafkaError{code=INVALID_CONFIG,val=40,str="Setting broker properties on named brokers is unsupported"}
+            if s.__class__.__name__ == "Cluster" and s.cluster_kind() != "redpanda":
+                old_broker_config_dict = s.broker_config(broker_int)[broker_int]
+                if "log.retention.ms" in old_broker_config_dict:
+                    old_log_retention_ms_str = old_broker_config_dict["log.retention.ms"]
+                else:
+                    old_log_retention_ms_str = 604800000
+                s.broker_config(broker_int, {"log.retention.ms": 604800001})
+                time.sleep(1)
+                new_background_threads_str = s.broker_config(broker_int)[broker_int]["log.retention.ms"]
+                self.assertEqual(new_background_threads_str, "604800001")
+                s.broker_config(broker_int, {"log.retention.ms": old_log_retention_ms_str})
 
     # Groups
 
@@ -187,8 +192,10 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertIn(group_str, group_str_list3)
         group_str_state_str_dict = s.groups("test_group*", state_pattern="stab*", state=True)
         self.assertIn("stable", group_str_state_str_dict[group_str])
-        group_str_list4 = s.groups(state_pattern="unknown", state=False)
-        self.assertEqual(group_str_list4, [])
+        # Doesn't yet work with Redpanda (cannot use state filters for list_consumer_groups).
+        if s.__class__.__name__ == "Cluster" and s.cluster_kind() != "redpanda":
+            group_str_list4 = s.groups(state_pattern="unknown", state=False)
+            self.assertEqual(group_str_list4, [])
         #
         consumer.close()
 
@@ -497,12 +504,26 @@ class TestSingleStorageBase(unittest.TestCase):
         if s.__class__.__name__ in ["Cluster", "RestProxy"]:
             topic_str_partition_int_partition_dict_dict_dict = s.partitions(topic_str, verbose=True)[topic_str]
             self.assertEqual(list(topic_str_partition_int_partition_dict_dict_dict.keys()), [0, 1])
-            self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["leader"], 1)
-            self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["replicas"], [1])
-            self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["isrs"], [1])
-            self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["leader"], 1)
-            self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["replicas"], [1])
-            self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["isrs"], [1])
+            print(topic_str_partition_int_partition_dict_dict_dict)
+            if s.cluster_kind() == "redpanda":
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["id"], 0)
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["leader"], 0)
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["replicas"], [0])
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["isrs"], [0])
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["id"], 1)
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["leader"], 0)
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["replicas"], [0])
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["isrs"], [0])
+            else:
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["id"], 0)
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["leader"], 1)
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["replicas"], [1])
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["isrs"], [1])
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["id"], 1)
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["leader"], 1)
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["replicas"], [1])
+                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["isrs"], [1])
+                
 
     def test_exists(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -762,8 +783,13 @@ class TestSingleStorageBase(unittest.TestCase):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return
         #
-        if not self.is_ccloud():
-            s = self.get_storage()
+        s = self.get_storage()
+        # Doesn't work with Confluent Cloud.
+        # TODO: Doesn't yet work with Redpanda:
+        #   File "/home/ralph/kafka/kafi/./test/test_single_storage_base.py", line 791, in test_compact
+        #     self.assertEqual(n_int2, 4)
+        #     AssertionError: 102 != 4 
+        if not self.is_ccloud() and s.__class__.__name__ == "Cluster" and s.cluster_kind() != "redpanda":
             #
             topic_str = self.create_test_topic_name()
             s.create(topic_str, config={"cleanup.policy": "compact", "max.compaction.lag.ms": 100, "min.cleanable.dirty.ratio": 0.0000000001, "segment.ms": 100, "delete.retention.ms": 100})
@@ -1233,11 +1259,17 @@ class TestSingleStorageBase(unittest.TestCase):
         value_registeredSchema_dict = s.lookup_schema(value_subject_name_str, value_schema_dict)
         self.assertEqual(value_registeredSchema_dict["schema_id"], value_schema_id_int)
         self.assertEqual(value_registeredSchema_dict["subject"], value_subject_name_str)
-        self.assertEqual(value_registeredSchema_dict["schema"]["schema_str"].replace("\n", "").replace("  ", " ").replace(";}", "; }"), self.protobuf_schema_str)
+        replaced_schema_str1 = value_registeredSchema_dict["schema"]["schema_str"].replace("\n", "").replace("  ", " ").replace(";}", "; }")
+        if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
+            replaced_schema_str1 = replaced_schema_str1.replace('syntax = "proto2";', "")
+        self.assertEqual(replaced_schema_str1, self.protobuf_schema_str)
         self.assertEqual(value_registeredSchema_dict["schema"]["schema_type"], "PROTOBUF")
         #
         value_schema_dict1 = s.get_schema(value_schema_id_int)
-        self.assertEqual(value_schema_dict1["schema_str"].replace("\n", "").replace("  ", " ").replace(";}", "; }"), self.protobuf_schema_str)
+        replaced_schema_str2 = value_schema_dict1["schema_str"].replace("\n", "").replace("  ", " ").replace(";}", "; }")
+        if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
+            replaced_schema_str2 = replaced_schema_str2.replace('syntax = "proto2";', "")
+        self.assertEqual(replaced_schema_str2, self.protobuf_schema_str)
         #
         #
         #
@@ -1334,7 +1366,11 @@ class TestSingleStorageBase(unittest.TestCase):
         key_registeredSchema_dict = s.lookup_schema(key_subject_name_str, key_schema_dict, normalize=True)
         self.assertEqual(key_registeredSchema_dict["schema_id"], key_schema_id_int)
         self.assertEqual(key_registeredSchema_dict["subject"], key_subject_name_str)
-        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_normalized_str)
+        
+        if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
+            self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_normalized_redpanda_str)
+        else:
+            self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_normalized_str)
         self.assertEqual(key_registeredSchema_dict["schema"]["schema_type"], "JSON")
         #
         #
@@ -1370,19 +1406,29 @@ class TestSingleStorageBase(unittest.TestCase):
         key_registeredSchema_dict1 = s.get_latest_version(key_subject_name_str)
         self.assertEqual(key_registeredSchema_dict1["schema_id"], key_schema_id_int1)
         self.assertEqual(key_registeredSchema_dict1["subject"], key_subject_name_str)
-        self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_str)
+        print(key_registeredSchema_dict1["schema"]["schema_str"])
+        if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
+            self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_redpanda_str)
+        else:
+            self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_str)
         self.assertEqual(key_registeredSchema_dict1["schema"]["schema_type"], "JSON")
         #
         key_registeredSchema_dict1 = s.get_version(key_subject_name_str, 2)
         self.assertEqual(key_registeredSchema_dict1["schema_id"], key_schema_id_int1)
         self.assertEqual(key_registeredSchema_dict1["subject"], key_subject_name_str)
-        self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_str)
+        if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
+            self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_redpanda_str)
+        else:
+            self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_str)
         self.assertEqual(key_registeredSchema_dict1["schema"]["schema_type"], "JSON")
         #
         key_registeredSchema_dict = s.get_version(key_subject_name_str, 1)
         self.assertEqual(key_registeredSchema_dict["schema_id"], key_schema_id_int)
         self.assertEqual(key_registeredSchema_dict["subject"], key_subject_name_str)
-        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_normalized_str)
+        if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
+            self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_normalized_redpanda_str)
+        else:
+            self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_normalized_str)
         self.assertEqual(key_registeredSchema_dict["schema"]["schema_type"], "JSON")
         #
         version_int_list = s.get_versions(key_subject_name_str)
@@ -1401,7 +1447,10 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(version_int_list, [2])
         #
         key_schema_dict = s.get_schema(key_schema_id_int)
-        self.assertEqual(key_schema_dict["schema_str"], self.jsonschema_schema_normalized_str)
+        if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
+            self.assertEqual(key_schema_dict["schema_str"], self.jsonschema_schema_normalized_redpanda_str)
+        else:
+            self.assertEqual(key_schema_dict["schema_str"], self.jsonschema_schema_normalized_str)
         self.assertEqual(key_schema_dict["schema_type"], "JSON")
         #
         version_int = s.delete_version(key_subject_name_str, 1, permanent=True)

@@ -5,7 +5,7 @@ from kafi.helpers import pattern_match
 from kafi.kafka.kafka_admin import KafkaAdmin
 
 from confluent_kafka import Consumer, TopicPartition
-from confluent_kafka.admin import AclBinding, AclBindingFilter, AclOperation, AclPermissionType, AdminClient, ConfigResource, _ConsumerGroupState, _ConsumerGroupTopicPartitions, NewPartitions, NewTopic, ResourcePatternType, ResourceType
+from confluent_kafka.admin import AclBinding, AclBindingFilter, AclOperation, AclPermissionType, AdminClient, AlterConfigOpType, ConfigEntry, ConfigResource, _ConsumerGroupState, _ConsumerGroupTopicPartitions, NewPartitions, NewTopic, ResourcePatternType, ResourceType
 
 #
 
@@ -83,25 +83,13 @@ class ClusterAdmin(KafkaAdmin):
     def set_resource_config_dict(self, resourceType, resource_str, new_config_dict, **kwargs):
         test_bool = kwargs["test"] if "test" in kwargs else False
         #
-        old_config_dict = self.get_resource_config_dict(resourceType, resource_str)
+        configResource = ConfigResource(resourceType, resource_str)
+        for key_str, value_str in new_config_dict.items():
+            configEntry = ConfigEntry(key_str, str(value_str), incremental_operation=AlterConfigOpType.SET)
+            print(configEntry)
+            configResource.add_incremental_config(configEntry)
         #
-        if resourceType == ResourceType.BROKER:
-            # https://docs.confluent.io/platform/current/installation/configuration/broker-configs.html#cp-config-brokers
-            white_list_key_str_list = ["advertised.listeners", "background.threads", "compression.type", "confluent.balancer.enable", "confluent.balancer.heal.uneven.load.trigger", "confluent.balancer.throttle.bytes.per.second", "confluent.tier.local.hotset.bytes", "confluent.tier.local.hotset.ms", "listeners", "log.flush.interval.messages", "log.flush.interval.ms", "log.retention.bytes", "log.retention.ms", "log.roll.jitter.ms", "log.roll.ms", "log.segment.bytes", "log.segment.delete.delay.ms", "message.max.bytes", "min.insync.replicas", "num.io.threads", "num.network.threads", "num.recovery.threads.per.data.dir", "num.replica.fetchers", "unclean.leader.election.enable", "confluent.balancer.exclude.topic.names", "confluent.balancer.exclude.topic.prefixes", "confluent.clm.enabled", "confluent.clm.frequency.in.hours", "confluent.clm.max.backup.days", "confluent.clm.min.delay.in.minutes", "confluent.clm.topic.retention.days.to.backup.days", "confluent.cluster.link.fetch.response.min.bytes", "confluent.cluster.link.fetch.response.total.bytes", "confluent.cluster.link.io.max.bytes.per.second", "confluent.tier.enable", "confluent.tier.max.partition.fetch.bytes.override", "log.cleaner.backoff.ms", "log.cleaner.dedupe.buffer.size", "log.cleaner.delete.retention.ms", "log.cleaner.io.buffer.load.factor", "log.cleaner.io.buffer.size", "log.cleaner.io.max.bytes.per.second", "log.cleaner.max.compaction.lag.ms", "log.cleaner.min.cleanable.ratio", "log.cleaner.min.compaction.lag.ms", "log.cleaner.threads", "log.cleanup.policy", "log.deletion.max.segments.per.run", "log.index.interval.bytes", "log.index.size.max.bytes", "log.message.timestamp.difference.max.ms", "log.message.timestamp.type", "log.preallocate", "max.connection.creation.rate", "max.connections", "max.connections.per.ip", "max.connections.per.ip.overrides", "principal.builder.class", "sasl.enabled.mechanisms", "sasl.jaas.config", "sasl.kerberos.kinit.cmd", "sasl.kerberos.min.time.before.relogin", "sasl.kerberos.principal.to.local.rules", "sasl.kerberos.service.name", "sasl.kerberos.ticket.renew.jitter", "sasl.kerberos.ticket.renew.window.factor", "sasl.login.refresh.buffer.seconds", "sasl.login.refresh.min.period.seconds", "sasl.login.refresh.window.factor", "sasl.login.refresh.window.jitter", "sasl.mechanism.inter.broker.protocol", "ssl.cipher.suites", "ssl.client.auth", "ssl.enabled.protocols", "ssl.keymanager.algorithm", "ssl.protocol", "ssl.provider", "ssl.trustmanager.algorithm", "confluent.cluster.link.replication.quota.mode", "confluent.metadata.server.cluster.registry.clusters", "confluent.reporters.telemetry.auto.enable", "confluent.security.event.router.config", "confluent.telemetry.enabled", "confluent.tier.topic.delete.backoff.ms", "confluent.tier.topic.delete.check.interval.ms", "confluent.tier.topic.delete.max.inprogress.partitions", "follower.replication.throttled.rate", "follower.replication.throttled.replicas", "leader.replication.throttled.rate", "leader.replication.throttled.replicas", "listener.security.protocol.map", "log.message.downconversion.enable", "metric.reporters", "ssl.endpoint.identification.algorithm", "ssl.engine.factory.class", "ssl.secure.random.implementation"]
-        #
-        alter_config_dict = {}
-        for key_str, value_str in old_config_dict.items():
-            if resourceType == ResourceType.BROKER:
-                if key_str not in white_list_key_str_list:
-                    continue
-            if key_str in new_config_dict:
-                value_str = new_config_dict[key_str]
-            if value_str:
-                alter_config_dict[key_str] = value_str
-        #
-        alter_configResource = ConfigResource(resourceType, resource_str, set_config=alter_config_dict)
-        #
-        future = self.adminClient.alter_configs([alter_configResource], validate_only=test_bool)[alter_configResource]
+        future = self.adminClient.incremental_alter_configs([configResource], validate_only=test_bool)[configResource]
         #
         future.result()
 
@@ -139,7 +127,10 @@ class ClusterAdmin(KafkaAdmin):
         if not consumerGroupState_set:
             return {} if state else []
         #
-        listConsumerGroupsResult = self.adminClient.list_consumer_groups(states=consumerGroupState_set).result()
+        if self.storage_obj.cluster_kind() == "redpanda":
+            listConsumerGroupsResult = self.adminClient.list_consumer_groups().result()
+        else:
+            listConsumerGroupsResult = self.adminClient.list_consumer_groups(states=consumerGroupState_set).result()
         consumerGroupListing_list = listConsumerGroupsResult.valid
         #
         group_str_state_str_dict = {consumerGroupListing.group_id: consumerGroupState_to_str(consumerGroupListing.state) for consumerGroupListing in consumerGroupListing_list if any(fnmatch(consumerGroupListing.group_id, pattern_str) for pattern_str in pattern_str_or_str_list)}
