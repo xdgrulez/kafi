@@ -86,7 +86,6 @@ class ClusterAdmin(KafkaAdmin):
         configResource = ConfigResource(resourceType, resource_str)
         for key_str, value_str in new_config_dict.items():
             configEntry = ConfigEntry(key_str, str(value_str), incremental_operation=AlterConfigOpType.SET)
-            print(configEntry)
             configResource.add_incremental_config(configEntry)
         #
         future = self.adminClient.incremental_alter_configs([configResource], validate_only=test_bool)[configResource]
@@ -121,19 +120,12 @@ class ClusterAdmin(KafkaAdmin):
 
     def groups(self, pattern="*", state_pattern="*", state=False):
         pattern_str_or_str_list = [pattern] if isinstance(pattern, str) else pattern
-        #
         consumerGroupState_pattern_str_list = [state_pattern] if isinstance(state_pattern, str) else state_pattern
-        consumerGroupState_set = set([str_to_consumerGroupState(consumerGroupState_str) for consumerGroupState_str in all_consumerGroupState_str_list if any(fnmatch(consumerGroupState_str, consumerGroupState_pattern_str) for consumerGroupState_pattern_str in consumerGroupState_pattern_str_list)])
-        if not consumerGroupState_set:
-            return {} if state else []
         #
-        if self.storage_obj.cluster_kind() == "redpanda":
-            listConsumerGroupsResult = self.adminClient.list_consumer_groups().result()
-        else:
-            listConsumerGroupsResult = self.adminClient.list_consumer_groups(states=consumerGroupState_set).result()
+        listConsumerGroupsResult = self.adminClient.list_consumer_groups().result()
         consumerGroupListing_list = listConsumerGroupsResult.valid
         #
-        group_str_state_str_dict = {consumerGroupListing.group_id: consumerGroupState_to_str(consumerGroupListing.state) for consumerGroupListing in consumerGroupListing_list if any(fnmatch(consumerGroupListing.group_id, pattern_str) for pattern_str in pattern_str_or_str_list)}
+        group_str_state_str_dict = {consumerGroupListing.group_id: consumerGroupState_to_str(consumerGroupListing.state) for consumerGroupListing in consumerGroupListing_list if any(fnmatch(consumerGroupListing.group_id, pattern_str) for pattern_str in pattern_str_or_str_list) and any(fnmatch(consumerGroupState_to_str(consumerGroupListing.state), consumerGroupState_pattern_str) for consumerGroupState_pattern_str in consumerGroupState_pattern_str_list)}
         #
         return group_str_state_str_dict if state else list(group_str_state_str_dict.keys())
 
@@ -444,9 +436,6 @@ def node_to_dict(node):
     return dict
 
 
-all_consumerGroupState_str_list = ["unknown", "preparing_rebalancing", "completing_rebalancing", "stable", "dead", "empty"]
-
-
 def consumerGroupState_to_str(consumerGroupState):
     if consumerGroupState == _ConsumerGroupState.UNKOWN:
         return "unknown"
@@ -460,21 +449,6 @@ def consumerGroupState_to_str(consumerGroupState):
         return "dead"
     elif consumerGroupState == _ConsumerGroupState.EMPTY:
         return "empty"
-
-
-def str_to_consumerGroupState(consumerGroupState_str):
-    if consumerGroupState_str == "unknown":
-        return _ConsumerGroupState.UNKOWN
-    elif consumerGroupState_str == "preparing_rebalancing":
-        return _ConsumerGroupState.PREPARING_REBALANCING 
-    elif consumerGroupState_str == "completing_rebalancing":
-        return _ConsumerGroupState.COMPLETING_REBALANCING
-    elif consumerGroupState_str == "stable":
-        return _ConsumerGroupState.STABLE
-    elif consumerGroupState_str == "dead":
-        return _ConsumerGroupState.DEAD
-    elif consumerGroupState_str == "empty":
-        return _ConsumerGroupState.EMPTY
 
 
 def topicMetadata_to_topic_dict(topicMetadata):

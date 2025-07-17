@@ -1,4 +1,4 @@
-confluent_kafka[avro,json,protobuf,schemaregistry]==2.8.2
+confluent-kafka[avro,json,protobuf,schemaregistry]==2.11.0
 grpcio-tools==1.69.0
 piny==1.1.0
 requests==2.32.3

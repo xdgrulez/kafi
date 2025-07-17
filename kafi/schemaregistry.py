@@ -58,11 +58,11 @@ class SchemaRegistry:
     def lookup_schema(self, subject_name, schema, normalize=False):
         subject_name_str = subject_name
         schema_dict = schema
-        normalize_schemas_bool = normalize
+        normalize_bool = normalize
         #
         schema1 = Schema(schema_dict["schema_str"], schema_dict["schema_type"]) # TODO: support references
         #
-        registeredSchema = self.schemaRegistryClient.lookup_schema(subject_name_str, schema1, normalize_schemas=normalize_schemas_bool)
+        registeredSchema = self.schemaRegistryClient.lookup_schema(subject_name_str, schema1, normalize_schemas=normalize_bool)
         registeredSchema_dict = registeredSchema_to_registeredSchema_dict(registeredSchema)
         #
         return registeredSchema_dict
