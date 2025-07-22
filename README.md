@@ -780,8 +780,6 @@ The following configuration items are shared across all *storages* (defaults in 
   * `retention.ms` (`604800000`)
   * `consume.timeout` (`5.0`)
   * `session.timeout.ms` (`45000`)
-  * `block.num.retries` (`10`)
-  * `block.interval` (`0.5`)
 
 ### Kafka REST Proxy API
 

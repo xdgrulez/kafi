@@ -13,7 +13,10 @@ class ClusterProducer(KafkaProducer):
     def __init__(self, cluster_obj, topic, **kwargs):
         super().__init__(cluster_obj, topic, **kwargs)
         #
-        self.on_delivery_function = kwargs["on_delivery"] if "on_delivery" in kwargs else None
+        def on_delivery(kafka_error, _):
+            if kafka_error is not None:
+                raise Exception(kafka_error)
+        self.on_delivery_function = kwargs["on_delivery"] if "on_delivery" in kwargs else on_delivery
         #
         # Producer config
         #
@@ -67,7 +70,6 @@ class ClusterProducer(KafkaProducer):
             timestamp_int = timestamp[1] if isinstance(timestamp, tuple) else timestamp
             #
             self.producer.produce(self.topic_str, value_str_or_bytes, key_str_or_bytes, partition=partition_int, timestamp=timestamp_int, headers=headers_str_bytes_tuple_list, on_delivery=self.on_delivery_function)
-            self.producer.poll(0) # https://stackoverflow.com/questions/62408128/buffererror-local-queue-full-in-python
             #
             self.written_counter_int += 1
         #

@@ -47,16 +47,6 @@ class Kafka(Storage):
         else:
             self.session_timeout_ms(int(self.kafi_config_dict["session.timeout.ms"]))
         #
-        if "block.num.retries" not in self.kafi_config_dict:
-            self.block_num_retries(10)
-        else:
-            self.block_num_retries(int(self.kafi_config_dict["block.num.retries"]))
-        #
-        if "block.interval" not in self.kafi_config_dict:
-            self.block_interval(0.5)
-        else:
-            self.block_interval(float(self.kafi_config_dict["block.interval"]))
-        #
         # both cluster and restproxy kafi section
         #
         if "fetch.min.bytes" not in self.kafi_config_dict:
@@ -95,12 +85,6 @@ class Kafka(Storage):
 
     def session_timeout_ms(self, new_value=None): # int
         return self.get_set_config("session.timeout.ms", new_value)
-
-    def block_num_retries(self, new_value=None): # int
-        return self.get_set_config("block.num.retries", new_value)
-
-    def block_interval(self, new_value=None): # float
-        return self.get_set_config("block.interval", new_value)
 
     # RestProxy
 

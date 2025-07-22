@@ -153,30 +153,6 @@ class ClusterAdmin(KafkaAdmin):
 
     # Topics
 
-    def block_topic(self, topic, exists=True):
-        topic_str = topic
-        exists_bool = exists
-        #
-        def exists(topic_str):
-            return self.list_topics(topic_str) != []
-        
-        num_retries_int = 0
-        while True:
-            if exists_bool:
-                if exists(topic_str):
-                    return True
-            else:
-                if not exists(topic_str):
-                    return True
-            #
-            num_retries_int += 1
-            if num_retries_int >= self.storage_obj.block_num_retries():
-                raise Exception(f"Retried waiting for topic {'deletion' if exists else 'creation'} {self.storage_obj.block_num_retries()} times, stopping.")
-            #
-            time.sleep(self.storage_obj.block_interval())
-
-    #
-
     def config(self, pattern, config=None, **kwargs):
         config_dict = config
         test_bool = kwargs["test"] if "test" in kwargs else False
@@ -203,10 +179,10 @@ class ClusterAdmin(KafkaAdmin):
         config_dict["retention.ms"] = config_dict["retention.ms"] if "retention.ms" in config_dict else self.storage_obj.retention_ms()
         #
         newTopic = NewTopic(topic_str, partitions_int, replication_factor=replication_int, config=config_dict)
-        self.adminClient.create_topics([newTopic])
+        topic_str_future_dict = self.adminClient.create_topics([newTopic])
         #
         if block_bool:
-            self.block_topic(topic_str, exists=True)
+            topic_str_future_dict[topic_str].result()
         #
         return topic_str
 
@@ -217,10 +193,10 @@ class ClusterAdmin(KafkaAdmin):
         topic_str_list = self.list_topics(pattern_str_or_str_list)
         #
         if topic_str_list:
-            self.adminClient.delete_topics(topic_str_list)
+            topic_str_future_dict = self.adminClient.delete_topics(topic_str_list)
             if block_bool:
-                for topic_str in topic_str_list:
-                    self.block_topic(topic_str, exists=False)
+                for future_dict in topic_str_future_dict.values():
+                    future_dict.result()
         #
         return topic_str_list
 

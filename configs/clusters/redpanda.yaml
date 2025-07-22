@@ -14,8 +14,6 @@ kafi:
   consumer.group.prefix: ""
   enable.auto.commit: false
   session.timeout.ms: 45000
-  block.num.retries: 10
-  block.interval: 0.5
   auto.offset.reset: earliest
   progress.num.messages: 1000
   key.type: str

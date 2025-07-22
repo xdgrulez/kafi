@@ -3,6 +3,7 @@ import sys
 import time
 import unittest
 import warnings
+from confluent_kafka import KafkaError
 
 if os.path.basename(os.getcwd()) == "test":
     sys.path.insert(1, "..")
@@ -26,27 +27,35 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWarning)
         #
+        self.key_snack_str_list = ['{"key": "cookie"}', '{"key": "cake"}', '{"key": "timtam"}']
+        self.key_snack_bytes_list = [bytes(key_snack_str, encoding="utf-8") for key_snack_str in self.key_snack_str_list]
+        self.key_snack_dict_list = [json.loads(key_snack_str) for key_snack_str in self.key_snack_str_list]
         # https://simon-aubury.medium.com/kafka-with-avro-vs-kafka-with-protobuf-vs-kafka-with-json-schema-667494cbb2af
-        self.snack_str_list = ['{"name": "cookie", "calories": 500.0, "colour": "brown"}', '{"name": "cake", "calories": 260.0, "colour": "white"}', '{"name": "timtam", "calories": 80.0, "colour": "chocolate"}']
-        self.snack_bytes_list = [bytes(snack_str, encoding="utf-8") for snack_str in self.snack_str_list]
-        self.snack_dict_list = [json.loads(snack_str) for snack_str in self.snack_str_list]
+        self.value_snack_str_list = ['{"name": "cookie", "calories": 500.0, "colour": "brown"}', '{"name": "cake", "calories": 260.0, "colour": "white"}', '{"name": "timtam", "calories": 80.0, "colour": "chocolate"}']
+        self.value_snack_bytes_list = [bytes(value_snack_str, encoding="utf-8") for value_snack_str in self.value_snack_str_list]
+        self.value_snack_dict_list = [json.loads(value_snack_str) for value_snack_str in self.value_snack_str_list]
         #
-        self.snack_ish_dict_list = []
-        for snack_dict in self.snack_dict_list:
-            snack_dict1 = snack_dict.copy()
-            snack_dict1["colour"] += "ish"
-            self.snack_ish_dict_list.append(snack_dict1)
+        self.value_snack_ish_dict_list = []
+        for value_snack_dict in self.value_snack_dict_list:
+            value_snack_dict1 = value_snack_dict.copy()
+            value_snack_dict1["colour"] += "ish"
+            self.value_snack_ish_dict_list.append(value_snack_dict1)
         #
-        self.avro_schema_str = '{ "type": "record", "name": "myrecord", "fields": [{"name": "name",  "type": "string" }, {"name": "calories", "type": "float" }, {"type": "string", "name": "colour" }] }'
-        self.avro_schema_normalized_str = '{"type":"record","name":"myrecord","fields":[{"name":"name","type":"string"},{"name":"calories","type":"float"},{"name":"colour","type":"string"}]}'
-        self.protobuf_schema_str = 'message Snack { required string name = 1; required float calories = 2; optional string colour = 3; }'
-        self.jsonschema_schema_str = '{ "title": "abc", "type": "object", "required": [ "name", "calories" ], "additionalProperties": false, "properties": { "name": { "type": "string" }, "calories": { "type": "number" }, "colour": { "type": "string" } } }'
-        self.jsonschema_schema_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"abc","type":"object"}'
-        self.jsonschema_schema_normalized_redpanda_str = '{"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"}},"required":["name","calories"],"title":"abc","type":"object"}'
-        self.jsonschema_schema_one_less_field_str = '{"title":"abc","type":"object","required":["name"],"additionalProperties":false,"properties":{"name":{"type":"string"},"colour":{"type":"string"}}}'
-        self.jsonschema_schema_one_more_field_str = '{"title":"abc","type":"object","required":["name","calories"],"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string", "default": ""}}}'
-        self.jsonschema_schema_one_more_field_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"country":{"default":"","type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"abc","type":"object"}'
-        self.jsonschema_schema_one_more_field_normalized_redpanda_str = '{"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string","default":""}},"required":["name","calories"],"title":"abc","type":"object"}'
+        self.avro_key_schema_str = '{"type": "record", "name": "snack_key", "fields": [{"name": "key",  "type": "string"}]}'
+        self.avro_value_schema_str = '{"type": "record", "name": "snack_value", "fields": [{"name": "name",  "type": "string"}, {"name": "calories", "type": "float"}, {"type": "string", "name": "colour"}]}'
+        self.avro_value_schema_normalized_str = '{"type":"record","name":"snack_value","fields":[{"name":"name","type":"string"},{"name":"calories","type":"float"},{"name":"colour","type":"string"}]}'
+        #
+        self.protobuf_key_schema_str = 'message snack_key { required string key = 1; }'
+        self.protobuf_value_schema_str = 'message snack_value { required string name = 1; required float calories = 2; optional string colour = 3; }'
+        #
+        self.jsonschema_key_schema_str = '{"title": "snack_key", "type": "object", "required": ["key"], "additionalProperties": false, "properties": {"key": {"type": "string"}}}'
+        self.jsonschema_value_schema_str = '{"title": "snack_value", "type": "object", "required": ["name", "calories"], "additionalProperties": false, "properties": {"name": {"type": "string"}, "calories": {"type": "number"}, "colour": {"type": "string"}}}'
+        self.jsonschema_value_schema_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"snack_value","type":"object"}'
+        self.jsonschema_value_schema_normalized_redpanda_str = '{"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"}},"required":["name","calories"],"title":"snack_value","type":"object"}'
+        self.jsonschema_value_schema_one_less_field_str = '{"title":"snack_value","type":"object","required":["name"],"additionalProperties":false,"properties":{"name":{"type":"string"},"colour":{"type":"string"}}}'
+        self.jsonschema_value_schema_one_more_field_str = '{"title":"snack_value","type":"object","required":["name","calories"],"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string", "default": ""}}}'
+        self.jsonschema_value_schema_one_more_field_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"country":{"default":"","type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"snack_value","type":"object"}'
+        self.jsonschema_value_schema_one_more_field_normalized_redpanda_str = '{"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string","default":""}},"required":["name","calories"],"title":"snack_value","type":"object"}'
         #
         self.headers_str_bytes_tuple_list = [("header_field1", b"header_value1"), ("header_field2", b"header_value2")]
         self.headers_str_bytes_dict = {"header_field1": b"header_value1", "header_field2": b"header_value2"}
@@ -417,7 +426,7 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertIn(topic_str, new_topic_str_list)
         #
         producer = s.producer(topic_str, type="str")
-        producer.produce("message 1", on_delivery=lambda kafkaError, message: print(kafkaError, message))
+        producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
@@ -545,7 +554,7 @@ class TestSingleStorageBase(unittest.TestCase):
         s.create(topic_str)
         # Upon produce, the types "bytes" and "string" trigger the conversion of bytes, strings and dictionaries to bytes on Kafka.
         producer = s.producer(topic_str, key_type="bytes", value_type="str")
-        producer.produce(self.snack_str_list, key=self.snack_str_list)
+        producer.produce(self.value_snack_str_list, key=self.key_snack_str_list)
         producer.close()
         self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
@@ -555,8 +564,8 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list = consumer.consume(n=3)
         key_str_list = [message_dict["key"] for message_dict in message_dict_list]
         value_bytes_list = [message_dict["value"] for message_dict in message_dict_list]
-        self.assertEqual(key_str_list, self.snack_str_list)
-        self.assertEqual(value_bytes_list, self.snack_bytes_list)
+        self.assertEqual(key_str_list, self.key_snack_str_list)
+        self.assertEqual(value_bytes_list, self.value_snack_bytes_list)
         consumer.close()
     
     def test_produce_consume_json(self):
@@ -569,7 +578,7 @@ class TestSingleStorageBase(unittest.TestCase):
         s.create(topic_str)
         # Upon produce, the types "str" and "json" trigger the conversion of bytes, strings and dictionaries to bytes on Kafka.
         producer = s.producer(topic_str, key_type="json", value_type="json")
-        producer.produce(self.snack_dict_list, key=self.snack_str_list)
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_str_list)
         producer.close()
         self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
@@ -579,8 +588,8 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
-        self.assertEqual(key_dict_list, self.snack_dict_list)
-        self.assertEqual(value_dict_list, self.snack_dict_list)
+        self.assertEqual(key_dict_list, self.key_snack_dict_list)
+        self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
 
     def test_produce_consume_protobuf(self):
@@ -592,8 +601,8 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         # Upon produce, the type "protobuf" (alias = "pb") triggers the conversion of bytes, strings and dictionaries into Protobuf-encoded bytes on Kafka.
-        producer = s.producer(topic_str, key_type="protobuf", value_type="pb", key_schema=self.protobuf_schema_str, value_schema=self.protobuf_schema_str)
-        producer.produce(self.snack_dict_list, key=self.snack_str_list)
+        producer = s.producer(topic_str, key_type="protobuf", value_type="pb", key_schema=self.protobuf_key_schema_str, value_schema=self.protobuf_value_schema_str)
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_str_list)
         producer.close()
         self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
@@ -603,8 +612,8 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
-        self.assertEqual(key_dict_list, self.snack_dict_list)
-        self.assertEqual(value_dict_list, self.snack_dict_list)
+        self.assertEqual(key_dict_list, self.key_snack_dict_list)
+        self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
 
     def test_produce_consume_avro(self):
@@ -616,8 +625,8 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         # Upon produce, the type "avro" triggers the conversion of bytes, strings and dictionaries into Avro-encoded bytes on Kafka.
-        producer = s.producer(topic_str, key_type="avro", value_type="avro", key_schema=self.avro_schema_str, value_schema=self.avro_schema_str)
-        producer.produce(self.snack_dict_list, key=self.snack_bytes_list)
+        producer = s.producer(topic_str, key_type="avro", value_type="avro", key_schema=self.avro_key_schema_str, value_schema=self.avro_value_schema_str)
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_bytes_list)
         producer.close()
         self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
@@ -627,8 +636,8 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
-        self.assertEqual(key_dict_list, self.snack_dict_list)
-        self.assertEqual(value_dict_list, self.snack_dict_list)
+        self.assertEqual(key_dict_list, self.key_snack_dict_list)
+        self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
 
     def test_produce_consume_jsonschema(self):
@@ -640,8 +649,8 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         # Upon produce, the type "jsonschema" triggers the conversion of bytes, strings and dictionaries into JSONSchema-encoded bytes on Kafka.
-        producer = s.producer(topic_str, key_type="jsonschema", value_type="jsonschema", key_schema=self.jsonschema_schema_str, value_schema=self.jsonschema_schema_str)
-        producer.produce(self.snack_dict_list, key=self.snack_str_list)
+        producer = s.producer(topic_str, key_type="jsonschema", value_type="jsonschema", key_schema=self.jsonschema_key_schema_str, value_schema=self.jsonschema_value_schema_str)
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_str_list)
         producer.close()
         self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
         #
@@ -651,9 +660,29 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
-        self.assertEqual(key_dict_list, self.snack_dict_list)
-        self.assertEqual(value_dict_list, self.snack_dict_list)
+        self.assertEqual(key_dict_list, self.key_snack_dict_list)
+        self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
+
+    def test_produce_error_handling(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str, config={"cleanup.policy": "compact"})
+        #
+        producer = s.producer(topic_str)
+        producer.produce("123", key="123")
+        producer.close()
+        self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 1)
+        #
+        producer = s.producer(topic_str)
+        producer.produce("123")
+        # Redpanda does not give us a KafkaError (instead: None) if we publish None as the key for compacted topics...
+        if s.__class__.__name__ == "Cluster" and s.cluster_kind() != "redpanda": 
+            self.assertRaises(Exception, producer.close)
 
     def test_consume_from_offsets(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -738,7 +767,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         w = s.producer(topic_str1, value_type="str")
-        w.produce(self.snack_str_list)
+        w.produce(self.value_snack_str_list)
         w.close()
         n_int1 = s.l(topic_str1)[topic_str1]
         self.assertEqual(n_int1, 3)
@@ -774,7 +803,7 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list = s.cat(topic_str1, group=group_str2, value_type="str", n=3)
         self.assertEqual(3, len(message_dict_list))
         value_str_list = [message_dict["value"] for message_dict in message_dict_list]
-        self.assertEqual(value_str_list, self.snack_str_list)
+        self.assertEqual(value_str_list, self.value_snack_str_list)
 
     def test_compact(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -844,7 +873,7 @@ class TestSingleStorageBase(unittest.TestCase):
             topic_str = self.create_test_topic_name()
             s.create(topic_str)
             w = s.producer(topic_str, value_type="str")
-            w.produce(self.snack_str_list)
+            w.produce(self.value_snack_str_list)
             w.close()
             #
             n_int = s.l(topic_str)[topic_str]
@@ -859,7 +888,7 @@ class TestSingleStorageBase(unittest.TestCase):
             topic_str = self.create_test_topic_name()
             s.create(topic_str)
             w = s.producer(topic_str, value_type="str")
-            w.produce(self.snack_str_list)
+            w.produce(self.value_snack_str_list)
             w.close()
             #
             n_int = s.l(topic_str)[topic_str]
@@ -883,14 +912,14 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, type="str")
-        producer.produce(self.snack_str_list, headers=self.headers_str_str_dict)
+        producer.produce(self.value_snack_str_list, headers=self.headers_str_str_dict)
         producer.close()
         #
         group_str1 = self.create_test_group_name()
         message_dict_list1 = s.cat(topic_str, group=group_str1, type="str")
         self.assertEqual(3, len(message_dict_list1))
         value_str_list1 = [message_dict["value"] for message_dict in message_dict_list1]
-        self.assertEqual(value_str_list1, self.snack_str_list)
+        self.assertEqual(value_str_list1, self.value_snack_str_list)
         #
         if not s.__class__.__name__ == "RestProxy":
             self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
@@ -898,7 +927,7 @@ class TestSingleStorageBase(unittest.TestCase):
             group_str2 = self.create_test_group_name()
             message_dict_list2 = s.cat(topic_str, group=group_str2, type="str", offsets={0:1}, n=1)
             self.assertEqual(1, len(message_dict_list2))
-            self.assertEqual(message_dict_list2[0]["value"], self.snack_str_list[1])
+            self.assertEqual(message_dict_list2[0]["value"], self.value_snack_str_list[1])
             self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
 
     def test_cat_from_to_offsets_diff(self):
@@ -919,22 +948,22 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str, partitions=2)
         producer = s.producer(topic_str, type="str")
-        producer.produce(self.snack_str_list[0], partition=0, flush=True)
+        producer.produce(self.value_snack_str_list[0], partition=0, flush=True)
         time.sleep(0.1)
         producer.produce(self.snack_countries_str_list[0], partition=1, flush=True)
         time.sleep(0.1)
-        producer.produce(self.snack_str_list[1], partition=0, flush=True)
+        producer.produce(self.value_snack_str_list[1], partition=0, flush=True)
         time.sleep(0.1)
         producer.produce(self.snack_countries_str_list[1], partition=1, flush=True)
         time.sleep(0.1)
-        producer.produce(self.snack_str_list[2], partition=0, flush=True)
+        producer.produce(self.value_snack_str_list[2], partition=0, flush=True)
         producer.close()
         # Read only the messages from the second to the fourth using the offsets.
         group_str5 = self.create_test_group_name()
         message_dict_list5 = s.cat(topic_str, group=group_str5, type="str", offsets={topic_str: {0: 1, 1: 0}}, end_offsets={topic_str: {0: 1, 1: 1}})
         self.assertEqual(3, len(message_dict_list5))
         partition_int_message_dict_list_dict5 = get_partition_int_message_dict_list_dict(message_dict_list5)
-        self.assertEqual(partition_int_message_dict_list_dict5[0][0]["value"], self.snack_str_list[1])
+        self.assertEqual(partition_int_message_dict_list_dict5[0][0]["value"], self.value_snack_str_list[1])
         self.assertEqual(partition_int_message_dict_list_dict5[1][0]["value"], self.snack_countries_str_list[0])
         self.assertEqual(partition_int_message_dict_list_dict5[1][1]["value"], self.snack_countries_str_list[1])
         # Read only the messages from the second to the end of the topic using the offsets.
@@ -942,8 +971,8 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list6 = s.cat(topic_str, group=group_str6, type="str", offsets={0: 1, 1: 1})
         self.assertEqual(3, len(message_dict_list6))
         partition_int_message_dict_list_dict6 = get_partition_int_message_dict_list_dict(message_dict_list6)
-        self.assertEqual(partition_int_message_dict_list_dict6[0][0]["value"], self.snack_str_list[1])
-        self.assertEqual(partition_int_message_dict_list_dict6[0][1]["value"], self.snack_str_list[2])
+        self.assertEqual(partition_int_message_dict_list_dict6[0][0]["value"], self.value_snack_str_list[1])
+        self.assertEqual(partition_int_message_dict_list_dict6[0][1]["value"], self.value_snack_str_list[2])
         self.assertEqual(partition_int_message_dict_list_dict6[1][0]["value"], self.snack_countries_str_list[1])
         # Skip the rest of the test for RestProxy (requires offsets_for_times() not available in the REST Proxy API).
         if s.__class__.__name__ == "RestProxy":
@@ -977,9 +1006,9 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list2 = s.cat(topic_str, group=group_str2, type="str", ts=ts_int0, end_ts=ts_int4)
         self.assertEqual(5, len(message_dict_list2))
         partition_int_message_dict_list_dict2 = get_partition_int_message_dict_list_dict(message_dict_list2)
-        self.assertEqual(partition_int_message_dict_list_dict2[0][0]["value"], self.snack_str_list[0])
-        self.assertEqual(partition_int_message_dict_list_dict2[0][1]["value"], self.snack_str_list[1])
-        self.assertEqual(partition_int_message_dict_list_dict2[0][2]["value"], self.snack_str_list[2])
+        self.assertEqual(partition_int_message_dict_list_dict2[0][0]["value"], self.value_snack_str_list[0])
+        self.assertEqual(partition_int_message_dict_list_dict2[0][1]["value"], self.value_snack_str_list[1])
+        self.assertEqual(partition_int_message_dict_list_dict2[0][2]["value"], self.value_snack_str_list[2])
         self.assertEqual(partition_int_message_dict_list_dict2[1][0]["value"], self.snack_countries_str_list[0])
         self.assertEqual(partition_int_message_dict_list_dict2[1][1]["value"], self.snack_countries_str_list[1])
         # Read the messages from the timestamp of the second to the timestamp of the fourth message (we also get the fifth from partition 0).
@@ -991,8 +1020,8 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list3 = s.cat(topic_str, group=group_str3, type="str", ts=ts_int1, end_ts=ts_int3)
         self.assertEqual(4, len(message_dict_list3))
         partition_int_message_dict_list_dict3 = get_partition_int_message_dict_list_dict(message_dict_list3)
-        self.assertEqual(partition_int_message_dict_list_dict3[0][0]["value"], self.snack_str_list[1])
-        self.assertEqual(partition_int_message_dict_list_dict3[0][1]["value"], self.snack_str_list[2])
+        self.assertEqual(partition_int_message_dict_list_dict3[0][0]["value"], self.value_snack_str_list[1])
+        self.assertEqual(partition_int_message_dict_list_dict3[0][1]["value"], self.value_snack_str_list[2])
         self.assertEqual(partition_int_message_dict_list_dict3[1][0]["value"], self.snack_countries_str_list[0])
         self.assertEqual(partition_int_message_dict_list_dict3[1][1]["value"], self.snack_countries_str_list[1])
         # Read the messages from the timestamp of the second to the timestamp of the third message (we also get the fourth on partition 1).
@@ -1004,7 +1033,7 @@ class TestSingleStorageBase(unittest.TestCase):
         message_dict_list4 = s.cat(topic_str, group=group_str4, type="str", ts=ts_int1, end_ts=ts_int2)
         self.assertEqual(3, len(message_dict_list4))
         partition_int_message_dict_list_dict4 = get_partition_int_message_dict_list_dict(message_dict_list4)
-        self.assertEqual(partition_int_message_dict_list_dict4[0][0]["value"], self.snack_str_list[1])
+        self.assertEqual(partition_int_message_dict_list_dict4[0][0]["value"], self.value_snack_str_list[1])
         self.assertEqual(partition_int_message_dict_list_dict4[1][0]["value"], self.snack_countries_str_list[0])
         self.assertEqual(partition_int_message_dict_list_dict4[1][1]["value"], self.snack_countries_str_list[1])
 
@@ -1018,14 +1047,14 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="json")
-        producer.produce(self.snack_str_list, headers=self.headers_str_str_tuple_list)
+        producer.produce(self.value_snack_str_list, headers=self.headers_str_str_tuple_list)
         producer.close()
         #
         group_str1 = self.create_test_group_name()
         message_dict_list1 = s.head(topic_str, group=group_str1, type="json", n=3)
         self.assertEqual(3, len(message_dict_list1))
         value_dict_list1 = [message_dict["value"] for message_dict in message_dict_list1]
-        self.assertEqual(value_dict_list1, self.snack_dict_list)
+        self.assertEqual(value_dict_list1, self.value_snack_dict_list)
         #
         if not s.__class__.__name__ == "RestProxy":
             self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
@@ -1040,13 +1069,13 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="json")
-        producer.produce(self.snack_dict_list, headers=self.headers_str_bytes_dict)
+        producer.produce(self.value_snack_dict_list, headers=self.headers_str_bytes_dict)
         producer.close()
         #
         group_str1 = self.create_test_group_name()
         message_dict_list1 = s.tail(topic_str, group=group_str1, type="json", n=1)
         self.assertEqual(1, len(message_dict_list1))
-        self.assertEqual(message_dict_list1[0]["value"], self.snack_dict_list[2])
+        self.assertEqual(message_dict_list1[0]["value"], self.value_snack_dict_list[2])
         #
         if not s.__class__.__name__ == "RestProxy":
             self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
@@ -1061,9 +1090,9 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         producer = s.producer(topic_str1, value_type="json")
-        producer.produce(self.snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
-        producer.produce(self.snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
-        producer.produce(self.snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
+        producer.produce(self.value_snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
+        producer.produce(self.value_snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
+        producer.produce(self.value_snack_bytes_list, headers=self.headers_str_bytes_tuple_list)
         producer.close()
         #
         topic_str2 = self.create_test_topic_name()
@@ -1082,7 +1111,7 @@ class TestSingleStorageBase(unittest.TestCase):
             group_str2 = self.create_test_group_name()
             message_dict_list2 = s.cat(topic_str2, group=group_str2, type="json", n=1)
             self.assertEqual(1, len(message_dict_list2))
-            self.assertEqual(message_dict_list2[0]["value"], self.snack_ish_dict_list[0])
+            self.assertEqual(message_dict_list2[0]["value"], self.value_snack_ish_dict_list[0])
             self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
         # test that the consumer does not consume too many messages (the former bug occurred when: n % consumer_batch_size > 0, n > consumer_batch_size * 2, source topic length > n (e.g. source topic length = 100000, n = 42700, consumer_batch_size = 1000))
         topic_str3 = self.create_test_topic_name()
@@ -1106,7 +1135,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="json")
-        producer.produce(self.snack_dict_list)
+        producer.produce(self.value_snack_dict_list)
         producer.close()
         #
         group_str1 = self.create_test_group_name()
@@ -1125,13 +1154,13 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         w1 = s.producer(topic_str1, value_type="json")
-        w1.produce(self.snack_str_list)
+        w1.produce(self.value_snack_str_list)
         w1.close()
         #
         topic_str2 = self.create_test_topic_name()
         s.create(topic_str2)
         w2 = s.producer(topic_str2, value_type="json")
-        w2.produce(self.snack_ish_dict_list)
+        w2.produce(self.value_snack_ish_dict_list)
         w2.close()
         #
         group_str1 = self.create_test_group_name()
@@ -1151,7 +1180,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="json")
-        producer.produce(self.snack_str_list)
+        producer.produce(self.value_snack_str_list)
         producer.close()
         #
         group_str = self.create_test_group_name()
@@ -1171,7 +1200,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="json")
-        producer.produce(self.snack_str_list)
+        producer.produce(self.value_snack_str_list)
         producer.close()
         #
         colour_str_list = []
@@ -1190,7 +1219,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, value_type="json")
-        producer.produce(self.snack_str_list)
+        producer.produce(self.value_snack_str_list)
         producer.close()
         #
         group_str = self.create_test_group_name()
@@ -1207,7 +1236,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         producer = s.producer(topic_str1, value_type="json")
-        producer.produce(self.snack_str_list)
+        producer.produce(self.value_snack_str_list)
         producer.close()
         #
         topic_str2 = self.create_test_topic_name()
@@ -1235,22 +1264,22 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         #
         key_subject_name_str = s.create_subject_name_str(topic_str, True)
-        key_schema_dict = s.create_schema_dict(self.avro_schema_str, "AVRO")
+        key_schema_dict = s.create_schema_dict(self.avro_key_schema_str, "AVRO")
         key_schema_id_int = s.register_schema(key_subject_name_str, key_schema_dict, normalize=True)
         #
         key_registeredSchema_dict = s.lookup_schema(key_subject_name_str, key_schema_dict)
         self.assertEqual(key_registeredSchema_dict["schema_id"], key_schema_id_int)
         self.assertEqual(key_registeredSchema_dict["subject"], key_subject_name_str)
-        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.avro_schema_str)
+        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.avro_key_schema_str)
         self.assertEqual(key_registeredSchema_dict["schema"]["schema_type"], "AVRO")
         #
         key_schema_dict1 = s.get_schema(key_schema_id_int)
-        self.assertEqual(key_schema_dict1["schema_str"], self.avro_schema_normalized_str.replace(" ", ""))
+        self.assertEqual(key_schema_dict1["schema_str"], self.avro_key_schema_str.replace(" ", ""))
         #
         #
         #
         value_subject_name_str = s.create_subject_name_str(topic_str, False)
-        value_schema_dict = s.create_schema_dict(self.protobuf_schema_str, "PROTOBUF")
+        value_schema_dict = s.create_schema_dict(self.protobuf_value_schema_str, "PROTOBUF")
         value_schema_id_int = s.register_schema(value_subject_name_str, value_schema_dict, normalize=False)
         #
         value_registeredSchema_dict = s.lookup_schema(value_subject_name_str, value_schema_dict)
@@ -1259,14 +1288,14 @@ class TestSingleStorageBase(unittest.TestCase):
         replaced_schema_str1 = value_registeredSchema_dict["schema"]["schema_str"].replace("\n", "").replace("  ", " ").replace(";}", "; }")
         if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
             replaced_schema_str1 = replaced_schema_str1.replace('syntax = "proto2";', "")
-        self.assertEqual(replaced_schema_str1, self.protobuf_schema_str)
+        self.assertEqual(replaced_schema_str1, self.protobuf_value_schema_str)
         self.assertEqual(value_registeredSchema_dict["schema"]["schema_type"], "PROTOBUF")
         #
         value_schema_dict1 = s.get_schema(value_schema_id_int)
         replaced_schema_str2 = value_schema_dict1["schema_str"].replace("\n", "").replace("  ", " ").replace(";}", "; }")
         if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
             replaced_schema_str2 = replaced_schema_str2.replace('syntax = "proto2";', "")
-        self.assertEqual(replaced_schema_str2, self.protobuf_schema_str)
+        self.assertEqual(replaced_schema_str2, self.protobuf_value_schema_str)
         #
         #
         #
@@ -1351,102 +1380,102 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         #
-        key_subject_name_str = s.create_subject_name_str(topic_str, True)
-        key_schema_dict = s.create_schema_dict(self.jsonschema_schema_str, "JSON")
-        key_schema_id_int = s.register_schema(key_subject_name_str, key_schema_dict, normalize=True)
+        value_subject_name_str = s.create_subject_name_str(topic_str, False)
+        value_schema_dict = s.create_schema_dict(self.jsonschema_value_schema_str, "JSON")
+        value_schema_id_int = s.register_schema(value_subject_name_str, value_schema_dict, normalize=True)
         #
         try:
-            s.lookup_schema(key_subject_name_str, key_schema_dict, normalize=False)
+            s.lookup_schema(value_subject_name_str, value_schema_dict, normalize=False)
         except Exception as e:
             self.assertEqual(str(e), "Schema not found (HTTP status code 404, SR code 40403)")
         #
-        key_registeredSchema_dict = s.lookup_schema(key_subject_name_str, key_schema_dict, normalize=True)
-        self.assertEqual(key_registeredSchema_dict["schema_id"], key_schema_id_int)
-        self.assertEqual(key_registeredSchema_dict["subject"], key_subject_name_str)
-        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_str)
-        self.assertEqual(key_registeredSchema_dict["schema"]["schema_type"], "JSON")
+        value_registeredSchema_dict = s.lookup_schema(value_subject_name_str, value_schema_dict, normalize=True)
+        self.assertEqual(value_registeredSchema_dict["schema_id"], value_schema_id_int)
+        self.assertEqual(value_registeredSchema_dict["subject"], value_subject_name_str)
+        self.assertEqual(value_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_value_schema_str)
+        self.assertEqual(value_registeredSchema_dict["schema"]["schema_type"], "JSON")
         #
         try:
-            s.get_compatibility(key_subject_name_str)
+            s.get_compatibility(value_subject_name_str)
         except Exception as e:
-            self.assertEqual(str(e), f"Subject '{key_subject_name_str}' does not have subject-level compatibility configured (HTTP status code 404, SR code 40408)")
+            self.assertEqual(str(e), f"Subject '{value_subject_name_str}' does not have subject-level compatibility configured (HTTP status code 404, SR code 40408)")
         #
-        set_level_str = s.set_compatibility(key_subject_name_str, "BACKWARD")
+        set_level_str = s.set_compatibility(value_subject_name_str, "BACKWARD")
         self.assertEqual(set_level_str, "BACKWARD")
         #
-        level_str = s.get_compatibility(key_subject_name_str)
+        level_str = s.get_compatibility(value_subject_name_str)
         self.assertEqual(level_str, "BACKWARD")
         #
-        key_schema_one_less_field_dict = s.create_schema_dict(self.jsonschema_schema_one_less_field_str, "JSON")
-        is_compatible_bool = s.test_compatibility(key_subject_name_str, key_schema_one_less_field_dict, version="latest")
+        value_schema_one_less_field_dict = s.create_schema_dict(self.jsonschema_value_schema_one_less_field_str, "JSON")
+        is_compatible_bool = s.test_compatibility(value_subject_name_str, value_schema_one_less_field_dict, version="latest")
         self.assertFalse(is_compatible_bool)
         #
-        key_schema_one_more_field_dict = s.create_schema_dict(self.jsonschema_schema_one_more_field_str, "JSON")
-        is_compatible_bool = s.test_compatibility(key_subject_name_str, key_schema_one_more_field_dict, version="latest")
+        value_schema_one_more_field_dict = s.create_schema_dict(self.jsonschema_value_schema_one_more_field_str, "JSON")
+        is_compatible_bool = s.test_compatibility(value_subject_name_str, value_schema_one_more_field_dict, version="latest")
         self.assertTrue(is_compatible_bool)
         #
         #
         #
-        key_schema_id_int1 = s.register_schema(key_subject_name_str, key_schema_one_more_field_dict, normalize=True)
-        self.assertGreater(key_schema_id_int1, key_schema_id_int)
+        value_schema_id_int1 = s.register_schema(value_subject_name_str, value_schema_one_more_field_dict, normalize=True)
+        self.assertGreater(value_schema_id_int1, value_schema_id_int)
         #
-        key_schema_one_more_field_first_then_drop_it_again_dict = s.create_schema_dict(self.jsonschema_schema_str, "JSON")
-        is_compatible_bool = s.test_compatibility(key_subject_name_str, key_schema_one_more_field_first_then_drop_it_again_dict, version="latest")
+        value_schema_one_more_field_first_then_drop_it_again_dict = s.create_schema_dict(self.jsonschema_value_schema_str, "JSON")
+        is_compatible_bool = s.test_compatibility(value_subject_name_str, value_schema_one_more_field_first_then_drop_it_again_dict, version="latest")
         self.assertFalse(is_compatible_bool)
         #
-        key_registeredSchema_dict1 = s.get_latest_version(key_subject_name_str)
-        self.assertEqual(key_registeredSchema_dict1["schema_id"], key_schema_id_int1)
-        self.assertEqual(key_registeredSchema_dict1["subject"], key_subject_name_str)
+        value_registeredSchema_dict1 = s.get_latest_version(value_subject_name_str)
+        self.assertEqual(value_registeredSchema_dict1["schema_id"], value_schema_id_int1)
+        self.assertEqual(value_registeredSchema_dict1["subject"], value_subject_name_str)
         if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
-            self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_redpanda_str)
+            self.assertEqual(value_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_value_schema_one_more_field_normalized_redpanda_str)
         else:
-            self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_str)
-        self.assertEqual(key_registeredSchema_dict1["schema"]["schema_type"], "JSON")
+            self.assertEqual(value_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_value_schema_one_more_field_normalized_str)
+        self.assertEqual(value_registeredSchema_dict1["schema"]["schema_type"], "JSON")
         #
-        key_registeredSchema_dict1 = s.get_version(key_subject_name_str, 2)
-        self.assertEqual(key_registeredSchema_dict1["schema_id"], key_schema_id_int1)
-        self.assertEqual(key_registeredSchema_dict1["subject"], key_subject_name_str)
+        value_registeredSchema_dict1 = s.get_version(value_subject_name_str, 2)
+        self.assertEqual(value_registeredSchema_dict1["schema_id"], value_schema_id_int1)
+        self.assertEqual(value_registeredSchema_dict1["subject"], value_subject_name_str)
         if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
-            self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_redpanda_str)
+            self.assertEqual(value_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_value_schema_one_more_field_normalized_redpanda_str)
         else:
-            self.assertEqual(key_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_schema_one_more_field_normalized_str)
-        self.assertEqual(key_registeredSchema_dict1["schema"]["schema_type"], "JSON")
+            self.assertEqual(value_registeredSchema_dict1["schema"]["schema_str"], self.jsonschema_value_schema_one_more_field_normalized_str)
+        self.assertEqual(value_registeredSchema_dict1["schema"]["schema_type"], "JSON")
         #
-        key_registeredSchema_dict = s.get_version(key_subject_name_str, 1)
-        self.assertEqual(key_registeredSchema_dict["schema_id"], key_schema_id_int)
-        self.assertEqual(key_registeredSchema_dict["subject"], key_subject_name_str)
-        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_schema_str)
-        self.assertEqual(key_registeredSchema_dict["schema"]["schema_type"], "JSON")
+        value_registeredSchema_dict = s.get_version(value_subject_name_str, 1)
+        self.assertEqual(value_registeredSchema_dict["schema_id"], value_schema_id_int)
+        self.assertEqual(value_registeredSchema_dict["subject"], value_subject_name_str)
+        self.assertEqual(value_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_value_schema_str)
+        self.assertEqual(value_registeredSchema_dict["schema"]["schema_type"], "JSON")
         #
-        version_int_list = s.get_versions(key_subject_name_str)
+        version_int_list = s.get_versions(value_subject_name_str)
         self.assertEqual(version_int_list, [1, 2])
         #
         try:
-            s.delete_version(key_subject_name_str, 1, permanent=True)
+            s.delete_version(value_subject_name_str, 1, permanent=True)
         except Exception as e:
-            self.assertEqual(str(e), f"Subject '{key_subject_name_str}' Version 1 was not deleted first before being permanently deleted")
+            self.assertEqual(str(e), f"Subject '{value_subject_name_str}' Version 1 was not deleted first before being permanently deleted")
             # self.assertEqual(str(e), f"Subject '{key_subject_name_str}' Version 1 was not deleted first before being permanently deleted (HTTP status code 404, SR code 40407)")
         #
-        version_int = s.delete_version(key_subject_name_str, 1, permanent=False)
+        version_int = s.delete_version(value_subject_name_str, 1, permanent=False)
         self.assertEqual(version_int, 1)
         #
-        version_int_list = s.get_versions(key_subject_name_str)
+        version_int_list = s.get_versions(value_subject_name_str)
         self.assertEqual(version_int_list, [2])
         #
-        key_schema_dict = s.get_schema(key_schema_id_int)
+        value_schema_dict = s.get_schema(value_schema_id_int)
         if s.__class__.__name__ == "Cluster" and s.cluster_kind() == "redpanda":
-            self.assertEqual(key_schema_dict["schema_str"], self.jsonschema_schema_normalized_redpanda_str)
+            self.assertEqual(value_schema_dict["schema_str"], self.jsonschema_value_schema_normalized_redpanda_str)
         else:
-            self.assertEqual(key_schema_dict["schema_str"], self.jsonschema_schema_normalized_str)
-        self.assertEqual(key_schema_dict["schema_type"], "JSON")
+            self.assertEqual(value_schema_dict["schema_str"], self.jsonschema_value_schema_normalized_str)
+        self.assertEqual(value_schema_dict["schema_type"], "JSON")
         #
-        version_int = s.delete_version(key_subject_name_str, 1, permanent=True)
+        version_int = s.delete_version(value_subject_name_str, 1, permanent=True)
         self.assertEqual(version_int, 1)
         #
-        subject_name_str_version_int_list_dict = s.delete_subject(key_subject_name_str, permanent=False)
-        self.assertEqual(subject_name_str_version_int_list_dict[key_subject_name_str], [2])
-        subject_name_str_version_int_list_dict = s.delete_subject(key_subject_name_str, permanent=True)
-        self.assertEqual(subject_name_str_version_int_list_dict[key_subject_name_str], [2])
+        subject_name_str_version_int_list_dict = s.delete_subject(value_subject_name_str, permanent=False)
+        self.assertEqual(subject_name_str_version_int_list_dict[value_subject_name_str], [2])
+        subject_name_str_version_int_list_dict = s.delete_subject(value_subject_name_str, permanent=True)
+        self.assertEqual(subject_name_str_version_int_list_dict[value_subject_name_str], [2])
 
     # Pandas
 
@@ -1459,7 +1488,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         producer = s.producer(topic_str1, type="json")
-        producer.produce(self.snack_str_list)
+        producer.produce(self.value_snack_str_list)
         producer.close()
         #
         group_str1 = self.create_test_group_name()
@@ -1525,7 +1554,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
         producer = s.producer(topic_str, key_type="json", value_type="json")
-        producer.produce(self.snack_dict_list, key=self.snack_dict_list, headers=self.headers_str_str_dict)
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_dict_list, headers=self.headers_str_str_dict)
         producer.close()
         #
         n_int = s.watermarks(topic_str)[topic_str][0][1]
@@ -1565,7 +1594,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str = self.create_test_topic_name()
         s.recreate(topic_str, partitions=2, config={"retention.ms": 4711})
         producer = s.producer(topic_str, value_type="json")
-        producer.produce(self.snack_dict_list)
+        producer.produce(self.value_snack_dict_list)
         producer.close()
         #
         n_int1 = s.l(topic_str)[topic_str]
@@ -1599,7 +1628,7 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str1 = self.create_test_topic_name()
         s.create(topic_str1)
         producer = s.producer(topic_str1, type="json")
-        producer.produce(self.snack_str_list)
+        producer.produce(self.value_snack_str_list)
         producer.close()
         #
         topic_str2 = self.create_test_topic_name()
@@ -1702,12 +1731,12 @@ class TestSingleStorageBase(unittest.TestCase):
         s.create(topic_str, partitions=3)
         # Produce six messages to the individual partitions.
         producer = s.producer(topic_str)
-        producer.produce(self.snack_str_list[0], partition=0)
-        producer.produce(self.snack_str_list[1], partition=1)
-        producer.produce(self.snack_str_list[2], partition=2)
-        producer.produce(self.snack_str_list[0], partition=0)
-        producer.produce(self.snack_str_list[1], partition=1)
-        producer.produce(self.snack_str_list[2], partition=2)
+        producer.produce(self.value_snack_str_list[0], partition=0)
+        producer.produce(self.value_snack_str_list[1], partition=1)
+        producer.produce(self.value_snack_str_list[2], partition=2)
+        producer.produce(self.value_snack_str_list[0], partition=0)
+        producer.produce(self.value_snack_str_list[1], partition=1)
+        producer.produce(self.value_snack_str_list[2], partition=2)
         producer.close()
         # Create two consumer group names.
         group_str1 = self.create_test_group_name()
