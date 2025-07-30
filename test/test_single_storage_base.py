@@ -805,7 +805,7 @@ class TestSingleStorageBase(unittest.TestCase):
         value_str_list = [message_dict["value"] for message_dict in message_dict_list]
         self.assertEqual(value_str_list, self.value_snack_str_list)
 
-    def test_compact(self):
+    def test_compaction(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return
         #
@@ -837,6 +837,41 @@ class TestSingleStorageBase(unittest.TestCase):
             #
             (n_int2, _, _) = s.wc(topic_str)
             self.assertEqual(n_int2, 4)
+
+    def test_compact(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str1 = self.create_test_topic_name()
+        s.create(topic_str1)
+        #
+        producer = s.producer(topic_str1, type="json")
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_dict_list)
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_dict_list)
+        producer.close()
+        self.assertEqual(s.topics(topic_str1, size=True, partitions=True)[topic_str1]["size"], 6)
+        #
+        group_str1 = self.create_test_group_name()
+        message_dict_list1 = s.compact(topic_str1, group=group_str1, type="json")
+        self.assertEqual(3, len(message_dict_list1))
+        key_dict_list = [message_dict["key"] for message_dict in message_dict_list1]
+        value_dict_list = [message_dict["value"] for message_dict in message_dict_list1]
+        self.assertEqual(key_dict_list, self.key_snack_dict_list)
+        self.assertEqual(value_dict_list, self.value_snack_dict_list)
+        #
+        topic_str2 = self.create_test_topic_name()
+        s.create(topic_str2)
+        group_str2 = self.create_test_group_name()
+        s.compact_to(topic_str1, s, topic_str2, group=group_str2, type="json")
+        group_str3 = self.create_test_group_name()
+        message_dict_list2 = s.cat(topic_str2, group=group_str3, type="json")
+        self.assertEqual(3, len(message_dict_list2))
+        key_dict_list = [message_dict["key"] for message_dict in message_dict_list2]
+        value_dict_list = [message_dict["value"] for message_dict in message_dict_list2]
+        self.assertEqual(key_dict_list, self.key_snack_dict_list)
+        self.assertEqual(value_dict_list, self.value_snack_dict_list)
 
     def test_cluster_settings(self):
         if self.__class__.__name__ == "TestSingleStorageBase":

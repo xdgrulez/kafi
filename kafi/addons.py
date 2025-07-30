@@ -40,8 +40,8 @@ class AddOns(Functional):
         return message_dict_list
 
     def compact_to(self, topic, target_storage, target_topic, n=ALL_MESSAGES, **kwargs):
-        source_kwargs = self.get_source_kwargs(**kwargs)
-        target_kwargs = self.get_target_kwargs(**kwargs)
+        source_kwargs = self.copy_kwargs("source", **kwargs)
+        target_kwargs = self.copy_kwargs("target", **kwargs)
         #
         message_dict_list = self.compact(topic, n, **source_kwargs)
         #

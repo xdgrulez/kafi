@@ -55,5 +55,5 @@ class Test(TestSingleStorageBase):
     def test_error_handling(self):
         pass
 
-    def test_compact(self):
+    def test_compaction(self):
         pass
