@@ -19,9 +19,9 @@ class Expr:
 
 
 class Literal(Expr):
-    def __init__(self, value, typ=None):
+    def __init__(self, value, type=None):
         self.value = value
-        self.typ = typ
+        self.type = type
     def sql(self) -> str:
         if isinstance(self.value, str):
             return f"'{self.value}'"
