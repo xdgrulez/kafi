@@ -88,57 +88,62 @@ class KS:
 
 #
 
-employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
-                              {"key": "1", "value": {"name": "mark"}},
-                              {"key": "2", "value": {"name": "mike"}}]
-salary_message_dict_list = [{"key": "2", "value": {"salary": 40000}},
-                            {"key": "0", "value": {"salary": 38750}},
-                            {"key": "1", "value": {"salary": 50000}}]
+def demo():
+    employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
+                                {"key": "1", "value": {"name": "mark"}},
+                                {"key": "2", "value": {"name": "mike"}}]
+    salary_message_dict_list = [{"key": "2", "value": {"salary": 40000}},
+                                {"key": "0", "value": {"salary": 38750}},
+                                {"key": "1", "value": {"salary": 50000}}]
 
-def message_dict_list_to_zset(message_dict_list):
-    message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
-    zSet = ZSet({k: 1 for k in message_str_list})
-    return zSet
+    def message_dict_list_to_zset(message_dict_list):
+        message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
+        zSet = ZSet({k: 1 for k in message_str_list})
+        return zSet
 
-def create_stream():
-    stream = Stream(ZSetAddition())
-    stream_handle = StreamHandle(lambda: stream)
-    return stream_handle
+    def create_stream():
+        stream = Stream(ZSetAddition())
+        stream_handle = StreamHandle(lambda: stream)
+        return stream_handle
 
-employees_stream_handle = create_stream()
-salaries_stream_handle = create_stream()
+    employees_stream_handle = create_stream()
+    salaries_stream_handle = create_stream()
 
-employee_zset = message_dict_list_to_zset(employee_message_dict_list)
-salary_zset = message_dict_list_to_zset(salary_message_dict_list)
+    employee_zset = message_dict_list_to_zset(employee_message_dict_list)
+    salary_zset = message_dict_list_to_zset(salary_message_dict_list)
 
-employees_stream_handle.get().send(employee_zset)
-salaries_stream_handle.get().send(salary_zset)
+    employees_stream_handle.get().send(employee_zset)
+    salaries_stream_handle.get().send(salary_zset)
 
-employees_node = KS(employees_stream_handle, "employees_source")
-salaries_node = KS(salaries_stream_handle, "salaries_source")
+    employees_node = KS(employees_stream_handle, "employees_source")
+    salaries_node = KS(salaries_stream_handle, "salaries_source")
 
-def sel(message_dict):
-    message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
-    return message_dict
+    def sel(message_dict):
+        message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
+        return message_dict
 
-def proj(_, left_message_dict, right_message_dict):
-    left_message_dict["value"].update(right_message_dict["value"])
-    return left_message_dict
+    def proj(_, left_message_dict, right_message_dict):
+        left_message_dict["value"].update(right_message_dict["value"])
+        return left_message_dict
 
-topology = (
-    employees_node
-    .where(lambda message_dict: message_dict["value"]["name"] != "mark")
-    .join(
-        salaries_node, 
-        on=lambda message_dict: message_dict["key"],
-        projection=proj
+    topology = (
+        employees_node
+        .where(lambda message_dict: message_dict["value"]["name"] != "mark")
+        .join(
+            salaries_node, 
+            on=lambda message_dict: message_dict["key"],
+            projection=proj
+        )
+        .select(sel)
     )
-    .select(sel)
-)
 
-topology.step()
+    topology.step()
 
-print()
-print(f"Topology: {topology.topology()}")
-print()
-print(f"Latest: {topology.latest()}")
+    print()
+    print(f"Topology: {topology.topology()}")
+    print()
+    print(f"Latest: {topology.latest()}")
+
+if __name__ == "__main__":
+    demo()
+ 
