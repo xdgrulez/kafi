@@ -6,14 +6,14 @@ from pydbsp.zset import ZSet, ZSetAddition
 from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
 import json
 
-class KS:
+class Node:
     def __init__(self, stream_handle, name="", operators=[], parents=[]):
         self._stream_handle = stream_handle
         self._name = name
         self._operators = operators
         self._parents = parents
         #
-        self._group = stream_handle.get().group()
+        self.group = stream_handle.get().group()
 
     def select(self, projection):
         def projection_(message_json_str):
@@ -21,7 +21,7 @@ class KS:
             return json.dumps(projection(message_dict))
         #
         project_op = LiftedProject(self._stream_handle, projection_)
-        return KS(project_op.output_handle(), "select_op", [project_op], [self])
+        return Node(project_op.output_handle(), "select_op", [project_op], [self])
 
     def where(self, predicate):
         def predicate_(message_json_str):
@@ -29,7 +29,7 @@ class KS:
             return predicate(message_dict)
         #
         liftedSelect = LiftedSelect(self._stream_handle, predicate_)
-        return KS(liftedSelect.output_handle(), "where_op", [liftedSelect], [self])
+        return Node(liftedSelect.output_handle(), "where_op", [liftedSelect], [self])
 
     def join(self, other, on, projection):
         def on_(message_json_str):
@@ -48,9 +48,9 @@ class KS:
             left_index.output_handle(),
             right_index.output_handle(),
             lambda l, r: join_with_index(l, r, projection_),
-            self._group
+            self.group
         )
-        return KS(join_op.output_handle(), "join_op", [left_index, right_index, join_op], [self, other])
+        return Node(join_op.output_handle(), "join_op", [left_index, right_index, join_op], [self, other])
 
     def step(self):
         def traverse(node, stack):
@@ -80,11 +80,53 @@ class KS:
     def parents(self):
         return self._parents
 
+    def name(self):
+        return self._name
+
+    def stream_handle(self):
+        return self._stream_handle
+
     def stream(self):
         return self._stream_handle.get()
-    
+        
     def latest(self):
         return self._operators[-1].output().latest()
+
+#
+
+def source(name):
+    stream = Stream(ZSetAddition())
+    stream_handle = StreamHandle(lambda: stream)
+    return Node(stream_handle, name)
+
+#
+
+def message_dict_list_to_zset(message_dict_list):
+    message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
+    zSet = ZSet({k: 1 for k in message_str_list})
+    return zSet
+
+#
+
+def run(storage_source_node_tuple_list, sink_storage, sink_topic_str, root_node, **kwargs):
+    topic_str_stream_handle_dict = {source_node.name(): source_node.stream_handle() for _, source_node in storage_source_node_tuple_list}
+    #
+    consumer_dict = {}
+    for storage, source_node in storage_source_node_tuple_list:
+        consumer = storage.consumer(source_node.name(), **kwargs)
+        consumer_dict[(storage.dir_str, storage.config_str, source_node.name())] = consumer
+    #
+    pr = sink_storage.producer(sink_topic_str, **kwargs)
+    for (_, _, topic_str), consumer in consumer_dict.items():
+        message_dict_list = consumer.consume(**kwargs)
+        stream = topic_str_stream_handle_dict[topic_str].get()
+        zset = message_dict_list_to_zset(message_dict_list)
+        stream.send(zset)
+        root_node.step()
+        x = root_node.latest()
+        y = [json.loads(z) for z, i in x.items() if i == 1]
+        for z in y:
+            pr.produce(z["value"], key=z["key"])
 
 #
 
@@ -96,28 +138,6 @@ def demo():
                                 {"key": "0", "value": {"salary": 38750}},
                                 {"key": "1", "value": {"salary": 50000}}]
 
-    def message_dict_list_to_zset(message_dict_list):
-        message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
-        zSet = ZSet({k: 1 for k in message_str_list})
-        return zSet
-
-    def create_stream():
-        stream = Stream(ZSetAddition())
-        stream_handle = StreamHandle(lambda: stream)
-        return stream_handle
-
-    employees_stream_handle = create_stream()
-    salaries_stream_handle = create_stream()
-
-    employee_zset = message_dict_list_to_zset(employee_message_dict_list)
-    salary_zset = message_dict_list_to_zset(salary_message_dict_list)
-
-    employees_stream_handle.get().send(employee_zset)
-    salaries_stream_handle.get().send(salary_zset)
-
-    employees_node = KS(employees_stream_handle, "employees_source")
-    salaries_node = KS(salaries_stream_handle, "salaries_source")
-
     def sel(message_dict):
         message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
         return message_dict
@@ -126,16 +146,24 @@ def demo():
         left_message_dict["value"].update(right_message_dict["value"])
         return left_message_dict
 
+    employees_source = source("employees_source")
+    salaries_source = source("salaries_source")
+
     topology = (
-        employees_node
+        employees_source
         .where(lambda message_dict: message_dict["value"]["name"] != "mark")
         .join(
-            salaries_node, 
+            salaries_source,
             on=lambda message_dict: message_dict["key"],
             projection=proj
         )
         .select(sel)
     )
+
+    employee_zset = message_dict_list_to_zset(employee_message_dict_list)
+    salary_zset = message_dict_list_to_zset(salary_message_dict_list)
+    employees_source.stream_handle().get().send(employee_zset)
+    salaries_source.stream_handle().get().send(salary_zset)
 
     topology.step()
 

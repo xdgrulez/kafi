@@ -24,13 +24,14 @@ setup(
                       'lxml==5.3.0',
                       'openpyxl==3.1.5',
                       'pandas==2.2.3',
-                      'pyarrow==18.1.0'
+                      'pyarrow==18.1.0',
+                      'pydbsp==0.6.0'
                       ],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.12',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ]
 )
