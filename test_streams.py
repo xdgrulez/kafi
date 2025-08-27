@@ -45,6 +45,7 @@ topology = (
     )
     .select(sel)
 )
+print(topology.topology())
 #
 run([(l, employees_source), (l, salaries_source)], l, t3, topology)
 #
