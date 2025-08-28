@@ -200,6 +200,11 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         #
         return headers_str_bytes_tuple_list
 
+    #
+
+    def get_id(self):
+        return (self.dir_str, self.config_str)
+
     # Topics
 
     def topics(self, pattern=None, size=False, **kwargs):

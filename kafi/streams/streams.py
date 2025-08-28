@@ -4,6 +4,8 @@ from pydbsp.stream import Stream, StreamHandle
 from pydbsp.stream.operators.bilinear import Incrementalize2
 from pydbsp.zset import ZSet, ZSetAddition
 from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
+
+from asyncio import TaskGroup, Queue, sleep
 import json
 
 class Node:
@@ -108,25 +110,54 @@ def message_dict_list_to_zset(message_dict_list):
 
 #
 
-def run(storage_source_node_tuple_list, sink_storage, sink_topic_str, root_node, **kwargs):
-    topic_str_stream_handle_dict = {source_node.name(): source_node.stream_handle() for _, source_node in storage_source_node_tuple_list}
-    #
-    consumer_dict = {}
+async def run(storage_source_node_tuple_list, sink_storage, sink_topic_str, root_node, **kwargs):
+    storage_source_node_queue_tuple_list = []
     for storage, source_node in storage_source_node_tuple_list:
-        consumer = storage.consumer(source_node.name(), **kwargs)
-        consumer_dict[(storage.dir_str, storage.config_str, source_node.name())] = consumer
+        queue = Queue()
+        storage_source_node_queue_tuple_list.append((storage, source_node, queue))
     #
-    pr = sink_storage.producer(sink_topic_str, **kwargs)
-    for (_, _, topic_str), consumer in consumer_dict.items():
-        message_dict_list = consumer.consume(**kwargs)
-        stream = topic_str_stream_handle_dict[topic_str].get()
-        zset = message_dict_list_to_zset(message_dict_list)
-        stream.send(zset)
-        root_node.step()
-        x = root_node.latest()
-        y = [json.loads(z) for z, i in x.items() if i == 1]
-        for z in y:
-            pr.produce(z["value"], key=z["key"])
+    async def consumer_task(storage, topic_str, queue):
+        consumer = storage.consumer(topic_str, **kwargs)
+        try:
+            while True:
+                message_dict_list = consumer.consume(**kwargs)
+                if message_dict_list != []:
+                    await queue.put(message_dict_list)
+                await sleep(0.1)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            consumer.close()
+    #
+    async def process():
+        producer = sink_storage.producer(sink_topic_str, **kwargs)
+        try:
+            while True:
+                for _, source_node, queue in storage_source_node_queue_tuple_list:
+                    message_dict_list = await queue.get()
+                    zset = message_dict_list_to_zset(message_dict_list)
+                    #
+                    stream = source_node.stream()
+                    stream.send(zset)
+                #
+                root_node.step()
+                #
+                zset = root_node.latest()
+                message_dict_list = [json.loads(message_json_str) for message_json_str, i in zset.items() if i == 1]
+                producer.produce_list(message_dict_list, **kwargs)
+                #
+                await sleep(0.1)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            producer.close()
+    #
+    async with TaskGroup() as taskGroup:
+        for storage, source_node, queue in storage_source_node_queue_tuple_list:
+            topic_str = source_node.name()
+            taskGroup.create_task(consumer_task(storage, topic_str, queue))
+        #
+        taskGroup.create_task(process())
 
 #
 
