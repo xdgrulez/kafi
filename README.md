@@ -451,14 +451,14 @@ c.cp("topic_json", c, "topic_json_avro_copy", target_value_type="avro", target_v
 
 ### Copy + Map (=Map_To)
 
-In the example below, we use a *single message transform*. In our `map_function`, we add 42 the "bla" fields or all messages from the input topic `topic_json` and write the processed messages to the output topic `topic_json_mapped`:
+In the example below, we use a *single message transform*. In our `map_fun`, we add 42 the "bla" fields or all messages from the input topic `topic_json` and write the processed messages to the output topic `topic_json_mapped`:
 
 ```
 def plus_42(x):
   x["value"]["bla"] += 42
   return x
 
-c.cp("topic_json", c, "topic_json_mapped", map_function=plus_42)
+c.cp("topic_json", c, "topic_json_mapped", map_fun=plus_42)
 
 (3, 3)
 ```
@@ -474,7 +474,7 @@ c.cat("topic_json_mapped")
 Of course, all that also works seamlessly with schemas, for example:
 
 ```
-c.cp("topic_protobuf", c, "topic_protobuf_json_mapped", map_function=plus_42, source_value_type="protobuf")
+c.cp("topic_protobuf", c, "topic_protobuf_json_mapped", map_fun=plus_42, source_value_type="protobuf")
 
 (3, 3)
 ```
@@ -490,7 +490,7 @@ def filter_out_456(x):
   else:
     return []
 
-c.cp("topic_json", c, "topic_json_flatmapped", flatmap_function=filter_out_456)
+c.cp("topic_json", c, "topic_json_flatmapped", flatmap_fun=filter_out_456)
 
 (3, 1)
 ```
@@ -616,7 +616,7 @@ Because Kafi is just a Python library integrated into the Python ecosystem, it c
 A typical reoccurring problem is that at the beginning of their development, producers forget to use a proper serializer and the first bunch of messages on dev are not e.g. JSONSchema-serialized. This is how you can find the first N messages in a topic that do not start with the *magic byte* 0:
 
 ```
-c.filter("my_topic", type="bytes", filter_function=lambda x: x["value"][0] != 0)
+c.filter("my_topic", type="bytes", filter_fun=lambda x: x["value"][0] != 0)
 ```
 
 ### Delete Records
@@ -761,7 +761,7 @@ Kafi uses the following defaults/assumptions here. First, for setting up the pro
 * The flush timeout for `flush` calls to the Kafka API is set to the corresponding value `flush.timeout` in the `kafi` section of the configuration file, e.g. `-1.0` in `clusters/local.yaml`.
 * The default key type is set to the corresponding value `key.type` in the `kafi` section of the configuration file, e.g. `str` in `clusters/local.yaml`. It can also be overridden with the `key_type` kwargs parameter.
 * The default value type is set to the corresponding value `value.type` in the `kafi` section of the configuration file, e.g. `json` in `clusters/local.yaml`. It can also be overridden with the `value_type` kwargs parameter.
-* No delivery callback function is called. This can be overridden with the `delivery_function` kwargs parameter.
+* No delivery callback function is called. This can be overridden with the `delivery_fun` kwargs parameter.
 
 Then, for each individual `produce` call:
 * there are no headers (you can add headers using the `headers` kwargs parameter).
@@ -776,7 +776,7 @@ c.produce_batch_size(1000)
 c.flush_timeout(-1.0)
 c.key_type("str")
 c.value_type("json")
-p = c.producer("topic_json", delivery_function=None)
+p = c.producer("topic_json", delivery_fun=None)
 p.produce({"bla": 123}, key="123", headers=None, partition=-1, timestamp=0, flush=False)
 p.produce({"bla": 456}, key="456", headers=None, partition=-1, timestamp=0, flush=False)
 p.produce({"bla": 789}, key="789", headers=None, partition=-1, timestamp=0, flush=False)

@@ -1,3 +1,4 @@
+* catch ctrl-c for functional not only streams
 * do not list internal _topics
 * "string" as an alias for "str"
 * SR: remove custom API calls for missing ones in ck 2.6.x (and check whether 2.7.0+ supports all it should...)

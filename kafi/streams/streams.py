@@ -15,7 +15,7 @@ def source(name):
 
 #
 
-def message_dict_list_to_zset(message_dict_list):
+def message_dict_list_to_ZSet(message_dict_list):
     message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
     zSet = ZSet({k: 1 for k in message_str_list})
     return zSet
@@ -33,7 +33,7 @@ async def streams(storage_source_topologyNode_tuple_list, root_topologyNode, sin
     #
     await streams_fun(storage_source_topologyNode_tuple_list, root_topologyNode, sink_fun, finally_fun, **kwargs)
 
-async def streams_fun(storage_source_topologyNode_tuple_list, root_topologyNode, foreach_function, finally_function, **kwargs):
+async def streams_fun(storage_source_topologyNode_tuple_list, root_topologyNode, foreach_fun, finally_fun, **kwargs):
     consume_sleep_int = kwargs["consume_sleep"] if "consume_sleep" in kwargs else 0.2
     process_sleep_int = kwargs["process_sleep"] if "process_sleep" in kwargs else 0.2
     #
@@ -91,17 +91,17 @@ async def streams_fun(storage_source_topologyNode_tuple_list, root_topologyNode,
                             if offset_int is not None:
                                 storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int + 1
                         #
-                        zset = message_dict_list_to_zset(message_dict_list)
+                        zSet = message_dict_list_to_ZSet(message_dict_list)
                         #
                         stream = source_topologyNode.stream()
-                        stream.send(zset)
+                        stream.send(zSet)
                 #
                 root_topologyNode.step()
                 #
-                zset = root_topologyNode.latest()
-                message_dict_list = [json.loads(message_json_str) for message_json_str, i in zset.items() if i == 1]
+                zSet = root_topologyNode.latest()
+                message_dict_list = [json.loads(message_json_str) for message_json_str, i in zSet.items() if i == 1]
                 #
-                foreach_function(message_dict_list)
+                foreach_fun(message_dict_list)
                 #
                 for storage_id_topic_str_tuple, offsets_dict in storage_id_topic_str_tuple_offsets_dict_dict.items():
                     consumer = storage_id_topic_str_tuple_consumer_dict[storage_id_topic_str_tuple]
@@ -112,7 +112,7 @@ async def streams_fun(storage_source_topologyNode_tuple_list, root_topologyNode,
         except KeyboardInterrupt:
             pass
         finally:
-            finally_function()
+            finally_fun()
     #
     async with TaskGroup() as taskGroup:
         for storage, source_topologyNode, queue in storage_source_topologyNode_queue_tuple_list:

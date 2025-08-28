@@ -23,15 +23,15 @@ root_topologyNode = (
     .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
     .join(
         salaries_source_topologyNode,
-        on_function=lambda message_dict: message_dict["key"],
-        projection_function=proj_fun
+        on_fun=lambda message_dict: message_dict["key"],
+        projection_fun=proj_fun
     )
     .peek(print)
     .map(map_fun)
 )
 
-employee_zset = message_dict_list_to_zset(employee_message_dict_list)
-salary_zset = message_dict_list_to_zset(salary_message_dict_list)
+employee_zset = message_dict_list_to_ZSet(employee_message_dict_list)
+salary_zset = message_dict_list_to_ZSet(salary_message_dict_list)
 employees_source_topologyNode.stream_handle().get().send(employee_zset)
 salaries_source_topologyNode.stream_handle().get().send(salary_zset)
 
@@ -39,5 +39,7 @@ root_topologyNode.step()
 
 print()
 print(f"Topology: {root_topologyNode.topology()}")
+print()
+print(f"Mermaid:\n{root_topologyNode.mermaid()}")
 print()
 print(f"Latest: {root_topologyNode.latest()}")

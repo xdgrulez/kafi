@@ -12,7 +12,7 @@ class KafkaConsumer(StorageConsumer):
 
     #
 
-    def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
+    def foldl(self, foldl_fun, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
         n_int = n
         #
         if n_int == 0:
@@ -24,7 +24,7 @@ class KafkaConsumer(StorageConsumer):
         if n != ALL_MESSAGES and consume_batch_size_int > n_int:
             consume_batch_size_int = n_int
         #
-        break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
+        break_fun = kwargs["break_fun"] if "break_fun" in kwargs else lambda _, _1: False
         #
         topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
         topic_str_offsets_dict_dict = {topic_str: {partition_int: 0 for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}
@@ -52,11 +52,11 @@ class KafkaConsumer(StorageConsumer):
                     if offset_int > end_offsets_dict[partition_int]:
                         continue
                 #
-                if break_function(acc, message_dict):
+                if break_fun(acc, message_dict):
                     break_bool = True
                     break
                 #
-                acc = foldl_function(acc, message_dict)
+                acc = foldl_fun(acc, message_dict)
                 message_counter_int += 1
                 #
                 if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
@@ -80,9 +80,9 @@ class KafkaConsumer(StorageConsumer):
     #
 
     def consume(self, n=ALL_MESSAGES, **kwargs):
-        def foldl_function(message_dict_list, message_dict):
+        def foldl_fun(message_dict_list, message_dict):
             message_dict_list.append(message_dict)
             #
             return message_dict_list
         #
-        return self.foldl(foldl_function, [], n, commit_after_processing=False, **kwargs)
+        return self.foldl(foldl_fun, [], n, commit_after_processing=False, **kwargs)

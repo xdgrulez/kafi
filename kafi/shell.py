@@ -9,8 +9,8 @@ ALL_MESSAGES = -1
 #
 
 class Shell(Functional):
-    def cat(self, topic, n=ALL_MESSAGES, map_function=lambda x: x, **kwargs):
-        (message_dict_list, _) = self.map(topic, map_function, n, **kwargs)
+    def cat(self, topic, n=ALL_MESSAGES, map_fun=lambda x: x, **kwargs):
+        (message_dict_list, _) = self.map(topic, map_fun, n, **kwargs)
         return message_dict_list
 
     def head(self, topic, n=10, **kwargs):
@@ -20,7 +20,7 @@ class Shell(Functional):
         topic_str = topic
         n_int = n
         #
-        def map_function(message_dict):
+        def map_fun(message_dict):
             return message_dict
         #
         partitions_int = self.partitions(topic_str)[topic_str]
@@ -28,21 +28,21 @@ class Shell(Functional):
         offsets_dict = {partition_int: -n_int for partition_int in range(partitions_int)}
         kwargs["offsets"] = offsets_dict
         #
-        (message_dict_list, _) = self.map(topic, map_function, n, **kwargs)
+        (message_dict_list, _) = self.map(topic, map_fun, n, **kwargs)
         return message_dict_list
 
     #
 
-    def cp(self, source_topic, target_storage, target_topic, map_function=lambda x: x, n=ALL_MESSAGES, flatmap_function=None, **kwargs):
-        if flatmap_function is not None:
-            return self.flatmap_to(source_topic, target_storage, target_topic, flatmap_function, n, **kwargs)
+    def cp(self, source_topic, target_storage, target_topic, map_fun=lambda x: x, n=ALL_MESSAGES, flatmap_fun=None, **kwargs):
+        if flatmap_fun is not None:
+            return self.flatmap_to(source_topic, target_storage, target_topic, flatmap_fun, n, **kwargs)
         else:
-            return self.map_to(source_topic, target_storage, target_topic, map_function, n, **kwargs)
+            return self.map_to(source_topic, target_storage, target_topic, map_fun, n, **kwargs)
 
     #
 
     def wc(self, topic, **kwargs):
-        def foldl_function(acc, message_dict):
+        def foldl_fun(acc, message_dict):
             if message_dict["key"] is None:
                 key_str = ""
             else:
@@ -61,15 +61,15 @@ class Shell(Functional):
             acc_num_bytes_int = acc[1] + num_bytes_key_int + num_bytes_value_int
             return (acc_num_words_int, acc_num_bytes_int)
         #
-        ((acc_num_words_int, acc_num_bytes_int), num_messages_int) = self.foldl(topic, foldl_function, (0, 0), **kwargs)
+        ((acc_num_words_int, acc_num_bytes_int), num_messages_int) = self.foldl(topic, foldl_fun, (0, 0), **kwargs)
         return (num_messages_int, acc_num_words_int, acc_num_bytes_int)
 
     #
 
-    def grep_fun(self, topic, match_function, n=ALL_MESSAGES, matches=ALL_MESSAGES, **kwargs):
-        def foldl_function(acc, message_dict):
+    def grep_fun(self, topic, match_fun, n=ALL_MESSAGES, matches=ALL_MESSAGES, **kwargs):
+        def foldl_fun(acc, message_dict):
             (matching_message_dict_acc_list, matches_acc_int) = acc
-            if match_function(message_dict):
+            if match_fun(message_dict):
                 if self.verbose() > 0:
                     partition_int = message_dict["partition"]
                     offset_int = message_dict["offset"]
@@ -85,15 +85,15 @@ class Shell(Functional):
         #
         matches_int = matches
         #
-        ((matching_message_dict_list, _), message_counter_int) = self.foldl(topic, foldl_function, ([], 0), n=n, **kwargs)
+        ((matching_message_dict_list, _), message_counter_int) = self.foldl(topic, foldl_fun, ([], 0), n=n, **kwargs)
         #
         return matching_message_dict_list, len(matching_message_dict_list), message_counter_int
 
     def grep(self, topic, re_pattern_str, n=ALL_MESSAGES, results=ALL_MESSAGES, **kwargs):
-        def match_function(message_dict):
+        def match_fun(message_dict):
             pattern = re.compile(re_pattern_str)
             key_str = str(message_dict["key"])
             value_str = str(message_dict["value"])
             return pattern.match(key_str) is not None or pattern.match(value_str) is not None
         #
-        return self.grep_fun(topic, match_function, n=n, results=results, **kwargs)
+        return self.grep_fun(topic, match_fun, n=n, results=results, **kwargs)

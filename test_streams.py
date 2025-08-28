@@ -47,8 +47,8 @@ root_topologyNode = (
     .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
     .join(
         salaries_source_topologyNode,
-        on_function=lambda message_dict: message_dict["key"],
-        projection_function=proj_fun
+        on_fun=lambda message_dict: message_dict["key"],
+        projection_fun=proj_fun
     )
     # .peek(print)
     .map(map_fun)
