@@ -6,8 +6,8 @@ c = Local("local")
 t1 = "employees"
 t2 = "salaries"
 t3 = "sink"
-c.retouch(t1)
-c.retouch(t2)
+c.retouch(t1, partitions=2)
+c.retouch(t2, partitions=2)
 c.retouch(t3)
 #
 employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
@@ -18,13 +18,17 @@ salary_message_dict_list = [{"key": "2", "value": {"salary": 40000}},
                             {"key": "1", "value": {"salary": 50000}}]
 #
 pr = c.producer(t1)
+partition_int = 0
 for x in employee_message_dict_list:
-    pr.produce(x["value"], key=x["key"])
+    pr.produce(x["value"], key=x["key"], partition=partition_int)
+    partition_int = 1 if partition_int == 0 else 0
 pr.close()
 #
 pr = c.producer(t2)
+partition_int = 0
 for x in salary_message_dict_list:
-    pr.produce(x["value"], key=x["key"])
+    pr.produce(x["value"], key=x["key"], partition=partition_int)
+    partition_int = 1 if partition_int == 0 else 0
 pr.close()
 #
 employees_source_topologyNode = source(t1)
@@ -46,12 +50,16 @@ root_topologyNode = (
         on_function=lambda message_dict: message_dict["key"],
         projection_function=proj_fun
     )
-    .peek(print)
+    # .peek(print)
     .map(map_fun)
 )
 print(root_topologyNode.topology())
 #
 async def test():
+    print(c.cat(t1))
+    print(c.cat(t2))
+    print()
+
     def run():
         asyncio.run(streams([(c, employees_source_topologyNode), (c, salaries_source_topologyNode)], root_topologyNode, c, t3))
     #
@@ -61,8 +69,10 @@ async def test():
     #
     await asyncio.sleep(8)
     #
+    print()
     print(c.l())
     print(c.cat(t3))
+    print()
     #
     pr = c.producer(t2)
     pr.produce({"salary": 100000}, key="0")
@@ -70,6 +80,7 @@ async def test():
     #
     await asyncio.sleep(2)
     #
+    print()
     print(c.l())
     print(c.cat(t3))
 #
