@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from kafi.kafi import *
 # c = Cluster("local")
 c = Local("local")
@@ -8,7 +9,6 @@ t3 = "sink"
 c.retouch(t1)
 c.retouch(t2)
 c.retouch(t3)
-print(c.l())
 #
 employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
                             {"key": "1", "value": {"name": "mark"}},
@@ -30,28 +30,47 @@ pr.close()
 employees_source = source(t1)
 salaries_source = source(t2)
 #
-def sel(message_dict):
+def map_fun(message_dict):
     message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
     return message_dict
 
-def proj(_, left_message_dict, right_message_dict):
+def proj_fun(_, left_message_dict, right_message_dict):
     left_message_dict["value"].update(right_message_dict["value"])
     return left_message_dict
 
 topology = (
     employees_source
-    .where(lambda message_dict: message_dict["value"]["name"] != "mark")
+    .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
     .join(
         salaries_source,
-        on=lambda message_dict: message_dict["key"],
-        projection=proj
+        on_function=lambda message_dict: message_dict["key"],
+        projection_function=proj_fun
     )
-    .select(sel)
+    .peek(print)
+    .map(map_fun)
 )
 print(topology.topology())
 #
-async def start():
-    await run([(c, employees_source), (c, salaries_source)], c, t3, topology)
-asyncio.run(start())
+async def test():
+    def run():
+        asyncio.run(streams([(c, employees_source), (c, salaries_source)], topology, c, t3))
+    #
+    thread = threading.Thread(target=run)
+    thread.daemon = True
+    thread.start()
+    #
+    await asyncio.sleep(8)
+    #
+    print(c.l())
+    print(c.cat(t3))
+    #
+    pr = c.producer(t2)
+    pr.produce({"salary": 100000}, key="0")
+    pr.close()
+    #
+    await asyncio.sleep(2)
+    #
+    print(c.l())
+    print(c.cat(t3))
 #
-print(c.cat(t3))
+asyncio.run(test())
