@@ -65,9 +65,6 @@ class TestSingleStorageBase(unittest.TestCase):
         self.nested_json_str_list = [{"state": "Florida", "shortname": "FL", "info": {"governor": "Rick Scott"}, "counties": [{"name": "Dade", "population": 12345}, {"name": "Broward", "population": 40000}, {"name": "Palm Beach", "population": 60000}]}, {"state": "Ohio", "shortname": "OH", "info": {"governor": "John Kasich"}, "counties": [{"name": "Summit", "population": 1234}, {"name": "Cuyahoga", "population": 1337}]}]
         #
         self.snack_countries_str_list = ['{"snack_name": "timtam", "country": "Australia"}', '{"snack_name": "cookie", "country": "US"}']
-        self.snack_inner_join_dict_list = [{"name": "cookie", "calories": 500.0, "colour": "brown", "snack_name": "cookie", "country": "US"}, {"name": "timtam", "calories": 80.0, "colour": "chocolate", "snack_name": "timtam", "country": "Australia"}]
-        self.snack_left_join_dict_list = [{"name": "cookie", "calories": 500.0, "colour": "brown"}, {"name": "cake", "calories": 260.0, "colour": "white"}, {"name": "cookie", "calories": 500.0, "colour": "brown", "snack_name": "cookie", "country": "US"}, {"name": "timtam", "calories": 80.0, "colour": "chocolate", "snack_name": "timtam", "country": "Australia"}]
-        self.snack_right_join_dict_list = [{'snack_name': 'timtam', 'country': 'Australia'}, {'snack_name': 'cookie', 'country': 'US'}, {'name': 'timtam', 'calories': 80.0, 'colour': 'chocolate', 'snack_name': 'timtam', 'country': 'Australia'}]
         #
         self.topic_str_list = []
         self.group_str_list = []
@@ -1178,51 +1175,6 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(3, num_messages_int)
         self.assertEqual(18, acc_num_words_int)
         self.assertEqual(169, acc_num_bytes_int)
-
-    # Shell.diff -> Shell.diff_fun -> Functional.zipfoldl -> ClusterConsumer.consumer/read/close
-    def test_diff(self):
-        if self.__class__.__name__ == "TestSingleStorageBase":
-            return
-        #
-        s = self.get_storage()
-        #
-        topic_str1 = self.create_test_topic_name()
-        s.create(topic_str1)
-        w1 = s.producer(topic_str1, value_type="json")
-        w1.produce(self.value_snack_str_list)
-        w1.close()
-        #
-        topic_str2 = self.create_test_topic_name()
-        s.create(topic_str2)
-        w2 = s.producer(topic_str2, value_type="json")
-        w2.produce(self.value_snack_ish_dict_list)
-        w2.close()
-        #
-        group_str1 = self.create_test_group_name()
-        group_str2 = self.create_test_group_name()
-        (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = s.diff(topic_str1, s, topic_str2, source1_group=group_str1, source2_group=group_str2, source1_type="json", source2_type="json", n=3)
-        self.assertEqual(3, len(message_dict_message_dict_tuple_list))
-        self.assertEqual(3, message_counter_int1)
-        self.assertEqual(3, message_counter_int2)
-
-    # Shell.diff -> Shell.diff_fun -> Functional.flatmap -> Functional.foldl -> ClusterConsumer.open/Kafka.foldl/ClusterConsumer.close -> ClusterConsumer.consume 
-    def test_grep(self):
-        if self.__class__.__name__ == "TestSingleStorageBase":
-            return
-        #
-        s = self.get_storage()
-        #
-        topic_str = self.create_test_topic_name()
-        s.create(topic_str)
-        producer = s.producer(topic_str, value_type="json")
-        producer.produce(self.value_snack_str_list)
-        producer.close()
-        #
-        group_str = self.create_test_group_name()
-        (message_dict_message_dict_tuple_list, message_counter_int1, message_counter_int2) = s.grep(topic_str, ".*brown.*", group=group_str, type="json", n=3)
-        self.assertEqual(1, len(message_dict_message_dict_tuple_list))
-        self.assertEqual(1, message_counter_int1)
-        self.assertEqual(3, message_counter_int2)
     
     # Functional
 
@@ -1651,103 +1603,6 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         partitions_int2 = s.partitions(topic_str)[topic_str]
         self.assertEqual(2, partitions_int2)
-
-    def test_join(self):
-        if self.__class__.__name__ == "TestSingleStorageBase":
-            return
-        #
-        s = self.get_storage()
-        # print(s.enable_auto_commit()) # Default: False
-        # print(s.commit_after_processing()) # Default: True
-        # #
-        topic_str1 = self.create_test_topic_name()
-        s.create(topic_str1)
-        producer = s.producer(topic_str1, type="json")
-        producer.produce(self.value_snack_str_list)
-        producer.close()
-        #
-        topic_str2 = self.create_test_topic_name()
-        s.create(topic_str2)
-        producer = s.producer(topic_str2, type="json")
-        producer.produce(self.snack_countries_str_list)
-        producer.close()
-        #
-        def get_key_function1(message_dict):
-            return message_dict["value"]["name"]
-        #
-        def get_key_function2(message_dict):
-            return message_dict["value"]["snack_name"]
-        #
-        def projection_function(message_dict1, message_dict2):
-            message_dict = dict(message_dict1)
-            message_dict["value"] = message_dict1["value"] | message_dict2["value"]
-            return message_dict
-        #
-        # inner join
-        #
-        topic_str3 = self.create_test_topic_name()
-        s.create(topic_str3)
-        #
-        group_str1 = self.create_test_group_name()
-        group_str2 = self.create_test_group_name()
-        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str3, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="inner", source1_group=group_str1, source2_group=group_str2, type="json")
-        self.assertEqual(3, n_int1)
-        self.assertEqual(2, n_int2)
-        self.assertEqual(2, n_int3)
-        #
-        group_str3 = self.create_test_group_name()
-        message_dict_list1 = s.cat(topic_str3, group=group_str3, type="json")
-        self.assertEqual(self.snack_inner_join_dict_list, [message_dict["value"] for message_dict in message_dict_list1])
-        # print(f"topic1: {s.group_offsets(group_str1)[group_str1][topic_str1]}, topic2: {s.group_offsets(group_str1)[group_str1][topic_str1]}")
-        #
-        # left join
-        #
-        topic_str4 = self.create_test_topic_name()
-        s.create(topic_str4)
-        #
-        group_str1 = self.create_test_group_name()
-        group_str2 = self.create_test_group_name()
-        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str4, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="left", source1_group=group_str1, source2_group=group_str2, type="json")
-        self.assertEqual(3, n_int1)
-        self.assertEqual(2, n_int2)
-        self.assertEqual(4, n_int3)
-        #
-        group_str3 = self.create_test_group_name()
-        message_dict_list2 = s.cat(topic_str4, group=group_str3, type="json")
-        self.assertEqual(self.snack_left_join_dict_list, [message_dict["value"] for message_dict in message_dict_list2])
-        # print(f"topic1: {s.group_offsets(group_str1)[group_str1][topic_str1]}, topic2: {s.group_offsets(group_str1)[group_str1][topic_str1]}")
-        #
-        # right join (1. join="right")
-        #
-        topic_str5 = self.create_test_topic_name()
-        s.create(topic_str5)
-        #
-        group_str1 = self.create_test_group_name()
-        group_str2 = self.create_test_group_name()
-        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str1, s, topic_str2, s, topic_str5, get_key_function1=get_key_function1, get_key_function2=get_key_function2, projection_function=projection_function, join="right", source1_group=group_str1, source2_group=group_str2, type="json")
-        self.assertEqual(3, n_int1)
-        self.assertEqual(2, n_int2)
-        self.assertEqual(3, n_int3)
-        #
-        group_str3 = self.create_test_group_name()
-        message_dict_list3 = s.cat(topic_str5, group=group_str3, type="json")
-        self.assertEqual(self.snack_right_join_dict_list, [message_dict["value"] for message_dict in message_dict_list3])
-        #
-        # right join (2. join="left" + swapped arguments)
-        #
-        topic_str6 = self.create_test_topic_name()
-        s.create(topic_str6)
-        #
-        group_str1 = self.create_test_group_name()
-        group_str2 = self.create_test_group_name()
-        (_, n_int1, n_int2, n_int3) = s.join_to(topic_str2, s, topic_str1, s, topic_str6, get_key_function1=get_key_function2, get_key_function2=get_key_function1, projection_function=projection_function, join="left", source1_group=group_str1, source2_group=group_str2, type="json")
-        self.assertEqual(2, n_int1)
-        self.assertEqual(3, n_int2)
-        self.assertEqual(3, n_int3)
-        #
-        group_str3 = self.create_test_group_name()
-        message_dict_list3 = s.cat(topic_str6, group=group_str3, type="json")
-        self.assertEqual(self.snack_right_join_dict_list, [message_dict["value"] for message_dict in message_dict_list3])
 
     def test_cp_group_offsets(self):
         if self.__class__.__name__ == "TestSingleStorageBase":

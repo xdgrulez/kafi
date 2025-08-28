@@ -66,29 +66,6 @@ class Shell(Functional):
 
     #
 
-    def diff_fun(self, topic1, storage2, topic2, diff_function, n=ALL_MESSAGES, **kwargs):
-        def zip_foldl_function(acc, message_dict1, message_dict2):
-            if diff_function(message_dict1, message_dict2):
-                acc += [(message_dict1, message_dict2)]
-                #
-                if self.verbose() > 0:
-                    partition_int1 = message_dict1["partition"]
-                    offset_int1 = message_dict1["offset"]
-                    partition_int2 = message_dict2["partition"]
-                    offset_int2 = message_dict2["offset"]
-                    print(f"Found differing messages on 1) partition {partition_int1}, offset {offset_int1} and 2) partition {partition_int2}, offset {offset_int2}.")
-                #
-            return acc
-        #
-        return self.zip_foldl(topic1, storage2, topic2, zip_foldl_function, [], n=n, **kwargs)
-    
-    def diff(self, topic1, storage2, topic2, n=ALL_MESSAGES, **kwargs):
-        def diff_function(message_dict1, message_dict2):
-            return message_dict1["key"] != message_dict2["key"] or message_dict1["value"] != message_dict2["value"]
-        return self.diff_fun(topic1, storage2, topic2, diff_function, n=n, **kwargs)
-
-    #
-
     def grep_fun(self, topic, match_function, n=ALL_MESSAGES, matches=ALL_MESSAGES, **kwargs):
         def foldl_function(acc, message_dict):
             (matching_message_dict_acc_list, matches_acc_int) = acc
@@ -120,6 +97,3 @@ class Shell(Functional):
             return pattern.match(key_str) is not None or pattern.match(value_str) is not None
         #
         return self.grep_fun(topic, match_function, n=n, results=results, **kwargs)
-
-    def stat(self, topic, **kwargs):
-        return self.cat(topic, **kwargs)[1]

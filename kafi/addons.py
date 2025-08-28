@@ -53,63 +53,6 @@ class AddOns(Functional):
 
     #
 
-    def join_to(self, source_topic1, source_storage2, source_topic2, target_storage, target_topic, get_key_function1=lambda x: x["key"], get_key_function2=lambda x: x["key"], projection_function=default_projection_function, join="left", n=ALL_MESSAGES, **kwargs):
-        join_str = join
-        #
-        if join_str not in ["inner", "left", "right"]:
-            raise Exception("Only \"inner\", \"left\" and \"right\" supported.")
-        #
-        def zip_foldl_to_function(acc, message_dict1, message_dict2):
-            # print(message_dict1["value"])
-            # print(message_dict2["value"])
-            # print("===")
-            (index_dict1, index_dict2) = acc
-            #
-            key1 = get_key_function1(message_dict1)
-            key2 = get_key_function2(message_dict2)
-            # DBSP: L join R = deltaL join deltaR + deltaL join R + L join deltaR
-            out_message_dict_list = []
-            # 1. deltaL join deltaR
-            if key1 == key2:
-                # Match in deltaL join deltaR.
-                out_message_dict_list.append(projection_function(message_dict1, message_dict2))
-            else:
-                # 2. deltaL join R
-                if key1 in index_dict2:
-                    # Match in deltaL join R.
-                    out_message_dict_list.append(projection_function(message_dict1, index_dict2[key1]))
-                else:
-                    # Could not find key1 in index_dict2.
-                    # Only append to the output if the join type is "left"
-                    if join_str == "left":
-                        out_message_dict_list.append(message_dict1)
-                # 3. L join deltaR
-                if key2 in index_dict1:
-                    # Match in L join deltaR
-                    out_message_dict_list.append(projection_function(index_dict1[key2], message_dict2))
-                else:
-                    # Could not find key2 in index_dict1.
-                    # Only append to the output if the join type is "right"
-                    if join_str == "right":
-                        out_message_dict_list.append(message_dict2)
-            # Depending on the join type, persist:
-            # * both sides (inner)
-            # * the left side (left)
-            # * the right side (right)
-            if join_str == "inner":
-                index_dict1[key1] = message_dict1
-                index_dict2[key2] = message_dict2
-            elif join_str == "left":
-                index_dict1[key1] = message_dict1
-            elif join_str == "right":
-                index_dict1[key2] = message_dict2
-            #
-            return ((index_dict1, index_dict2), list(out_message_dict_list))
-
-        return self.zip_foldl_to(source_topic1, source_storage2, source_topic2, target_storage, target_topic, zip_foldl_to_function, ({}, {}), n=n, **kwargs)
-
-    #
-
     def repeat(self, topic_str, n=1, **kwargs):
         n_int = n
         #
