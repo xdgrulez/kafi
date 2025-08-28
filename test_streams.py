@@ -1,11 +1,14 @@
+import asyncio
 from kafi.kafi import *
-l = Local("local")
+# c = Cluster("local")
+c = Local("local")
 t1 = "employees"
 t2 = "salaries"
 t3 = "sink"
-l.retouch(t1)
-l.retouch(t2)
-l.retouch(t3)
+c.retouch(t1)
+c.retouch(t2)
+c.retouch(t3)
+print(c.l())
 #
 employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
                             {"key": "1", "value": {"name": "mark"}},
@@ -14,12 +17,12 @@ salary_message_dict_list = [{"key": "2", "value": {"salary": 40000}},
                             {"key": "0", "value": {"salary": 38750}},
                             {"key": "1", "value": {"salary": 50000}}]
 #
-pr = l.producer(t1)
+pr = c.producer(t1)
 for x in employee_message_dict_list:
     pr.produce(x["value"], key=x["key"])
 pr.close()
 #
-pr = l.producer(t2)
+pr = c.producer(t2)
 for x in salary_message_dict_list:
     pr.produce(x["value"], key=x["key"])
 pr.close()
@@ -47,6 +50,8 @@ topology = (
 )
 print(topology.topology())
 #
-run([(l, employees_source), (l, salaries_source)], l, t3, topology)
+async def start():
+    await run([(c, employees_source), (c, salaries_source)], c, t3, topology)
+asyncio.run(start())
 #
-print(l.cat(t3))
+print(c.cat(t3))
