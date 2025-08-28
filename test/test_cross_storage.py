@@ -583,7 +583,7 @@ def test_cp(test_obj, storage1, storage2):
 
     group_str5 = test_obj.create_test_group_name(storage1)
     produce_batch_size_int3 = random.randint(1, 3*3)
-    (consume_n_int3, written_n_int3) = storage1.cp(topic_str3, storage2, topic_str5, group=group_str5, source_type=type_str, target_type="json", produce_batch_size=produce_batch_size_int3, map_function=map_ish, n=3*3)
+    (consume_n_int3, written_n_int3) = storage1.cp(topic_str3, storage2, topic_str5, group=group_str5, source_type=type_str, target_type="json", produce_batch_size=produce_batch_size_int3, map_fun=map_ish, n=3*3)
     #
     test_obj.assertEqual(3*3, consume_n_int3)
     test_obj.assertEqual(3*3, written_n_int3)

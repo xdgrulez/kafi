@@ -777,7 +777,7 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(n_int1, 3)
         #
         self.counter_int = 0
-        def map_function(message_dict):
+        def map_fun(message_dict):
             if self.counter_int == 2:
                 self.counter_int += 1
                 raise Exception("Error...")
@@ -791,7 +791,7 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str1 = self.create_test_group_name()
         #
         try:
-            s.cp(topic_str1, s, topic_str2, group=group_str1, n=3, map_function=map_function, value_type="str", consume_batch_size=1, produce_batch_size=1)
+            s.cp(topic_str1, s, topic_str2, group=group_str1, n=3, map_fun=map_fun, value_type="str", consume_batch_size=1, produce_batch_size=1)
         except Exception:
             pass
         #
@@ -1142,7 +1142,7 @@ class TestSingleStorageBase(unittest.TestCase):
             return message_dict
         #
         group_str1 = self.create_test_group_name()
-        (consume_n_int, written_n_int) = s.cp(topic_str1, s, topic_str2, group=group_str1, source_type="json", target_type="json", produce_batch_size=2, map_function=map_ish, n=3)
+        (consume_n_int, written_n_int) = s.cp(topic_str1, s, topic_str2, group=group_str1, source_type="json", target_type="json", produce_batch_size=2, map_fun=map_ish, n=3)
         self.assertEqual(3, consume_n_int)
         self.assertEqual(3, written_n_int)
         #
@@ -1161,7 +1161,7 @@ class TestSingleStorageBase(unittest.TestCase):
             return [message_dict]
         #
         group_str2 = self.create_test_group_name()
-        (consume_n_int1, written_n_int1) = s.cp(topic_str1, s, topic_str3, group=group_str2, source_type="json", target_type="json", consume_batch_size=3, flatmap_function=flatmap_ish, n=7)
+        (consume_n_int1, written_n_int1) = s.cp(topic_str1, s, topic_str3, group=group_str2, source_type="json", target_type="json", consume_batch_size=3, flatmap_fun=flatmap_ish, n=7)
         self.assertEqual(7, consume_n_int1)
         self.assertEqual(7, written_n_int1)
 
@@ -1199,7 +1199,7 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         colour_str_list = []
         group_str = self.create_test_group_name()
-        s.foreach(topic_str, group=group_str, foreach_function=lambda message_dict: colour_str_list.append(message_dict["value"]["colour"]), type="json")
+        s.foreach(topic_str, group=group_str, foreach_fun=lambda message_dict: colour_str_list.append(message_dict["value"]["colour"]), type="json")
         self.assertEqual("brown", colour_str_list[0])
         self.assertEqual("white", colour_str_list[1])
         self.assertEqual("chocolate", colour_str_list[2])
@@ -1217,7 +1217,7 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str = self.create_test_group_name()
-        (message_dict_list, message_counter_int) = s.filter(topic_str, group=group_str, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, type="json")
+        (message_dict_list, message_counter_int) = s.filter(topic_str, group=group_str, filter_fun=lambda message_dict: message_dict["value"]["calories"] > 100, type="json")
         self.assertEqual(2, len(message_dict_list))
         self.assertEqual(3, message_counter_int)
 
@@ -1237,7 +1237,7 @@ class TestSingleStorageBase(unittest.TestCase):
         s.create(topic_str2)
         #
         group_str1 = self.create_test_group_name()
-        (consume_n_int, written_n_int) = s.filter_to(topic_str1, s, topic_str2, group=group_str1, filter_function=lambda message_dict: message_dict["value"]["calories"] > 100, source_type="json", target_type="json")
+        (consume_n_int, written_n_int) = s.filter_to(topic_str1, s, topic_str2, group=group_str1, filter_fun=lambda message_dict: message_dict["value"]["calories"] > 100, source_type="json", target_type="json")
         self.assertEqual(3, consume_n_int)
         self.assertEqual(2, written_n_int)
         #
