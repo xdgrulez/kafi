@@ -27,8 +27,8 @@ for x in salary_message_dict_list:
     pr.produce(x["value"], key=x["key"])
 pr.close()
 #
-employees_source = source(t1)
-salaries_source = source(t2)
+employees_source_topologyNode = source(t1)
+salaries_source_topologyNode = source(t2)
 #
 def map_fun(message_dict):
     message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
@@ -38,22 +38,22 @@ def proj_fun(_, left_message_dict, right_message_dict):
     left_message_dict["value"].update(right_message_dict["value"])
     return left_message_dict
 
-topology = (
-    employees_source
+root_topologyNode = (
+    employees_source_topologyNode
     .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
     .join(
-        salaries_source,
+        salaries_source_topologyNode,
         on_function=lambda message_dict: message_dict["key"],
         projection_function=proj_fun
     )
     .peek(print)
     .map(map_fun)
 )
-print(topology.topology())
+print(root_topologyNode.topology())
 #
 async def test():
     def run():
-        asyncio.run(streams([(c, employees_source), (c, salaries_source)], topology, c, t3))
+        asyncio.run(streams([(c, employees_source_topologyNode), (c, salaries_source_topologyNode)], root_topologyNode, c, t3))
     #
     thread = threading.Thread(target=run)
     thread.daemon = True
