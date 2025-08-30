@@ -25,15 +25,15 @@ def message_dict_list_to_ZSet(message_dict_list):
 async def streams(storage_source_topologyNode_tuple_list, root_topologyNode, sink_storage, sink_topic_str, **kwargs):
     producer = sink_storage.producer(sink_topic_str, **kwargs)
     #
-    def sink_fun(message_dict_list):
+    def sink_function(message_dict_list):
         producer.produce_list(message_dict_list, **kwargs)
     #
-    def finally_fun():
+    def finally_function():
         producer.close()
     #
-    await streams_fun(storage_source_topologyNode_tuple_list, root_topologyNode, sink_fun, finally_fun, **kwargs)
+    await streams_function(storage_source_topologyNode_tuple_list, root_topologyNode, sink_function, finally_function, **kwargs)
 
-async def streams_fun(storage_source_topologyNode_tuple_list, root_topologyNode, foreach_fun, finally_fun, **kwargs):
+async def streams_function(storage_source_topologyNode_tuple_list, root_topologyNode, foreach_function, finally_function, **kwargs):
     consume_sleep_int = kwargs["consume_sleep"] if "consume_sleep" in kwargs else 0.2
     process_sleep_int = kwargs["process_sleep"] if "process_sleep" in kwargs else 0.2
     #
@@ -101,7 +101,7 @@ async def streams_fun(storage_source_topologyNode_tuple_list, root_topologyNode,
                 zSet = root_topologyNode.latest()
                 message_dict_list = [json.loads(message_json_str) for message_json_str, i in zSet.items() if i == 1]
                 #
-                foreach_fun(message_dict_list)
+                foreach_function(message_dict_list)
                 #
                 for storage_id_topic_str_tuple, offsets_dict in storage_id_topic_str_tuple_offsets_dict_dict.items():
                     consumer = storage_id_topic_str_tuple_consumer_dict[storage_id_topic_str_tuple]
@@ -112,7 +112,7 @@ async def streams_fun(storage_source_topologyNode_tuple_list, root_topologyNode,
         except KeyboardInterrupt:
             pass
         finally:
-            finally_fun()
+            finally_function()
     #
     async with TaskGroup() as taskGroup:
         for storage, source_topologyNode, queue in storage_source_topologyNode_queue_tuple_list:

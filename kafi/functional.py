@@ -8,17 +8,17 @@ ALL_MESSAGES = -1
 #
 
 class Functional:
-    def foldl(self, topic, foldl_fun, initial_acc, n=ALL_MESSAGES, **kwargs):
+    def foldl(self, topic, foldl_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         verbose_int = self.verbose()
         #
         progress_num_messages_int = self.progress_num_messages()
         #
         consumer = self.consumer(topic, **kwargs)
         #
-        def foldl_fun1(acc_consume_message_counter_int_tuple, message_dict):
+        def foldl_function1(acc_consume_message_counter_int_tuple, message_dict):
             (acc, consume_message_counter_int) = acc_consume_message_counter_int_tuple
             #
-            acc = foldl_fun(acc, message_dict)
+            acc = foldl_function(acc, message_dict)
             #
             consume_message_counter_int += 1
             if verbose_int > 0 and consume_message_counter_int % progress_num_messages_int == 0:
@@ -26,7 +26,7 @@ class Functional:
             #
             return (acc, consume_message_counter_int)
         #
-        acc_consume_message_counter_int_tuple = consumer.foldl(foldl_fun1, (initial_acc, 0), n, **kwargs)
+        acc_consume_message_counter_int_tuple = consumer.foldl(foldl_function1, (initial_acc, 0), n, **kwargs)
         #
         consumer.close()
         #
@@ -34,44 +34,44 @@ class Functional:
 
     #
 
-    def flatmap(self, topic, flatmap_fun, n=ALL_MESSAGES, **kwargs):
-        def foldl_fun(list, message_dict):
-            list += flatmap_fun(message_dict)
+    def flatmap(self, topic, flatmap_function, n=ALL_MESSAGES, **kwargs):
+        def foldl_function(list, message_dict):
+            list += flatmap_function(message_dict)
             #
             return list
         #
-        return self.foldl(topic, foldl_fun, [], n, **kwargs)
+        return self.foldl(topic, foldl_function, [], n, **kwargs)
 
-    def map(self, topic, map_fun, n=ALL_MESSAGES, **kwargs):
-        def flatmap_fun(message_dict):
-            return [map_fun(message_dict)]
+    def map(self, topic, map_function, n=ALL_MESSAGES, **kwargs):
+        def flatmap_function(message_dict):
+            return [map_function(message_dict)]
         #
-        return self.flatmap(topic, flatmap_fun, n, **kwargs)
+        return self.flatmap(topic, flatmap_function, n, **kwargs)
 
-    def filter(self, topic, filter_fun, n=ALL_MESSAGES, **kwargs):
-        def flatmap_fun(message_dict):
-            return [message_dict] if filter_fun(message_dict) else []
+    def filter(self, topic, filter_function, n=ALL_MESSAGES, **kwargs):
+        def flatmap_function(message_dict):
+            return [message_dict] if filter_function(message_dict) else []
         #
-        return self.flatmap(topic, flatmap_fun, n, **kwargs)
+        return self.flatmap(topic, flatmap_function, n, **kwargs)
 
-    def foreach(self, topic, foreach_fun, n=ALL_MESSAGES, **kwargs):
-        def foldl_fun(_, message_dict):
-            foreach_fun(message_dict)
+    def foreach(self, topic, foreach_function, n=ALL_MESSAGES, **kwargs):
+        def foldl_function(_, message_dict):
+            foreach_function(message_dict)
         #
-        self.foldl(topic, foldl_fun, None, n, **kwargs)
+        self.foldl(topic, foldl_function, None, n, **kwargs)
 
     #
 
-    def foldl_to(self, topic, target_storage, target_topic, foldl_to_fun, initial_acc, n=ALL_MESSAGES, **kwargs):
+    def foldl_to(self, topic, target_storage, target_topic, foldl_to_function, initial_acc, n=ALL_MESSAGES, **kwargs):
         verbose_int = self.verbose()
         #
         progress_num_messages_int = self.progress_num_messages()
         #
 
-        def foldl_to_fun1(acc_consume_message_counter_int_produce_batch_size_int_produce_batch_message_dict_list_produce_message_counter_int_tuple, message_dict):
+        def foldl_to_function1(acc_consume_message_counter_int_produce_batch_size_int_produce_batch_message_dict_list_produce_message_counter_int_tuple, message_dict):
             (acc, consume_message_counter_int, produce_batch_size_int, produce_batch_message_dict_list, produce_message_counter_int) = acc_consume_message_counter_int_produce_batch_size_int_produce_batch_message_dict_list_produce_message_counter_int_tuple
             #
-            (acc, message_dict_list) = foldl_to_fun(acc, message_dict)
+            (acc, message_dict_list) = foldl_to_function(acc, message_dict)
             #
             consume_message_counter_int += 1
             if verbose_int > 0 and consume_message_counter_int % progress_num_messages_int == 0:
@@ -101,7 +101,7 @@ class Functional:
         #
         target_producer = target_storage.producer(target_topic, **target_kwargs)
         #
-        (acc, consume_message_counter_int, _, produce_batch_message_dict_list, produce_message_counter_int) = consumer.foldl(foldl_to_fun1, (initial_acc, 0, produce_batch_size_int, [], 0), n, **kwargs)
+        (acc, consume_message_counter_int, _, produce_batch_message_dict_list, produce_message_counter_int) = consumer.foldl(foldl_to_function1, (initial_acc, 0, produce_batch_size_int, [], 0), n, **kwargs)
         #
         consumer.close()
         #
@@ -113,24 +113,24 @@ class Functional:
         #
         return (acc, consume_message_counter_int, produce_message_counter_int)
 
-    def flatmap_to(self, topic, target_storage, target_topic, flatmap_fun, n=ALL_MESSAGES, **kwargs):
-        def foldl_to_fun(_, message_dict):
-            return (None, flatmap_fun(message_dict))
+    def flatmap_to(self, topic, target_storage, target_topic, flatmap_function, n=ALL_MESSAGES, **kwargs):
+        def foldl_to_function(_, message_dict):
+            return (None, flatmap_function(message_dict))
         #
-        (_, consume_message_counter_int, produce_message_counter_int) = self.foldl_to(topic, target_storage, target_topic, foldl_to_fun, None, n, **kwargs)
+        (_, consume_message_counter_int, produce_message_counter_int) = self.foldl_to(topic, target_storage, target_topic, foldl_to_function, None, n, **kwargs)
         return (consume_message_counter_int, produce_message_counter_int)
 
-    def map_to(self, topic, target_storage, target_topic, map_fun, n=ALL_MESSAGES, **kwargs):
-        def flatmap_fun(message_dict):
-            return [map_fun(message_dict)]
+    def map_to(self, topic, target_storage, target_topic, map_function, n=ALL_MESSAGES, **kwargs):
+        def flatmap_function(message_dict):
+            return [map_function(message_dict)]
         #
-        return self.flatmap_to(topic, target_storage, target_topic, flatmap_fun, n, **kwargs)
+        return self.flatmap_to(topic, target_storage, target_topic, flatmap_function, n, **kwargs)
 
-    def filter_to(self, topic, target_storage, target_topic, filter_fun, n=ALL_MESSAGES, **kwargs):
-        def flatmap_fun(message_dict):
-            return [message_dict] if filter_fun(message_dict) else []
+    def filter_to(self, topic, target_storage, target_topic, filter_function, n=ALL_MESSAGES, **kwargs):
+        def flatmap_function(message_dict):
+            return [message_dict] if filter_function(message_dict) else []
         #
-        return self.flatmap_to(topic, target_storage, target_topic, flatmap_fun, n, **kwargs)
+        return self.flatmap_to(topic, target_storage, target_topic, flatmap_function, n, **kwargs)
 
     #
 

@@ -37,7 +37,7 @@ class FSConsumer(StorageConsumer):
 
     #
   
-    def foldl(self, foldl_fun, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
+    def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
         n_int = n
         #
         commit_after_processing_bool = self.storage_obj.commit_after_processing() if commit_after_processing is None else commit_after_processing
@@ -127,7 +127,7 @@ class FSConsumer(StorageConsumer):
                             continue
                     #
                     if offset_int >= start_offsets_dict[partition_int]:
-                        acc = foldl_fun(acc, message_dict)
+                        acc = foldl_function(acc, message_dict)
                         #
                         message_counter_int += 1
                         #
@@ -149,12 +149,12 @@ class FSConsumer(StorageConsumer):
     #
 
     def consume(self, n=ALL_MESSAGES):
-        def foldl_fun(message_dict_list, message_dict):
+        def foldl_function(message_dict_list, message_dict):
             message_dict_list.append(message_dict)
             #
             return message_dict_list
         #
-        return self.foldl(foldl_fun, [], n)
+        return self.foldl(foldl_function, [], n)
 
     def offsets(self):
         group_str_topic_str_offsets_dict_dict_dict = self.storage_obj.admin.group_offsets(self.group_str)

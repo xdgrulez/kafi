@@ -34,11 +34,11 @@ pr.close()
 employees_source_topologyNode = source(t1)
 salaries_source_topologyNode = source(t2)
 #
-def map_fun(message_dict):
+def map_function(message_dict):
     message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
     return message_dict
 
-def proj_fun(_, left_message_dict, right_message_dict):
+def proj_function(_, left_message_dict, right_message_dict):
     left_message_dict["value"].update(right_message_dict["value"])
     return left_message_dict
 
@@ -47,11 +47,11 @@ root_topologyNode = (
     .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
     .join(
         salaries_source_topologyNode,
-        on_fun=lambda message_dict: message_dict["key"],
-        projection_fun=proj_fun
+        on_function=lambda message_dict: message_dict["key"],
+        projection_function=proj_function
     )
     # .peek(print)
-    .map(map_fun)
+    .map(map_function)
 )
 print(root_topologyNode.topology())
 #
