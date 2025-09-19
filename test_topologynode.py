@@ -1,3 +1,5 @@
+import pickle
+
 from kafi.streams.streams import *
 
 def map_function(message_dict):
@@ -20,7 +22,7 @@ def setup():
             on_function=lambda message_dict: message_dict["key"],
             projection_function=proj_function
         )
-        .peek(print)
+        # .peek(print)
         .map(map_function)
     )
     #
@@ -49,21 +51,14 @@ print(f"Mermaid:\n{root_topologyNode.mermaid()}")
 print()
 print(f"Latest: {root_topologyNode.latest()}")
 
-state_dict = root_topologyNode.get_state()
-# print(state_dict)
-
 #
-
-employees_source_topologyNode1, salaries_source_topologyNode1, root_topologyNode1 = setup()
-
-root_topologyNode1.set_state(state_dict)
 
 salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
 salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 
-salaries_source_topologyNode1.stream_handle().get().send(salary_zset1)
+salaries_source_topologyNode.stream_handle().get().send(salary_zset1)
 
-root_topologyNode1.step()
+root_topologyNode.step()
 
 print()
-print(f"Latest: {root_topologyNode1.latest()}")
+print(f"Latest: {root_topologyNode.latest()}")

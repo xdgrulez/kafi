@@ -1,19 +1,24 @@
 from pydbsp.indexed_zset.functions.bilinear import join_with_index
-from pydbsp.indexed_zset.operators.linear import LiftedIndex
-from pydbsp.stream.operators.bilinear import Incrementalize2
+from pydbsp.indexed_zset.operators.linear import LiftedIndex, LiftedLiftedIndex
+from pydbsp.indexed_zset.operators.bilinear import DeltaLiftedDeltaLiftedSortMergeJoin
+from pydbsp.stream import step_until_fixpoint_and_return, StreamAddition, StreamHandle
+from pydbsp.stream.functions.linear import stream_introduction
+from pydbsp.zset import ZSetAddition
 from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
+from pydbsp.stream.operators.linear import LiftedStreamIntroduction
+from pydbsp.stream.operators.bilinear import Incrementalize2
+
 import json
 
 #
 
 class TopologyNode:
-    def __init__(self, stream_handle, name_str="", operator_list=[], daughter_topologyNode_list=[], state_function_tuple=None):
+    def __init__(self, stream_handle, name_str="", operator=None, step_function=lambda: None, daughter_topologyNode_list=[]):
         self._stream_handle = stream_handle
         self._name_str = name_str
-        self._operator_list = operator_list
+        self._operator = operator # root operator of the topology node or None
+        self._step_function = step_function
         self._daughter_topologyNode_list = daughter_topologyNode_list
-        #
-        self._state_function_tuple = state_function_tuple
         #
         self.group = stream_handle.get().group()
 
@@ -23,7 +28,11 @@ class TopologyNode:
             return json.dumps(map_function(message_dict))
         #
         liftedProject = LiftedProject(self._stream_handle, map_function1)
-        return TopologyNode(liftedProject.output_handle(), "map_op", [liftedProject], [self])
+        #
+        def step_function():
+            liftedProject.step()
+        #
+        return TopologyNode(liftedProject.output_handle(), "map_op", liftedProject, step_function, [self])
 
     def filter(self, filter_function):
         def filter_function1(message_json_str):
@@ -31,7 +40,11 @@ class TopologyNode:
             return filter_function(message_dict)
         #
         liftedSelect = LiftedSelect(self._stream_handle, filter_function1)
-        return TopologyNode(liftedSelect.output_handle(), "filter_op", [liftedSelect], [self])
+        #
+        def step_function():
+            liftedSelect.step()
+        #
+        return TopologyNode(liftedSelect.output_handle(), "filter_op", liftedSelect, step_function, [self])
 
     def join(self, other, on_function, projection_function):
         def on_function1(message_json_str):
@@ -44,28 +57,51 @@ class TopologyNode:
             return json.dumps(projection_function(key, left_message_dict, right_message_dict))
         #
         index_function = lambda x: on_function1(x)
-        left_liftedIndex = LiftedIndex(self._stream_handle, index_function)
-        right_liftedIndex = LiftedIndex(other._stream_handle, index_function)
-        incrementalize2 = Incrementalize2(
-            left_liftedIndex.output_handle(),
-            right_liftedIndex.output_handle(),
-            lambda left_indexed_ZSet, right_indexed_ZSet: join_with_index(left_indexed_ZSet, right_indexed_ZSet, projection_function1),
+        left_index = LiftedIndex(self._stream_handle, index_function)
+        right_index = LiftedIndex(other._stream_handle, index_function)
+        join_op = Incrementalize2(
+            left_index.output_handle(),
+            right_index.output_handle(),
+            lambda l, r: join_with_index(l, r, projection_function1),
             self.group
         )
         #
-        def get_state():
-            return (incrementalize2.integrated_stream_a,
-                    incrementalize2.delayed_integrated_stream_a,
-                    incrementalize2.integrated_stream_b,
-                    incrementalize2.delayed_integrated_stream_b)
+        def step_function():
+            left_index.step()
+            right_index.step()
+            join_op.step()
         #
-        def set_state(state_tuple):
-            incrementalize2.integrated_stream_a = state_tuple[0]
-            incrementalize2.delayed_integrated_stream_a = state_tuple[1]
-            incrementalize2.integrated_stream_b = state_tuple[2]
-            incrementalize2.delayed_integrated_stream_b = state_tuple[3]
-        #
-        return TopologyNode(incrementalize2.output_handle(), "join_op", [left_liftedIndex, right_liftedIndex, incrementalize2], [self, other], (get_state, set_state))
+        return TopologyNode(join_op.output_handle(), "join_op", join_op, step_function, [self, other])
+
+    # def join(self, other, on_function, projection_function):
+    #     def on_function1(message_json_str):
+    #         message_dict = json.loads(message_json_str)
+    #         return json.dumps(on_function(message_dict))
+    #     #
+    #     def projection_function1(key, left_message_json_str, right_message_json_str):
+    #         left_message_dict = json.loads(left_message_json_str)
+    #         right_message_dict = json.loads(right_message_json_str)
+    #         return json.dumps(projection_function(key, left_message_dict, right_message_dict))
+    #     #
+    #     index_function = lambda x: on_function1(x)
+    #     l1 = LiftedStreamIntroduction(self._stream_handle)
+    #     r1 = LiftedStreamIntroduction(other._stream_handle)
+    #     l2 = LiftedLiftedIndex(l1, index_function)
+    #     r2 = LiftedLiftedIndex(r1, index_function)
+    #     #
+    #     deltaLiftedDeltaLiftedSortMergeJoin = DeltaLiftedDeltaLiftedSortMergeJoin(
+    #         l2.output_handle(),
+    #         r2.output_handle(),
+    #         projection_function1)
+    #     #
+    #     def step_function():
+    #         l1.step()
+    #         r1.step()
+    #         l2.step()
+    #         r2.step()
+    #         deltaLiftedDeltaLiftedSortMergeJoin.step()
+    #     #
+    #     return TopologyNode(deltaLiftedDeltaLiftedSortMergeJoin.output_handle(), "join_op", deltaLiftedDeltaLiftedSortMergeJoin, step_function, [self, other])
 
     def peek(self, peek_function):
         def peek_function1(message_json_str):
@@ -74,7 +110,11 @@ class TopologyNode:
             return message_json_str
         #
         liftedProject = LiftedProject(self._stream_handle, peek_function1)
-        return TopologyNode(liftedProject.output_handle(), "peek_op", [liftedProject], [self])
+        #
+        def step_function():
+            liftedProject.step()
+        #
+        return TopologyNode(liftedProject.output_handle(), "peek_op", liftedProject, step_function, [self])
     
     #
 
@@ -89,8 +129,7 @@ class TopologyNode:
         #
         while stack:
             topologyNode = stack.pop()
-            for operator in topologyNode.operators():
-                operator.step()
+            topologyNode._step_function()
     
     #
 
@@ -103,29 +142,16 @@ class TopologyNode:
     def name(self):
         return self._name_str
 
-    def operators(self):
-        return self._operator_list
+    def step_function(self):
+        return self._step_function
 
     def daughters(self):
         return self._daughter_topologyNode_list
-        
+
     #
 
     def latest(self):
-        return self._operator_list[-1].output().latest()
-
-    #
-
-    def get_state(self):
-        return {"state": self._state_function_tuple[0]() if self._state_function_tuple is not None else None,
-                "daughters": [daughter_topologyNode.get_state() for daughter_topologyNode in self._daughter_topologyNode_list]}
-
-    def set_state(self, state_dict):
-        if state_dict["state"] is not None:
-            self._state_function_tuple[1](state_dict["state"])
-        #
-        for i in range(len(self._daughter_topologyNode_list)):
-            self._daughter_topologyNode_list[i].set_state(state_dict["daughters"][i])
+        return self._operator.output().latest()
 
     #
 
