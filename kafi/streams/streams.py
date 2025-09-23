@@ -11,7 +11,11 @@ from kafi.streams.topologynode import TopologyNode
 def source(name):
     stream = Stream(ZSetAddition())
     stream_handle = StreamHandle(lambda: stream)
-    return TopologyNode(stream_handle, name)
+    #
+    def output_handle_function():
+        return stream_handle
+    #
+    return TopologyNode(name, output_handle_function)
 
 #
 

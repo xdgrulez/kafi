@@ -1,5 +1,3 @@
-import pickle
-
 from kafi.streams.streams import *
 
 def map_function(message_dict):
@@ -39,8 +37,8 @@ salary_message_dict_list = [{"key": "2", "value": {"salary": 40000}},
 
 employee_zset = message_dict_list_to_ZSet(employee_message_dict_list)
 salary_zset = message_dict_list_to_ZSet(salary_message_dict_list)
-employees_source_topologyNode.stream_handle().get().send(employee_zset)
-salaries_source_topologyNode.stream_handle().get().send(salary_zset)
+employees_source_topologyNode.output_handle_function()().get().send(employee_zset)
+salaries_source_topologyNode.output_handle_function()().get().send(salary_zset)
 
 root_topologyNode.step()
 
@@ -56,7 +54,7 @@ print(f"Latest: {root_topologyNode.latest()}")
 salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
 salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 
-salaries_source_topologyNode.stream_handle().get().send(salary_zset1)
+salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
 
 root_topologyNode.step()
 
