@@ -1,9 +1,8 @@
 from pydbsp.indexed_zset.functions.bilinear import join_with_index
 from pydbsp.indexed_zset.operators.linear import LiftedIndex, LiftedLiftedIndex
 from pydbsp.indexed_zset.operators.bilinear import DeltaLiftedDeltaLiftedSortMergeJoin
-from pydbsp.stream import step_until_fixpoint_and_return, StreamAddition, StreamHandle
-from pydbsp.stream.functions.linear import stream_introduction, stream_elimination
-from pydbsp.zset import ZSetAddition
+from pydbsp.stream import step_until_fixpoint_and_return, StreamHandle
+from pydbsp.stream.functions.linear import stream_elimination
 from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
 from pydbsp.stream.operators.linear import LiftedStreamIntroduction
 from pydbsp.stream.operators.bilinear import Incrementalize2
@@ -13,10 +12,9 @@ import json
 #
 
 class TopologyNode:
-    def __init__(self, name_str="", output_handle_function=lambda: None, latest_function=lambda: None, step_function=lambda: None, daughter_topologyNode_list=[]):
+    def __init__(self, name_str="", output_handle_function=lambda: None, step_function=lambda: None, daughter_topologyNode_list=[]):
         self._name_str = name_str
         self._output_handle_function = output_handle_function
-        self._latest_function = latest_function
         self._step_function = step_function
         self._daughter_topologyNode_list = daughter_topologyNode_list
         #
@@ -32,13 +30,10 @@ class TopologyNode:
         def output_handle_function():
             return liftedProject.output_handle()
         #
-        def latest_function():
-            return liftedProject.output().latest()
-        #
         def step_function():
             liftedProject.step()
         #
-        return TopologyNode("map_op", output_handle_function, latest_function, step_function, [self])
+        return TopologyNode("map_op", output_handle_function, step_function, [self])
 
     def filter(self, filter_function):
         def filter_function1(message_json_str):
@@ -50,13 +45,10 @@ class TopologyNode:
         def output_handle_function():
             return liftedSelect.output_handle()
         #
-        def latest_function():
-            return liftedSelect.output().latest()
-        #
         def step_function():
             liftedSelect.step()
         #
-        return TopologyNode("filter_op", output_handle_function, latest_function, step_function, [self])
+        return TopologyNode("filter_op", output_handle_function, step_function, [self])
 
     def join(self, other, on_function, projection_function):
         def on_function1(message_json_str):
@@ -80,53 +72,47 @@ class TopologyNode:
         def output_handle_function():
             return join_op.output_handle()
         #
-        def latest_function():
-            return join_op.output().latest()
-        #
         def step_function():
             left_index.step()
             right_index.step()
             join_op.step()
         #
-        return TopologyNode("join_op", output_handle_function, latest_function, step_function, [self, other])
+        return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
-    # def join(self, other, on_function, projection_function):
-    #     def on_function1(message_json_str):
-    #         message_dict = json.loads(message_json_str)
-    #         return json.dumps(on_function(message_dict))
-    #     #
-    #     def projection_function1(key, left_message_json_str, right_message_json_str):
-    #         left_message_dict = json.loads(left_message_json_str)
-    #         right_message_dict = json.loads(right_message_json_str)
-    #         return json.dumps(projection_function(key, left_message_dict, right_message_dict))
-    #     #
-    #     l1 = LiftedStreamIntroduction(self._output_handle_function())
-    #     r1 = LiftedStreamIntroduction(other._output_handle_function())
-    #     #
-    #     index_function = lambda x: on_function1(x)
-    #     l2 = LiftedLiftedIndex(l1.output_handle(), index_function)
-    #     r2 = LiftedLiftedIndex(r1.output_handle(), index_function)
-    #     #
-    #     deltaLiftedDeltaLiftedSortMergeJoin = DeltaLiftedDeltaLiftedSortMergeJoin(
-    #         l2.output_handle(),
-    #         r2.output_handle(),
-    #         projection_function1)
-    #     #
-    #     def output_handle_function():
-    #         return StreamHandle(lambda: stream_elimination(deltaLiftedDeltaLiftedSortMergeJoin.output_handle().get()))
-    #     #
-    #     def latest_function():
-    #         return stream_elimination(stream_elimination(deltaLiftedDeltaLiftedSortMergeJoin.output().latest()))
-    #     #
-    #     def step_function():
-    #         l1.step()
-    #         r1.step()
-    #         l2.step()
-    #         r2.step()
-    #         step_until_fixpoint_and_return(deltaLiftedDeltaLiftedSortMergeJoin)
-    #         # deltaLiftedDeltaLiftedSortMergeJoin.step()
-    #     #
-    #     return TopologyNode("join_op", output_handle_function, latest_function, step_function, [self, other])
+    def join2(self, other, on_function, projection_function):
+        def on_function1(message_json_str):
+            message_dict = json.loads(message_json_str)
+            return json.dumps(on_function(message_dict))
+        #
+        def projection_function1(key, left_message_json_str, right_message_json_str):
+            left_message_dict = json.loads(left_message_json_str)
+            right_message_dict = json.loads(right_message_json_str)
+            return json.dumps(projection_function(key, left_message_dict, right_message_dict))
+        #
+        l1 = LiftedStreamIntroduction(self._output_handle_function())
+        r1 = LiftedStreamIntroduction(other._output_handle_function())
+        #
+        index_function = lambda x: on_function1(x)
+        l2 = LiftedLiftedIndex(l1.output_handle(), index_function)
+        r2 = LiftedLiftedIndex(r1.output_handle(), index_function)
+        #
+        deltaLiftedDeltaLiftedSortMergeJoin = DeltaLiftedDeltaLiftedSortMergeJoin(
+            l2.output_handle(),
+            r2.output_handle(),
+            projection_function1)
+        #
+        def output_handle_function():
+            return StreamHandle(lambda: stream_elimination(deltaLiftedDeltaLiftedSortMergeJoin.output_handle().get()))
+        #
+        def step_function():
+            l1.step()
+            r1.step()
+            l2.step()
+            r2.step()
+            # deltaLiftedDeltaLiftedSortMergeJoin.step()
+            step_until_fixpoint_and_return(deltaLiftedDeltaLiftedSortMergeJoin)
+        #
+        return TopologyNode("join2_op", output_handle_function, step_function, [self, other])
 
     def peek(self, peek_function):
         def peek_function1(message_json_str):
@@ -139,13 +125,10 @@ class TopologyNode:
         def output_handle_function():
             return liftedProject.output_handle()
         #
-        def latest_function():
-            return liftedProject.output().latest()
-        #
         def step_function():
             liftedProject.step()
         #
-        return TopologyNode("peek_op", output_handle_function, latest_function, step_function, [self])
+        return TopologyNode("peek_op", output_handle_function, step_function, [self])
     
     #
 
@@ -170,9 +153,6 @@ class TopologyNode:
     def output_handle_function(self):
         return self._output_handle_function
 
-    def latest_function(self):
-        return self._latest_function
-    
     def step_function(self):
         return self._step_function
 
@@ -182,7 +162,7 @@ class TopologyNode:
     #
 
     def latest(self):
-        return self._latest_function()
+        return self._output_handle_function().get().latest()
 
     #
 
