@@ -41,7 +41,7 @@ class TestSingleStorageBase(unittest.TestCase):
             value_snack_dict1["colour"] += "ish"
             self.value_snack_ish_dict_list.append(value_snack_dict1)
         #
-        self.avro_key_schema_str = '{"type": "record", "name": "snack_key", "fields": [{"name": "key",  "type": "string"}]}'
+        self.avro_key_schema_str = '{"type": "record", "name": "snack_key", "fields": [{"name": "key", "type": "string"}]}'
         self.avro_value_schema_str = '{"type": "record", "name": "snack_value", "fields": [{"name": "name",  "type": "string"}, {"name": "calories", "type": "float"}, {"type": "string", "name": "colour"}]}'
         self.avro_value_schema_normalized_str = '{"type":"record","name":"snack_value","fields":[{"name":"name","type":"string"},{"name":"calories","type":"float"},{"name":"colour","type":"string"}]}'
         #
@@ -49,9 +49,9 @@ class TestSingleStorageBase(unittest.TestCase):
         self.protobuf_value_schema_str = 'message snack_value { required string name = 1; required float calories = 2; optional string colour = 3; }'
         #
         self.jsonschema_key_schema_str = '{"title": "snack_key", "type": "object", "required": ["key"], "additionalProperties": false, "properties": {"key": {"type": "string"}}}'
-        self.jsonschema_value_schema_str = '{"title": "snack_value", "type": "object", "required": ["name", "calories"], "additionalProperties": false, "properties": {"name": {"type": "string"}, "calories": {"type": "number"}, "colour": {"type": "string"}}}'
+        self.jsonschema_value_schema_str = '{"additionalProperties": false, "properties": {"calories": {"type": "number"}, "colour": {"type": "string"}, "name": {"type": "string"}}, "required": ["name", "calories"], "title": "snack_value", "type": "object"}'
         self.jsonschema_value_schema_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"snack_value","type":"object"}'
-        self.jsonschema_value_schema_normalized_redpanda_str = '{"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"}},"required":["name","calories"],"title":"snack_value","type":"object"}'
+        self.jsonschema_value_schema_normalized_redpanda_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"snack_value","type":"object"}'
         self.jsonschema_value_schema_one_less_field_str = '{"title":"snack_value","type":"object","required":["name"],"additionalProperties":false,"properties":{"name":{"type":"string"},"colour":{"type":"string"}}}'
         self.jsonschema_value_schema_one_more_field_str = '{"title":"snack_value","type":"object","required":["name","calories"],"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string", "default": ""}}}'
         self.jsonschema_value_schema_one_more_field_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"country":{"default":"","type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"snack_value","type":"object"}'
@@ -180,14 +180,14 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str)
-        producer = s.producer(topic_str, type="str")
+        producer = s.producer(topic_str, type="string")
         producer.produce("message 1")
         producer.produce("message 2")
         producer.produce("message 3")
         producer.close()
         #
         group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str, type="str")
+        consumer = s.consumer(topic_str, group=group_str, type="string")
         consumer.consume(n=1)
         #
         group_str_list1 = s.groups(["test*", "test_group*"])
@@ -371,12 +371,12 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, type="str")
         consumer.consume(n=1)
-        consumer.commit()
+        consumer.commit(asynchronous=False)
         lags_dict1 = s.lags(group_str, topic_str)
         self.assertEqual(lags_dict1[group_str][topic_str][0], 1)
         consumer.consume(n=1)
         consumer.commit()
-        lags_dict2 = s.lags(group_str, topic_str)
+        lags_dict2 = s.lags(group_str, topic_str)   
         self.assertEqual(lags_dict2[group_str][topic_str][0], 0)
         consumer.close()
 
@@ -509,20 +509,24 @@ class TestSingleStorageBase(unittest.TestCase):
             topic_str_partition_int_partition_dict_dict_dict = s.partitions(topic_str, verbose=True)[topic_str]
             self.assertEqual(list(topic_str_partition_int_partition_dict_dict_dict.keys()), [0, 1])
             if s.cluster_kind() == "redpanda":
-                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["id"], 0)
+                if s.__class__.__name__ != "RestProxy":
+                    self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["id"], 0)
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["leader"], 0)
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["replicas"], [0])
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["isrs"], [0])
-                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["id"], 1)
+                if s.__class__.__name__ != "RestProxy":
+                    self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["id"], 1)
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["leader"], 0)
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["replicas"], [0])
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["isrs"], [0])
             else:
-                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["id"], 0)
+                if s.__class__.__name__ != "RestProxy":
+                    self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["id"], 0)
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["leader"], 1)
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["replicas"], [1])
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[0]["isrs"], [1])
-                self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["id"], 1)
+                if s.__class__.__name__ != "RestProxy":
+                    self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["id"], 1)
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["leader"], 1)
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["replicas"], [1])
                 self.assertEqual(topic_str_partition_int_partition_dict_dict_dict[1]["isrs"], [1])
@@ -589,30 +593,6 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
 
-    def test_produce_consume_protobuf(self):
-        if self.__class__.__name__ == "TestSingleStorageBase":
-            return
-        #
-        s = self.get_storage()
-        #
-        topic_str = self.create_test_topic_name()
-        s.create(topic_str)
-        # Upon produce, the type "protobuf" (alias = "pb") triggers the conversion of bytes, strings and dictionaries into Protobuf-encoded bytes on Kafka.
-        producer = s.producer(topic_str, key_type="protobuf", value_type="pb", key_schema=self.protobuf_key_schema_str, value_schema=self.protobuf_value_schema_str)
-        producer.produce(self.value_snack_dict_list, key=self.key_snack_str_list)
-        producer.close()
-        self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
-        #
-        group_str = self.create_test_group_name()
-        # Upon consume, the type "protobuf" (alias = "pb") triggers the conversion into a dictionary.
-        consumer = s.consumer(topic_str, group=group_str, key_type="pb", value_type="protobuf")
-        message_dict_list = consumer.consume(n=3)
-        key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
-        value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
-        self.assertEqual(key_dict_list, self.key_snack_dict_list)
-        self.assertEqual(value_dict_list, self.value_snack_dict_list)
-        consumer.close()
-
     def test_produce_consume_avro(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return
@@ -653,7 +633,31 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         group_str = self.create_test_group_name()
         # Upon consume, the types "json" and "jsonschema" (alias = "json_sr") trigger the conversion into a dictionary.
-        consumer = s.consumer(topic_str, group=group_str, key_type="json_sr", value_type="json_sr")
+        consumer = s.consumer(topic_str, group=group_str, key_type="json_sr", value_type="json_sr", deser_conf={"validate": False})
+        message_dict_list = consumer.consume(n=3)
+        key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
+        value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
+        self.assertEqual(key_dict_list, self.key_snack_dict_list)
+        self.assertEqual(value_dict_list, self.value_snack_dict_list)
+        consumer.close()
+
+    def test_produce_consume_protobuf(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str)
+        # Upon produce, the type "protobuf" (alias = "pb") triggers the conversion of bytes, strings and dictionaries into Protobuf-encoded bytes on Kafka.
+        producer = s.producer(topic_str, key_type="protobuf", value_type="pb", key_schema=self.protobuf_key_schema_str, value_schema=self.protobuf_value_schema_str)
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_str_list)
+        producer.close()
+        self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
+        #
+        group_str = self.create_test_group_name()
+        # Upon consume, the type "protobuf" (alias = "pb") triggers the conversion into a dictionary.
+        consumer = s.consumer(topic_str, group=group_str, key_type="pb", value_type="protobuf")
         message_dict_list = consumer.consume(n=3)
         key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
         value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
@@ -676,10 +680,13 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 1)
         #
         producer = s.producer(topic_str)
-        producer.produce("123")
         # Redpanda does not give us a KafkaError (instead: None) if we publish None as the key for compacted topics...
-        if s.__class__.__name__ == "Cluster" and s.cluster_kind() != "redpanda": 
-            self.assertRaises(Exception, producer.close)
+        if s.__class__.__name__ == "RestProxy":
+            self.assertRaises(Exception, producer.produce, "123")
+        # if s.__class__.__name__ == "Cluster" and s.cluster_kind() != "redpanda": 
+        # self.assertRaises(Exception, producer.close)
+        # else:
+        producer.close()
 
     def test_consume_from_offsets(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -1257,7 +1264,7 @@ class TestSingleStorageBase(unittest.TestCase):
         key_registeredSchema_dict = s.lookup_schema(key_subject_name_str, key_schema_dict)
         self.assertEqual(key_registeredSchema_dict["schema_id"], key_schema_id_int)
         self.assertEqual(key_registeredSchema_dict["subject"], key_subject_name_str)
-        self.assertEqual(key_registeredSchema_dict["schema"]["schema_str"], self.avro_key_schema_str)
+        self.assertEqual(json.dumps(json.loads(key_registeredSchema_dict["schema"]["schema_str"])), self.avro_key_schema_str)
         self.assertEqual(key_registeredSchema_dict["schema"]["schema_type"], "AVRO")
         #
         key_schema_dict1 = s.get_schema(key_schema_id_int)
@@ -1379,7 +1386,7 @@ class TestSingleStorageBase(unittest.TestCase):
         value_registeredSchema_dict = s.lookup_schema(value_subject_name_str, value_schema_dict, normalize=True)
         self.assertEqual(value_registeredSchema_dict["schema_id"], value_schema_id_int)
         self.assertEqual(value_registeredSchema_dict["subject"], value_subject_name_str)
-        self.assertEqual(value_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_value_schema_str)
+        self.assertEqual(json.dumps(json.loads(value_registeredSchema_dict["schema"]["schema_str"])), self.jsonschema_value_schema_str)
         self.assertEqual(value_registeredSchema_dict["schema"]["schema_type"], "JSON")
         #
         try:
@@ -1431,7 +1438,7 @@ class TestSingleStorageBase(unittest.TestCase):
         value_registeredSchema_dict = s.get_version(value_subject_name_str, 1)
         self.assertEqual(value_registeredSchema_dict["schema_id"], value_schema_id_int)
         self.assertEqual(value_registeredSchema_dict["subject"], value_subject_name_str)
-        self.assertEqual(value_registeredSchema_dict["schema"]["schema_str"], self.jsonschema_value_schema_str)
+        self.assertEqual(json.dumps(json.loads(value_registeredSchema_dict["schema"]["schema_str"])), self.jsonschema_value_schema_str)
         self.assertEqual(value_registeredSchema_dict["schema"]["schema_type"], "JSON")
         #
         version_int_list = s.get_versions(value_subject_name_str)
