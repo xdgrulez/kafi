@@ -112,7 +112,7 @@ class ClusterConsumer(KafkaConsumer):
             #
             topic_str_offsets_dict_dict = topicPartition_list_to_offsets_dict(commit_topicPartition_list)
         else:
-            self.consumer.commit() # always returns None in this branch
+            self.consumer.commit(asynchronous=asynchronous_bool)
             topic_str_offsets_dict_dict = {}
         #
         return topic_str_offsets_dict_dict

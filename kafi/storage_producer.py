@@ -9,7 +9,7 @@ class StorageProducer(Serializer):
     def __init__(self, storage_obj, topic, **kwargs):
         self.storage_obj = storage_obj
         #
-        super().__init__(storage_obj.schema_registry_config_dict)
+        super().__init__(storage_obj.schema_registry_config_dict, **kwargs)
         #
         self.topic_str = topic
         #

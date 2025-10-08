@@ -5,7 +5,7 @@ class StorageConsumer(Deserializer):
     def __init__(self, storage_obj, *topics, **kwargs):
         self.storage_obj = storage_obj
         #
-        super().__init__(storage_obj.schema_registry_config_dict)
+        super().__init__(storage_obj.schema_registry_config_dict, **kwargs)
         #
         # Get topics to subscribe to.
         self.topic_str_list = list(topics)

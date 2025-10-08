@@ -1,5 +1,4 @@
-* aiokafka
-* Support for Serializer/Deserializer-Confs 
+* aio support...
 * do not list internal _topics
 * "string" as an alias for "str"
 * Schema Registry: support patterns

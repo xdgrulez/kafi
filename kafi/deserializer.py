@@ -13,22 +13,29 @@ from google.protobuf.json_format import MessageToDict
 from kafi.schemaregistry import SchemaRegistry
 
 class Deserializer(SchemaRegistry):
-    def __init__(self, schema_registry_config_dict):
+    def __init__(self, schema_registry_config_dict, **kwargs):
+        self.deser_from_dict = kwargs["deser_from_dict"] if "deser_from_dict" in kwargs else None
+        self.deser_conf = kwargs["deser_conf"] if "deser_conf" in kwargs else None
+        self.deser_rule_conf = kwargs["deser_rule_conf"] if "deser_rule_conf" in kwargs else None
+        self.deser_rule_registry = kwargs["deser_rule_registry"] if "deser_rule_registry" in kwargs else None
+        self.deser_json_decode = kwargs["deser_json_decode"] if "deser_json_decode" in kwargs else None
+        self.deser_return_record_name = kwargs["deser_return_record_name"] if "deser_return_record_name" in kwargs else False
+        #
         super().__init__(schema_registry_config_dict)
 
     def deserialize(self, payload_bytes, type_str, topic_str, key_bool):
         if type_str.lower() == "bytes":
             deserialized_payload = self.bytes_to_bytes(payload_bytes)
-        elif type_str.lower() == "str":
+        elif type_str.lower() in ["str", "string"]:
             deserialized_payload = self.bytes_to_str(payload_bytes)
         elif type_str.lower() == "json":
             deserialized_payload = self.bytes_to_dict(payload_bytes)
-        elif type_str.lower() in ["protobuf", "pb"]:
-            deserialized_payload = self.bytes_protobuf_to_dict(payload_bytes, topic_str, key_bool)
         elif type_str.lower() == "avro":
             deserialized_payload = self.bytes_avro_to_dict(payload_bytes, topic_str, key_bool)
         elif type_str.lower() in ["jsonschema", "json_sr"]:
             deserialized_payload = self.bytes_jsonschema_to_dict(payload_bytes, topic_str, key_bool)
+        elif type_str.lower() in ["protobuf", "pb"]:
+            deserialized_payload = self.bytes_protobuf_to_dict(payload_bytes, topic_str, key_bool)
         else:
             raise Exception("Only \"str\", \"bytes\", \"json\", \"protobuf\" (\"pb\"), \"avro\" and \"jsonschema\" (\"json_sr\") supported.")
         #
@@ -49,23 +56,6 @@ class Deserializer(SchemaRegistry):
         #
         return json.loads(bytes)
 
-    def bytes_protobuf_to_dict(self, bytes, topic_str, key_bool):
-        if bytes is None:
-            return None
-        #
-        schema_id_int = int.from_bytes(bytes[1:5], "big")
-        if schema_id_int in self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict:
-            generalizedProtocolMessageType, protobuf_schema_str = self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int]
-        else:
-            generalizedProtocolMessageType, protobuf_schema_str = self.schema_id_int_to_generalizedProtocolMessageType_protobuf_schema_str_tuple(schema_id_int)
-            self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int] = (generalizedProtocolMessageType, protobuf_schema_str)
-        #
-        protobufDeserializer = ProtobufDeserializer(generalizedProtocolMessageType, {"use.deprecated.format": False})
-        serializationContext = SerializationContext(topic_str, MessageField.KEY if key_bool else MessageField.VALUE)
-        protobuf_message = protobufDeserializer(bytes, serializationContext)
-        dict = MessageToDict(protobuf_message)
-        return dict
-
     def bytes_avro_to_dict(self, bytes, topic_str, key_bool):
         if bytes is None:
             return None
@@ -74,7 +64,7 @@ class Deserializer(SchemaRegistry):
         schema_dict = self.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
         #
-        avroDeserializer = AvroDeserializer(self.schemaRegistryClient, schema_str)
+        avroDeserializer = AvroDeserializer(self.schemaRegistryClient, schema_str, self.deser_from_dict, self.deser_return_record_name, self.deser_conf, self.deser_rule_conf, self.deser_rule_registry)
         serializationContext = SerializationContext(topic_str, MessageField.KEY if key_bool else MessageField.VALUE)
         dict = avroDeserializer(bytes, serializationContext)
         return dict
@@ -87,9 +77,29 @@ class Deserializer(SchemaRegistry):
         schema_dict = self.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
         #
-        jsonDeserializer = JSONDeserializer(schema_str)
+        jsonDeserializer = JSONDeserializer(schema_str, self.deser_from_dict, None, self.deser_conf, self.deser_rule_conf, self.deser_rule_registry, self.deser_json_decode)
         serializationContext = SerializationContext(topic_str, MessageField.KEY if key_bool else MessageField.VALUE)
         dict = jsonDeserializer(bytes, serializationContext)
+        return dict
+
+    def bytes_protobuf_to_dict(self, bytes, topic_str, key_bool):
+        if bytes is None:
+            return None
+        #
+        schema_id_int = int.from_bytes(bytes[1:5], "big")
+        if schema_id_int in self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict:
+            generalizedProtocolMessageType, protobuf_schema_str = self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int]
+        else:
+            generalizedProtocolMessageType, protobuf_schema_str = self.schema_id_int_to_generalizedProtocolMessageType_protobuf_schema_str_tuple(schema_id_int)
+            self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict[schema_id_int] = (generalizedProtocolMessageType, protobuf_schema_str)
+        #
+        # Prevent: RuntimeError: ProtobufSerializer: the 'use.deprecated.format' configuration property must be explicitly set due to backward incompatibility with older confluent-kafka-python Protobuf producers and consumers. See the release notes for more details
+        if self.deser_conf is None:
+            self.deser_conf = {"use.deprecated.format": False}
+        protobufDeserializer = ProtobufDeserializer(generalizedProtocolMessageType, self.deser_conf, None, self.deser_rule_conf, self.deser_rule_registry)
+        serializationContext = SerializationContext(topic_str, MessageField.KEY if key_bool else MessageField.VALUE)
+        protobuf_message = protobufDeserializer(bytes, serializationContext)
+        dict = MessageToDict(protobuf_message)
         return dict
 
     # Helpers
