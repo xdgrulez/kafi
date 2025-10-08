@@ -4,7 +4,7 @@ from pydbsp.indexed_zset.operators.bilinear import DeltaLiftedDeltaLiftedSortMer
 from pydbsp.stream import step_until_fixpoint_and_return, StreamHandle
 from pydbsp.stream.functions.linear import stream_elimination
 from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
-from pydbsp.stream.operators.linear import LiftedStreamIntroduction
+from pydbsp.stream.operators.linear import LiftedStreamIntroduction, LiftedStreamElimination
 from pydbsp.stream.operators.bilinear import Incrementalize2
 
 import json
@@ -101,16 +101,20 @@ class TopologyNode:
             r2.output_handle(),
             projection_function1)
         #
+        output_node = LiftedStreamElimination(
+            deltaLiftedDeltaLiftedSortMergeJoin.output_handle()
+        )
+        #
         def output_handle_function():
-            return StreamHandle(lambda: stream_elimination(deltaLiftedDeltaLiftedSortMergeJoin.output_handle().get()))
+            return output_node.output_handle()
         #
         def step_function():
             l1.step()
             r1.step()
             l2.step()
             r2.step()
-            # deltaLiftedDeltaLiftedSortMergeJoin.step()
-            step_until_fixpoint_and_return(deltaLiftedDeltaLiftedSortMergeJoin)
+            deltaLiftedDeltaLiftedSortMergeJoin.step()
+            step_until_fixpoint_and_return(output_node)
         #
         return TopologyNode("join2_op", output_handle_function, step_function, [self, other])
 
