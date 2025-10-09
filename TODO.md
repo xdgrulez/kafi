@@ -1,4 +1,5 @@
 * aio support...
+* support all kwargs that make sense globally in config yamls (e.g. the new ones or (de)serializer configs)?
 * do not list internal _topics
 * "string" as an alias for "str"
 * Schema Registry: support patterns
