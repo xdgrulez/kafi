@@ -15,7 +15,7 @@ def source(name):
     def output_handle_function():
         return stream_handle
     #
-    return TopologyNode(name, output_handle_function)
+    return TopologyNode(f"{name}_source", output_handle_function)
 
 #
 

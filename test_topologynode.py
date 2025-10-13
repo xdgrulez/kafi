@@ -1,4 +1,5 @@
 from kafi.streams.streams import *
+import dill
 
 def map_function(message_dict):
     message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
@@ -9,8 +10,8 @@ def proj_function(_, left_message_dict, right_message_dict):
     return left_message_dict
 
 def setup():
-    employees_source_topologyNode = source("employees_source")
-    salaries_source_topologyNode = source("salaries_source")
+    employees_source_topologyNode = source("employees")
+    salaries_source_topologyNode = source("salaries")
     #
     root_topologyNode = (
         employees_source_topologyNode
@@ -49,11 +50,14 @@ print(f"Mermaid:\n{root_topologyNode.mermaid()}")
 print()
 print(f"Latest: {root_topologyNode.latest()}")
 
+root_topologyNode = dill.loads(dill.dumps(root_topologyNode))
+
 #
 
 salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
 salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 
+salaries_source_topologyNode = root_topologyNode.get_source("salaries")
 salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
 
 root_topologyNode.step()

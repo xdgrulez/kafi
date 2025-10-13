@@ -4,6 +4,8 @@ piny==1.1.0
 requests==2.32.3
 # Azure Blob Storage
 azure-storage-blob==12.24.0
+# Dill
+dill==0.4.0
 # MinIO/S3
 minio==7.2.14
 # Pandas

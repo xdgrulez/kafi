@@ -170,6 +170,22 @@ class TopologyNode:
 
     #
 
+    def get_source(self, name_str):
+        def collect_nodes(topologyNode, name_str_source_node_dict):
+            full_name_str = topologyNode.name()
+            if full_name_str.endswith("_source"):
+                name_str_source_node_dict[full_name_str[0:len(full_name_str) - len("_source")]] = topologyNode
+            #
+            for daughter_topologyNode in topologyNode.daughters():
+                collect_nodes(daughter_topologyNode, node_str_source_node_dict)
+        #
+        node_str_source_node_dict = {}
+        collect_nodes(self, node_str_source_node_dict)
+        #
+        return node_str_source_node_dict[name_str]
+
+    #
+
     def topology(self):
         daughters_int = len(self._daughter_topologyNode_list)
         match daughters_int:
