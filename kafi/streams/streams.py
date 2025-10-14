@@ -1,3 +1,4 @@
+from kafi.streams.topologynode import message_dict_list_to_ZSet
 from asyncio import TaskGroup, Queue, sleep
 import json
 
@@ -74,7 +75,7 @@ async def streams_function(storage_source_topologyNode_tuple_list, root_topology
                         #
                         zSet = message_dict_list_to_ZSet(message_dict_list)
                         #
-                        stream = source_topologyNode.stream()
+                        stream = source_topologyNode.output_handle_function()().get()
                         stream.send(zSet)
                 #
                 root_topologyNode.step()
