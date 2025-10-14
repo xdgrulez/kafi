@@ -8,6 +8,12 @@ ALL_MESSAGES = -1
 
 #
 
+def default_projection_function(message_dict1, message_dict2):
+    message_dict = dict(message_dict1)
+    message_dict["value"] = message_dict1["value"] | message_dict2["value"]
+    return message_dict
+#
+
 class AddOns(Functional):
     def compact(self, topic, n=ALL_MESSAGES, **kwargs):
         def foldl_fun(acc, message_dict):
