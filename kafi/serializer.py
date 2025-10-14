@@ -15,7 +15,13 @@ from kafi.schemaregistry import SchemaRegistry
 from kafi.helpers import to_bytes
 
 class Serializer(SchemaRegistry):
-    def __init__(self, schema_registry_config_dict):
+    def __init__(self, schema_registry_config_dict, **kwargs):
+        self.ser_to_dict = kwargs["ser_to_dict"] if "ser_to_dict" in kwargs else None
+        self.ser_conf = kwargs["ser_conf"] if "ser_conf" in kwargs else None
+        self.ser_rule_conf = kwargs["ser_rule_conf"] if "ser_rule_conf" in kwargs else None
+        self.ser_rule_registry = kwargs["ser_rule_registry"] if "ser_rule_registry" in kwargs else None
+        self.ser_json_encode = kwargs["ser_json_encode"] if "ser_json_encode" in kwargs else None
+        #
         super().__init__(schema_registry_config_dict)
 
     def serialize(self, payload, key_bool, normalize_schemas=False):
@@ -51,26 +57,29 @@ class Serializer(SchemaRegistry):
         if payload == None:
             serialized_payload_bytes = None
         else:
-            if type_str.lower() in ["bytes", "str", "json"]:
+            if type_str.lower() in ["bytes", "str", "string", "json"]:
                 serialized_payload_bytes = to_bytes(payload)
-            elif type_str.lower() in ["pb", "protobuf"]:
-                schema = get_schema_str()
-                generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
-                protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistryClient, {"use.deprecated.format": False})
-                payload_dict = payload_to_payload_dict()
-                protobuf_message = generalizedProtocolMessageType()
-                ParseDict(payload_dict, protobuf_message)
-                serialized_payload_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() == "avro":
                 schema = get_schema_str()
-                avroSerializer = AvroSerializer(self.schemaRegistryClient, schema)
+                avroSerializer = AvroSerializer(self.schemaRegistryClient, schema, self.ser_to_dict, self.ser_conf, self.ser_rule_conf, self.ser_rule_registry)
                 payload_dict = payload_to_payload_dict()
                 serialized_payload_bytes = avroSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() in ["jsonschema", "json_sr"]:
                 payload_dict = payload_to_payload_dict()
                 schema = get_schema_str()
-                jSONSerializer = JSONSerializer(schema, self.schemaRegistryClient)
+                jSONSerializer = JSONSerializer(schema, self.schemaRegistryClient, self.ser_to_dict, self.ser_conf, self.ser_rule_conf, self.ser_rule_registry, self.ser_json_encode)
                 serialized_payload_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
+            elif type_str.lower() in ["pb", "protobuf"]:
+                schema = get_schema_str()
+                generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
+                # Prevent: RuntimeError: ProtobufSerializer: the 'use.deprecated.format' configuration property must be explicitly set due to backward incompatibility with older confluent-kafka-python Protobuf producers and consumers. See the release notes for more details
+                if self.ser_conf is None:
+                    self.ser_conf = {"use.deprecated.format": False}
+                protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistryClient, self.ser_conf, self.ser_rule_conf, self.ser_rule_registry)
+                payload_dict = payload_to_payload_dict()
+                protobuf_message = generalizedProtocolMessageType()
+                ParseDict(payload_dict, protobuf_message)
+                serialized_payload_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))
             else:
                 raise Exception("Only \"bytes\", \"str\", \"json\", \"avro\", \"protobuf\" (\"pb\") and \"jsonschema\" (\"json_sr\") supported.")
         #

@@ -166,7 +166,7 @@ class FSConsumer(StorageConsumer):
         #
         return topic_str_offsets_dict_dict
 
-    def commit(self, offsets=None):
+    def commit(self, offsets=None, **kwargs):
         if offsets is None:
             new_group_dict = {"offsets": self.next_topic_str_offsets_dict_dict}
             #
