@@ -1,28 +1,5 @@
-from pydbsp.stream import Stream, StreamHandle
-from pydbsp.zset import ZSet, ZSetAddition
-
 from asyncio import TaskGroup, Queue, sleep
 import json
-
-from kafi.streams.topologynode import TopologyNode
-
-#
-
-def source(name):
-    stream = Stream(ZSetAddition())
-    stream_handle = StreamHandle(lambda: stream)
-    #
-    def output_handle_function():
-        return stream_handle
-    #
-    return TopologyNode(f"{name}_source", output_handle_function)
-
-#
-
-def message_dict_list_to_ZSet(message_dict_list):
-    message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
-    zSet = ZSet({k: 1 for k in message_str_list})
-    return zSet
 
 #
 

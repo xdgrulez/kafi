@@ -1,5 +1,5 @@
-from kafi.streams.streams import *
-import dill
+from kafi.streams.topologynode import source, message_dict_list_to_ZSet
+import cloudpickle as pickle
 
 def map_function(message_dict):
     message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
@@ -16,7 +16,7 @@ def setup():
     root_topologyNode = (
         employees_source_topologyNode
         .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
-        .join(
+        .join2(
             salaries_source_topologyNode,
             on_function=lambda message_dict: message_dict["key"],
             projection_function=proj_function
@@ -48,16 +48,20 @@ print(f"Topology: {root_topologyNode.topology()}")
 print()
 print(f"Mermaid:\n{root_topologyNode.mermaid()}")
 print()
+print(f"Topology: {root_topologyNode.topology(True)}")
+print()
+print(f"Mermaid:\n{root_topologyNode.mermaid(True)}")
+print()
 print(f"Latest: {root_topologyNode.latest()}")
 
-root_topologyNode = dill.loads(dill.dumps(root_topologyNode))
+root_topologyNode = pickle.loads(pickle.dumps(root_topologyNode))
 
 #
 
 salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
 salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 
-salaries_source_topologyNode = root_topologyNode.get_source("salaries")
+salaries_source_topologyNode = root_topologyNode.get_node(salaries_source_topologyNode.id())
 salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
 
 root_topologyNode.step()

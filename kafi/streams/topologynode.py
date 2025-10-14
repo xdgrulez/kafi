@@ -1,19 +1,40 @@
 from pydbsp.indexed_zset.functions.bilinear import join_with_index
 from pydbsp.indexed_zset.operators.linear import LiftedIndex, LiftedLiftedIndex
 from pydbsp.indexed_zset.operators.bilinear import DeltaLiftedDeltaLiftedSortMergeJoin
-from pydbsp.stream import step_until_fixpoint_and_return, StreamHandle
-from pydbsp.stream.functions.linear import stream_elimination
+from pydbsp.stream import step_until_fixpoint_and_return, Stream, StreamHandle
 from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
 from pydbsp.stream.operators.linear import LiftedStreamIntroduction, LiftedStreamElimination
 from pydbsp.stream.operators.bilinear import Incrementalize2
+from pydbsp.stream import Stream, StreamHandle
+from pydbsp.zset import ZSet, ZSetAddition
 
 import json
+import uuid
+
+#
+
+def source(name_str):
+    stream = Stream(ZSetAddition())
+    stream_handle = StreamHandle(lambda: stream)
+    #
+    def output_handle_function():
+        return stream_handle
+    #
+    return TopologyNode(name_str, output_handle_function)
+
+#
+
+def message_dict_list_to_ZSet(message_dict_list):
+    message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
+    zSet = ZSet({k: 1 for k in message_str_list})
+    return zSet
 
 #
 
 class TopologyNode:
-    def __init__(self, name_str="", output_handle_function=lambda: None, step_function=lambda: None, daughter_topologyNode_list=[]):
+    def __init__(self, name_str, output_handle_function=lambda: None, step_function=lambda: None, daughter_topologyNode_list=[]):
         self._name_str = name_str
+        self._id_str = str(uuid.uuid4())
         self._output_handle_function = output_handle_function
         self._step_function = step_function
         self._daughter_topologyNode_list = daughter_topologyNode_list
@@ -154,6 +175,9 @@ class TopologyNode:
     def name(self):
         return self._name_str
 
+    def id(self):
+        return self._id_str
+
     def output_handle_function(self):
         return self._output_handle_function
 
@@ -170,43 +194,60 @@ class TopologyNode:
 
     #
 
-    def get_source(self, name_str):
-        def collect_nodes(topologyNode, name_str_source_node_dict):
-            full_name_str = topologyNode.name()
-            if full_name_str.endswith("_source"):
-                name_str_source_node_dict[full_name_str[0:len(full_name_str) - len("_source")]] = topologyNode
-            #
-            for daughter_topologyNode in topologyNode.daughters():
-                collect_nodes(daughter_topologyNode, node_str_source_node_dict)
+    def get_node(self, id_str):
+        def collect_node_dict(topologyNode, id_str_topologyNode_dict):
+            if id_str == topologyNode.id():
+                id_str_topologyNode_dict[id_str] = topologyNode
+            else:
+                for daughter_topologyNode in topologyNode.daughters():
+                    collect_node_dict(daughter_topologyNode, id_str_topologyNode_dict)
         #
-        node_str_source_node_dict = {}
-        collect_nodes(self, node_str_source_node_dict)
+        id_str_topologyNode_dict = {}
+        collect_node_dict(self, id_str_topologyNode_dict)
         #
-        return node_str_source_node_dict[name_str]
+        return id_str_topologyNode_dict[id_str]
 
     #
 
-    def topology(self):
+    def topology(self, include_ids=False):
+        include_ids_bool = include_ids
+        #
         daughters_int = len(self._daughter_topologyNode_list)
         match daughters_int:
             case 0:
-                return self._name_str
+                if include_ids_bool:
+                    return f"{self._name_str}_{self._id_str}"
+                else:
+                    return self._name_str
             case 1:
-                return f"{self._name_str}({self._daughter_topologyNode_list[0].topology()})"
+                if include_ids_bool:
+                    return f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology()})"
+                else:
+                    return f"{self._name_str}({self._daughter_topologyNode_list[0].topology()})"
             case 2:
-                return  f"{self._name_str}({self._daughter_topologyNode_list[0].topology()}, {self._daughter_topologyNode_list[1].topology()})"
+                if include_ids_bool:
+                    return  f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology()}, {self._daughter_topologyNode_list[1].topology()})"
+                else:
+                    return  f"{self._name_str}({self._daughter_topologyNode_list[0].topology()}, {self._daughter_topologyNode_list[1].topology()})"
 
-    def mermaid(self):
-        def collect_nodes(topologyNode, name_str_set, edge_str_list):
-            name_str_set.add(topologyNode.name())
+    def mermaid(self, include_ids=False):
+        def collect_nodes_and_edges(topologyNode, name_str_set, edge_str_list):
+            if include_ids:
+                name_str_set.add(f"{topologyNode.name()}_{topologyNode.id()}")
+            else:
+                name_str_set.add(topologyNode.name())
             #
             for daughter_topologyNode in topologyNode.daughters():
-                edge_str_list.append(f"{daughter_topologyNode.name()} --> {topologyNode.name()}")
-                collect_nodes(daughter_topologyNode, name_str_set, edge_str_list)
+                if include_ids:
+                    edge_str_list.append(f"{daughter_topologyNode.name()}_{topologyNode.id()} --> {topologyNode.name()}_{topologyNode.id()}")
+                else:
+                    edge_str_list.append(f"{daughter_topologyNode.name()} --> {topologyNode.name()}")
+                #
+                collect_nodes_and_edges(daughter_topologyNode, name_str_set, edge_str_list)
         #
         node_str_set = set()
         edge_str_list = []
-        collect_nodes(self, node_str_set, edge_str_list)
+        collect_nodes_and_edges(self, node_str_set, edge_str_list)
         #
         mermaid_str = ["graph TD"]
         mermaid_str.extend(f"    {name_str}" for name_str in node_str_set)
