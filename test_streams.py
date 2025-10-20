@@ -6,9 +6,11 @@ c = Local("local")
 t1 = "employees"
 t2 = "salaries"
 t3 = "sink"
+t4 = "snapshot"
 c.retouch(t1, partitions=2)
 c.retouch(t2, partitions=2)
 c.retouch(t3)
+c.retouch(t4)
 #
 employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
                             {"key": "1", "value": {"name": "mark"}},
@@ -60,10 +62,11 @@ async def test():
     print(c.cat(t2))
     print()
 
-    def run():
-        asyncio.run(streams([(c, employees_source_topologyNode), (c, salaries_source_topologyNode)], root_topologyNode, c, t3))
+    def run(stop_thread=None):
+        asyncio.run(streams([(c, t1), (c, t2)], root_topologyNode, c, t3, c, t4, stop_thread))
     #
-    thread = threading.Thread(target=run)
+    stop_thread = threading.Event()
+    thread = threading.Thread(target=run, args=[stop_thread])
     thread.daemon = True
     thread.start()
     #
@@ -74,14 +77,23 @@ async def test():
     print(c.cat(t3))
     print()
     #
+    stop_thread.set()
+    thread.join()
+    #
+    thread = threading.Thread(target=run)
+    thread.daemon = True
+    thread.start()
+    #
     pr = c.producer(t2)
     pr.produce({"salary": 100000}, key="0")
     pr.close()
     #
-    await asyncio.sleep(2)
+    await asyncio.sleep(4)
     #
     print()
     print(c.l())
     print(c.cat(t3))
+    #
+    thread.join()
 #
 asyncio.run(test())

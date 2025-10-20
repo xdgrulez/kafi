@@ -41,30 +41,35 @@ salary_zset = message_dict_list_to_ZSet(salary_message_dict_list)
 employees_source_topologyNode.output_handle_function()().get().send(employee_zset)
 salaries_source_topologyNode.output_handle_function()().get().send(salary_zset)
 
-root_topologyNode.step()
+salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
+salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
+salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
 
-print()
-print(f"Topology: {root_topologyNode.topology()}")
-print()
-print(f"Mermaid:\n{root_topologyNode.mermaid()}")
-print()
-print(f"Topology: {root_topologyNode.topology(True)}")
-print()
-print(f"Mermaid:\n{root_topologyNode.mermaid(True)}")
-print()
-print(f"Latest: {root_topologyNode.latest()}")
+x = root_topologyNode.latest_until_fixed_point()
+print(x)
 
-root_topologyNode = pickle.loads(pickle.dumps(root_topologyNode))
+# print()
+# print(f"Topology: {root_topologyNode.topology()}")
+# print()
+# print(f"Mermaid:\n{root_topologyNode.mermaid()}")
+# print()
+# print(f"Topology: {root_topologyNode.topology(True)}")
+# print()
+# print(f"Mermaid:\n{root_topologyNode.mermaid(True)}")
+# print()
+# print(f"Latest: {root_topologyNode.latest()}")
 
 #
 
-salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
-salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
+# root_topologyNode = pickle.loads(pickle.dumps(root_topologyNode))
 
-salaries_source_topologyNode = root_topologyNode.get_node(salaries_source_topologyNode.id())
-salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
+# salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
+# salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 
-root_topologyNode.step()
+# salaries_source_topologyNode = root_topologyNode.get_node_by_id(salaries_source_topologyNode.id())
+# salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
 
-print()
-print(f"Latest: {root_topologyNode.latest()}")
+# root_topologyNode.step()
+
+# print()
+# print(f"Latest: {root_topologyNode.latest()}")
