@@ -51,7 +51,7 @@ class TopologyNode:
             return liftedProject.output_handle()
         #
         def step_function():
-            liftedProject.step()
+            return liftedProject.step()
         #
         return TopologyNode("map_op", output_handle_function, step_function, [self])
 
@@ -66,7 +66,7 @@ class TopologyNode:
             return liftedSelect.output_handle()
         #
         def step_function():
-            liftedSelect.step()
+            return liftedSelect.step()
         #
         return TopologyNode("filter_op", output_handle_function, step_function, [self])
 
@@ -95,7 +95,7 @@ class TopologyNode:
         def step_function():
             left_index.step()
             right_index.step()
-            join_op.step()
+            return join_op.step()
         #
         return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
@@ -134,7 +134,7 @@ class TopologyNode:
             l2.step()
             r2.step()
             deltaLiftedDeltaLiftedSortMergeJoin.step()
-            step_until_fixpoint_and_return(output_node)
+            return step_until_fixpoint_and_return(output_node)
         #
         return TopologyNode("join2_op", output_handle_function, step_function, [self, other])
 
@@ -150,24 +150,9 @@ class TopologyNode:
             return liftedProject.output_handle()
         #
         def step_function():
-            liftedProject.step()
+            return liftedProject.step()
         #
         return TopologyNode("peek_op", output_handle_function, step_function, [self])
-    
-    #
-
-    def step(self):
-        def traverse(topologyNode, stack):
-            stack.append(topologyNode)
-            for daughter in topologyNode.daughters():
-                traverse(daughter, stack)
-            return stack
-        #
-        stack = traverse(self, [])
-        #
-        while stack:
-            topologyNode = stack.pop()
-            topologyNode._step_function()
     
     #
 
@@ -188,12 +173,38 @@ class TopologyNode:
 
     #
 
+    def step(self):
+        def traverse(topologyNode, stack):
+            stack.append(topologyNode)
+            for daughter in topologyNode.daughters():
+                traverse(daughter, stack)
+            return stack
+        #
+        stack = traverse(self, [])
+        #
+        x = None
+        while stack:
+            topologyNode = stack.pop()
+            x = topologyNode._step_function()
+        #
+        return x
+    
     def latest(self):
         return self._output_handle_function().get().latest()
 
+    def latest_until_fixed_point(self):
+        latest_list = []
+        while True:
+            x = self.step()
+            if x:
+                latest_list.append()
+            else:
+                break
+        return latest_list
+
     #
 
-    def get_node(self, id_str):
+    def get_node_by_id(self, id_str):
         def collect_node_dict(topologyNode, id_str_topologyNode_dict):
             if id_str == topologyNode.id():
                 id_str_topologyNode_dict[id_str] = topologyNode
@@ -205,6 +216,19 @@ class TopologyNode:
         collect_node_dict(self, id_str_topologyNode_dict)
         #
         return id_str_topologyNode_dict[id_str]
+
+    def get_node_by_name(self, name_str):
+        def collect_node_dict(topologyNode, name_str_topologyNode_dict):
+            if name_str == topologyNode.name():
+                name_str_topologyNode_dict[name_str] = topologyNode
+            else:
+                for daughter_topologyNode in topologyNode.daughters():
+                    collect_node_dict(daughter_topologyNode, name_str_topologyNode_dict)
+        #
+        name_str_topologyNode_dict = {}
+        collect_node_dict(self, name_str_topologyNode_dict)
+        #
+        return name_str_topologyNode_dict[name_str]
 
     #
 
