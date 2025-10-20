@@ -45,6 +45,11 @@ salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
 salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
 
+# x = root_topologyNode.step()
+# print(x)
+# x = root_topologyNode.step()
+# print(x)
+
 x = root_topologyNode.latest_until_fixed_point()
 print(x)
 

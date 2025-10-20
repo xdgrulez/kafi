@@ -51,7 +51,7 @@ class TopologyNode:
             return liftedProject.output_handle()
         #
         def step_function():
-            return liftedProject.step()
+            liftedProject.step()
         #
         return TopologyNode("map_op", output_handle_function, step_function, [self])
 
@@ -66,7 +66,7 @@ class TopologyNode:
             return liftedSelect.output_handle()
         #
         def step_function():
-            return liftedSelect.step()
+            liftedSelect.step()
         #
         return TopologyNode("filter_op", output_handle_function, step_function, [self])
 
@@ -95,7 +95,7 @@ class TopologyNode:
         def step_function():
             left_index.step()
             right_index.step()
-            return join_op.step()
+            join_op.step()
         #
         return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
@@ -134,7 +134,7 @@ class TopologyNode:
             l2.step()
             r2.step()
             deltaLiftedDeltaLiftedSortMergeJoin.step()
-            return step_until_fixpoint_and_return(output_node)
+            step_until_fixpoint_and_return(output_node)
         #
         return TopologyNode("join2_op", output_handle_function, step_function, [self, other])
 
@@ -150,7 +150,7 @@ class TopologyNode:
             return liftedProject.output_handle()
         #
         def step_function():
-            return liftedProject.step()
+            liftedProject.step()
         #
         return TopologyNode("peek_op", output_handle_function, step_function, [self])
     
@@ -182,22 +182,24 @@ class TopologyNode:
         #
         stack = traverse(self, [])
         #
-        x = None
         while stack:
             topologyNode = stack.pop()
-            x = topologyNode._step_function()
-        #
-        return x
+            topologyNode._step_function()
     
     def latest(self):
         return self._output_handle_function().get().latest()
 
     def latest_until_fixed_point(self):
         latest_list = []
+        last_latest = None
         while True:
-            x = self.step()
-            if x:
-                latest_list.append()
+            self.step()
+            x = self.latest()
+            if x != last_latest:
+                if x.is_identity():
+                    break
+                latest_list.append(x)
+                last_latest = x
             else:
                 break
         return latest_list
