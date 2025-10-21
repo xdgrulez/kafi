@@ -84,12 +84,11 @@ class FSConsumer(StorageConsumer):
                                 start_offsets_dict[partition_int] = auto_offset_reset_offsets_dict[partition_int]
                             else:
                                 start_offsets_dict[partition_int] = group_offset_int
+                                self.next_topic_str_offsets_dict_dict[topic_str][partition_int] = start_offsets_dict[partition_int]
+            #
             #
             # Get partition files for the partitions to be consumed.
-            if self.topic_str_partition_int_list_dict is not None:
-                partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str, self.topic_str_partition_int_list_dict[topic_str])
-            else:
-                partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str, [partition_int for partition_int in partition_int_list])
+            partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str, [partition_int for partition_int in partition_int_list])
             #
             # Get first partition files for all partitions.
             partition_int_first_partition_rel_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str_by_offset(topic_str, partition_int, offset_int) for partition_int, offset_int in start_offsets_dict.items()}

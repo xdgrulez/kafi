@@ -16,7 +16,7 @@ def setup():
     root_topologyNode = (
         employees_source_topologyNode
         .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
-        .join2(
+        .join(
             salaries_source_topologyNode,
             on_function=lambda message_dict: message_dict["key"],
             projection_function=proj_function
@@ -41,12 +41,6 @@ salary_zset = message_dict_list_to_ZSet(salary_message_dict_list)
 employees_source_topologyNode.output_handle_function()().get().send(employee_zset)
 salaries_source_topologyNode.output_handle_function()().get().send(salary_zset)
 
-salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
-salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
-
-salaries_source_topologyNode = root_topologyNode.get_node_by_id(salaries_source_topologyNode.id())
-salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
-
 print()
 print(f"Topology: {root_topologyNode.topology()}")
 print()
@@ -62,11 +56,14 @@ print(f"Latest: {root_topologyNode.latest_until_fixed_point()}")
 
 root_topologyNode = pickle.loads(pickle.dumps(root_topologyNode))
 
-salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100001}}]
+salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
 salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 
-salaries_source_topologyNode = root_topologyNode.get_node_by_id(salaries_source_topologyNode.id())
+# salaries_source_topologyNode = root_topologyNode.get_node_by_id(salaries_source_topologyNode.id())
+salaries_source_topologyNode = root_topologyNode.get_node_by_name("salaries")
+print(salaries_source_topologyNode.output_handle_function()().get())
 salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
+print(salaries_source_topologyNode.output_handle_function()().get())
 
 print()
 print(f"Latest: {root_topologyNode.latest_until_fixed_point()}")

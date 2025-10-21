@@ -46,18 +46,20 @@ def proj_function(_, left_message_dict, right_message_dict):
     left_message_dict["value"].update(right_message_dict["value"])
     return left_message_dict
 
-root_topologyNode = (
-    employees_source_topologyNode
-    .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
-    .join(
-        salaries_source_topologyNode,
-        on_function=lambda message_dict: message_dict["key"],
-        projection_function=proj_function
+def get_root_topologyNode():
+    root_topologyNode = (
+        employees_source_topologyNode
+        .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
+        .join(
+            salaries_source_topologyNode,
+            on_function=lambda message_dict: message_dict["key"],
+            projection_function=proj_function
+        )
+        # .peek(print)
+        .map(map_function)
     )
-    # .peek(print)
-    .map(map_function)
-)
-print(root_topologyNode.topology())
+    #
+    return root_topologyNode
 #
 async def test():
     print(c.cat(t1))
@@ -65,14 +67,14 @@ async def test():
     print()
 
     def run(stop_thread=None):
-        asyncio.run(streams([(c, t1), (c, t2)], root_topologyNode, c, t3, c, t4, stop_thread, group=g1))
+        asyncio.run(streams([(c, t1), (c, t2)], get_root_topologyNode(), c, t3, c, t4, stop_thread, group=g1))
     #
     stop_thread = threading.Event()
     thread = threading.Thread(target=run, args=[stop_thread])
     thread.daemon = True
     thread.start()
     #
-    await asyncio.sleep(8)
+    await asyncio.sleep(5)
     #
     print()
     print(c.l())
@@ -81,6 +83,7 @@ async def test():
     #
     stop_thread.set()
     thread.join()
+    await asyncio.sleep(5)
     #
     thread = threading.Thread(target=run)
     thread.daemon = True
@@ -90,7 +93,7 @@ async def test():
     pr.produce({"salary": 100000}, key="0")
     pr.close()
     #
-    await asyncio.sleep(4)
+    await asyncio.sleep(5)
     #
     print()
     print(c.l())
