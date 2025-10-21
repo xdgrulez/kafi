@@ -13,9 +13,12 @@ OFFSET_INVALID = -1001
 class FSConsumer(StorageConsumer):
     def __init__(self, fs_obj, *topics, **kwargs):
         super().__init__(fs_obj, *topics, **kwargs)
-        # Initialize self.next_topic_str_offsets_dict_dict (required for commit() without offsets).
+        #
+        # Initialize offsets cache self.next_topic_str_offsets_dict_dict
+        # (required for commit() without offsets).
         self.topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
         self.next_topic_str_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
+        #
         # Initialize/update group dict file.
         group_dict = self.storage_obj.admin.get_group_dict(self.group_str)
         if group_dict == {}:
@@ -36,7 +39,7 @@ class FSConsumer(StorageConsumer):
 
     #
   
-    def foldl(self, foldl_fun, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
+    def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
         n_int = n
         #
         commit_after_processing_bool = self.storage_obj.commit_after_processing() if commit_after_processing is None else commit_after_processing
@@ -48,43 +51,50 @@ class FSConsumer(StorageConsumer):
         rel_file_str_list = []
         for topic_str in self.topic_str_list:
             partitions_int = self.topic_str_partitions_int_dict[topic_str]
-            #
+            if self.topic_str_partition_int_list_dict is not None:
+                partition_int_list = self.topic_str_partition_int_list_dict[topic_str]
+            else:
+                partition_int_list = [partition_int for partition_int in range(partitions_int)]
             # Get start offsets.
             start_offsets_dict = self.topic_str_start_offsets_dict_dict[topic_str] if self.topic_str_start_offsets_dict_dict is not None and topic_str in self.topic_str_start_offsets_dict_dict else None
-            #
             if start_offsets_dict is None:
-                # If we got no start offsets, try to get the start offsets from the group.
-                group_dict = self.storage_obj.admin.get_group_dict(self.group_str)
-                group_offsets_dict = group_dict["offsets"][topic_str]
-                #
-                if any(group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in range(partitions_int)):
-                    # If any of the partitions still does not have a committed offset yet...
-                    if auto_offset_reset_str.lower() == "latest":
-                        # If auto.offset.reset == latest, start offsets = last offsets.
-                        partition_int_offset_tuple_dict = self.watermarks(topic_str, **kwargs)[topic_str]
-                        auto_offset_reset_offsets_dict = {partition_int: offset_tuple[1] for partition_int, offset_tuple in partition_int_offset_tuple_dict.items()}
-                    elif auto_offset_reset_str.lower() == "earliest":
-                        # If auto.offset.reset == earliest, start offsets = 0
-                        auto_offset_reset_offsets_dict = {partition_int: 0 for partition_int in range(partitions_int)}
-                    else:
-                        raise Exception("Only \"earliest\" and \"latest\" supported for \"auto.offset.reset\".")
-                    # ...and for each partition still not having a committed offset yet, use the auto.offset.reset one.
-                    start_offsets_dict = {}
-                    for partition_int, offset_int in group_offsets_dict.items():
-                        if offset_int == OFFSET_INVALID:
-                            start_offsets_dict[partition_int] = auto_offset_reset_offsets_dict[partition_int]
+                # If we have no start offsets, we first try to get the start offsets from the cache.
+                start_offsets_dict = {partition_int: offset_int for partition_int, offset_int in self.next_topic_str_offsets_dict_dict[topic_str].items() if partition_int in partition_int_list}
+                if any(start_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in partition_int_list):
+                    # If we still do not have start offsets for all partitions to be consumed, try to get them from the consumer group.
+                    group_dict = self.storage_obj.admin.get_group_dict(self.group_str)
+                    group_offsets_dict = group_dict["offsets"][topic_str]
+                    #
+                    if any(start_offsets_dict[partition_int] == OFFSET_INVALID and group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in partition_int_list):
+                        # If any of the partitions still does not have a start or committed offset yet, get the auto.offset.reset offsets...
+                        partition_int_offset_tuple_dict = self.storage_obj.admin.watermarks(topic_str, **kwargs)[topic_str]
+                        if auto_offset_reset_str.lower() == "latest":
+                            # If auto.offset.reset == latest, get the high watermark.
+                            auto_offset_reset_offsets_dict = {partition_int: offset_tuple[1] for partition_int, offset_tuple in partition_int_offset_tuple_dict.items()}
+                        elif auto_offset_reset_str.lower() == "earliest":
+                            # If auto.offset.reset == earliest, get the low watermark.
+                            auto_offset_reset_offsets_dict = {partition_int: offset_tuple[0] for partition_int, offset_tuple in partition_int_offset_tuple_dict.items()}
                         else:
-                            start_offsets_dict[partition_int] = group_offsets_dict[partition_int]
-                else:
-                    start_offsets_dict = group_offsets_dict
+                            raise Exception("Only \"earliest\" and \"latest\" supported for \"auto.offset.reset\".")
+                    # Now either use the offsets from the consumer group or from the auto.offset.reset offsets to fill in the missing start offsets.
+                    for partition_int, offset_int in start_offsets_dict.items():
+                        if offset_int == OFFSET_INVALID:
+                            group_offset_int = group_offsets_dict[partition_int]
+                            if group_offset_int == OFFSET_INVALID:
+                                start_offsets_dict[partition_int] = auto_offset_reset_offsets_dict[partition_int]
+                            else:
+                                start_offsets_dict[partition_int] = group_offset_int
             #
-            # Get partition files for all partitions.
-            partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str)
+            # Get partition files for the partitions to be consumed.
+            if self.topic_str_partition_int_list_dict is not None:
+                partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str, self.topic_str_partition_int_list_dict[topic_str])
+            else:
+                partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str, [partition_int for partition_int in partition_int_list])
             #
             # Get first partition files for all partitions.
             partition_int_first_partition_rel_file_str_dict = {partition_int: self.storage_obj.admin.find_partition_file_str_by_offset(topic_str, partition_int, offset_int) for partition_int, offset_int in start_offsets_dict.items()}
             #
-            # Filter out partitions not corresponding to any filee listed by get_partition_files() above.
+            # Filter out partitions not corresponding to any file listed by get_partition_files() above.
             partition_int_first_partition_rel_file_str_dict = {partition_int: first_partition_rel_file_str for partition_int, first_partition_rel_file_str in partition_int_first_partition_rel_file_str_dict.items() if first_partition_rel_file_str is not None}
             #
             # Get all partition files to be consumed for all partitions.
@@ -95,7 +105,7 @@ class FSConsumer(StorageConsumer):
             max_num_files_int = max([len(to_be_consume_rel_file_str_list) for to_be_consume_rel_file_str_list in partition_int_to_be_consume_rel_file_str_list_dict.values()])
             #
             for file_counter_int in range(max_num_files_int):
-                for partition_int in range(partitions_int):
+                for partition_int in partition_int_list:
                     if partition_int in partition_int_to_be_consume_rel_file_str_list_dict:
                         if len(partition_int_to_be_consume_rel_file_str_list_dict[partition_int]) > file_counter_int:
                             rel_file_str_list.append(partition_int_to_be_consume_rel_file_str_list_dict[partition_int][file_counter_int])
@@ -126,7 +136,7 @@ class FSConsumer(StorageConsumer):
                             continue
                     #
                     if offset_int >= start_offsets_dict[partition_int]:
-                        acc = foldl_fun(acc, message_dict)
+                        acc = foldl_function(acc, message_dict)
                         #
                         message_counter_int += 1
                         #
@@ -148,12 +158,12 @@ class FSConsumer(StorageConsumer):
     #
 
     def consume(self, n=ALL_MESSAGES, **kwargs):
-        def foldl_fun(message_dict_list, message_dict):
+        def foldl_function(message_dict_list, message_dict):
             message_dict_list.append(message_dict)
             #
             return message_dict_list
         #
-        return self.foldl(foldl_fun, [], n)
+        return self.foldl(foldl_function, [], n)
 
     def offsets(self):
         group_str_topic_str_offsets_dict_dict_dict = self.storage_obj.admin.group_offsets(self.group_str)

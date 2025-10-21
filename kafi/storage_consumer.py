@@ -14,6 +14,8 @@ class StorageConsumer(Deserializer):
         self.topic_str_start_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "offsets", "ts", **kwargs)
         self.topic_str_end_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "end_offsets", "end_ts", **kwargs)
         #
+        # Get partitions to assign for the subscribed topics.
+        self.topic_str_partition_int_list_dict = self.get_partitions_from_kwargs("partitions", **kwargs)
         # Get key and value types.
         (self.topic_str_key_type_str_dict, self.topic_str_value_type_str_dict) = self.get_key_value_types_from_kwargs(self.topic_str_list, **kwargs)
         #
@@ -71,6 +73,14 @@ class StorageConsumer(Deserializer):
         topic_str_value_type_str_dict = {topic_str: value_type_str for topic_str in topic_str_list}
         #
         return (topic_str_key_type_str_dict, topic_str_value_type_str_dict)
+
+    def get_partitions_from_kwargs(self, partitions_key_str, **kwargs):
+        if partitions_key_str in kwargs and kwargs[partitions_key_str] is not None:
+            topic_str_partition_int_list_dict = kwargs[partitions_key_str]
+        else:
+            topic_str_partition_int_list_dict = None
+        #
+        return topic_str_partition_int_list_dict
 
     #
 

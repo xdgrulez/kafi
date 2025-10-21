@@ -260,10 +260,8 @@ class FSAdmin(StorageAdmin):
         #
         return found_rel_file_str
 
-    def get_partition_files(self, topic_str):
+    def get_partition_files(self, topic_str, partition_int_list):
         topic_abs_dir_str = self.get_topic_abs_path_str(topic_str)
-        #
-        partitions_int = self.get_partitions(topic_str)
         #
         rel_file_str_list = self.list_files(os.path.join(topic_abs_dir_str, "partitions"))
         #
@@ -271,8 +269,7 @@ class FSAdmin(StorageAdmin):
             list.sort()
             return list
         #
-
-        partition_int_rel_file_str_list_dict = {partition_int: sort([rel_file_str for rel_file_str in rel_file_str_list if int(rel_file_str.split(",")[0]) == partition_int]) for partition_int in range(partitions_int)}
+        partition_int_rel_file_str_list_dict = {partition_int: sort([rel_file_str for rel_file_str in rel_file_str_list if int(rel_file_str.split(",")[0]) == partition_int]) for partition_int in partition_int_list}
         #
         return partition_int_rel_file_str_list_dict
 

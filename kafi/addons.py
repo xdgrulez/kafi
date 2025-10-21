@@ -16,7 +16,7 @@ def default_projection_function(message_dict1, message_dict2):
 
 class AddOns(Functional):
     def compact(self, topic, n=ALL_MESSAGES, **kwargs):
-        def foldl_fun(acc, message_dict):
+        def foldl_function(acc, message_dict):
             key_hash_int_message_dict_dict = acc
             #
             key = message_dict["key"]
@@ -33,7 +33,7 @@ class AddOns(Functional):
             return key_hash_int_message_dict_dict
         #
 
-        (key_hash_int_message_dict_dict, _) = self.foldl(topic, foldl_fun, {}, n, **kwargs)
+        (key_hash_int_message_dict_dict, _) = self.foldl(topic, foldl_function, {}, n, **kwargs)
         #
         message_dict_list = list(key_hash_int_message_dict_dict.values())
         #

@@ -47,6 +47,10 @@ class ClusterConsumer(KafkaConsumer):
             if self.topic_str_start_offsets_dict_dict is not None:
                 topicPartition_list = [set_offset(topicPartition) for topicPartition in partitions]
                 consumer.assign(topicPartition_list)
+            if self.topic_str_partition_int_list_dict is not None:
+                print(self.topic_str_partition_int_list_dict)
+                topicPartition_list = [topicPartition for topicPartition in partitions if topicPartition.partition in self.topic_str_partition_int_list_dict[topicPartition.topic]]
+                consumer.assign(topicPartition_list)
         self.consumer.subscribe(self.topic_str_list, on_assign=on_assign)
         #
         return self.topic_str_list, self.group_str
@@ -60,6 +64,18 @@ class ClusterConsumer(KafkaConsumer):
         self.consumer.close()
         #
         return self.topic_str_list, self.group_str
+
+    #
+
+    def assign(self, topic_str_partition_int_list_dict):
+        topicPartition_list = topic_str_partition_int_list_dict_to_TopicPartition_list(topic_str_partition_int_list_dict)
+        #
+        self.consumer.assign(topicPartition_list)
+
+    def seek(self, topic_str, partition_int, offset_int):
+        topicPartition = TopicPartition(topic_str, partition_int, offset_int)
+        #
+        self.consumer.seek(topicPartition)
 
     #
 
@@ -149,3 +165,12 @@ def topicPartition_list_to_offsets_dict(topicPartition_list):
         offsets_dict[topic_str] = offsets
     #
     return offsets_dict
+
+
+def topic_str_partition_int_list_dict_to_TopicPartition_list(topic_str_partition_int_dict):
+    topicPartition_list = []
+    for topic_str, partition_int_list in topic_str_partition_int_dict.items():
+        for partition_int in partition_int_list:
+            topicPartition_list.append(TopicPartition(topic_str, partition_int))
+    #
+    return topicPartition_list
