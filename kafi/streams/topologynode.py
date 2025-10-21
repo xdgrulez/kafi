@@ -190,19 +190,20 @@ class TopologyNode:
         return self._output_handle_function().get().latest()
 
     def latest_until_fixed_point(self):
-        latest_list = []
-        last_latest = None
+        latest_summed_zSet = ZSet({})
+        latest_zSet = ZSet({})
+        zSetAddition = ZSetAddition()
         while True:
             self.step()
-            x = self.latest()
-            if x != last_latest:
-                if x.is_identity():
+            latest_zSet1 = self.latest()
+            if latest_zSet1 != latest_zSet:
+                if latest_zSet1.is_identity():
                     break
-                latest_list.append(x)
-                last_latest = x
+                latest_summed_zSet = zSetAddition.add(latest_summed_zSet, latest_zSet1)
+                latest_zSet = latest_zSet1
             else:
                 break
-        return latest_list
+        return latest_summed_zSet
 
     #
 

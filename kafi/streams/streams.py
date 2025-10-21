@@ -20,7 +20,7 @@ async def streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage,
 async def streams_function(storage_topic_str_tuple_list, root_topologyNode, foreach_function, finally_function, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
     consume_sleep_float = kwargs["consume_sleep"] if "consume_sleep" in kwargs else 0.2
     process_sleep_float = kwargs["process_sleep"] if "process_sleep" in kwargs else 0.2
-    snapshot_interval_float = kwargs["snapshot_interval"] if "snapshot_interval" in kwargs else 1.0
+    snapshot_interval_float = kwargs["snapshot_interval"] if "snapshot_interval" in kwargs else 60.0
     #
     initial_time_int = get_millis()
     #
@@ -82,8 +82,6 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
                         #
                         stream = source_topologyNode.output_handle_function()().get()
                         stream.send(zSet)
-                #
-                root_topologyNode.step()
                 #
                 zSet = root_topologyNode.latest_until_fixed_point()
                 message_dict_list = [json.loads(message_json_str) for message_json_str, i in zSet.items() if i == 1]

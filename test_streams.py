@@ -7,10 +7,12 @@ t1 = "employees"
 t2 = "salaries"
 t3 = "sink"
 t4 = "snapshot"
+g1 = "group1"
 c.retouch(t1, partitions=2)
 c.retouch(t2, partitions=2)
 c.retouch(t3)
 c.retouch(t4)
+c.grm(g1)
 #
 employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
                             {"key": "1", "value": {"name": "mark"}},
@@ -63,7 +65,7 @@ async def test():
     print()
 
     def run(stop_thread=None):
-        asyncio.run(streams([(c, t1), (c, t2)], root_topologyNode, c, t3, c, t4, stop_thread))
+        asyncio.run(streams([(c, t1), (c, t2)], root_topologyNode, c, t3, c, t4, stop_thread, group=g1))
     #
     stop_thread = threading.Event()
     thread = threading.Thread(target=run, args=[stop_thread])

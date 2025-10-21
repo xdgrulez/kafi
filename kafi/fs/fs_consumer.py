@@ -13,8 +13,7 @@ OFFSET_INVALID = -1001
 class FSConsumer(StorageConsumer):
     def __init__(self, fs_obj, *topics, **kwargs):
         super().__init__(fs_obj, *topics, **kwargs)
-        #  required for commit() without offsets.
-        # Initialize self.next_topic_str_offsets_dict_dict
+        # Initialize self.next_topic_str_offsets_dict_dict (required for commit() without offsets).
         self.topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
         self.next_topic_str_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
         # Initialize/update group dict file.
@@ -148,7 +147,7 @@ class FSConsumer(StorageConsumer):
 
     #
 
-    def consume(self, n=ALL_MESSAGES):
+    def consume(self, n=ALL_MESSAGES, **kwargs):
         def foldl_fun(message_dict_list, message_dict):
             message_dict_list.append(message_dict)
             #
