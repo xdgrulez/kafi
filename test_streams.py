@@ -7,12 +7,11 @@ t1 = "employees"
 t2 = "salaries"
 t3 = "sink"
 t4 = "snapshot"
-g1 = "group1"
+g1 = f"group_{get_millis()}"
 c.retouch(t1, partitions=2)
 c.retouch(t2, partitions=2)
 c.retouch(t3)
 c.retouch(t4)
-c.grm(g1)
 #
 employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
                             {"key": "1", "value": {"name": "mark"}},
@@ -35,9 +34,6 @@ for x in salary_message_dict_list:
     partition_int = 1 if partition_int == 0 else 0
 pr.close()
 #
-employees_source_topologyNode = source(t1)
-salaries_source_topologyNode = source(t2)
-#
 def map_function(message_dict):
     message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
     return message_dict
@@ -47,6 +43,9 @@ def proj_function(_, left_message_dict, right_message_dict):
     return left_message_dict
 
 def get_root_topologyNode():
+    employees_source_topologyNode = source(t1)
+    salaries_source_topologyNode = source(t2)
+    #
     root_topologyNode = (
         employees_source_topologyNode
         .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
@@ -62,6 +61,7 @@ def get_root_topologyNode():
     return root_topologyNode
 #
 async def test():
+    print(c.l())
     print(c.cat(t1))
     print(c.cat(t2))
     print()
@@ -74,7 +74,7 @@ async def test():
     thread.daemon = True
     thread.start()
     #
-    await asyncio.sleep(5)
+    await asyncio.sleep(8)
     #
     print()
     print(c.l())
@@ -83,7 +83,6 @@ async def test():
     #
     stop_thread.set()
     thread.join()
-    await asyncio.sleep(5)
     #
     thread = threading.Thread(target=run)
     thread.daemon = True
@@ -93,7 +92,7 @@ async def test():
     pr.produce({"salary": 100000}, key="0")
     pr.close()
     #
-    await asyncio.sleep(5)
+    await asyncio.sleep(8)
     #
     print()
     print(c.l())

@@ -61,9 +61,9 @@ salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 
 # salaries_source_topologyNode = root_topologyNode.get_node_by_id(salaries_source_topologyNode.id())
 salaries_source_topologyNode = root_topologyNode.get_node_by_name("salaries")
-print(salaries_source_topologyNode.output_handle_function()().get())
+# print(salaries_source_topologyNode.output_handle_function()().get())
 salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
-print(salaries_source_topologyNode.output_handle_function()().get())
+# print(salaries_source_topologyNode.output_handle_function()().get())
 
 print()
 print(f"Latest: {root_topologyNode.latest_until_fixed_point()}")

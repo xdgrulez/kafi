@@ -2,7 +2,8 @@ from kafi.streams.topologynode import message_dict_list_to_ZSet
 from kafi.helpers import get_millis
 from asyncio import TaskGroup, Queue, sleep
 import json
-import cloudpickle as pickle
+import cloudpickle
+import hashlib
 
 #
 
@@ -23,6 +24,40 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
     snapshot_interval_float = kwargs["snapshot_interval"] if "snapshot_interval" in kwargs else 1.0
     #
     initial_time_int = get_millis()
+    #
+    def get_latest_offset(message_dict_list, partition_int):
+        return next((message_dict["offset"] for message_dict in reversed(message_dict_list) if message_dict["partition"] == partition_int), None)
+    #
+    last_snapshot_hash_str_list = [None]
+    #
+    def save_snapshot():
+        root_topologyNode_bytes = cloudpickle.dumps(root_topologyNode)
+        root_topologyNode_hash_str = hashlib.md5(root_topologyNode_bytes).hexdigest()
+        #
+        if root_topologyNode_hash_str != last_snapshot_hash_str_list[0]:
+            last_snapshot_hash_str_list[0] = root_topologyNode_hash_str
+            #
+            print("Saving snapshot...")
+            producer = snapshot_storage.producer(snapshot_topic, type="bytes")
+            producer.produce(root_topologyNode_bytes, key=root_topologyNode.id())
+            producer.close()
+
+    #
+    def load_snapshot():
+        message_dict_list = snapshot_storage.compact(snapshot_topic, type="bytes", **kwargs)
+        if len(message_dict_list) > 0:
+            root_topologyNode_bytes = message_dict_list[0]["value"]
+            #
+            root_topologyNode_hash_str = hashlib.md5(root_topologyNode_bytes).hexdigest()
+            last_snapshot_hash_str_list[0] = root_topologyNode_hash_str
+            #
+            print("Loading snaphot...")
+            return cloudpickle.loads(root_topologyNode_bytes)
+        else:
+            return root_topologyNode
+    #
+    if snapshot_storage is not None:
+        root_topologyNode = load_snapshot()
     #
     storage_source_topologyNode_queue_tuple_list = []
     for storage, topic_str in storage_topic_str_tuple_list:
@@ -77,8 +112,6 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
                                 storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int + 1
                         #
                         zSet = message_dict_list_to_ZSet(message_dict_list)
-                        print("ZSet1")
-                        print(zSet)
                         #
                         stream = source_topologyNode.output_handle_function()().get()
                         stream.send(zSet)
@@ -86,8 +119,6 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
                 #
                 if sent_bool:
                     zSet = root_topologyNode.latest_until_fixed_point()
-                    print("ZSet2")
-                    print(zSet)
                     #
                     message_dict_list = [json.loads(message_json_str) for message_json_str, i in zSet.items() if i == 1]
                     #
@@ -96,40 +127,17 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
                 time_int = get_millis()
                 if snapshot_storage is not None and (time_int - initial_time_int) > snapshot_interval_float * 1000:
                     save_snapshot()
-                    #
-                    for storage_id_topic_str_tuple, offsets_dict in storage_id_topic_str_tuple_offsets_dict_dict.items():
-                        consumer = storage_id_topic_str_tuple_consumer_dict[storage_id_topic_str_tuple]
-                        print(f"Committed {offsets_dict} for topic {storage_id_topic_str_tuple[1]}")
-                        consumer.commit(offsets_dict)
-
+                #
+                for storage_id_topic_str_tuple, offsets_dict in storage_id_topic_str_tuple_offsets_dict_dict.items():
+                    consumer = storage_id_topic_str_tuple_consumer_dict[storage_id_topic_str_tuple]
+                    print(f"Committed {offsets_dict} for topic {storage_id_topic_str_tuple[1]}")
+                    consumer.commit(offsets_dict)
                 #
                 await sleep(process_sleep_float)
         except KeyboardInterrupt:
             pass
         finally:
             finally_function()
-    #
-    def get_latest_offset(message_dict_list, partition_int):
-        return next((message_dict["offset"] for message_dict in reversed(message_dict_list) if message_dict["partition"] == partition_int), None)
-    #
-    def save_snapshot():
-        root_topologyNode_bytes = pickle.dumps(root_topologyNode)
-        #
-        producer = snapshot_storage.producer(snapshot_topic, type="bytes")
-        producer.produce(root_topologyNode_bytes, key=root_topologyNode.id())
-        producer.close()
-    #
-    def load_snapshot():
-        message_dict_list = snapshot_storage.compact(snapshot_topic, type="bytes")
-        if len(message_dict_list) > 0:
-            root_topologyNode_bytes = message_dict_list[0]["value"]
-            #
-            print("Loading snaphot...")
-            return pickle.loads(root_topologyNode_bytes)
-        else:
-            return root_topologyNode
-    #
-    root_topologyNode = load_snapshot()
     #
     async with TaskGroup() as taskGroup:
         # Create one task for each source of the topology.
