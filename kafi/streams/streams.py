@@ -11,7 +11,7 @@ async def streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage,
     producer = sink_storage.producer(sink_topic_str, **kwargs)
     #
     def sink_function(message_dict_list):
-        producer.produce_list(message_dict_list, **kwargs)
+        producer.produce_to(message_dict_list, **kwargs)
     #
     def finally_function():
         producer.close()

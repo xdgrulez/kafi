@@ -29,7 +29,35 @@ class StorageProducer(Serializer):
 
     #
 
-    def produce_list(self, message_dict_list, **kwargs):
+    # Produce with bells and whistles (lists, chunking, later encryption...).
+    def produce(self, value, **kwargs):
+        key = kwargs["key"] if "key" in kwargs else None
+        partition = kwargs["partition"] if "partition" in kwargs else RD_KAFKA_PARTITION_UA
+        timestamp = kwargs["timestamp"] if "timestamp" in kwargs else CURRENT_TIME
+        headers = kwargs["headers"] if "headers" in kwargs else None
+        #
+        # chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else -1
+        #
+        value_list = value if isinstance(value, list) else [value]
+        #
+        key_list = key if isinstance(key, list) else [key for _ in value_list]
+        #
+        partition_int_list = partition if isinstance(partition, list) else [partition for _ in value_list]
+        #
+        timestamp_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
+        #
+        headers_list = headers if isinstance(headers, list) and all(self.storage_obj.is_headers(headers1) for headers1 in headers) and len(headers) == len(value_list) else [headers for _ in value_list]
+        headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
+        #
+        message_dict_list = [{"value": value, "key": key, "partition": partition_int, "timestamp": timestamp, "headers": headers_str_bytes_tuple_list} for value, key, partition_int, timestamp, headers_str_bytes_tuple_list in zip(value_list, key_list, partition_int_list, timestamp_list, headers_str_bytes_tuple_list_list)]
+        
+            message_dict
+            self.produce_impl(message_dict_list, **kwargs)
+
+
+
+    # Produce a list of read message_dicts, e.g. for foldl_to()...
+    def produce_to(self, message_dict_list, **kwargs):
         value_list = [message_dict["value"] for message_dict in message_dict_list]
         #
         key_list = [message_dict["key"] for message_dict in message_dict_list]

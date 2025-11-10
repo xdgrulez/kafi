@@ -80,7 +80,7 @@ class Functional:
             produce_batch_message_dict_list += message_dict_list
             #
             if len(produce_batch_message_dict_list) == produce_batch_size_int:
-                target_producer.produce_list(produce_batch_message_dict_list, **target_kwargs)
+                target_producer.produce_to(produce_batch_message_dict_list, **target_kwargs)
                 #
                 produce_message_counter_int += len(produce_batch_message_dict_list)
                 if verbose_int > 0 and produce_message_counter_int % progress_num_messages_int == 0:
@@ -106,7 +106,7 @@ class Functional:
         consumer.close()
         #
         if len(produce_batch_message_dict_list) > 0:
-            target_producer.produce_list(produce_batch_message_dict_list, **target_kwargs)
+            target_producer.produce_to(produce_batch_message_dict_list, **target_kwargs)
             produce_message_counter_int += len(produce_batch_message_dict_list)
         #
         target_producer.close()
@@ -272,7 +272,7 @@ class Functional:
             produce_batch_message_dict_list += collected_message_dict_list
             #
             if len(produce_batch_message_dict_list) == produce_batch_size_int:
-                target_producer.produce_list(produce_batch_message_dict_list, **target_kwargs)
+                target_producer.produce_to(produce_batch_message_dict_list, **target_kwargs)
                 #
                 produce_message_counter_int += len(produce_batch_message_dict_list)
                 if verbose_int > 0 and produce_message_counter_int % progress_num_messages_int == 0:
@@ -288,7 +288,7 @@ class Functional:
         consumer2.close()
         #
         if len(produce_batch_message_dict_list) > 0:
-            target_producer.produce_list(produce_batch_message_dict_list, **target_kwargs)
+            target_producer.produce_to(produce_batch_message_dict_list, **target_kwargs)
             #
             produce_message_counter_int += len(produce_batch_message_dict_list)
         #
@@ -436,7 +436,7 @@ class Functional:
             produce_batch_message_dict_list += collected_message_dict_list
             #
             if len(produce_batch_message_dict_list) == produce_batch_size_int:
-                target_producer.produce_list(produce_batch_message_dict_list, **target_kwargs)
+                target_producer.produce_to(produce_batch_message_dict_list, **target_kwargs)
                 #
                 produce_message_counter_int += len(produce_batch_message_dict_list)
                 if verbose_int > 0 and produce_message_counter_int % progress_num_messages_int == 0:
@@ -452,7 +452,7 @@ class Functional:
         consumer2.close()
         #
         if len(produce_batch_message_dict_list) > 0:
-            target_producer.produce_list(produce_batch_message_dict_list, **target_kwargs)
+            target_producer.produce_to(produce_batch_message_dict_list, **target_kwargs)
             #
             produce_message_counter_int += len(produce_batch_message_dict_list)
         #
