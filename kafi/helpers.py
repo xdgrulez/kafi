@@ -326,3 +326,9 @@ def s_id(payload_bytes):
 
 def hash_dict(d):
     return hash(json.dumps(d, sort_keys=True))
+
+
+def split_bytes(bytes, chunk_size_bytes_int):
+    bytes_list = [bytes[i:i + chunk_size_bytes_int] for i in range(0, len(bytes), chunk_size_bytes_int)]
+    #
+    return bytes_list

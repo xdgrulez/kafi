@@ -1,4 +1,6 @@
 from kafi.serializer import Serializer
+from kafi.helpers import split_bytes
+from kafi.partitioner import round_robin_partitioner, create_chunk_key
 
 # Constants
 
@@ -29,14 +31,63 @@ class StorageProducer(Serializer):
 
     #
 
-    # Produce with bells and whistles (lists, chunking, later encryption...).
+    # <subclass of storage_producer>.produce_impl(self, message_dict_list, **kwargs) -> Unit
+    #  Produce a list of messages as is.
+
+    # Produce a list of messages plus:
+    #   * support for self.keep_partitions_bool, self.keep_timestamps_bool and self.keep_headers_bool
+    #.  * serialization (except for kafka/RestProxy)
+    #   * extensions (e.g. chunking, encryption)
+    def produce_list(self, message_dict_list, **kwargs):
+        chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else -1
+        #
+        partitioner_function = kwargs["partitioner_function"] if "partitioner_function" in kwargs else None
+        partitioner_key_projection_function = kwargs["partitioner_key_projection_function"] if "partitioner_key_projection_function" in kwargs else None
+        #
+        # Serialization and support for self.keep_partitions_bool, self.keep_timestamps_bool and self.keep_headers_bool.
+        message_dict_list1 = [{"value": self.serialize(message_dict["value"], False),
+                               "key": self.serialize(message_dict["key"], True),
+                               "partition": message_dict["partition"] if self.keep_partitions_bool else RD_KAFKA_PARTITION_UA,
+                               "timestamp": message_dict["timestamp"] if self.keep_timestamps_bool else CURRENT_TIME,
+                               "headers": None if self.keep_headers_bool else message_dict["headers"]} for message_dict in message_dict_list]
+        # (Optional) chunking.
+        if chunk_size_bytes_int > 0:
+
+            #
+            message_dict_list2 = []
+            #
+            for message_dict in message_dict_list1:
+                value_bytes = message_dict["value"]
+                #
+                if len(value_bytes) > chunk_size_bytes_int:
+                    chunk_value_bytes_list = split_bytes(value_bytes, chunk_size_bytes_int)
+                    #
+                    for chunk_int, value_bytes in zip(range(0, len(chunk_value_bytes_list)), chunk_value_bytes_list):
+                        key_bytes = create_chunk_key(message_dict["key"])
+                        #
+                        
+
+
+
+                    message_dict_list3 = [{"value": value_bytes,
+                                           "key": message_dict["key"] + "_" + i,
+                                           "partition": message_dict["partition"],
+                                           "timestamp": message_dict["timestamp"],
+                                           "headers": message_dict["headers"]} for i, value_bytes in ]
+
+
+        else:
+            message_dict_list2 = message_dict_list1
+
+
+        return self.produce_impl(message_dict_list3, **kwargs)
+
+    # Syntactic sugar for produce_list() (including headers).
     def produce(self, value, **kwargs):
         key = kwargs["key"] if "key" in kwargs else None
         partition = kwargs["partition"] if "partition" in kwargs else RD_KAFKA_PARTITION_UA
         timestamp = kwargs["timestamp"] if "timestamp" in kwargs else CURRENT_TIME
         headers = kwargs["headers"] if "headers" in kwargs else None
-        #
-        # chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else -1
         #
         value_list = value if isinstance(value, list) else [value]
         #
@@ -50,25 +101,20 @@ class StorageProducer(Serializer):
         headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         #
         message_dict_list = [{"value": value, "key": key, "partition": partition_int, "timestamp": timestamp, "headers": headers_str_bytes_tuple_list} for value, key, partition_int, timestamp, headers_str_bytes_tuple_list in zip(value_list, key_list, partition_int_list, timestamp_list, headers_str_bytes_tuple_list_list)]
-        
-            message_dict
-            self.produce_impl(message_dict_list, **kwargs)
+        #
+        return self.produce_list(message_dict_list, **kwargs)
 
+    #
 
-
-    # Produce a list of read message_dicts, e.g. for foldl_to()...
-    def produce_to(self, message_dict_list, **kwargs):
-        value_list = [message_dict["value"] for message_dict in message_dict_list]
+    def partition(self, message_dict_list, partitioner_function=round_robin_partitioner, key_projection_function=lambda x: x):
         #
-        key_list = [message_dict["key"] for message_dict in message_dict_list]
+        partitions_int = self.storage_obj.partitions(self.topic_str)
         #
-        partition_list = [message_dict["partition"] for message_dict in message_dict_list] if self.keep_partitions_bool else [RD_KAFKA_PARTITION_UA for _ in message_dict_list]
-        #
-        timestamp_list = [message_dict["timestamp"] for message_dict in message_dict_list] if self.keep_timestamps_bool else [CURRENT_TIME for _ in message_dict_list]
-        #
-        headers_list = [message_dict["headers"] for message_dict in message_dict_list] if self.keep_headers_bool else [None for _ in message_dict_list]
-        #
-        return self.produce(value_list, key=key_list, partition=partition_list, timestamp=timestamp_list, headers=headers_list, **kwargs)
+        return [{"value": message_dict["value"],
+                 "key": message_dict["key"],
+                "partition": partitioner_function(message_dict, counter_int, partitions_int, key_projection_function),
+                "timestamp": message_dict["timestamp"],
+                "headers": message_dict["headers"]} for counter_int, message_dict in zip(range(0, partitions_int), message_dict_list)]
 
     # Helpers
 

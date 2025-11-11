@@ -46,7 +46,7 @@ class AddOns(Functional):
         message_dict_list = self.compact(topic, n, **source_kwargs)
         #
         target_producer = target_storage.producer(target_topic, **target_kwargs)
-        key_bytes_list_value_bytes_list_tuple = target_producer.produce_to(message_dict_list, **target_kwargs)
+        key_bytes_list_value_bytes_list_tuple = target_producer.produce_list(message_dict_list, **target_kwargs)
         target_producer.close()
         #
         return key_bytes_list_value_bytes_list_tuple
@@ -115,7 +115,7 @@ class AddOns(Functional):
         #
         message_dict_list = self.tail(topic_str, type="bytes", n=n_int, **kwargs)
         pr = self.producer(topic_str, type="bytes", **kwargs)
-        pr.produce_to(message_dict_list, **kwargs)
+        pr.produce_list(message_dict_list, **kwargs)
         pr.close()
         #
         return message_dict_list
