@@ -163,7 +163,7 @@ class AddOns(Functional):
         topic_str_list = self.admin.list_topics(pattern)
         #
         # Get the offsets of the source consumer group.
-        source_group_offsets = self.group_offsets(source_group_str)
+        topic_str_offsets_dict_dict = {topic_str: offsets_dict for topic_str, offsets_dict in self.group_offsets(source_group_str)[source_group_str].items() if topic_str in topic_str_list}
         #
         # Consume one message from eacg topic with the target consumer group to bring it to life.
         for topic_str in topic_str_list:
@@ -171,7 +171,7 @@ class AddOns(Functional):
             co.consume(n=1)
             co.close()
         #
-        target_group_offsets = target_storage.group_offsets(target_group, source_group_offsets[source_group_str])
+        target_group_offsets = target_storage.group_offsets(target_group, topic_str_offsets_dict_dict)
         #
         return target_group_offsets
 

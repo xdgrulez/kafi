@@ -1815,3 +1815,44 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertTrue(message_dict_list[0]["value"]["country"] == "Australia")
         self.assertTrue(message_dict_list[1]["value"]["country"] == "Australia")
         self.assertTrue(message_dict_list[2]["value"]["country"] == "Australia")
+
+    def test_cp_group_offsets_multiple_topics_in_group(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        if s.__class__.__name__ == "RestProxy":
+            return
+        #
+        s.enable_auto_commit(False)
+        s.commit_after_processing(True)
+        #
+        # Create two topics.
+        topic_str1 = self.create_test_topic_name()
+        s.create(topic_str1)
+        time.sleep(0.1)
+        topic_str2 = self.create_test_topic_name()
+        s.create(topic_str2)
+        # Produce messages to them.
+        producer = s.producer(topic_str1)
+        producer.produce(self.value_snack_str_list)
+        producer.close()
+        producer = s.producer(topic_str2)
+        producer.produce(self.value_snack_str_list)
+        producer.close()
+        # Create just one consumer group name.
+        group_str1 = self.create_test_group_name()
+        # Read one message from the first topic.
+        s.cat(topic_str1, group=group_str1, n=2)
+        s.cat(topic_str2, group=group_str1, n=1)
+        # Create a new consumer group name.
+        group_str2 = self.create_test_group_name()
+        # Copy the group offsets only of topic_str1.
+        s.cp_group_offsets(topic_str1, group_str1, s, group_str2)
+        # Check whether only the group offsets for topic_str1 have been copied.
+        topic_str_offsets_dict_dict = s.group_offsets(group_str2)[group_str2]
+        self.assertEqual(len(topic_str_offsets_dict_dict), 1)
+        self.assertTrue(topic_str1 in topic_str_offsets_dict_dict)
+        self.assertEqual(topic_str_offsets_dict_dict[topic_str1][0], 2)
+
