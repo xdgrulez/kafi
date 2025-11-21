@@ -7,7 +7,6 @@ from kafi.partitioners import default_partitioner
 # Constants
 
 CURRENT_TIME = 0
-RD_KAFKA_PARTITION_UA = -1
 TIMESTAMP_CREATE_TIME = 1
 
 #
@@ -31,7 +30,8 @@ class FSProducer(StorageProducer):
         partition_int_message_dict_list_dict = {partition_int: [] for partition_int in range(self.partitions_int)}
         partition_int_offset_counter_int_dict = {partition_int: last_offset_int if last_offset_int > 0 else 0 for partition_int, last_offset_int in last_offsets_dict.items()}
         #
-        for counter_int, message_dict in zip(range(len(message_dict_list)), message_dict_list):
+        counter_int = 0
+        for message_dict in message_dict_list:
             timestamp = message_dict["timestamp"]
             if timestamp == CURRENT_TIME:
                 timestamp = (TIMESTAMP_CREATE_TIME, get_millis())

@@ -53,7 +53,8 @@ class ClusterProducer(KafkaProducer):
     def produce_impl(self, message_dict_list, **kwargs):
         flush_bool = kwargs["flush"] if "flush" in kwargs else False
         #
-        for counter_int, message_dict in zip(range(len(message_dict_list)), message_dict_list):
+        counter_int = 0
+        for message_dict in message_dict_list:
             timestamp = message_dict["timestamp"]
             timestamp_int = timestamp[1] if isinstance(timestamp, tuple) else timestamp
             #

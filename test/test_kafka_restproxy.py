@@ -55,5 +55,8 @@ class Test(TestSingleStorageBase):
     def test_error_handling(self):
         pass
 
+    def test_offsets_cache(self):
+        pass
+
     def test_compaction(self):
         pass

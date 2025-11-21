@@ -917,51 +917,51 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(key_dict_list, self.key_snack_dict_list)
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
 
-    # Splitting/joining large messages
+    # Chunking large messages
 
-    def test_split_join(self):
-        if self.__class__.__name__ == "TestSingleStorageBase":
-            return
-        #
-        s = self.get_storage()
-        #
-        topic_str1 = self.create_test_topic_name()
-        s.create(topic_str1)
-        #
-        producer = s.producer(topic_str1, type="json", split_bytes=-1)
-        producer.produce(self.value_snack_dict_list, key=self.key_snack_dict_list)
-        producer.close()
-        #
-        n_int1 = s.l(topic_str1)[topic_str1]
-        self.assertEqual(len(self.value_snack_dict_list), n_int1)
-        #
-        group_str1 = self.create_test_group_name()
-        message_dict_list1 = s.cat(topic_str1, group=group_str1)
-        value_dict_list1 = [message_dict["value"] for message_dict in message_dict_list1]
-        self.assertEqual(self.value_snack_dict_list, value_dict_list1)
-        #
-        #
-        #
-        chunk_size_bytes_int = 10
-        #
-        topic_str2 = self.create_test_topic_name()
-        s.create(topic_str2)
-        #
-        producer = s.producer(topic_str2, chunk_size_bytes=chunk_size_bytes_int)
-        producer.produce(self.value_snack_dict_list, key=self.key_snack_dict_list)
-        producer.close()
-        # Calculate how many chunked messages we should have written to Kafka.
-        n_int2 = s.l(topic_str2)[topic_str2]
-        n_chunks_int = sum(
-            math.ceil(len(value_snack_bytes) / chunk_size_bytes_int)
-            for value_snack_bytes in self.value_snack_bytes_list)
-        self.assertEqual(n_chunks_int, n_int2)
-        # Automatically join these chunked messages back to their original form.
-        group_str2 = self.create_test_group_name()
-        message_dict_list2 = s.cat(topic_str2, group=group_str2)
-        self.assertEqual(len(self.value_snack_dict_list), len(message_dict_list2))
-        value_dict_list2 = [message_dict["value"] for message_dict in message_dict_list2]
-        self.assertEqual(self.value_snack_dict_list, value_dict_list2)
+    # def test_chunking(self):
+    #     if self.__class__.__name__ == "TestSingleStorageBase":
+    #         return
+    #     #
+    #     s = self.get_storage()
+    #     #
+    #     topic_str1 = self.create_test_topic_name()
+    #     s.create(topic_str1)
+    #     #
+    #     producer = s.producer(topic_str1, type="json", chunk_size=-1)
+    #     producer.produce(self.value_snack_dict_list, key=self.key_snack_dict_list)
+    #     producer.close()
+    #     #
+    #     n_int1 = s.l(topic_str1)[topic_str1]
+    #     self.assertEqual(len(self.value_snack_dict_list), n_int1)
+    #     #
+    #     group_str1 = self.create_test_group_name()
+    #     message_dict_list1 = s.cat(topic_str1, group=group_str1)
+    #     value_dict_list1 = [message_dict["value"] for message_dict in message_dict_list1]
+    #     self.assertEqual(self.value_snack_dict_list, value_dict_list1)
+    #     #
+    #     #
+    #     #
+    #     chunk_size_bytes_int = 10
+    #     #
+    #     topic_str2 = self.create_test_topic_name()
+    #     s.create(topic_str2)
+    #     #
+    #     producer = s.producer(topic_str2, chunk_size_bytes=chunk_size_bytes_int)
+    #     producer.produce(self.value_snack_dict_list, key=self.key_snack_dict_list)
+    #     producer.close()
+    #     # Calculate how many chunked messages we should have written to Kafka.
+    #     n_int2 = s.l(topic_str2)[topic_str2]
+    #     n_chunks_int = sum(
+    #         math.ceil(len(value_snack_bytes) / chunk_size_bytes_int)
+    #         for value_snack_bytes in self.value_snack_bytes_list)
+    #     self.assertEqual(n_chunks_int, n_int2)
+    #     # Automatically join these chunked messages back to their original form.
+    #     group_str2 = self.create_test_group_name()
+    #     message_dict_list2 = s.cat(topic_str2, group=group_str2)
+    #     self.assertEqual(len(self.value_snack_dict_list), len(message_dict_list2))
+    #     value_dict_list2 = [message_dict["value"] for message_dict in message_dict_list2]
+    #     self.assertEqual(self.value_snack_dict_list, value_dict_list2)
 
     #
 

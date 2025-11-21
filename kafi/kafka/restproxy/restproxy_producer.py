@@ -33,7 +33,8 @@ class RestProxyProducer(KafkaProducer):
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{self.topic_str}/records"
         #
         payload_dict_list = []
-        for counter_int, message_dict in zip(range(len(message_dict_list)), message_dict_list):
+        counter_int = 0
+        for message_dict in message_dict_list:
             headers_dict = {"Content-Type": "application/json", "Transfer-Encoding": "chunked"}
             #
             value = message_dict["value"]
@@ -116,7 +117,7 @@ class RestProxyProducer(KafkaProducer):
                     # Let the REST Proxy do the partitioning if no custom partitioner function is specified.
                     pass
             else:
-                payload_dict["partition_id"]
+                payload_dict["partition_id"] = partition_int
             #
             payload_dict_list.append(bytes(json.dumps(payload_dict, default=str), "utf-8"))
         #

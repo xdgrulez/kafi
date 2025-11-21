@@ -63,7 +63,7 @@ class StorageProducer(Serializer):
                                "key": serialize(message_dict["key"], True),
                                "partition": message_dict["partition"] if self.keep_partitions_bool else RD_KAFKA_PARTITION_UA,
                                "timestamp": message_dict["timestamp"] if self.keep_timestamps_bool else CURRENT_TIME,
-                               "headers": None if self.keep_headers_bool else message_dict["headers"]} for message_dict in message_dict_list]
+                               "headers": message_dict["headers"] if self.keep_headers_bool else None} for message_dict in message_dict_list]
         # (Optional) chunking.
         if self.chunk_size_bytes_int > 0:
             message_dict_list2 = []
@@ -111,6 +111,10 @@ class StorageProducer(Serializer):
                               "timestamp": timestamp,
                               "headers": headers_str_bytes_tuple_list}
                               for value, key, partition_int, timestamp, headers_str_bytes_tuple_list in zip(value_list, key_list, partition_int_list, timestamp_list, headers_str_bytes_tuple_list_list)]
+        #
+        self.keep_partitions_bool = True
+        self.keep_timestamps_bool = True
+        self.keep_headers_bool = True
         #
         return self.produce_list(message_dict_list, **kwargs)
 
