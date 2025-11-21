@@ -17,6 +17,9 @@ class RestProxyProducer(KafkaProducer):
         super().__init__(restproxy_obj, topic, **kwargs)
         #
         self.cluster_id_str = restproxy_obj.cluster_id_str
+        #
+        # The default partitioner function for the REST Proxy is None.
+        self.partitioner_function = kwargs["partitioner_function"] if "partitioner_function" in kwargs else None
 
     #
 
@@ -25,30 +28,15 @@ class RestProxyProducer(KafkaProducer):
 
     #
 
-    def produce(self, value, **kwargs):
+    def produce_impl(self, message_dict_list, **kwargs):
         (rest_proxy_url_str, auth_str_tuple) = self.storage_obj.get_url_str_auth_str_tuple_tuple()
         url_str = f"{rest_proxy_url_str}/v3/clusters/{self.cluster_id_str}/topics/{self.topic_str}/records"
         #
-        key = kwargs["key"] if "key" in kwargs else None
-        partition = kwargs["partition"] if "partition" in kwargs else RD_KAFKA_PARTITION_UA
-        timestamp = kwargs["timestamp"] if "timestamp" in kwargs else CURRENT_TIME
-        headers = kwargs["headers"] if "headers" in kwargs else None
-        #
-        value_list = value if isinstance(value, list) else [value]
-        #
-        key_list = key if isinstance(key, list) else [key for _ in value_list]
-        #
-        partition_int_list = partition if isinstance(partition, list) else [partition for _ in value_list]
-        #
-        timestamp_list = timestamp if isinstance(timestamp, list) else [timestamp for _ in value_list]
-        #
-        headers_list = headers if isinstance(headers, list) and all(self.storage_obj.is_headers(headers1) for headers1 in headers) and len(headers) == len(value_list) else [headers for _ in value_list]
-        headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
-        #
         payload_dict_list = []
-        for value, key, timestamp, headers_str_bytes_tuple_list, partition_int in zip(value_list, key_list, timestamp_list, headers_str_bytes_tuple_list_list, partition_int_list):
+        for counter_int, message_dict in zip(range(len(message_dict_list)), message_dict_list):
             headers_dict = {"Content-Type": "application/json", "Transfer-Encoding": "chunked"}
             #
+            value = message_dict["value"]
             if self.value_type_str.lower() == "json":
                 type_str = "JSON"
                 if value is not None and not isinstance(value, dict):
@@ -78,6 +66,7 @@ class RestProxyProducer(KafkaProducer):
             else:
                 payload_dict = {"value": {"type": type_str, "data": value}}
             #
+            key = message_dict["key"]
             if key is not None:
                 if self.key_type_str.lower() == "json":
                     type_str = "JSON"
@@ -108,16 +97,26 @@ class RestProxyProducer(KafkaProducer):
                 else:
                     payload_dict["key"] = {"type": type_str, "data": key}
             #
+            timestamp = message_dict["timestamp"]
             if self.keep_timestamps_bool or timestamp is not None:
                 if isinstance(timestamp, tuple):
                     timestamp_str = datetime.datetime.fromtimestamp(timestamp[1]/1000.0, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                     payload_dict["timestamp"] = timestamp_str
             #
+            headers_str_bytes_tuple_list = message_dict["headers"]
             if headers_str_bytes_tuple_list is not None:
                 payload_dict["headers"] = [{"name": headers_str_bytes_tuple[0], "value": base64_encode(headers_str_bytes_tuple[1]).decode("utf-8")} for headers_str_bytes_tuple in headers_str_bytes_tuple_list]
             #
-            if partition_int is not None and partition_int != RD_KAFKA_PARTITION_UA:
-                payload_dict["partition_id"] = partition_int
+            partition_int = message_dict["partition"]
+            if partition_int == RD_KAFKA_PARTITION_UA:
+                if self.partitioner_function is not None:
+                    # Use the custom partitioner function for the partitioning.
+                    payload_dict["partition_id"] = self.partitioner_function(message_dict, counter_int, self.partitions_int, self.projection_function)
+                else:
+                    # Let the REST Proxy do the partitioning if no custom partitioner function is specified.
+                    pass
+            else:
+                payload_dict["partition_id"]
             #
             payload_dict_list.append(bytes(json.dumps(payload_dict, default=str), "utf-8"))
         #
@@ -131,4 +130,4 @@ class RestProxyProducer(KafkaProducer):
         #
         self.written_counter_int += len(payload_dict_list)
         #
-        return key_list, value_list
+        return self.written_counter_int
