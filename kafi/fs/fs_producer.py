@@ -1,8 +1,7 @@
 import os
 
 from kafi.storage_producer import StorageProducer
-from kafi.helpers import get_millis
-from kafi.partitioners import default_partitioner
+from kafi.helpers import get_millis, default_partitioner
 
 # Constants
 

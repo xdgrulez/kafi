@@ -1,4 +1,5 @@
 from kafi.deserializer import Deserializer
+from kafi.helpers import chunk_key_to_key
 
 #
 
@@ -45,7 +46,7 @@ class Dechunker(Deserializer):
                         else:
                             dechunked_value_bytes += value_bytes
                     #
-                    key_bytes = self.chunk_key_to_key(message_dict["key"])
+                    key_bytes = chunk_key_to_key(message_dict["key"])
                     #
                     # Delete the header fields for chunking.
                     del headers_str_bytes_dict["kafi_chunked_message_id"]

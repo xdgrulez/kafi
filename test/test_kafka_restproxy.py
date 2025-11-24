@@ -60,3 +60,6 @@ class Test(TestSingleStorageBase):
 
     def test_compaction(self):
         pass
+
+    def test_cp_group_offsets(self):
+        pass
