@@ -39,17 +39,16 @@ class FSConsumer(StorageConsumer):
 
     #
   
-    def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
-        n_int = n
-        #
-        commit_after_processing_bool = self.storage_obj.commit_after_processing() if commit_after_processing is None else commit_after_processing
+    def consume_impl(self, **kwargs):
+        n_int = kwargs["n"] if "n" in kwargs and kwargs["n"] != ALL_MESSAGES else 1
         #
         auto_offset_reset_str = self.consumer_config_dict["auto.offset.reset"]
         #
-        message_counter_int = 0
-        acc = initial_acc
         rel_file_str_list = []
+        message_dict_list = []
+        message_counter_int = 0
         for topic_str in self.topic_str_list:
+            #
             partitions_int = self.topic_str_partitions_int_dict[topic_str]
             if self.topic_str_partition_int_list_dict is not None:
                 partition_int_list = self.topic_str_partition_int_list_dict[topic_str]
@@ -66,7 +65,7 @@ class FSConsumer(StorageConsumer):
                     group_offsets_dict = group_dict["offsets"][topic_str]
                     #
                     if any(start_offsets_dict[partition_int] == OFFSET_INVALID and group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in partition_int_list):
-                        # If any of the partitions still does not have a start or committed offset yet, get the auto.offset.reset offsets...
+                        # If any of the partitions does not have a start or committed offset yet, get the auto.offset.reset offsets...
                         partition_int_offset_tuple_dict = self.storage_obj.admin.watermarks(topic_str, **kwargs)[topic_str]
                         if auto_offset_reset_str.lower() == "latest":
                             # If auto.offset.reset == latest, get the high watermark.
@@ -85,7 +84,6 @@ class FSConsumer(StorageConsumer):
                             else:
                                 start_offsets_dict[partition_int] = group_offset_int
                                 self.next_topic_str_offsets_dict_dict[topic_str][partition_int] = start_offsets_dict[partition_int]
-            #
             #
             # Get partition files for the partitions to be consumed.
             partition_int_rel_file_str_list_dict = self.storage_obj.admin.get_partition_files(topic_str, [partition_int for partition_int in partition_int_list])
@@ -118,10 +116,6 @@ class FSConsumer(StorageConsumer):
                 for message_bytes in message_bytes_list:
                     message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
                     #
-                    message_dict["key"] = self.deserialize(message_dict["key"], self.topic_str_key_type_str_dict[message_dict["topic"]], topic_str=topic_str, key_bool=True)
-                    #
-                    message_dict["value"] = self.deserialize(message_dict["value"], self.topic_str_value_type_str_dict[message_dict["topic"]], topic_str=topic_str, key_bool=False)
-                    #
                     partition_int = message_dict["partition"]
                     offset_int = message_dict["offset"]
                     self.next_topic_str_offsets_dict_dict[topic_str][partition_int] = offset_int + 1
@@ -135,34 +129,22 @@ class FSConsumer(StorageConsumer):
                             continue
                     #
                     if offset_int >= start_offsets_dict[partition_int]:
-                        acc = foldl_function(acc, message_dict)
+                        message_dict_list.append(message_dict)
                         #
                         message_counter_int += 1
-                        #
-                        if not self.enable_auto_commit_bool and commit_after_processing_bool:
-                            # Only commit once the message has been processed if enable.auto.commit == False and commit.after.processing == True
-                            self.commit()
                     #
                     if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
                         end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
                         offsets_dict = self.next_topic_str_offsets_dict_dict[topic_str]
                         if all(offsets_dict[partition_int] > end_offset_int for partition_int, end_offset_int in end_offsets_dict.items() if partition_int in offsets_dict):
-                            return acc
+                            continue
                     #
                     if n_int != ALL_MESSAGES and message_counter_int >= n_int:
-                        return acc
+                        continue
         #
-        return acc
+        return message_dict_list
 
     #
-
-    def consume(self, n=ALL_MESSAGES, **kwargs):
-        def foldl_function(message_dict_list, message_dict):
-            message_dict_list.append(message_dict)
-            #
-            return message_dict_list
-        #
-        return self.foldl(foldl_function, [], n)
 
     def offsets(self):
         group_str_topic_str_offsets_dict_dict_dict = self.storage_obj.admin.group_offsets(self.group_str)
@@ -173,6 +155,8 @@ class FSConsumer(StorageConsumer):
             topic_str_offsets_dict_dict = {topic_str: offsets_dict for topic_str, offsets_dict in group_str_topic_str_offsets_dict_dict_dict[self.group_str].items() if topic_str in self.topic_str_list}
         #
         return topic_str_offsets_dict_dict
+
+    #
 
     def commit(self, offsets=None, **kwargs):
         if offsets is None:

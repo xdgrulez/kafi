@@ -1,13 +1,13 @@
-from kafi.serializer import Serializer
+from kafi.chunker import Chunker
+from kafi.dechunker import chunk_key_to_key, key_to_chunk_key
 from kafi.helpers import split_bytes
-from kafi.partitioners import default_partitioner, key_to_chunk_key, chunk_key_to_key
 
 # Constants
 
 CURRENT_TIME = 0
 RD_KAFKA_PARTITION_UA = -1
 
-class StorageProducer(Serializer):
+class StorageProducer(Chunker):
     def __init__(self, storage_obj, topic, **kwargs):
         self.storage_obj = storage_obj
         #
@@ -33,16 +33,6 @@ class StorageProducer(Serializer):
         self.partitions_int = self.storage_obj.partitions(self.topic_str)[self.topic_str]
         # If a custom partitioner function is used, the default projection function just considers the key.
         self.projection_function = kwargs["projection_function"] if "projection_function" in kwargs else lambda x: x["key"]
-        #
-        self.chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else -1
-        if self.chunk_size_bytes_int == 0:
-            raise Exception("Chunk size is zero.")
-        if self.chunk_size_bytes_int > 0 and self.__class__.__name__ == "RestProxyProducer":
-            raise Exception("Chunking not supported for RestProxy storage.")
-        #
-        if self.chunk_size_bytes_int > 0:
-            self.partitioner_function = default_partitioner
-            self.projection_function = chunk_key_to_key
 
     #
 
@@ -64,26 +54,8 @@ class StorageProducer(Serializer):
                                "partition": message_dict["partition"] if self.keep_partitions_bool else RD_KAFKA_PARTITION_UA,
                                "timestamp": message_dict["timestamp"] if self.keep_timestamps_bool else CURRENT_TIME,
                                "headers": message_dict["headers"] if self.keep_headers_bool else None} for message_dict in message_dict_list]
-        # (Optional) chunking.
-        if self.chunk_size_bytes_int > 0:
-            message_dict_list2 = []
-            #
-            for message_dict1 in message_dict_list1:
-                value_bytes = message_dict1["value"]
-                #
-                if len(value_bytes) > self.chunk_size_bytes_int:
-                    chunk_value_bytes_list = split_bytes(value_bytes, self.chunk_size_bytes_int)
-                    #
-                    for chunk_int, value_bytes in zip(range(len(chunk_value_bytes_list)), chunk_value_bytes_list):
-                        key_bytes = key_to_chunk_key(message_dict1["key"], chunk_int)
-                        message_dict2 = {"value": value_bytes,
-                                         "key": key_bytes,
-                                         "partition": message_dict1["partition"],
-                                         "timestamp": message_dict1["timestamp"],
-                                         "headers": message_dict1["headers"]}
-                        message_dict_list2.append(message_dict2)
-        else:
-            message_dict_list2 = message_dict_list1
+        #
+        message_dict_list2 = self.chunk(message_dict_list1)
         #
         return self.produce_impl(message_dict_list2, **kwargs)
 

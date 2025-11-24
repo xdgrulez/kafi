@@ -139,7 +139,7 @@ class RestProxyConsumer(KafkaConsumer):
                 type_str1 = key_type_str if key_bool else value_type_str
                 if type_str1 == "bytes":
                     return decoded_bytes
-                elif type_str1 == "str":
+                elif type_str1 in ["str", "string"]:
                     return decoded_bytes.decode(encoding="utf-8")
 
         #

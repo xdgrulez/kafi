@@ -884,7 +884,9 @@ title: Kafi class diagram (Consumer)
 classDiagram
     SchemaRegistry <|-- Deserializer
     
-    Deserializer <|-- StorageConsumer
+    Deserializer <|-- Dechunker
+
+    Dechunker <|-- StorageConsumer
 
     StorageConsumer <|-- KafkaConsumer
     KafkaConsumer <|-- ClusterConsumer

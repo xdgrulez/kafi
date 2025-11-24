@@ -1,8 +1,36 @@
+# consume/foldl/consume_impl
+
+so far:
+KafkaConsumer
+  consume(self, n=ALL_MESSAGES, **kwargs) -> message_dict_list
+    foldl()
+      consume_impl(self, **kwargs) -> message_dict_list
+
+FSConsumer
+  consume(self, n=ALL_MESSAGES, **kwargs) -> message_dict_list
+    foldl()
+      (no separate consume_impl)
+      
+idea:
+  separate consume_impl() in FSConsumer
+  foldl -> StorageConsumer
+  foldl for chunking: collect not only messages but mapping from chunk IDs to chunked messages (or so)
+
+how to dechunk upon consuming:
+  * we need state beyond a single poll, e.g. in the consumer object
+  * but what state?
+  * chunk number
+  * number of chunks
+  * chunked message; ID = UUID or hash of full message?
+  * build up dict like this while consuming: chunked message ID -> chunk number -> message_dict/value
+  * if all chunks could be found, add the message to the list of returned messages + delete it in the state 
+
+# other TODOs
+
 * catch ctrl-c for functional not only streams
 * aio support...
 * support all kwargs that make sense globally in config yamls (e.g. the new ones or (de)serializer configs)?
 * do not list internal _topics
-* "string" as an alias for "str"
 * Schema Registry: support patterns
 * better error handling (e.g. if topic does not yet exists and auto creation is off, GroupAuthorization, TopicAuthorization...)
 * add Perftest?
