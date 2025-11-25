@@ -87,10 +87,10 @@ class StorageConsumer(Dechunker):
                 message_dict1 = {"value": self.deserialize(message_dict["value"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=False),
                                  "key": self.deserialize(message_dict["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=True),
                                  "headers": message_dict["headers"],
-                                 "timestamp": message_dict1["timestamp"],
-                                 "partition": message_dict1["partition"],
-                                 "offset": message_dict1["offset"],
-                                 "topic": message_dict1["topic"]}
+                                 "timestamp": message_dict["timestamp"],
+                                 "partition": message_dict["partition"],
+                                 "offset": message_dict["offset"],
+                                 "topic": message_dict["topic"]}
                 #
                 if break_function(acc, message_dict1):
                     break_bool = True

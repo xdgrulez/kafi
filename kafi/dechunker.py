@@ -17,9 +17,12 @@ class Dechunker(Deserializer):
         for message_dict in message_dict_list:
             # Get dictionary of headers
             headers_str_bytes_tuple_list = message_dict["headers"]
+            if headers_str_bytes_tuple_list is None:
+                headers_str_bytes_tuple_list = []
             headers_str_bytes_dict = dict(headers_str_bytes_tuple_list)
             #
             if "kafi_chunked_message_id" in headers_str_bytes_dict:
+                #
                 chunked_message_id_str = str(headers_str_bytes_dict["kafi_chunked_message_id"])
                 #
                 number_of_chunks_int = int(headers_str_bytes_dict["kafi_number_of_chunks"])
