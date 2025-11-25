@@ -40,12 +40,12 @@ class StorageProducer(Chunker):
     #   * extensions (e.g. chunking, encryption)
     def produce_list(self, message_dict_list, **kwargs):
         #
-        def serialize(payload, key):
+        def serialize(payload, key_bool):
             # Do not serialize if this is a RestProxyProducer object (serialization takes place later on the REST Proxy). 
             if self.__class__.__name__ == "RestProxyProducer":
                 return payload
             else:
-                return self.serialize(payload, key)
+                return self.serialize(payload, key_bool)
         #
         message_dict_list1 = [{"value": serialize(message_dict["value"], False),
                                "key": serialize(message_dict["key"], True),

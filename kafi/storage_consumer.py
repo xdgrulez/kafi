@@ -62,6 +62,14 @@ class StorageConsumer(Dechunker):
         #
         acc = initial_acc
         break_bool = False
+        #
+        def deserialize(payload_bytes, type_str, topic_str, key_bool):
+            # Do not deserialize if this is a RestProxyConsumer object (deserialization has already taken place on the REST Proxy). 
+            if self.__class__.__name__ == "RestProxyConsumer":
+                return payload_bytes
+            else:
+                return self.deserialize(payload_bytes, type_str, topic_str, key_bool)
+        #
         while True:
             message_dict_list1 = self.consume_impl(n=consume_batch_size_int, **kwargs)
             if not message_dict_list1:
@@ -84,8 +92,8 @@ class StorageConsumer(Dechunker):
                     if offset_int > end_offsets_dict[partition_int]:
                         continue
                 #
-                message_dict1 = {"value": self.deserialize(message_dict["value"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=False),
-                                 "key": self.deserialize(message_dict["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=True),
+                message_dict1 = {"value": deserialize(message_dict["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, key_bool=False),
+                                 "key": deserialize(message_dict["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=True),
                                  "headers": message_dict["headers"],
                                  "timestamp": message_dict["timestamp"],
                                  "partition": message_dict["partition"],

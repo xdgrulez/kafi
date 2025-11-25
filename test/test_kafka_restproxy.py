@@ -63,3 +63,6 @@ class Test(TestSingleStorageBase):
 
     def test_cp_group_offsets(self):
         pass
+
+    def test_chunking(self):
+        pass

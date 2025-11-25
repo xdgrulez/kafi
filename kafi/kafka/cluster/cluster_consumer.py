@@ -87,23 +87,13 @@ class ClusterConsumer(KafkaConsumer):
         message_dict_list = []
         for message in message_list:
             if message.error() is None:
-                try:
-                    key_deserialized_payload = self.deserialize(message.key(), self.topic_str_key_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=True)
-                except Exception as e:
-                    raise Exception(f"Error deserializing message key: topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}")
-                #
-                try:
-                    value_deserialized_payload = self.deserialize(message.value(), self.topic_str_value_type_str_dict[message.topic()], topic_str=message.topic(), key_bool=False)
-                except Exception as e:
-                    raise Exception(f"Error deserializing message value: topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}")
-                #                
                 message_dict = {"topic": message.topic(),
                                 "headers": message.headers(),
                                 "partition": message.partition(),
                                 "offset": message.offset(),
                                 "timestamp": message.timestamp(),
-                                "key": key_deserialized_payload,
-                                "value": value_deserialized_payload}
+                                "key": message.key(),
+                                "value": message.value()}
             else:
                 raise Exception(f"Error consuming topic(s) {self.topic_str_list}: {message.error().str()}, topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}")
             message_dict_list.append(message_dict)
