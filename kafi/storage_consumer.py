@@ -61,6 +61,8 @@ class StorageConsumer(Dechunker):
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
         #
+        dechunking_bool = kwargs["dechunking"] if "dechunking" in kwargs else True
+        #
         topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
         topic_str_offsets_dict_dict = {topic_str: {partition_int: 0 for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}
         #
@@ -81,8 +83,11 @@ class StorageConsumer(Dechunker):
             if not message_dict_list1:
                 break
             #
-            # Dechunk if necessary.
-            message_dict_list2 = self.dechunk(message_dict_list1)
+            # Dechunk if necessary/enabled.
+            if dechunking_bool:
+                message_dict_list2 = self.dechunk(message_dict_list1)
+            else:
+                message_dict_list2 = message_dict_list1
             #
             for message_dict in message_dict_list2:
                 topic_str = message_dict["topic"]
@@ -140,7 +145,6 @@ class StorageConsumer(Dechunker):
             return message_dict_list
         #
         return self.foldl(foldl_function, [], n)
-        # return self.foldl(foldl_function, [], n, commit_after_processing=False, **kwargs) from kafka_consumer???
 
     #
 

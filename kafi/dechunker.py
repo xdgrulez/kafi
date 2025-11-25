@@ -25,9 +25,9 @@ class Dechunker(Deserializer):
                 #
                 chunked_message_id_str = str(headers_str_bytes_dict["kafi_chunked_message_id"])
                 #
-                number_of_chunks_int = int(headers_str_bytes_dict["kafi_number_of_chunks"])
+                number_of_chunks_int = int.from_bytes(headers_str_bytes_dict["kafi_number_of_chunks"])
                 #
-                chunk_number_int = int(headers_str_bytes_dict["kafi_chunk_number"])
+                chunk_number_int = int.from_bytes(headers_str_bytes_dict["kafi_chunk_number"])
                 #
                 if chunked_message_id_str not in self.chunks_dict:
                     self.chunks_dict[chunked_message_id_str] = {chunk_number_int1: None for chunk_number_int1 in range(number_of_chunks_int)}

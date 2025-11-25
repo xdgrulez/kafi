@@ -34,8 +34,8 @@ class Chunker(Serializer):
                     if headers_str_bytes_tuple_list is None:
                         headers_str_bytes_tuple_list = []
                     headers_str_bytes_dict = dict(headers_str_bytes_tuple_list)
-                    headers_str_bytes_dict["kafi_chunked_message_id"] = bytes(str(uuid.uuid4()))
-                    headers_str_bytes_dict["kafi_number_of_chunks"] = bytes(len(chunk_value_bytes_list))
+                    headers_str_bytes_dict["kafi_chunked_message_id"] = bytes(str(uuid.uuid4()), "UTF-8")
+                    headers_str_bytes_dict["kafi_number_of_chunks"] = int.to_bytes(len(chunk_value_bytes_list))
                     #
                     for chunk_int, chunk_value_bytes in zip(range(len(chunk_value_bytes_list)), chunk_value_bytes_list):
                         # If the first byte of the value starts with 0 we assume this is a message serialized using Schema Registry. In that case, add the five bytes from the beginning of the message to each chunk (to avoid confluent.value.schema.validation == true blocking the individual chunks).
@@ -44,7 +44,7 @@ class Chunker(Serializer):
                         #
                         chunk_key_bytes = key_to_chunk_key(message_dict["key"], chunk_int)
                         #
-                        headers_str_bytes_dict["kafi_chunk_number"] = bytes(chunk_int)
+                        headers_str_bytes_dict["kafi_chunk_number"] = int.to_bytes(chunk_int)
                         #
                         chunk_headers_str_bytes_tuple_list = list(headers_str_bytes_dict.items())
                         #
