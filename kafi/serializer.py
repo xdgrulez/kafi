@@ -16,13 +16,14 @@ from kafi.helpers import to_bytes
 
 class Serializer(SchemaRegistry):
     def __init__(self, schema_registry_config_dict, **kwargs):
-        super().__init__(schema_registry_config_dict)
-        #
         self.ser_to_dict = kwargs["ser_to_dict"] if "ser_to_dict" in kwargs else None
         self.ser_conf = kwargs["ser_conf"] if "ser_conf" in kwargs else None
         self.ser_rule_conf = kwargs["ser_rule_conf"] if "ser_rule_conf" in kwargs else None
         self.ser_rule_registry = kwargs["ser_rule_registry"] if "ser_rule_registry" in kwargs else None
         self.ser_json_encode = kwargs["ser_json_encode"] if "ser_json_encode" in kwargs else None
+        #
+        super().__init__(schema_registry_config_dict)
+
 
     def serialize(self, payload, key_bool, normalize_schemas=False):
         type_str = self.key_type_str if key_bool else self.value_type_str

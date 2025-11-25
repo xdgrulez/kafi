@@ -360,6 +360,11 @@ def default_partitioner(message_dict, counter_int, partitions_int, projection_fu
 
 # Chunking
 
+def message_dict_chunk_key_to_key(message_dict):
+    chunk_key_bytes = message_dict["key"]
+    key_bytes = chunk_key_to_key(chunk_key_bytes)
+    return key_bytes
+
 def chunk_key_to_key(chunk_key_bytes):
     if chunk_key_bytes == None:
         key_bytes = chunk_key_bytes
@@ -373,6 +378,6 @@ def key_to_chunk_key(key_bytes, chunk_int):
     if key_bytes == None:
         chunk_key_bytes = key_bytes
     else:
-        chunk_key_bytes = key_bytes + bytes(f"_{chunk_int:06}")
+        chunk_key_bytes = key_bytes + bytes(f"_{chunk_int:06}", "UTF-8")
     #
     return chunk_key_bytes

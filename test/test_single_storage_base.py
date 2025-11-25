@@ -1781,8 +1781,8 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         message_dict_list2 = s.cat(topic_str, dechunk=True)
         self.assertEqual(len(message_dict_list2), len(self.value_snack_str_list))
-        for message_dict, value_snack_str in zip(message_dict_list2, self.value_snack_str_list):
-            self.assertEqual(message_dict["value"], json.loads(value_snack_str))
+        for message_dict, value_snack_dict in zip(message_dict_list2, self.value_snack_dict_list):
+            self.assertEqual(message_dict["value"], value_snack_dict)
 
     def test_chunking_jsonschema(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -1812,5 +1812,54 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         message_dict_list2 = s.cat(topic_str, value_type="jsonschema", dechunk=True)
         self.assertEqual(len(message_dict_list2), len(self.value_snack_str_list))
-        for message_dict, value_snack_str in zip(message_dict_list2, self.value_snack_str_list):
-            self.assertEqual(message_dict["value"], json.loads(value_snack_str))
+        for message_dict, value_snack_dict in zip(message_dict_list2, self.value_snack_dict_list):
+            self.assertEqual(message_dict["value"], value_snack_dict)
+
+    def test_chunking_key(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        s.enable_auto_commit(False)
+        s.commit_after_processing(True)
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str, partitions=6)
+        #
+        chunk_size_bytes_int = 10
+        producer = s.producer(topic_str, chunk_size_bytes=chunk_size_bytes_int)
+        producer.produce(self.value_snack_str_list, key=self.key_snack_bytes_list)
+        producer.close()
+        # Check whether the chunk keys of the messages have all landed on the same partition.
+        message_dict_list1 = s.cat(topic_str, type="bytes", dechunk=False)
+        partition_int_key_str_set_dict = {}
+        for message_dict in message_dict_list1:
+            partition_int = message_dict["partition"]
+            chunk_key_bytes = message_dict["key"]
+            key_str = json.loads(chunk_key_to_key(chunk_key_bytes))["key"]
+            #
+            if partition_int in partition_int_key_str_set_dict:
+                chunk_key_str_set = partition_int_key_str_set_dict[partition_int]
+                chunk_key_str_set.add(key_str)
+                partition_int_key_str_set_dict[partition_int] = chunk_key_str_set
+            else:
+                 partition_int_key_str_set_dict[partition_int] = set([key_str])
+        key_str_list = []
+        for _, key_str_set in partition_int_key_str_set_dict.items():
+            for key_str in key_str_set:
+                key_str_list.append(key_str)
+        print(partition_int_key_str_set_dict)
+        print(key_str_list)
+        self.assertEqual(len(key_str_list), len(self.key_snack_bytes_list))
+        #
+        message_dict_list2 = s.cat(topic_str, value_type="json", dechunk=True)
+        self.assertEqual(len(message_dict_list2), len(self.value_snack_str_list))
+        name_str_value_dict_dict = {}
+        for message_dict in message_dict_list2:
+            name_str = message_dict["value"]["name"]
+            value_dict = message_dict["value"]
+            name_str_value_dict_dict[name_str] = value_dict
+        for value_dict in self.value_snack_dict_list:
+            name_str = value_dict["name"]
+            self.assertEqual(name_str_value_dict_dict[name_str], value_dict)

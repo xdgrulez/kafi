@@ -38,7 +38,7 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
             last_snapshot_hash_str_list[0] = root_topologyNode_hash_str
             #
             print("Saving snapshot...")
-            producer = snapshot_storage.producer(snapshot_topic, type="bytes")
+            producer = snapshot_storage.producer(snapshot_topic, type="bytes", chunk_size_bytes=100)
             producer.produce(root_topologyNode_bytes, key=root_topologyNode.id())
             producer.close()
 

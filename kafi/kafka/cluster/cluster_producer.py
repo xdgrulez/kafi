@@ -11,6 +11,9 @@ RD_KAFKA_PARTITION_UA = -1
 
 class ClusterProducer(KafkaProducer):
     def __init__(self, cluster_obj, topic, **kwargs):
+        # The default partitioner function for confluent-kafka is None.
+        self.partitioner_function = kwargs["partitioner_function"] if "partitioner_function" in kwargs else None
+        #
         super().__init__(cluster_obj, topic, **kwargs)
         #
         def on_delivery(kafka_error, _):
@@ -27,9 +30,6 @@ class ClusterProducer(KafkaProducer):
                 producer_config_dict[key_str] = value
         #
         self.producer = Producer(producer_config_dict)
-        #
-        # The default partitioner function for confluent-kafka is None.
-        self.partitioner_function = kwargs["partitioner_function"] if "partitioner_function" in kwargs else None
 
 
     def __del__(self):

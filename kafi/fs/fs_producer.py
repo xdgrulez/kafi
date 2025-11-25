@@ -12,13 +12,14 @@ TIMESTAMP_CREATE_TIME = 1
 
 class FSProducer(StorageProducer):
     def __init__(self, fs_obj, topic, **kwargs):
+        # The default partitioner function for the FSProducer is the default partitioner.
+        self.partitioner_function = kwargs["partitioner_function"] if "partitioner_function" in kwargs else default_partitioner
+        self.projection_function = kwargs["projection_function"] if "projection_function" in kwargs else lambda x: x["key"]
+        #
         super().__init__(fs_obj, topic, **kwargs)
         #
         if not fs_obj.exists(self.topic_str):
             fs_obj.create(self.topic_str)
-        #
-        # The default partitioner function for the FSProducer is the default partitioner.
-        self.partitioner_function = kwargs["partitioner_function"] if "partitioner_function" in kwargs else default_partitioner
 
     #
 

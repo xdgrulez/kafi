@@ -64,5 +64,8 @@ class Test(TestSingleStorageBase):
     def test_cp_group_offsets(self):
         pass
 
-    def test_chunking(self):
+    def test_chunking_json(self):
+        pass
+
+    def test_chunking_jsonschema(self):
         pass

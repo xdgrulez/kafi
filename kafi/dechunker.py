@@ -5,16 +5,17 @@ from kafi.helpers import chunk_key_to_key
 
 class Dechunker(Deserializer):
     def __init__(self, schema_registry_config_dict, **kwargs):
-        super().__init__(schema_registry_config_dict, **kwargs)
-        #
         # Dictionary mapping chunked message IDs to chunk numbers to chunk value_bytes (to reconstruct chunked messages).
         self.chunks_dict = {}
+        #
+        super().__init__(schema_registry_config_dict, **kwargs)
 
     #
 
     def dechunk(self, message_dict_list):
         message_dict_list1 = []
         for message_dict in message_dict_list:
+            topic_str = message_dict["topic"]
             # Get dictionary of headers
             headers_str_bytes_tuple_list = message_dict["headers"]
             if headers_str_bytes_tuple_list is None:
@@ -39,7 +40,7 @@ class Dechunker(Deserializer):
                     #
                     for chunk_number_int1, value_bytes in self.chunks_dict[chunked_message_id_str].items():
                         # Special handling if the values were serialized in conjunction with Schema Registry.
-                        if value_bytes[0] == 0:
+                        if self.topic_str_value_type_str_dict[topic_str] in ["avro", "jsonschema", "json_sr", "pb", "protobuf"]:
                             # If so, skip the first five bytes from all but the first chunk (upon produce, we add the first five bytes to all messages to avoid confluent.value.schema.validation == true blocking them).
                             if chunk_number_int1 == 0:
                                 dechunked_value_bytes += value_bytes

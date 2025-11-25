@@ -9,8 +9,6 @@ class StorageProducer(Chunker):
     def __init__(self, storage_obj, topic, **kwargs):
         self.storage_obj = storage_obj
         #
-        super().__init__(storage_obj.schema_registry_config_dict, **kwargs)
-        #
         self.topic_str = topic
         #
         (self.key_type_str, self.value_type_str) = storage_obj.get_key_value_type_tuple(**kwargs)
@@ -29,8 +27,8 @@ class StorageProducer(Chunker):
         #
         # Cache the number of partitions of the topic (e.g. for custom partitioner functions).
         self.partitions_int = self.storage_obj.partitions(self.topic_str)[self.topic_str]
-        # If a custom partitioner function is used, the default projection function just considers the key.
-        self.projection_function = kwargs["projection_function"] if "projection_function" in kwargs else lambda x: x["key"]
+        #
+        super().__init__(storage_obj.schema_registry_config_dict, **kwargs)
 
     #
 

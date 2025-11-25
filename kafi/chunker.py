@@ -1,14 +1,12 @@
 import uuid
 
 from kafi.serializer import Serializer
-from kafi.helpers import chunk_key_to_key, default_partitioner, key_to_chunk_key, split_bytes
+from kafi.helpers import message_dict_chunk_key_to_key, default_partitioner, key_to_chunk_key, split_bytes
 
 #
 
 class Chunker(Serializer):
     def __init__(self, schema_registry_config_dict, **kwargs):
-        super().__init__(schema_registry_config_dict, **kwargs)
-        #
         self.chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else -1
         if self.chunk_size_bytes_int == 0:
             raise Exception("Chunk size is zero.")
@@ -17,7 +15,10 @@ class Chunker(Serializer):
         #
         if self.chunk_size_bytes_int > 0:
             self.partitioner_function = default_partitioner
-            self.projection_function = chunk_key_to_key
+            self.projection_function = message_dict_chunk_key_to_key
+        #
+        super().__init__(schema_registry_config_dict, **kwargs)
+
 
     #
 
@@ -39,7 +40,7 @@ class Chunker(Serializer):
                     #
                     for chunk_int, chunk_value_bytes in zip(range(len(chunk_value_bytes_list)), chunk_value_bytes_list):
                         # If the first byte of the value starts with 0 we assume this is a message serialized using Schema Registry. In that case, add the five bytes from the beginning of the message to each chunk (to avoid confluent.value.schema.validation == true blocking the individual chunks).
-                        if value_bytes[0] == 0 and chunk_int > 0:
+                        if self.value_type_str in ["avro", "jsonschema", "json_sr", "pb", "protobuf"] and chunk_int > 0:
                             chunk_value_bytes = value_bytes[0:5] + chunk_value_bytes
                         #
                         chunk_key_bytes = key_to_chunk_key(message_dict["key"], chunk_int)

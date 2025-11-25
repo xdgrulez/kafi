@@ -12,8 +12,6 @@ class StorageConsumer(Dechunker):
     def __init__(self, storage_obj, *topics, **kwargs):
         self.storage_obj = storage_obj
         #
-        super().__init__(storage_obj.schema_registry_config_dict, **kwargs)
-        #
         # Get topics to subscribe to.
         self.topic_str_list = list(topics)
         #
@@ -44,6 +42,8 @@ class StorageConsumer(Dechunker):
         self.enable_auto_commit_bool = kwargs["enable_auto_commit"] if "enable_auto_commit" in kwargs else storage_obj.enable_auto_commit()
         #
         self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict = {}
+        #
+        super().__init__(storage_obj.schema_registry_config_dict, **kwargs)
 
     #
 

@@ -14,14 +14,14 @@ from kafi.schemaregistry import SchemaRegistry
 
 class Deserializer(SchemaRegistry):
     def __init__(self, schema_registry_config_dict, **kwargs):
-        super().__init__(schema_registry_config_dict)
-        #
         self.deser_from_dict = kwargs["deser_from_dict"] if "deser_from_dict" in kwargs else None
         self.deser_conf = kwargs["deser_conf"] if "deser_conf" in kwargs else None
         self.deser_rule_conf = kwargs["deser_rule_conf"] if "deser_rule_conf" in kwargs else None
         self.deser_rule_registry = kwargs["deser_rule_registry"] if "deser_rule_registry" in kwargs else None
         self.deser_json_decode = kwargs["deser_json_decode"] if "deser_json_decode" in kwargs else None
         self.deser_return_record_name = kwargs["deser_return_record_name"] if "deser_return_record_name" in kwargs else False
+        #
+        super().__init__(schema_registry_config_dict)
 
     def deserialize(self, payload_bytes, type_str, topic_str, key_bool):
         if type_str.lower() == "bytes":
