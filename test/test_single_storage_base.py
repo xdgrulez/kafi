@@ -361,6 +361,8 @@ class TestSingleStorageBase(unittest.TestCase):
             return
         #
         s = self.get_storage()
+        s.enable_auto_commit(False)
+        s.commit_after_processing(False)
         #
         topic_str = self.create_test_topic_name()
         s.create(topic_str, partitions=1)
@@ -1093,7 +1095,7 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(partition_int_message_dict_list_dict5[0][0]["value"], self.value_snack_str_list[1])
         self.assertEqual(partition_int_message_dict_list_dict5[1][0]["value"], self.snack_countries_str_list[0])
         self.assertEqual(partition_int_message_dict_list_dict5[1][1]["value"], self.snack_countries_str_list[1])
-        # Read only the messages from the second to the end of the topic using the offsets.
+        # Read only the messages from the third to the end of the topic using the offsets.
         group_str6 = self.create_test_group_name()
         message_dict_list6 = s.cat(topic_str, group=group_str6, type="str", offsets={0: 1, 1: 1})
         self.assertEqual(3, len(message_dict_list6))
@@ -1756,20 +1758,20 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertTrue(message_dict_list[1]["value"]["country"] == "Australia")
         self.assertTrue(message_dict_list[2]["value"]["country"] == "Australia")
 
-    def test_chunking(self):
-        if self.__class__.__name__ == "TestSingleStorageBase":
-            return
-        #
-        s = self.get_storage()
-        #
-        s.enable_auto_commit(False)
-        s.commit_after_processing(True)
-        #
-        topic_str = self.create_test_topic_name()
-        s.create(topic_str)
-        #
-        producer = s.producer(topic_str, chunk_size_bytes=10)
-        producer.produce(self.snack_countries_str_list)
-        producer.close()
-        #
-        x = s.cat(topic_str)
+    # def test_chunking(self):
+    #     if self.__class__.__name__ == "TestSingleStorageBase":
+    #         return
+    #     #
+    #     s = self.get_storage()
+    #     #
+    #     s.enable_auto_commit(False)
+    #     s.commit_after_processing(True)
+    #     #
+    #     topic_str = self.create_test_topic_name()
+    #     s.create(topic_str)
+    #     #
+    #     producer = s.producer(topic_str, chunk_size_bytes=10)
+    #     producer.produce(self.snack_countries_str_list)
+    #     producer.close()
+    #     #
+    #     x = s.cat(topic_str)

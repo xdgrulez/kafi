@@ -64,9 +64,9 @@ class RestProxyConsumer(KafkaConsumer):
 #     }
 #   ]
 # }
-        if self.topic_str_start_offsets_dict_dict is not None:
-            self.commit(self.topic_str_start_offsets_dict_dict)
-            # rest_proxy_offset_dict_list = [{"topic": topic_str, "partition": partition_int, "offset": offset_int} for topic_str, start_offsets_dict in self.topic_str_start_offsets_dict_dict.items() for partition_int, offset_int in start_offsets_dict.items()]
+        if self.topic_str_next_offsets_dict_dict is not None:
+            self.commit(self.topic_str_next_offsets_dict_dict)
+            # rest_proxy_offset_dict_list = [{"topic": topic_str, "partition": partition_int, "offset": offset_int} for topic_str, start_offsets_dict in self.topic_str_next_offsets_dict_dict.items() for partition_int, offset_int in start_offsets_dict.items()]
             # url_str2 = f"{rest_proxy_url_str}/consumers/{self.group_str}/instances/{self.instance_id_str}/offsets"
             # headers_dict2 = {"Content-Type": "application/vnd.kafka.v2+json"}
             # payload_dict2 = {"offsets": rest_proxy_offset_dict_list}

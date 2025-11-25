@@ -37,14 +37,14 @@ class ClusterConsumer(KafkaConsumer):
     def subscribe(self):
         def on_assign(consumer, partitions):
             def set_offset(topicPartition):
-                if topicPartition.topic in self.topic_str_start_offsets_dict_dict:
-                    offsets = self.topic_str_start_offsets_dict_dict[topicPartition.topic]
+                if topicPartition.topic in self.topic_str_next_offsets_dict_dict:
+                    offsets = self.topic_str_next_offsets_dict_dict[topicPartition.topic]
                     if topicPartition.partition in offsets:
                         offset_int = offsets[topicPartition.partition]
                         topicPartition.offset = offset_int
                 return topicPartition
             #
-            if self.topic_str_start_offsets_dict_dict is not None:
+            if self.topic_str_next_offsets_dict_dict is not None:
                 topicPartition_list = [set_offset(topicPartition) for topicPartition in partitions]
                 consumer.assign(topicPartition_list)
             if self.topic_str_partition_int_list_dict is not None:

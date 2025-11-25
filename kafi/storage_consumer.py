@@ -4,6 +4,7 @@ from kafi.helpers import get_millis
 # Constants
 
 ALL_MESSAGES = -1
+OFFSET_INVALID = -1001
 
 #
 
@@ -16,12 +17,17 @@ class StorageConsumer(Dechunker):
         # Get topics to subscribe to.
         self.topic_str_list = list(topics)
         #
-        # Get start offsets for the subscribed topics.
-        self.topic_str_start_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "offsets", "ts", **kwargs)
+        # Get next (=start) and end offsets for the subscribed topics.
+        self.topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
+        self.topic_str_next_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "offsets", "ts", **kwargs)
+        if self.topic_str_next_offsets_dict_dict is None:
+            self.topic_str_next_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
+        # Get end offsets for the subscribed topics.
         self.topic_str_end_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "end_offsets", "end_ts", **kwargs)
         #
         # Get partitions to assign for the subscribed topics.
         self.topic_str_partition_int_list_dict = self.get_partitions_from_kwargs("partitions", **kwargs)
+        #
         # Get key and value types.
         (self.topic_str_key_type_str_dict, self.topic_str_value_type_str_dict) = self.get_key_value_types_from_kwargs(self.topic_str_list, **kwargs)
         #
