@@ -1758,7 +1758,7 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertTrue(message_dict_list[1]["value"]["country"] == "Australia")
         self.assertTrue(message_dict_list[2]["value"]["country"] == "Australia")
 
-    def test_chunking(self):
+    def test_chunking_json(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return
         #
@@ -1772,14 +1772,45 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         chunk_size_bytes_int = 10
         producer = s.producer(topic_str, chunk_size_bytes=chunk_size_bytes_int)
-        producer.produce(self.snack_countries_str_list)
+        producer.produce(self.value_snack_str_list)
         producer.close()
         #
-        number_of_chunks_int = sum([math.ceil(len(bytes(snack_countries_str, "UTF-8")) / chunk_size_bytes_int) for snack_countries_str in self.snack_countries_str_list])
-        message_dict_list1 = s.cat(topic_str, type="bytes", dechunking=False)
+        number_of_chunks_int = sum([math.ceil(len(producer.serialize(value_snack_str, False)) / chunk_size_bytes_int) for value_snack_str in self.value_snack_str_list])
+        message_dict_list1 = s.cat(topic_str, type="bytes", dechunk=False)
         self.assertEqual(len(message_dict_list1), number_of_chunks_int)
         #
-        message_dict_list2 = s.cat(topic_str, dechunking=True)
-        self.assertEqual(len(message_dict_list2), len(self.snack_countries_str_list))
-        for message_dict, snack_countries_str in zip(message_dict_list2, self.snack_countries_str_list):
-            self.assertEqual(message_dict["value"], json.loads(snack_countries_str))
+        message_dict_list2 = s.cat(topic_str, dechunk=True)
+        self.assertEqual(len(message_dict_list2), len(self.value_snack_str_list))
+        for message_dict, value_snack_str in zip(message_dict_list2, self.value_snack_str_list):
+            self.assertEqual(message_dict["value"], json.loads(value_snack_str))
+
+    def test_chunking_jsonschema(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        s.enable_auto_commit(False)
+        s.commit_after_processing(True)
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str)
+        #
+        config_dict = s.config(topic_str)[topic_str]
+        if "confluent.value.schema.validation" in config_dict:
+            s.config(topic_str, {"confluent.value.schema.validation": True})
+            time.sleep(1)
+        #
+        chunk_size_bytes_int = 10
+        producer = s.producer(topic_str, value_type="jsonschema", value_schema=self.jsonschema_value_schema_str, chunk_size_bytes=chunk_size_bytes_int)
+        producer.produce(self.value_snack_str_list)
+        producer.close()
+        #
+        number_of_chunks_int = sum([math.ceil(len(producer.serialize(value_snack_str, False)) / chunk_size_bytes_int) for value_snack_str in self.value_snack_str_list])
+        message_dict_list1 = s.cat(topic_str, value_type="bytes", dechunk=False)
+        self.assertEqual(len(message_dict_list1), number_of_chunks_int)
+        #
+        message_dict_list2 = s.cat(topic_str, value_type="jsonschema", dechunk=True)
+        self.assertEqual(len(message_dict_list2), len(self.value_snack_str_list))
+        for message_dict, value_snack_str in zip(message_dict_list2, self.value_snack_str_list):
+            self.assertEqual(message_dict["value"], json.loads(value_snack_str))

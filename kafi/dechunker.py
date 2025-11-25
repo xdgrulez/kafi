@@ -39,7 +39,7 @@ class Dechunker(Deserializer):
                     #
                     for chunk_number_int1, value_bytes in self.chunks_dict[chunked_message_id_str].items():
                         # Special handling if the values were serialized in conjunction with Schema Registry.
-                        if value_bytes[0] == b"0":
+                        if value_bytes[0] == 0:
                             # If so, skip the first five bytes from all but the first chunk (upon produce, we add the first five bytes to all messages to avoid confluent.value.schema.validation == true blocking them).
                             if chunk_number_int1 == 0:
                                 dechunked_value_bytes += value_bytes

@@ -61,7 +61,7 @@ class StorageConsumer(Dechunker):
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
         #
-        dechunking_bool = kwargs["dechunking"] if "dechunking" in kwargs else True
+        dechunk_bool = kwargs["dechunk"] if "dechunk" in kwargs else True
         #
         topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
         topic_str_offsets_dict_dict = {topic_str: {partition_int: 0 for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}
@@ -84,7 +84,7 @@ class StorageConsumer(Dechunker):
                 break
             #
             # Dechunk if necessary/enabled.
-            if dechunking_bool:
+            if dechunk_bool:
                 message_dict_list2 = self.dechunk(message_dict_list1)
             else:
                 message_dict_list2 = message_dict_list1

@@ -39,8 +39,8 @@ class Chunker(Serializer):
                     #
                     for chunk_int, chunk_value_bytes in zip(range(len(chunk_value_bytes_list)), chunk_value_bytes_list):
                         # If the first byte of the value starts with 0 we assume this is a message serialized using Schema Registry. In that case, add the five bytes from the beginning of the message to each chunk (to avoid confluent.value.schema.validation == true blocking the individual chunks).
-                        if value_bytes[0] == b"0" and chunk_int > 0:
-                            chunk_value_bytes = value_bytes[0:4] + chunk_value_bytes
+                        if value_bytes[0] == 0 and chunk_int > 0:
+                            chunk_value_bytes = value_bytes[0:5] + chunk_value_bytes
                         #
                         chunk_key_bytes = key_to_chunk_key(message_dict["key"], chunk_int)
                         #
