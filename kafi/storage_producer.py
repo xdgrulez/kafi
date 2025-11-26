@@ -47,9 +47,9 @@ class StorageProducer(Chunker):
         #
         message_dict_list1 = [{"value": serialize(message_dict["value"], False),
                                "key": serialize(message_dict["key"], True),
-                               "partition": message_dict["partition"] if self.keep_partitions_bool else RD_KAFKA_PARTITION_UA,
-                               "timestamp": message_dict["timestamp"] if self.keep_timestamps_bool else CURRENT_TIME,
-                               "headers": message_dict["headers"] if self.keep_headers_bool else None} for message_dict in message_dict_list]
+                               "partition": message_dict["partition"] if "partition" in message_dict and self.keep_partitions_bool else RD_KAFKA_PARTITION_UA,
+                               "timestamp": message_dict["timestamp"] if "timestamp" in message_dict and self.keep_timestamps_bool else CURRENT_TIME,
+                               "headers": message_dict["headers"] if "headers" in message_dict and self.keep_headers_bool else None} for message_dict in message_dict_list]
         #
         message_dict_list2 = self.chunk(message_dict_list1)
         #

@@ -1,8 +1,8 @@
 import asyncio
 import threading
 from kafi.kafi import *
-# c = Cluster("local")
-c = Local("local")
+c = Cluster("local")
+# c = Local("local")
 t1 = "employees"
 t2 = "salaries"
 t3 = "sink"
