@@ -274,14 +274,14 @@ class TopologyNode:
                     return self._name_str
             case 1:
                 if include_ids_bool:
-                    return f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology()})"
+                    return f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)})"
                 else:
-                    return f"{self._name_str}({self._daughter_topologyNode_list[0].topology()})"
+                    return f"{self._name_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)})"
             case 2:
                 if include_ids_bool:
-                    return  f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology()}, {self._daughter_topologyNode_list[1].topology()})"
+                    return  f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)}, {self._daughter_topologyNode_list[1].topology(include_ids_bool)})"
                 else:
-                    return  f"{self._name_str}({self._daughter_topologyNode_list[0].topology()}, {self._daughter_topologyNode_list[1].topology()})"
+                    return  f"{self._name_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)}, {self._daughter_topologyNode_list[1].topology(include_ids_bool)})"
 
     def mermaid(self, include_ids=False):
         def collect_nodes_and_edges(topologyNode, name_str_set, edge_str_list):
@@ -292,7 +292,7 @@ class TopologyNode:
             #
             for daughter_topologyNode in topologyNode.daughters():
                 if include_ids:
-                    edge_str_list.append(f"{daughter_topologyNode.name()}_{topologyNode.id()} --> {topologyNode.name()}_{topologyNode.id()}")
+                    edge_str_list.append(f"{daughter_topologyNode.name()}_{daughter_topologyNode.id()} --> {topologyNode.name()}_{topologyNode.id()}")
                 else:
                     edge_str_list.append(f"{daughter_topologyNode.name()} --> {topologyNode.name()}")
                 #
