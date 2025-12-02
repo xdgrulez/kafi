@@ -4,7 +4,7 @@ import sys
 import time
 import unittest
 import warnings
-from confluent_kafka import KafkaError
+# from confluent_kafka import KafkaError
 
 if os.path.basename(os.getcwd()) == "test":
     sys.path.insert(1, "..")
