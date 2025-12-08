@@ -1,14 +1,12 @@
 from pydbsp.indexed_zset.functions.bilinear import join_with_index
 from pydbsp.indexed_zset.operators.linear import LiftedIndex, LiftedLiftedIndex
-from pydbsp.indexed_zset.operators.bilinear import DeltaLiftedDeltaLiftedSortMergeJoin
+from pydbsp.zset.operators.bilinear import DeltaLiftedDeltaLiftedJoin
 from pydbsp.stream import step_until_fixpoint_and_return, step_until_fixpoint, Stream, StreamHandle
 from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
 from pydbsp.stream.operators.linear import LiftedStreamIntroduction, LiftedStreamElimination, Integrate, LiftedIntegrate
 from pydbsp.stream.operators.bilinear import Incrementalize2
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset import ZSet, ZSetAddition
-
-from kafi.streams.pydbsp_addons import LiftedLiftedAggregate
 
 import json
 import uuid
@@ -101,42 +99,83 @@ class TopologyNode:
         #
         return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
+# from pydbsp.zset.operators.bilinear import JoinCmp
+
+# class Join(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T, R]]]]):
+#     """
+#     SELECT I1.*, I2.*
+#     FROM I1 JOIN I2
+#     ON I1.c1 = I2.c2
+#     """
+    
+#     join: DeltaLiftedDeltaLiftedJoin[T, R, tuple[T, R]]
+#     on: JoinCmp[T, R]
+
+#     def set_input_a(self, stream_handle_a: StreamHandle[Stream[ZSet[T]]]) -> None:
+#         self.input_stream_handle_a = stream_handle_a
+
+#     def set_input_b(self, stream_handle_b: StreamHandle[Stream[ZSet[R]]]) -> None:
+#         self.input_stream_handle_b = stream_handle_b
+#         self.join = DeltaLiftedDeltaLiftedJoin(self.input_stream_handle_a, self.input_stream_handle_b, self.on, lambda x, y: (x, y))
+#         self.output_stream = self.join.output()
+#         self.output_stream_handle = self.join.output_handle()
+
+#     def __init__(self, stream_a: Optional[StreamHandle[Stream[ZSet[T]]]], stream_b: Optional[StreamHandle[Stream[ZSet[R]]]], on: JoinCmp[T, R]):
+#         self.on = on
+#         if stream_a is not None:
+#             self.set_input_a(stream_a)
+#         if stream_b is not None:
+#             self.set_input_b(stream_b)
+
+#     def step(self) -> bool:
+#         return self.join.step()
+
+# I1 = from_dict_into_singleton_stream({ ("a", "b"): 1, ("a", "d"): 1, ("e", "f"): 1 })
+# lifted_lifted_I1 = LiftedStreamIntroduction(I1)
+# step_until_fixpoint(lifted_lifted_I1)
+
+# I2 = from_dict_into_singleton_stream({ ("a", "b"): 1, ("c", "d"): 1, ("e", "g"): 1 })
+# lifted_lifted_I2 = LiftedStreamIntroduction(I2)
+# step_until_fixpoint(lifted_lifted_I2)
+
+# join = Join(lifted_lifted_I1.output_handle(), lifted_lifted_I2.output_handle(), lambda x, y: x[0] == y[0])
+# step_until_fixpoint(join)
+
+# output = LiftedStreamElimination(join.output_handle())
+# step_until_fixpoint(output)
+
+# print(output.output())
+
     def join2(self, other, on_function, projection_function):
-        def on_function1(message_json_str):
-            message_dict = json.loads(message_json_str)
-            return json.dumps(on_function(message_dict))
-        #
-        def projection_function1(key, left_message_json_str, right_message_json_str):
+        def on_function1(left_message_json_str, right_message_json_str):
             left_message_dict = json.loads(left_message_json_str)
             right_message_dict = json.loads(right_message_json_str)
-            return json.dumps(projection_function(key, left_message_dict, right_message_dict))
+            return on_function(left_message_dict, right_message_dict)
         #
-        l1 = LiftedStreamIntroduction(self._output_handle_function())
-        r1 = LiftedStreamIntroduction(other._output_handle_function())
+        def projection_function1(left_message_json_str, right_message_json_str):
+            left_message_dict = json.loads(left_message_json_str)
+            right_message_dict = json.loads(right_message_json_str)
+            return json.dumps(projection_function(left_message_dict, right_message_dict))
         #
-        index_function = lambda x: on_function1(x)
-        l2 = LiftedLiftedIndex(l1.output_handle(), index_function)
-        r2 = LiftedLiftedIndex(r1.output_handle(), index_function)
+        left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
         #
-        deltaLiftedDeltaLiftedSortMergeJoin = DeltaLiftedDeltaLiftedSortMergeJoin(
-            l2.output_handle(),
-            r2.output_handle(),
+        deltaLiftedDeltaLiftedJoin = DeltaLiftedDeltaLiftedJoin(
+            left_liftedStream.output_handle(),
+            right_liftedStream.output_handle(),
+            on_function1,
             projection_function1)
         #
-        output_node = LiftedStreamElimination(
-            deltaLiftedDeltaLiftedSortMergeJoin.output_handle()
-        )
-        #
         def output_handle_function():
+            output_node = LiftedStreamElimination(deltaLiftedDeltaLiftedJoin.output_handle())
+            step_until_fixpoint(output_node)
             return output_node.output_handle()
         #
         def step_function():
-            l1.step()
-            r1.step()
-            l2.step()
-            r2.step()
-            deltaLiftedDeltaLiftedSortMergeJoin.step()
-            step_until_fixpoint_and_return(output_node)
+            step_until_fixpoint(left_liftedStream)
+            step_until_fixpoint(right_liftedStream)
+            #
+            step_until_fixpoint(deltaLiftedDeltaLiftedJoin)
         #
         return TopologyNode("join2_op", output_handle_function, step_function, [self, other])
 
@@ -216,21 +255,21 @@ class TopologyNode:
     def latest(self):
         return self._output_handle_function().get().latest()
 
-    def latest_until_fixed_point(self):
-        latest_summed_zSet = ZSet({})
-        latest_zSet = ZSet({})
-        zSetAddition = ZSetAddition()
-        while True:
-            self.step()
-            latest_zSet1 = self.latest()
-            if latest_zSet1 != latest_zSet:
-                if latest_zSet1.is_identity():
-                    break
-                latest_summed_zSet = zSetAddition.add(latest_summed_zSet, latest_zSet1)
-                latest_zSet = latest_zSet1
-            else:
-                break
-        return latest_summed_zSet
+    # def latest_until_fixed_point(self):
+    #     latest_summed_zSet = ZSet({})
+    #     latest_zSet = ZSet({})
+    #     zSetAddition = ZSetAddition()
+    #     while True:
+    #         self.step()
+    #         latest_zSet1 = self.latest()
+    #         if latest_zSet1 != latest_zSet:
+    #             if latest_zSet1.is_identity():
+    #                 break
+    #             latest_summed_zSet = zSetAddition.add(latest_summed_zSet, latest_zSet1)
+    #             latest_zSet = latest_zSet1
+    #         else:
+    #             break
+    #     return latest_summed_zSet
 
     #
 

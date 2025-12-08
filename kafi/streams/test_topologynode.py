@@ -1,11 +1,14 @@
-from kafi.streams.topologynode import source, message_dict_list_to_ZSet
+from topologynode import source, message_dict_list_to_ZSet
 import cloudpickle as pickle
 
 def map_function(message_dict):
     message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
     return message_dict
 
-def proj_function(_, left_message_dict, right_message_dict):
+def on_function(left_message_dict, right_message_dict):
+    return left_message_dict["key"] == right_message_dict["key"]
+
+def proj_function(left_message_dict, right_message_dict):
     left_message_dict["value"].update(right_message_dict["value"])
     return left_message_dict
 
@@ -15,14 +18,14 @@ def setup():
     #
     root_topologyNode = (
         employees_source_topologyNode
-        .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
-        .join(
+        # .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
+        .join2(
             salaries_source_topologyNode,
-            on_function=lambda message_dict: message_dict["key"],
+            on_function=on_function,
             projection_function=proj_function
         )
         # .peek(print)
-        .map(map_function)
+        # .map(map_function)
     )
     #
     return employees_source_topologyNode, salaries_source_topologyNode, root_topologyNode
@@ -41,6 +44,8 @@ salary_zset = message_dict_list_to_ZSet(salary_message_dict_list)
 employees_source_topologyNode.output_handle_function()().get().send(employee_zset)
 salaries_source_topologyNode.output_handle_function()().get().send(salary_zset)
 
+root_topologyNode.step()
+
 print()
 print(f"Topology: {root_topologyNode.topology()}")
 print()
@@ -50,7 +55,7 @@ print(f"Topology: {root_topologyNode.topology(True)}")
 print()
 print(f"Mermaid:\n{root_topologyNode.mermaid(True)}")
 print()
-print(f"Latest: {root_topologyNode.latest_until_fixed_point()}")
+print(f"Latest: {root_topologyNode.latest()}")
 
 #
 
@@ -65,5 +70,7 @@ salaries_source_topologyNode = root_topologyNode.get_node_by_name("salaries")
 salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
 # print(salaries_source_topologyNode.output_handle_function()().get())
 
+root_topologyNode.step()
+
 print()
-print(f"Latest: {root_topologyNode.latest_until_fixed_point()}")
+print(f"Latest: {root_topologyNode.latest()}")
