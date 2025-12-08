@@ -71,82 +71,6 @@ class TopologyNode:
         return TopologyNode("filter_op", output_handle_function, step_function, [self])
 
     def join(self, other, on_function, projection_function):
-        def on_function1(message_json_str):
-            message_dict = json.loads(message_json_str)
-            return json.dumps(on_function(message_dict))
-        #
-        def projection_function1(key, left_message_json_str, right_message_json_str):
-            left_message_dict = json.loads(left_message_json_str)
-            right_message_dict = json.loads(right_message_json_str)
-            return json.dumps(projection_function(key, left_message_dict, right_message_dict))
-        #
-        index_function = lambda x: on_function1(x)
-        left_index = LiftedIndex(self._output_handle_function(), index_function)
-        right_index = LiftedIndex(other._output_handle_function(), index_function)
-        join_op = Incrementalize2(
-            left_index.output_handle(),
-            right_index.output_handle(),
-            lambda l, r: join_with_index(l, r, projection_function1),
-            self.group
-        )
-        def output_handle_function():
-            return join_op.output_handle()
-        #
-        def step_function():
-            left_index.step()
-            right_index.step()
-            join_op.step()
-        #
-        return TopologyNode("join_op", output_handle_function, step_function, [self, other])
-
-# from pydbsp.zset.operators.bilinear import JoinCmp
-
-# class Join(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T, R]]]]):
-#     """
-#     SELECT I1.*, I2.*
-#     FROM I1 JOIN I2
-#     ON I1.c1 = I2.c2
-#     """
-    
-#     join: DeltaLiftedDeltaLiftedJoin[T, R, tuple[T, R]]
-#     on: JoinCmp[T, R]
-
-#     def set_input_a(self, stream_handle_a: StreamHandle[Stream[ZSet[T]]]) -> None:
-#         self.input_stream_handle_a = stream_handle_a
-
-#     def set_input_b(self, stream_handle_b: StreamHandle[Stream[ZSet[R]]]) -> None:
-#         self.input_stream_handle_b = stream_handle_b
-#         self.join = DeltaLiftedDeltaLiftedJoin(self.input_stream_handle_a, self.input_stream_handle_b, self.on, lambda x, y: (x, y))
-#         self.output_stream = self.join.output()
-#         self.output_stream_handle = self.join.output_handle()
-
-#     def __init__(self, stream_a: Optional[StreamHandle[Stream[ZSet[T]]]], stream_b: Optional[StreamHandle[Stream[ZSet[R]]]], on: JoinCmp[T, R]):
-#         self.on = on
-#         if stream_a is not None:
-#             self.set_input_a(stream_a)
-#         if stream_b is not None:
-#             self.set_input_b(stream_b)
-
-#     def step(self) -> bool:
-#         return self.join.step()
-
-# I1 = from_dict_into_singleton_stream({ ("a", "b"): 1, ("a", "d"): 1, ("e", "f"): 1 })
-# lifted_lifted_I1 = LiftedStreamIntroduction(I1)
-# step_until_fixpoint(lifted_lifted_I1)
-
-# I2 = from_dict_into_singleton_stream({ ("a", "b"): 1, ("c", "d"): 1, ("e", "g"): 1 })
-# lifted_lifted_I2 = LiftedStreamIntroduction(I2)
-# step_until_fixpoint(lifted_lifted_I2)
-
-# join = Join(lifted_lifted_I1.output_handle(), lifted_lifted_I2.output_handle(), lambda x, y: x[0] == y[0])
-# step_until_fixpoint(join)
-
-# output = LiftedStreamElimination(join.output_handle())
-# step_until_fixpoint(output)
-
-# print(output.output())
-
-    def join2(self, other, on_function, projection_function):
         def on_function1(left_message_json_str, right_message_json_str):
             left_message_dict = json.loads(left_message_json_str)
             right_message_dict = json.loads(right_message_json_str)
@@ -166,9 +90,9 @@ class TopologyNode:
             on_function1,
             projection_function1)
         #
+        output_node = LiftedStreamElimination(deltaLiftedDeltaLiftedJoin.output_handle())
+        #
         def output_handle_function():
-            output_node = LiftedStreamElimination(deltaLiftedDeltaLiftedJoin.output_handle())
-            step_until_fixpoint(output_node)
             return output_node.output_handle()
         #
         def step_function():
@@ -176,8 +100,10 @@ class TopologyNode:
             step_until_fixpoint(right_liftedStream)
             #
             step_until_fixpoint(deltaLiftedDeltaLiftedJoin)
+            #
+            step_until_fixpoint(output_node)
         #
-        return TopologyNode("join2_op", output_handle_function, step_function, [self, other])
+        return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
     # def groupByAgg(self, by_function, agg_function):
     #     def by_function1(message_json_str):

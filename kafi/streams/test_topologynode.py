@@ -18,14 +18,14 @@ def setup():
     #
     root_topologyNode = (
         employees_source_topologyNode
-        # .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
-        .join2(
+        .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
+        .join(
             salaries_source_topologyNode,
             on_function=on_function,
             projection_function=proj_function
         )
         # .peek(print)
-        # .map(map_function)
+        .map(map_function)
     )
     #
     return employees_source_topologyNode, salaries_source_topologyNode, root_topologyNode
