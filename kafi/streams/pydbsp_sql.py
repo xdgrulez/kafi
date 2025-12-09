@@ -1,4 +1,4 @@
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 from pydbsp.indexed_zset import Indexer, I
 
@@ -6,8 +6,8 @@ from pydbsp.stream import step_until_fixpoint_and_return, BinaryOperator, Lift1,
 from pydbsp.stream.operators.linear import Integrate, LiftedIntegrate, LiftedGroupNegate
 
 from pydbsp.zset import ZSet, ZSetAddition
-from pydbsp.zset.operators.bilinear import DeltaLiftedDeltaLiftedJoin, JoinCmp
-from pydbsp.zset.operators.linear import Cmp, LiftedLiftedProject, LiftedLiftedSelect, Projection as project, R, T
+from pydbsp.zset.operators.bilinear import DeltaLiftedDeltaLiftedJoin, JoinCmp, PostJoinProjection, R, S, T
+from pydbsp.zset.operators.linear import Cmp, LiftedLiftedProject, LiftedLiftedSelect, Projection as project
 from pydbsp.zset.operators.unary import DeltaLiftedDeltaLiftedDistinct
 
 # We assume that the aggregation function is linear, that is, f(a + b) = f(a) + f(b)
@@ -233,18 +233,20 @@ class Join(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T,
     
     join: DeltaLiftedDeltaLiftedJoin[T, R, tuple[T, R]]
     on: JoinCmp[T, R]
+    proj: PostJoinProjection[T, R, S]
 
     def set_input_a(self, stream_handle_a: StreamHandle[Stream[ZSet[T]]]) -> None:
         self.input_stream_handle_a = stream_handle_a
 
     def set_input_b(self, stream_handle_b: StreamHandle[Stream[ZSet[R]]]) -> None:
         self.input_stream_handle_b = stream_handle_b
-        self.join = DeltaLiftedDeltaLiftedJoin(self.input_stream_handle_a, self.input_stream_handle_b, self.on, lambda x, y: (x, y))
+        self.join = DeltaLiftedDeltaLiftedJoin(self.input_stream_handle_a, self.input_stream_handle_b, self.on, self.proj)
         self.output_stream = self.join.output()
         self.output_stream_handle = self.join.output_handle()
 
-    def __init__(self, stream_a: Optional[StreamHandle[Stream[ZSet[T]]]], stream_b: Optional[StreamHandle[Stream[ZSet[R]]]], on: JoinCmp[T, R]):
+    def __init__(self, stream_a: Optional[StreamHandle[Stream[ZSet[T]]]], stream_b: Optional[StreamHandle[Stream[ZSet[R]]]], on: JoinCmp[T, R], proj: PostJoinProjection[T, R, S]):
         self.on = on
+        self.proj = proj
         if stream_a is not None:
             self.set_input_a(stream_a)
         if stream_b is not None:
@@ -252,34 +254,6 @@ class Join(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T,
 
     def step(self) -> bool:
         return self.join.step()
-
-
-class Intersection(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[T]], Stream[ZSet[T]]]):
-    """
-    (SELECT * FROM I1)
-    INTERSECT
-    (SELECT * FROM I2)
-    """
-    
-    intersection: DeltaLiftedDeltaLiftedJoin[T, T, T]
-
-    def set_input_a(self, stream_handle_a: StreamHandle[Stream[ZSet[T]]]) -> None:
-        self.input_stream_handle_a = stream_handle_a
-
-    def set_input_b(self, stream_handle_b: StreamHandle[Stream[ZSet[T]]]) -> None:
-        self.input_stream_handle_b = stream_handle_b
-        self.intersection = DeltaLiftedDeltaLiftedJoin(self.input_stream_handle_a, self.input_stream_handle_b, lambda x, y: x == y, lambda x, y: x)
-        self.output_stream = self.intersection.output()
-        self.output_stream_handle = self.intersection.output_handle()
-    
-    def __init__(self, stream_a: Optional[StreamHandle[Stream[ZSet[T]]]], stream_b: Optional[StreamHandle[Stream[ZSet[T]]]]):
-        if stream_a is not None:
-            self.set_input_a(stream_a)
-        if stream_b is not None:
-            self.set_input_b(stream_b)
-
-    def step(self) -> bool:
-        return self.intersection.step()
 
 
 class Difference(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[T]], Stream[ZSet[T]]]):

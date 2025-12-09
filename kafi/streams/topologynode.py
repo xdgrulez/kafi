@@ -7,6 +7,7 @@ from pydbsp.stream.operators.linear import LiftedStreamIntroduction, LiftedStrea
 from pydbsp.stream.operators.bilinear import Incrementalize2
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset import ZSet, ZSetAddition
+from pydbsp_sql import Join, Union
 
 import json
 import uuid
@@ -84,13 +85,9 @@ class TopologyNode:
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
         right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
         #
-        deltaLiftedDeltaLiftedJoin = DeltaLiftedDeltaLiftedJoin(
-            left_liftedStream.output_handle(),
-            right_liftedStream.output_handle(),
-            on_function1,
-            projection_function1)
+        join = Join(left_liftedStream.output_handle(), right_liftedStream.output_handle(), on_function1, projection_function1)
         #
-        output_node = LiftedStreamElimination(deltaLiftedDeltaLiftedJoin.output_handle())
+        output_node = LiftedStreamElimination(join.output_handle())
         #
         def output_handle_function():
             return output_node.output_handle()
@@ -99,36 +96,70 @@ class TopologyNode:
             step_until_fixpoint(left_liftedStream)
             step_until_fixpoint(right_liftedStream)
             #
-            step_until_fixpoint(deltaLiftedDeltaLiftedJoin)
+            step_until_fixpoint(join)
             #
             step_until_fixpoint(output_node)
         #
         return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
-    # def groupByAgg(self, by_function, agg_function):
-    #     def by_function1(message_json_str):
-    #         message_dict = json.loads(message_json_str)
-    #         return json.dumps(by_function(message_dict))
-    #     #
-    #     def agg_function1(message_json_str):
-    #         message_dict = json.loads(message_json_str)
-    #         return json.dumps(agg_function(message_dict))
-    #     #
-    #     stream_handle = self._output_handle_function()
-    #     integrated_stream = Integrate(stream_handle)
-    #     lifted_integrated_stream = LiftedIntegrate(integrated_stream.output_handle())
-    #     output_node = LiftedLiftedAggregate(lifted_integrated_stream.output_handle(), by_function1, agg_function1)
-    #     #
-    #     def output_handle_function():
-    #         return output_node.output_handle()
-    #     #
-    #     def step_function():
-    #         integrated_stream.step()
-    #         lifted_integrated_stream.step()
-    #         #
-    #         step_until_fixpoint_and_return(output_node)
-    #     #
-    #     return TopologyNode("group_by_agg_op", output_handle_function, step_function, [self])
+    def union(self, other):
+        left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
+        #
+        union = Union(left_liftedStream.output_handle(), right_liftedStream.output_handle())
+        #
+        output_node = LiftedStreamElimination(union.output_handle())
+        #
+        def output_handle_function():
+            return output_node.output_handle()
+        #
+        def step_function():
+            step_until_fixpoint(left_liftedStream)
+            step_until_fixpoint(right_liftedStream)
+            #
+            step_until_fixpoint(union)
+            #
+            step_until_fixpoint(output_node)
+        #
+        return TopologyNode("union_op", output_handle_function, step_function, [self, other])
+
+    def groupBy(self, by_function, agg_function):
+        def by_function1(message_json_str):
+            message_dict = json.loads(message_json_str)
+            return json.dumps(by_function(message_dict))
+        #
+
+def zset_sum(input: ZSet[tuple[I, ZSet[int]]]) -> ZSet[tuple[I, int]]:
+    output_dict: dict[I, int] = {}
+    for (group, zset), _ in input.items():
+        for k, v in zset.items():
+            if group not in output_dict:
+                output_dict[group] = k[1] * v
+            else:
+                output_dict[group] += (k[1] * v)
+    
+    return ZSet({(group_fst, v): 1 for group_fst, v in output_dict.items()})
+
+
+        def agg_function1(message_json_str):
+            message_dict = json.loads(message_json_str)
+            return json.dumps(agg_function(message_dict))
+        #
+        stream_handle = self._output_handle_function()
+        integrated_stream = Integrate(stream_handle)
+        lifted_integrated_stream = LiftedIntegrate(integrated_stream.output_handle())
+        output_node = LiftedLiftedAggregate(lifted_integrated_stream.output_handle(), by_function1, agg_function1)
+        #
+        def output_handle_function():
+            return output_node.output_handle()
+        #
+        def step_function():
+            integrated_stream.step()
+            lifted_integrated_stream.step()
+            #
+            step_until_fixpoint_and_return(output_node)
+        #
+        return TopologyNode("group_by_op", output_handle_function, step_function, [self])
 
     def peek(self, peek_function):
         def peek_function1(message_json_str):
