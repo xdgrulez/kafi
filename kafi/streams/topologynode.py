@@ -129,16 +129,7 @@ class TopologyNode:
             return json.dumps(by_function(message_dict))
         #
 
-def zset_sum(input: ZSet[tuple[I, ZSet[int]]]) -> ZSet[tuple[I, int]]:
-    output_dict: dict[I, int] = {}
-    for (group, zset), _ in input.items():
-        for k, v in zset.items():
-            if group not in output_dict:
-                output_dict[group] = k[1] * v
-            else:
-                output_dict[group] += (k[1] * v)
-    
-    return ZSet({(group_fst, v): 1 for group_fst, v in output_dict.items()})
+
 
 
         def agg_function1(message_json_str):
