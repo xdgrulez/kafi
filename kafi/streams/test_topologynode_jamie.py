@@ -1,3 +1,8 @@
+import json
+from functools import reduce
+
+from pydbsp.zset import ZSet
+
 from topologynode import source, message_dict_list_to_ZSet
 
 # create table if not exists transactions (
@@ -31,9 +36,20 @@ from topologynode import source, message_dict_list_to_ZSet
 # drop view credits;
 # drop table transactions;
 
+def get_value(any, key_str_list):
+    return reduce(lambda d, key_str: d.get(key_str, {}) if isinstance(d, dict) else None, key_str_list, any)
+
+
+def set_value(d, key_str_list, any):
+    for key in key_str_list[:-1]:
+        if key not in d or not isinstance(d[key], dict):
+            d[key] = {}
+        d = d[key]
+    d[key_str_list[-1]] = any
+
+
 def by_function(message_dict):
     return message_dict["value"]["to_account"]
-
 
 # def zset_sum(input: ZSet[tuple[I, ZSet[int]]]) -> ZSet[tuple[I, int]]:
 #     output_dict: dict[I, int] = {}
@@ -46,37 +62,45 @@ def by_function(message_dict):
     
 #     return ZSet({(group_fst, v): 1 for group_fst, v in output_dict.items()})
 
-def agg_function(group_any_zset_tuple):
-    agg_group_any_message_dict = {}
-    for group_any, zset in group_any_zset_tuple:
-        for message_dict, weight_int in zset.items():
-            if group_any not in agg_group_any_message_dict:
-                message_dict["value"]["amount"] = message_dict["value"]["amount"] * weight_int
-                agg_group_any_message_dict[group_any] = message_dict
-            else:
-                message_dict["value"]["amount"] += agg_group_any_message_dict[group_any]["value"]["amount"] * weight_int
-                agg_group_any_message_dict[group_any] = message_dict
+
+def agg_function(group_any_zset_tuple_zset):
+    return agg_function1(group_any_zset_tuple_zset, )
+
+
+def agg_function(group_any_zset_tuple_zset, select_str_key_str_list_as_key_str_list_tuple_dict):
+    def agg_function1(group_any_zset_tuple_zset):
+        agg_group_any_message_str_dict = {}
+        for select_str, (key_str_list, as_key_str_list) in select_str_key_str_list_as_key_str_list_tuple_dict.items():
+            if select_str == "sum":
+                for group_any, zset in group_any_zset_tuple_zset:
+                    for message_str, weight_int in zset.items():
+                        message_dict = json.loads(message_str)
+                        if group_any not in agg_group_any_message_str_dict:
+                            any = get_value(message_dict, ["value"] + key_str_list)
+                            message_dict1 = {}
+                            set_value(message_dict1, ["value"] + as_key_str_list, any * weight_int)
+                            agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
+                        else:
+                            any = get_value(message_dict, key_str_list)
+                            message_dict1 = json.loads(agg_group_any_message_str_dict[group_any])
+                            any1 = get_value(message_dict1, ["value"] + key_str_list)
+                            set_value(message_dict1, ["value"] + as_key_str_list, any1 + any * weight_int)
+                            agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
+        #
+        return ZSet({(group_any, message_dict): 1 for group_any, message_dict in agg_group_any_message_str_dict.items()})
     #
-    return ZSet({(group_any, message_dict): 1 for group_any, message_dict in agg_group_any_message_dict.items()})
+    return lambda group_any_zset_tuple_zset: agg_function1(group_any_zset_tuple_zset)
 
 
 def setup():
-    employees_source_topologyNode = source("employees")
-    salaries_source_topologyNode = source("salaries")
+    transactions_source_topologyNode = source("transactions")
     #
     root_topologyNode = (
-        employees_source_topologyNode
-        .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
-        .join(
-            salaries_source_topologyNode,
-            on_function=on_function,
-            projection_function=proj_function
-        )
-        # .peek(print)
-        .map(map_function)
+        transactions_source_topologyNode
+        .groupBy(by_function, agg_function())
     )
     #
-    return employees_source_topologyNode, salaries_source_topologyNode, root_topologyNode
+    return transactions_source_topologyNode, salaries_source_topologyNode, root_topologyNode
 
 employees_source_topologyNode, salaries_source_topologyNode, root_topologyNode = setup()
 
