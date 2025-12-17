@@ -1,3 +1,4 @@
+import datetime, json, random
 import json
 from functools import reduce
 
@@ -63,16 +64,12 @@ def by_function(message_dict):
 #     return ZSet({(group_fst, v): 1 for group_fst, v in output_dict.items()})
 
 
-def agg_function(group_any_zset_tuple_zset):
-    return agg_function1(group_any_zset_tuple_zset, )
-
-
-def agg_function(group_any_zset_tuple_zset, select_str_key_str_list_as_key_str_list_tuple_dict):
+def agg_function(select_str_key_str_list_as_key_str_list_tuple_dict):
     def agg_function1(group_any_zset_tuple_zset):
         agg_group_any_message_str_dict = {}
         for select_str, (key_str_list, as_key_str_list) in select_str_key_str_list_as_key_str_list_tuple_dict.items():
             if select_str == "sum":
-                for group_any, zset in group_any_zset_tuple_zset:
+                for (group_any, zset), _ in group_any_zset_tuple_zset.items():
                     for message_str, weight_int in zset.items():
                         message_dict = json.loads(message_str)
                         if group_any not in agg_group_any_message_str_dict:
@@ -81,40 +78,48 @@ def agg_function(group_any_zset_tuple_zset, select_str_key_str_list_as_key_str_l
                             set_value(message_dict1, ["value"] + as_key_str_list, any * weight_int)
                             agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
                         else:
-                            any = get_value(message_dict, key_str_list)
+                            any = get_value(message_dict, ["value"] + key_str_list)
                             message_dict1 = json.loads(agg_group_any_message_str_dict[group_any])
-                            any1 = get_value(message_dict1, ["value"] + key_str_list)
+                            any1 = get_value(message_dict1, ["value"] + as_key_str_list)
                             set_value(message_dict1, ["value"] + as_key_str_list, any1 + any * weight_int)
                             agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
         #
-        return ZSet({(group_any, message_dict): 1 for group_any, message_dict in agg_group_any_message_str_dict.items()})
+        return ZSet({(group_any, message_str): 1 for group_any, message_str in agg_group_any_message_str_dict.items()})
     #
-    return lambda group_any_zset_tuple_zset: agg_function1(group_any_zset_tuple_zset)
+    return agg_function1
 
+#
 
 def setup():
     transactions_source_topologyNode = source("transactions")
     #
     root_topologyNode = (
         transactions_source_topologyNode
-        .groupBy(by_function, agg_function())
+        .groupBy(by_function, agg_function({"sum": (["amount"], ["credits"])}))
     )
     #
-    return transactions_source_topologyNode, salaries_source_topologyNode, root_topologyNode
+    return transactions_source_topologyNode, root_topologyNode
 
-employees_source_topologyNode, salaries_source_topologyNode, root_topologyNode = setup()
+transactions_source_topologyNode, root_topologyNode = setup()
 
-employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
-                            {"key": "1", "value": {"name": "mark"}},
-                            {"key": "2", "value": {"name": "mike"}}]
-salary_message_dict_list = [{"key": "2", "value": {"salary": 40000}},
-                            {"key": "0", "value": {"salary": 38750}},
-                            {"key": "1", "value": {"salary": 50000}}]
+#
 
-employee_zset = message_dict_list_to_ZSet(employee_message_dict_list)
-salary_zset = message_dict_list_to_ZSet(salary_message_dict_list)
-employees_source_topologyNode.output_handle_function()().get().send(employee_zset)
-salaries_source_topologyNode.output_handle_function()().get().send(salary_zset)
+n_int = 100
+random.seed(42)
+transactions_message_dict_list = []
+for id_int in range(0, n_int):
+  message_dict = {"key": str(id_int),
+                  "value": {"id": id_int,
+                            "from_account": random.randint(0, 9),
+                            "to_account": random.randint(0, 9),
+                            "amount": 1,
+                            "ts": datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")}}
+  transactions_message_dict_list.append(message_dict)
+
+#
+
+transactions_zset = message_dict_list_to_ZSet(transactions_message_dict_list)
+transactions_source_topologyNode.output_handle_function()().get().send(transactions_zset)
 
 root_topologyNode.step()
 
@@ -126,23 +131,5 @@ print()
 print(f"Topology: {root_topologyNode.topology(True)}")
 print()
 print(f"Mermaid:\n{root_topologyNode.mermaid(True)}")
-print()
-print(f"Latest: {root_topologyNode.latest()}")
-
-#
-
-root_topologyNode = pickle.loads(pickle.dumps(root_topologyNode))
-
-salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
-salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
-
-# salaries_source_topologyNode = root_topologyNode.get_node_by_id(salaries_source_topologyNode.id())
-salaries_source_topologyNode = root_topologyNode.get_node_by_name("salaries")
-# print(salaries_source_topologyNode.output_handle_function()().get())
-salaries_source_topologyNode.output_handle_function()().get().send(salary_zset1)
-# print(salaries_source_topologyNode.output_handle_function()().get())
-
-root_topologyNode.step()
-
 print()
 print(f"Latest: {root_topologyNode.latest()}")
