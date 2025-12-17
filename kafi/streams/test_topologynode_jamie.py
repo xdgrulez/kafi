@@ -49,8 +49,17 @@ def set_value(d, key_str_list, any):
     d[key_str_list[-1]] = any
 
 
-def by_function(message_dict):
-    return message_dict["value"]["to_account"]
+def by_function(key_str_list):
+    def by_function1(message_dict):
+        return get_value(message_dict, ["value"] + key_str_list)
+    #
+    return by_function1
+
+def none_by_function():
+    def none_by_function1(_):
+        return None
+    #
+    return none_by_function1
 
 # def zset_sum(input: ZSet[tuple[I, ZSet[int]]]) -> ZSet[tuple[I, int]]:
 #     output_dict: dict[I, int] = {}
@@ -64,10 +73,10 @@ def by_function(message_dict):
 #     return ZSet({(group_fst, v): 1 for group_fst, v in output_dict.items()})
 
 
-def agg_function(select_str_key_str_list_as_key_str_list_tuple_dict):
+def agg_function(select_str_key_str_list_as_key_str_list_group_key_str_list_tuple_dict):
     def agg_function1(group_any_zset_tuple_zset):
         agg_group_any_message_str_dict = {}
-        for select_str, (key_str_list, as_key_str_list) in select_str_key_str_list_as_key_str_list_tuple_dict.items():
+        for select_str, (key_str_list, as_key_str_list, group_key_str_list) in select_str_key_str_list_as_key_str_list_group_key_str_list_tuple_dict.items():
             if select_str == "sum":
                 for (group_any, zset), _ in group_any_zset_tuple_zset.items():
                     for message_str, weight_int in zset.items():
@@ -76,35 +85,66 @@ def agg_function(select_str_key_str_list_as_key_str_list_tuple_dict):
                             any = get_value(message_dict, ["value"] + key_str_list)
                             message_dict1 = {}
                             set_value(message_dict1, ["value"] + as_key_str_list, any * weight_int)
-                            agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
                         else:
                             any = get_value(message_dict, ["value"] + key_str_list)
                             message_dict1 = json.loads(agg_group_any_message_str_dict[group_any])
                             any1 = get_value(message_dict1, ["value"] + as_key_str_list)
                             set_value(message_dict1, ["value"] + as_key_str_list, any1 + any * weight_int)
-                            agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
+                        #
+                        if group_any is not None:
+                            set_value(message_dict1, ["value"] + group_key_str_list, group_any)
+                        agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
         #
-        return ZSet({(group_any, message_str): 1 for group_any, message_str in agg_group_any_message_str_dict.items()})
+        return ZSet({message_str: 1 for _, message_str in agg_group_any_message_str_dict.items()})
     #
     return agg_function1
+
+
+def on_function(left_message_dict, right_message_dict):
+    return left_message_dict["value"]["account"] == right_message_dict["value"]["account"]
+
+def proj_function(left_message_dict, right_message_dict):
+    message_dict = {"value": {"account": left_message_dict["value"]["account"],
+                              "balance": left_message_dict["value"]["credits"] - right_message_dict["value"]["debits"]}}
+    return message_dict
 
 #
 
 def setup():
     transactions_source_topologyNode = source("transactions")
     #
-    root_topologyNode = (
+    credits_topologyNode = (
         transactions_source_topologyNode
-        .groupBy(by_function, agg_function({"sum": (["amount"], ["credits"])}))
+        .groupBy(by_function(["to_account"]), agg_function({"sum": (["amount"], ["credits"], ["account"])}))
+    )
+    
+    debits_topologyNode = (
+        transactions_source_topologyNode
+        .groupBy(by_function(["from_account"]), agg_function({"sum": (["amount"], ["debits"], ["account"])}))
     )
     #
+    balance_topologyNode = (
+        credits_topologyNode
+        .join(
+            debits_topologyNode,
+            on_function=on_function,
+            projection_function=proj_function
+        )
+    )
+    #
+    root_topologyNode = (
+        balance_topologyNode
+        .groupBy(none_by_function(), agg_function({"sum": (["balance"], ["sum"], None)}))
+    )
+    # create view balance as select credits.account as account, credits - debits as balance from credits inner join debits on credits.account = debits.account;
+
     return transactions_source_topologyNode, root_topologyNode
 
 transactions_source_topologyNode, root_topologyNode = setup()
 
 #
 
-n_int = 100
+n_int = 10000
 random.seed(42)
 transactions_message_dict_list = []
 for id_int in range(0, n_int):

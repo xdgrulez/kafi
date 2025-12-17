@@ -139,6 +139,7 @@ class TopologyNode:
         def step_function():
             step_until_fixpoint(lifted_stream_introduction)
             step_until_fixpoint(group_by_then_agg)
+            print(group_by_then_agg.output())
             #
             step_until_fixpoint(lifted_stream_elimination)
             step_until_fixpoint(output_node)
