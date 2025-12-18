@@ -1,9 +1,9 @@
-from pydbsp.stream import step_until_fixpoint_and_return, step_until_fixpoint, Stream, StreamHandle
+from pydbsp.stream import step_until_fixpoint, Stream, StreamHandle
 from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
-from pydbsp.stream.operators.linear import Differentiate, LiftedStreamIntroduction, LiftedStreamElimination, Integrate, LiftedIntegrate
+from pydbsp.stream.operators.linear import Differentiate, LiftedStreamIntroduction, LiftedStreamElimination
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset import ZSet, ZSetAddition
-from pydbsp_sql import Join, Union, LiftedLiftedAggregate, GroupByThenAgg
+from pydbsp_sql import Difference, Intersection, Join, Union, GroupByThenAgg
 
 import json
 import uuid
@@ -118,6 +118,48 @@ class TopologyNode:
             step_until_fixpoint(output_node)
         #
         return TopologyNode("union_op", output_handle_function, step_function, [self, other])
+
+    def intersect(self, other):
+        left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
+        #
+        intersection = Intersection(left_liftedStream.output_handle(), right_liftedStream.output_handle())
+        #
+        output_node = LiftedStreamElimination(intersection.output_handle())
+        #
+        def output_handle_function():
+            return output_node.output_handle()
+        #
+        def step_function():
+            step_until_fixpoint(left_liftedStream)
+            step_until_fixpoint(right_liftedStream)
+            #
+            step_until_fixpoint(intersection)
+            #
+            step_until_fixpoint(output_node)
+        #
+        return TopologyNode("intersect_op", output_handle_function, step_function, [self, other])
+
+    def difference(self, other):
+        left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
+        #
+        difference = Difference(left_liftedStream.output_handle(), right_liftedStream.output_handle())
+        #
+        output_node = LiftedStreamElimination(difference.output_handle())
+        #
+        def output_handle_function():
+            return output_node.output_handle()
+        #
+        def step_function():
+            step_until_fixpoint(left_liftedStream)
+            step_until_fixpoint(right_liftedStream)
+            #
+            step_until_fixpoint(difference)
+            #
+            step_until_fixpoint(output_node)
+        #
+        return TopologyNode("difference_op", output_handle_function, step_function, [self, other])
 
     def group_by_agg(self, by_function, agg_function):
         def by_function1(message_json_str):
