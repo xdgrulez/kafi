@@ -72,32 +72,55 @@ def none_by_function():
     
 #     return ZSet({(group_fst, v): 1 for group_fst, v in output_dict.items()})
 
+def select_function(key_str_list):
+    def select_function1(message_dict):
+        return get_value(message_dict, ["value"] + key_str_list)
+    #
+    return select_function1
 
-def agg_function(select_str_key_str_list_as_key_str_list_group_key_str_list_tuple_dict):
-    def agg_function1(group_any_zset_tuple_zset):
+def agg_as_function(key_str_list):
+    def agg_as_function1(message_dict):
+        return get_value(message_dict, ["value"] + key_str_list)
+    #
+    def agg_as_function2(message_dict, any):
+        set_value(message_dict, ["value"] + key_str_list, any)
+        return message_dict
+    #
+    return agg_as_function1, agg_as_function2
+
+
+def group_as_function(key_str_list):
+    def group_as_function1(message_dict, any):
+        set_value(message_dict, ["value"] + key_str_list, any)
+        return message_dict
+    #
+    return group_as_function1
+
+
+def sum_function(select_function_agg_as_function1_agg_as_function2_group_as_function_tuple_list): 
+    def sum_function1(group_any_zset_tuple_zset):
         agg_group_any_message_str_dict = {}
-        for select_str, (key_str_list, as_key_str_list, group_key_str_list) in select_str_key_str_list_as_key_str_list_group_key_str_list_tuple_dict.items():
-            if select_str == "sum":
-                for (group_any, zset), _ in group_any_zset_tuple_zset.items():
-                    for message_str, weight_int in zset.items():
-                        message_dict = json.loads(message_str)
-                        if group_any not in agg_group_any_message_str_dict:
-                            any = get_value(message_dict, ["value"] + key_str_list)
-                            message_dict1 = {}
-                            set_value(message_dict1, ["value"] + as_key_str_list, any * weight_int)
-                        else:
-                            any = get_value(message_dict, ["value"] + key_str_list)
-                            message_dict1 = json.loads(agg_group_any_message_str_dict[group_any])
-                            any1 = get_value(message_dict1, ["value"] + as_key_str_list)
-                            set_value(message_dict1, ["value"] + as_key_str_list, any1 + any * weight_int)
-                        #
-                        if group_any is not None:
-                            set_value(message_dict1, ["value"] + group_key_str_list, group_any)
-                        agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
+        for select_function, (agg_as_function1, agg_as_function2), group_as_function in select_function_agg_as_function1_agg_as_function2_group_as_function_tuple_list:
+            for (group_any, zset), _ in group_any_zset_tuple_zset.items():
+                for message_str, weight_int in zset.items():
+                    message_dict = json.loads(message_str)
+                    if group_any not in agg_group_any_message_str_dict:
+                        any = select_function(message_dict)
+                        message_dict1 = {}
+                        message_dict1 = agg_as_function2(message_dict1, any * weight_int)
+                    else:
+                        any = select_function(message_dict)
+                        message_dict1 = json.loads(agg_group_any_message_str_dict[group_any])
+                        any1 = agg_as_function1(message_dict1)
+                        message_dict1 = agg_as_function2(message_dict1, any1 + any * weight_int)
+                    #
+                    if group_any is not None:
+                        message_dict1 = group_as_function(message_dict1, group_any)
+                    agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
         #
         return ZSet({message_str: 1 for _, message_str in agg_group_any_message_str_dict.items()})
     #
-    return agg_function1
+    return sum_function1
 
 
 def on_function(left_message_dict, right_message_dict):
@@ -113,16 +136,19 @@ def proj_function(left_message_dict, right_message_dict):
 def setup():
     transactions_source_topologyNode = source("transactions")
     #
+# create view credits as select to_account as account, sum(amount) as credits from transactions group by to_account;
     credits_topologyNode = (
         transactions_source_topologyNode
-        .groupBy(by_function(["to_account"]), agg_function({"sum": (["amount"], ["credits"], ["account"])}))
+        .groupBy(by_function(["to_account"]), sum_function([(select_function(["amount"]), agg_as_function(["credits"]), group_as_function(["account"]))]))
     )
     
+# create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
     debits_topologyNode = (
         transactions_source_topologyNode
-        .groupBy(by_function(["from_account"]), agg_function({"sum": (["amount"], ["debits"], ["account"])}))
+        .groupBy(by_function(["from_account"]), sum_function([(select_function(["amount"]), agg_as_function(["debits"]), group_as_function(["account"]))]))
     )
     #
+# create view balance as select credits.account as account, credits - debits as balance from credits inner join debits on credits.account = debits.account;
     balance_topologyNode = (
         credits_topologyNode
         .join(
@@ -132,11 +158,11 @@ def setup():
         )
     )
     #
+# create view total as select sum(balance) from balance;
     root_topologyNode = (
         balance_topologyNode
-        .groupBy(none_by_function(), agg_function({"sum": (["balance"], ["sum"], None)}))
+        .groupBy(none_by_function(), sum_function([(select_function(["balance"]), agg_as_function(["sum"]), None)]))
     )
-    # create view balance as select credits.account as account, credits - debits as balance from credits inner join debits on credits.account = debits.account;
 
     return transactions_source_topologyNode, root_topologyNode
 
