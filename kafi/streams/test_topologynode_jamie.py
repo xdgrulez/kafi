@@ -49,17 +49,11 @@ def set_value(d, key_str_list, any):
     d[key_str_list[-1]] = any
 
 
-def by_function(key_str_list):
-    def by_function1(message_dict):
-        return get_value(message_dict, ["value"] + key_str_list)
-    #
-    return by_function1
-
-def none_by_function():
-    def none_by_function1(_):
+def none_by_fun():
+    def none_by_fun1(_):
         return None
     #
-    return none_by_function1
+    return none_by_fun1
 
 # def zset_sum(input: ZSet[tuple[I, ZSet[int]]]) -> ZSet[tuple[I, int]]:
 #     output_dict: dict[I, int] = {}
@@ -72,64 +66,67 @@ def none_by_function():
     
 #     return ZSet({(group_fst, v): 1 for group_fst, v in output_dict.items()})
 
-def select_function(key_str_list):
-    def select_function1(message_dict):
-        return get_value(message_dict, ["value"] + key_str_list)
+def select_fun(key_str_list):
+    def select_fun1(message_dict):
+        return get_value(message_dict, key_str_list)
     #
-    return select_function1
+    return select_fun1
 
-def agg_as_function(key_str_list):
-    def agg_as_function1(message_dict):
-        return get_value(message_dict, ["value"] + key_str_list)
-    #
-    def agg_as_function2(message_dict, any):
-        set_value(message_dict, ["value"] + key_str_list, any)
+
+def as_fun(key_str_list):
+    def as_fun1(message_dict, any):
+        set_value(message_dict, key_str_list, any)
         return message_dict
     #
-    return agg_as_function1, agg_as_function2
+    return as_fun1
 
 
-def group_as_function(key_str_list):
-    def group_as_function1(message_dict, any):
-        set_value(message_dict, ["value"] + key_str_list, any)
-        return message_dict
+def select_as_fun(key_str_list):
+    def select_as_fun1(message_dict, any=None):
+        if any is not None:
+            set_value(message_dict, key_str_list, any)
+            return message_dict
+        else:
+            return get_value(message_dict, key_str_list)
     #
-    return group_as_function1
+    return select_as_fun1
 
 
-def sum_function(select_function_agg_as_function1_agg_as_function2_group_as_function_tuple_list): 
-    def sum_function1(group_any_zset_tuple_zset):
+def agg_fun(agg_fun_select_fun_agg_select_as_fun_tuple_list):
+    agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list = [(agg_fun, select_fun, agg_select_as_fun, None) for agg_fun, select_fun, agg_select_as_fun in agg_fun_select_fun_agg_select_as_fun_tuple_list]
+    #
+    return group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list)
+
+
+def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
+    def group_by_agg_fun1(group_any_zset_tuple_zset):
         agg_group_any_message_str_dict = {}
-        for select_function, (agg_as_function1, agg_as_function2), group_as_function in select_function_agg_as_function1_agg_as_function2_group_as_function_tuple_list:
+        for agg_fun, select_fun, agg_select_as_fun, group_as_fun in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list:
             for (group_any, zset), _ in group_any_zset_tuple_zset.items():
                 for message_str, weight_int in zset.items():
                     message_dict = json.loads(message_str)
                     if group_any not in agg_group_any_message_str_dict:
-                        any = select_function(message_dict)
+                        any = select_fun(message_dict)
                         message_dict1 = {}
-                        message_dict1 = agg_as_function2(message_dict1, any * weight_int)
+                        message_dict1 = agg_select_as_fun(message_dict1, any * weight_int)
                     else:
-                        any = select_function(message_dict)
+                        any = select_fun(message_dict)
                         message_dict1 = json.loads(agg_group_any_message_str_dict[group_any])
-                        any1 = agg_as_function1(message_dict1)
-                        message_dict1 = agg_as_function2(message_dict1, any1 + any * weight_int)
+                        any1 = agg_select_as_fun(message_dict1)
+                        message_dict1 = agg_select_as_fun(message_dict1, agg_fun(any1, any * weight_int))
                     #
                     if group_any is not None:
-                        message_dict1 = group_as_function(message_dict1, group_any)
+                        message_dict1 = group_as_fun(message_dict1, group_any)
                     agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
         #
         return ZSet({message_str: 1 for _, message_str in agg_group_any_message_str_dict.items()})
     #
-    return sum_function1
+    return group_by_agg_fun1
 
 
-def on_function(left_message_dict, right_message_dict):
-    return left_message_dict["value"]["account"] == right_message_dict["value"]["account"]
+def sum_fun(i, j):
+    return i + j
 
-def proj_function(left_message_dict, right_message_dict):
-    message_dict = {"value": {"account": left_message_dict["value"]["account"],
-                              "balance": left_message_dict["value"]["credits"] - right_message_dict["value"]["debits"]}}
-    return message_dict
 
 #
 
@@ -139,13 +136,13 @@ def setup():
 # create view credits as select to_account as account, sum(amount) as credits from transactions group by to_account;
     credits_topologyNode = (
         transactions_source_topologyNode
-        .groupBy(by_function(["to_account"]), sum_function([(select_function(["amount"]), agg_as_function(["credits"]), group_as_function(["account"]))]))
+        .group_by_agg(select_fun(["value", "to_account"]), group_by_agg_fun([(sum_fun, select_fun(["value", "amount"]), select_as_fun(["value", "credits"]), as_fun(["value", "account"]))]))
     )
     
 # create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
     debits_topologyNode = (
         transactions_source_topologyNode
-        .groupBy(by_function(["from_account"]), sum_function([(select_function(["amount"]), agg_as_function(["debits"]), group_as_function(["account"]))]))
+        .group_by_agg(select_fun(["value", "from_account"]), group_by_agg_fun([(sum_fun, select_fun(["value", "amount"]), select_as_fun(["value", "debits"]), as_fun(["value", "account"]))]))
     )
     #
 # create view balance as select credits.account as account, credits - debits as balance from credits inner join debits on credits.account = debits.account;
@@ -153,15 +150,16 @@ def setup():
         credits_topologyNode
         .join(
             debits_topologyNode,
-            on_function=on_function,
-            projection_function=proj_function
+            on_function=lambda l, r: l["value"]["account"] == r["value"]["account"],
+            projection_function=lambda l, r: {"value": {"account": l["value"]["account"],
+                                                        "balance": l["value"]["credits"] - r["value"]["debits"]}}
         )
     )
     #
 # create view total as select sum(balance) from balance;
     root_topologyNode = (
         balance_topologyNode
-        .groupBy(none_by_function(), sum_function([(select_function(["balance"]), agg_as_function(["sum"]), None)]))
+        .agg(agg_fun([(sum_fun, select_fun(["value", "balance"]), select_as_fun(["value", "sum"]))]))
     )
 
     return transactions_source_topologyNode, root_topologyNode

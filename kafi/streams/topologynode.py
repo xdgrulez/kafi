@@ -119,7 +119,7 @@ class TopologyNode:
         #
         return TopologyNode("union_op", output_handle_function, step_function, [self, other])
 
-    def groupBy(self, by_function, agg_function):
+    def group_by_agg(self, by_function, agg_function):
         def by_function1(message_json_str):
             message_dict = json.loads(message_json_str)
             return by_function(message_dict)
@@ -144,7 +144,33 @@ class TopologyNode:
             step_until_fixpoint(lifted_stream_elimination)
             step_until_fixpoint(output_node)
         #
-        return TopologyNode("group_by_op", output_handle_function, step_function, [self])
+        return TopologyNode("group_by_agg_op", output_handle_function, step_function, [self])
+
+    def agg(self, agg_function):
+        def by_function1(_):
+            return None
+        #
+        def agg_function1(group_any_zset_tuple_zset):
+            return agg_function(group_any_zset_tuple_zset)
+        #
+        stream_handle = self._output_handle_function()
+        lifted_stream_introduction = LiftedStreamIntroduction(stream_handle)
+        group_by_then_agg = GroupByThenAgg(lifted_stream_introduction.output_handle(), by_function1, agg_function1)
+        lifted_stream_elimination = LiftedStreamElimination(group_by_then_agg.output_handle())
+        output_node = Differentiate(lifted_stream_elimination.output_handle())
+        #
+        def output_handle_function():
+            return output_node.output_handle()
+        #
+        def step_function():
+            step_until_fixpoint(lifted_stream_introduction)
+            step_until_fixpoint(group_by_then_agg)
+            print(group_by_then_agg.output())
+            #
+            step_until_fixpoint(lifted_stream_elimination)
+            step_until_fixpoint(output_node)
+        #
+        return TopologyNode("agg_op", output_handle_function, step_function, [self])
 
     def peek(self, peek_function):
         def peek_function1(message_json_str):
