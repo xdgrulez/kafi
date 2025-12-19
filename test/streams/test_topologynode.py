@@ -1,5 +1,15 @@
-from topologynode import source, message_dict_list_to_ZSet
+import os, sys
+
 import cloudpickle as pickle
+
+#
+
+if "test/streams" in os.path.basename(os.getcwd()):
+    sys.path.insert(1, "..")
+else:
+    sys.path.insert(1, ".")
+
+from kafi.streams.topologynode import source, message_dict_list_to_ZSet
 
 def map_function(message_dict):
     message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"

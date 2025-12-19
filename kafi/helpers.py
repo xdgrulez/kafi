@@ -340,6 +340,18 @@ def split_bytes(bytes, chunk_size_bytes_int):
     return bytes_list
 
 
+def get_value(any, key_str_list):
+    return reduce(lambda d, key_str: d.get(key_str, {}) if isinstance(d, dict) else None, key_str_list, any)
+
+
+def set_value(d, key_str_list, any):
+    for key in key_str_list[:-1]:
+        if key not in d or not isinstance(d[key], dict):
+            d[key] = {}
+        d = d[key]
+    d[key_str_list[-1]] = any
+
+
 # Partitioners
 
 def default_partitioner(message_dict, counter_int, partitions_int, projection_function=lambda x: x["key"]):

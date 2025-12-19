@@ -1,9 +1,10 @@
-from kafi.streams.topologynode import message_dict_list_to_ZSet
-from kafi.helpers import get_millis
 from asyncio import TaskGroup, Queue, sleep
 import json
 import cloudpickle
 import hashlib
+
+from kafi.streams.topologynode import message_dict_list_to_ZSet
+from kafi.helpers import get_millis
 
 #
 
@@ -120,7 +121,9 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
                         sent_bool = True
                 #
                 if sent_bool:
-                    zSet = root_topologyNode.latest_until_fixed_point()
+                    root_topologyNode.step()
+                    zSet = root_topologyNode.latest()
+                    # zSet = root_topologyNode.latest_until_fixpoint()
                     #
                     message_dict_list = [json.loads(message_json_str) for message_json_str, i in zSet.items() if i == 1]
                     #

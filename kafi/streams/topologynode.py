@@ -1,29 +1,15 @@
+from kafi.helpers import get_value, set_value
+
 from pydbsp.stream import step_until_fixpoint, Stream, StreamHandle
 from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
 from pydbsp.stream.operators.linear import Differentiate, LiftedStreamIntroduction, LiftedStreamElimination
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset import ZSet, ZSetAddition
-from pydbsp_sql import Difference, Intersection, Join, Union, GroupByThenAgg
+
+from kafi.streams.pydbsp_sql import Difference, Intersection, Join, Union, GroupByThenAgg
 
 import json
 import uuid
-
-#
-
-def source(name_str):
-    stream = Stream(ZSetAddition())
-    stream_handle = StreamHandle(lambda: stream)
-    #
-    def output_handle_function():
-        return stream_handle
-    #
-    return TopologyNode(name_str, output_handle_function)
-
-#
-def message_dict_list_to_ZSet(message_dict_list):
-    message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
-    zSet = ZSet({k: 1 for k in message_str_list})
-    return zSet
 
 #
 
@@ -89,12 +75,12 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            step_until_fixpoint(left_liftedStream)
-            step_until_fixpoint(right_liftedStream)
+            left_liftedStream.step()
+            right_liftedStream.step()
             #
-            step_until_fixpoint(join)
+            join.step()
             #
-            step_until_fixpoint(output_node)
+            output_node.step()
         #
         return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
@@ -110,12 +96,12 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            step_until_fixpoint(left_liftedStream)
-            step_until_fixpoint(right_liftedStream)
+            left_liftedStream.step()
+            right_liftedStream.step()
             #
-            step_until_fixpoint(union)
+            union.step()
             #
-            step_until_fixpoint(output_node)
+            output_node.step()
         #
         return TopologyNode("union_op", output_handle_function, step_function, [self, other])
 
@@ -131,12 +117,12 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            step_until_fixpoint(left_liftedStream)
-            step_until_fixpoint(right_liftedStream)
+            left_liftedStream.step()
+            right_liftedStream.step()
             #
-            step_until_fixpoint(intersection)
+            intersection.step()
             #
-            step_until_fixpoint(output_node)
+            output_node.step()
         #
         return TopologyNode("intersect_op", output_handle_function, step_function, [self, other])
 
@@ -152,12 +138,12 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            step_until_fixpoint(left_liftedStream)
-            step_until_fixpoint(right_liftedStream)
+            left_liftedStream.step()
+            right_liftedStream.step()
             #
-            step_until_fixpoint(difference)
+            difference.step()
             #
-            step_until_fixpoint(output_node)
+            output_node.step()
         #
         return TopologyNode("difference_op", output_handle_function, step_function, [self, other])
 
@@ -179,12 +165,11 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            step_until_fixpoint(lifted_stream_introduction)
-            step_until_fixpoint(group_by_then_agg)
-            print(group_by_then_agg.output())
+            lifted_stream_introduction.step()
+            group_by_then_agg.step()
             #
-            step_until_fixpoint(lifted_stream_elimination)
-            step_until_fixpoint(output_node)
+            lifted_stream_elimination.step()
+            output_node.step()
         #
         return TopologyNode("group_by_agg_op", output_handle_function, step_function, [self])
 
@@ -205,12 +190,11 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            step_until_fixpoint(lifted_stream_introduction)
-            step_until_fixpoint(group_by_then_agg)
-            print(group_by_then_agg.output())
+            lifted_stream_introduction.step()
+            group_by_then_agg.step()
             #
-            step_until_fixpoint(lifted_stream_elimination)
-            step_until_fixpoint(output_node)
+            lifted_stream_elimination.step()
+            output_node.step()
         #
         return TopologyNode("agg_op", output_handle_function, step_function, [self])
 
@@ -265,21 +249,21 @@ class TopologyNode:
     def latest(self):
         return self._output_handle_function().get().latest()
 
-    # def latest_until_fixed_point(self):
-    #     latest_summed_zSet = ZSet({})
-    #     latest_zSet = ZSet({})
-    #     zSetAddition = ZSetAddition()
-    #     while True:
-    #         self.step()
-    #         latest_zSet1 = self.latest()
-    #         if latest_zSet1 != latest_zSet:
-    #             if latest_zSet1.is_identity():
-    #                 break
-    #             latest_summed_zSet = zSetAddition.add(latest_summed_zSet, latest_zSet1)
-    #             latest_zSet = latest_zSet1
-    #         else:
-    #             break
-    #     return latest_summed_zSet
+    def latest_until_fixpoint(self):
+        latest_summed_zSet = ZSet({})
+        latest_zSet = ZSet({})
+        zSetAddition = ZSetAddition()
+        while True:
+            self.step()
+            latest_zSet1 = self.latest()
+            if latest_zSet1 != latest_zSet:
+                if latest_zSet1.is_identity():
+                    break
+                latest_summed_zSet = zSetAddition.add(latest_summed_zSet, latest_zSet1)
+                latest_zSet = latest_zSet1
+            else:
+                break
+        return latest_summed_zSet
 
     #
 
@@ -356,3 +340,79 @@ class TopologyNode:
         mermaid_str.extend(f"    {edge_str}" for edge_str in edge_str_list)
         #
         return "\n".join(mermaid_str)
+
+#
+
+def select_fun(key_str_list):
+    def select_fun1(message_dict):
+        return get_value(message_dict, key_str_list)
+    #
+    return select_fun1
+
+
+def as_fun(key_str_list):
+    def as_fun1(message_dict, any):
+        set_value(message_dict, key_str_list, any)
+        return message_dict
+    #
+    return as_fun1
+
+
+def select_as_fun(key_str_list):
+    def select_as_fun1(message_dict, any=None):
+        if any is not None:
+            set_value(message_dict, key_str_list, any)
+            return message_dict
+        else:
+            return get_value(message_dict, key_str_list)
+    #
+    return select_as_fun1
+
+
+def agg_fun(agg_fun_select_fun_agg_select_as_fun_tuple_list):
+    agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list = [(agg_fun, select_fun, agg_select_as_fun, None) for agg_fun, select_fun, agg_select_as_fun in agg_fun_select_fun_agg_select_as_fun_tuple_list]
+    #
+    return group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list)
+
+
+def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
+    def group_by_agg_fun1(group_any_zset_tuple_zset):
+        agg_group_any_message_str_dict = {}
+        for agg_fun, select_fun, agg_select_as_fun, group_as_fun in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list:
+            for (group_any, zset), _ in group_any_zset_tuple_zset.items():
+                for message_str, weight_int in zset.items():
+                    message_dict = json.loads(message_str)
+                    if group_any not in agg_group_any_message_str_dict:
+                        any = select_fun(message_dict)
+                        message_dict1 = {}
+                        message_dict1 = agg_select_as_fun(message_dict1, any * weight_int)
+                    else:
+                        any = select_fun(message_dict)
+                        message_dict1 = json.loads(agg_group_any_message_str_dict[group_any])
+                        any1 = agg_select_as_fun(message_dict1)
+                        message_dict1 = agg_select_as_fun(message_dict1, agg_fun(any1, any * weight_int))
+                    #
+                    if group_any is not None:
+                        message_dict1 = group_as_fun(message_dict1, group_any)
+                    agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
+        #
+        return ZSet({message_str: 1 for _, message_str in agg_group_any_message_str_dict.items()})
+    #
+    return group_by_agg_fun1
+
+#
+
+def source(name_str):
+    stream = Stream(ZSetAddition())
+    stream_handle = StreamHandle(lambda: stream)
+    #
+    def output_handle_function():
+        return stream_handle
+    #
+    return TopologyNode(name_str, output_handle_function)
+
+
+def message_dict_list_to_ZSet(message_dict_list):
+    message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
+    zSet = ZSet({k: 1 for k in message_str_list})
+    return zSet

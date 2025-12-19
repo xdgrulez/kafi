@@ -1,8 +1,18 @@
-import asyncio
-import threading
+import asyncio, os, sys, threading
+
+#
+
+if os.path.basename(os.getcwd()) == "kafi":
+    sys.path.insert(1, ".")
+else:
+    sys.path.insert(1, "../..")
+
 from kafi.kafi import *
-c = Cluster("local")
-# c = Local("local")
+
+#
+
+# c = Cluster("local")
+c = Local("local")
 t1 = "employees"
 t2 = "salaries"
 t3 = "sink"
@@ -38,7 +48,10 @@ def map_function(message_dict):
     message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
     return message_dict
 
-def proj_function(_, left_message_dict, right_message_dict):
+def on_function(left_message_dict, right_message_dict):
+    return left_message_dict["key"] == right_message_dict["key"]
+
+def proj_function(left_message_dict, right_message_dict):
     left_message_dict["value"].update(right_message_dict["value"])
     return left_message_dict
 
@@ -51,10 +64,10 @@ def get_root_topologyNode():
         .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
         .join(
             salaries_source_topologyNode,
-            on_function=lambda message_dict: message_dict["key"],
+            on_function=on_function,
             projection_function=proj_function
         )
-        # .peek(print)
+        .peek(print)
         .map(map_function)
     )
     #
@@ -83,7 +96,7 @@ async def test():
     #
     stop_thread.set()
     thread.join()
-    #
+    
     thread = threading.Thread(target=run)
     thread.daemon = True
     thread.start()

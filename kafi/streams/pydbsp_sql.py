@@ -256,6 +256,34 @@ class Join(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T,
         return self.join.step()
 
 
+class Intersection(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[T]], Stream[ZSet[T]]]):
+    """
+    (SELECT * FROM I1)
+    INTERSECT
+    (SELECT * FROM I2)
+    """
+    
+    intersection: DeltaLiftedDeltaLiftedJoin[T, T, T]
+
+    def set_input_a(self, stream_handle_a: StreamHandle[Stream[ZSet[T]]]) -> None:
+        self.input_stream_handle_a = stream_handle_a
+
+    def set_input_b(self, stream_handle_b: StreamHandle[Stream[ZSet[T]]]) -> None:
+        self.input_stream_handle_b = stream_handle_b
+        self.intersection = DeltaLiftedDeltaLiftedJoin(self.input_stream_handle_a, self.input_stream_handle_b, lambda x, y: x == y, lambda x, y: x)
+        self.output_stream = self.intersection.output()
+        self.output_stream_handle = self.intersection.output_handle()
+    
+    def __init__(self, stream_a: Optional[StreamHandle[Stream[ZSet[T]]]], stream_b: Optional[StreamHandle[Stream[ZSet[T]]]]):
+        if stream_a is not None:
+            self.set_input_a(stream_a)
+        if stream_b is not None:
+            self.set_input_b(stream_b)
+
+    def step(self) -> bool:
+        return self.intersection.step()
+
+
 class Difference(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[T]], Stream[ZSet[T]]]):
     """
     SELECT * FROM I1

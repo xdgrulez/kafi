@@ -1,10 +1,13 @@
-import datetime, json, random
-import json
-from functools import reduce
+import datetime, os, random, sys
 
-from pydbsp.zset import ZSet
+#
 
-from topologynode import source, message_dict_list_to_ZSet
+if "test/streams" in os.path.basename(os.getcwd()):
+    sys.path.insert(1, "..")
+else:
+    sys.path.insert(1, ".")
+
+from kafi.streams.topologynode import agg_fun, as_fun, group_by_agg_fun, message_dict_list_to_ZSet, select_fun, select_as_fun, source
 
 # create table if not exists transactions (
 #    id int, from_account int, to_account int, amount int, ts timestamp
@@ -37,96 +40,8 @@ from topologynode import source, message_dict_list_to_ZSet
 # drop view credits;
 # drop table transactions;
 
-def get_value(any, key_str_list):
-    return reduce(lambda d, key_str: d.get(key_str, {}) if isinstance(d, dict) else None, key_str_list, any)
-
-
-def set_value(d, key_str_list, any):
-    for key in key_str_list[:-1]:
-        if key not in d or not isinstance(d[key], dict):
-            d[key] = {}
-        d = d[key]
-    d[key_str_list[-1]] = any
-
-
-def none_by_fun():
-    def none_by_fun1(_):
-        return None
-    #
-    return none_by_fun1
-
-# def zset_sum(input: ZSet[tuple[I, ZSet[int]]]) -> ZSet[tuple[I, int]]:
-#     output_dict: dict[I, int] = {}
-#     for (group, zset), _ in input.items():
-#         for k, v in zset.items():
-#             if group not in output_dict:
-#                 output_dict[group] = k[1] * v
-#             else:
-#                 output_dict[group] += (k[1] * v)
-    
-#     return ZSet({(group_fst, v): 1 for group_fst, v in output_dict.items()})
-
-def select_fun(key_str_list):
-    def select_fun1(message_dict):
-        return get_value(message_dict, key_str_list)
-    #
-    return select_fun1
-
-
-def as_fun(key_str_list):
-    def as_fun1(message_dict, any):
-        set_value(message_dict, key_str_list, any)
-        return message_dict
-    #
-    return as_fun1
-
-
-def select_as_fun(key_str_list):
-    def select_as_fun1(message_dict, any=None):
-        if any is not None:
-            set_value(message_dict, key_str_list, any)
-            return message_dict
-        else:
-            return get_value(message_dict, key_str_list)
-    #
-    return select_as_fun1
-
-
-def agg_fun(agg_fun_select_fun_agg_select_as_fun_tuple_list):
-    agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list = [(agg_fun, select_fun, agg_select_as_fun, None) for agg_fun, select_fun, agg_select_as_fun in agg_fun_select_fun_agg_select_as_fun_tuple_list]
-    #
-    return group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list)
-
-
-def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
-    def group_by_agg_fun1(group_any_zset_tuple_zset):
-        agg_group_any_message_str_dict = {}
-        for agg_fun, select_fun, agg_select_as_fun, group_as_fun in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list:
-            for (group_any, zset), _ in group_any_zset_tuple_zset.items():
-                for message_str, weight_int in zset.items():
-                    message_dict = json.loads(message_str)
-                    if group_any not in agg_group_any_message_str_dict:
-                        any = select_fun(message_dict)
-                        message_dict1 = {}
-                        message_dict1 = agg_select_as_fun(message_dict1, any * weight_int)
-                    else:
-                        any = select_fun(message_dict)
-                        message_dict1 = json.loads(agg_group_any_message_str_dict[group_any])
-                        any1 = agg_select_as_fun(message_dict1)
-                        message_dict1 = agg_select_as_fun(message_dict1, agg_fun(any1, any * weight_int))
-                    #
-                    if group_any is not None:
-                        message_dict1 = group_as_fun(message_dict1, group_any)
-                    agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
-        #
-        return ZSet({message_str: 1 for _, message_str in agg_group_any_message_str_dict.items()})
-    #
-    return group_by_agg_fun1
-
-
 def sum_fun(i, j):
     return i + j
-
 
 #
 
