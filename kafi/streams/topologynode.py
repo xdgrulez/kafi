@@ -24,9 +24,9 @@ class TopologyNode:
         self.group = output_handle_function().get().group()
 
     def map(self, map_function):
-        def map_function1(message_json_str):
-            message_dict = json.loads(message_json_str)
-            return json.dumps(map_function(message_dict))
+        def map_function1(value_json_str):
+            value_dict = json.loads(value_json_str)
+            return json.dumps(map_function(value_dict))
         #
         liftedProject = LiftedProject(self._output_handle_function(), map_function1)
         #
@@ -39,9 +39,9 @@ class TopologyNode:
         return TopologyNode("map_op", output_handle_function, step_function, [self])
 
     def filter(self, filter_function):
-        def filter_function1(message_json_str):
-            message_dict = json.loads(message_json_str)
-            return filter_function(message_dict)
+        def filter_function1(value_json_str):
+            value_dict = json.loads(value_json_str)
+            return filter_function(value_dict)
         #
         liftedSelect = LiftedSelect(self._output_handle_function(), filter_function1)
         #
@@ -54,15 +54,15 @@ class TopologyNode:
         return TopologyNode("filter_op", output_handle_function, step_function, [self])
 
     def join(self, other, on_function, projection_function):
-        def on_function1(left_message_json_str, right_message_json_str):
-            left_message_dict = json.loads(left_message_json_str)
-            right_message_dict = json.loads(right_message_json_str)
-            return on_function(left_message_dict, right_message_dict)
+        def on_function1(left_value_json_str, right_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            right_value_dict = json.loads(right_value_json_str)
+            return on_function(left_value_dict, right_value_dict)
         #
-        def projection_function1(left_message_json_str, right_message_json_str):
-            left_message_dict = json.loads(left_message_json_str)
-            right_message_dict = json.loads(right_message_json_str)
-            return json.dumps(projection_function(left_message_dict, right_message_dict))
+        def projection_function1(left_value_json_str, right_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            right_value_dict = json.loads(right_value_json_str)
+            return json.dumps(projection_function(left_value_dict, right_value_dict))
         #
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
         right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
@@ -148,9 +148,9 @@ class TopologyNode:
         return TopologyNode("difference_op", output_handle_function, step_function, [self, other])
 
     def group_by_agg(self, by_function, agg_function):
-        def by_function1(message_json_str):
-            message_dict = json.loads(message_json_str)
-            return by_function(message_dict)
+        def by_function1(value_json_str):
+            value_dict = json.loads(value_json_str)
+            return by_function(value_dict)
         #
         def agg_function1(group_any_zset_tuple_zset):
             return agg_function(group_any_zset_tuple_zset)
@@ -199,10 +199,10 @@ class TopologyNode:
         return TopologyNode("agg_op", output_handle_function, step_function, [self])
 
     def peek(self, peek_function):
-        def peek_function1(message_json_str):
-            message_dict = json.loads(message_json_str)
-            peek_function(message_dict)
-            return message_json_str
+        def peek_function1(value_json_str):
+            value_dict = json.loads(value_json_str)
+            peek_function(value_dict)
+            return value_json_str
         #
         liftedProject = LiftedProject(self._output_handle_function(), peek_function1)
         #
@@ -344,27 +344,27 @@ class TopologyNode:
 #
 
 def select_fun(key_str_list):
-    def select_fun1(message_dict):
-        return get_value(message_dict, key_str_list)
+    def select_fun1(value_dict):
+        return get_value(value_dict, key_str_list)
     #
     return select_fun1
 
 
 def as_fun(key_str_list):
-    def as_fun1(message_dict, any):
-        set_value(message_dict, key_str_list, any)
-        return message_dict
+    def as_fun1(value_dict, any):
+        set_value(value_dict, key_str_list, any)
+        return value_dict
     #
     return as_fun1
 
 
 def select_as_fun(key_str_list):
-    def select_as_fun1(message_dict, any=None):
+    def select_as_fun1(value_dict, any=None):
         if any is not None:
-            set_value(message_dict, key_str_list, any)
-            return message_dict
+            set_value(value_dict, key_str_list, any)
+            return value_dict
         else:
-            return get_value(message_dict, key_str_list)
+            return get_value(value_dict, key_str_list)
     #
     return select_as_fun1
 
@@ -377,26 +377,26 @@ def agg_fun(agg_fun_select_fun_agg_select_as_fun_tuple_list):
 
 def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
     def group_by_agg_fun1(group_any_zset_tuple_zset):
-        agg_group_any_message_str_dict = {}
+        agg_group_any_value_str_dict = {}
         for agg_fun, select_fun, agg_select_as_fun, group_as_fun in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list:
             for (group_any, zset), _ in group_any_zset_tuple_zset.items():
-                for message_str, weight_int in zset.items():
-                    message_dict = json.loads(message_str)
-                    if group_any not in agg_group_any_message_str_dict:
-                        any = select_fun(message_dict)
-                        message_dict1 = {}
-                        message_dict1 = agg_select_as_fun(message_dict1, any * weight_int)
+                for value_str, weight_int in zset.items():
+                    value_dict = json.loads(value_str)
+                    if group_any not in agg_group_any_value_str_dict:
+                        any = select_fun(value_dict)
+                        value_dict1 = {}
+                        value_dict1 = agg_select_as_fun(value_dict1, any * weight_int)
                     else:
-                        any = select_fun(message_dict)
-                        message_dict1 = json.loads(agg_group_any_message_str_dict[group_any])
-                        any1 = agg_select_as_fun(message_dict1)
-                        message_dict1 = agg_select_as_fun(message_dict1, agg_fun(any1, any * weight_int))
+                        any = select_fun(value_dict)
+                        value_dict1 = json.loads(agg_group_any_value_str_dict[group_any])
+                        any1 = agg_select_as_fun(value_dict1)
+                        value_dict1 = agg_select_as_fun(value_dict1, agg_fun(any1, any * weight_int))
                     #
                     if group_any is not None:
-                        message_dict1 = group_as_fun(message_dict1, group_any)
-                    agg_group_any_message_str_dict[group_any] = json.dumps(message_dict1)
+                        value_dict1 = group_as_fun(value_dict1, group_any)
+                    agg_group_any_value_str_dict[group_any] = json.dumps(value_dict1)
         #
-        return ZSet({message_str: 1 for _, message_str in agg_group_any_message_str_dict.items()})
+        return ZSet({value_str: 1 for _, value_str in agg_group_any_value_str_dict.items()})
     #
     return group_by_agg_fun1
 
@@ -413,6 +413,6 @@ def source(name_str):
 
 
 def message_dict_list_to_ZSet(message_dict_list):
-    message_str_list = [json.dumps(message_dict) for message_dict in message_dict_list]
-    zSet = ZSet({k: 1 for k in message_str_list})
+    value_json_str_list = [json.dumps(message_dict["value"]) for message_dict in message_dict_list]
+    zSet = ZSet({k: 1 for k in value_json_str_list})
     return zSet

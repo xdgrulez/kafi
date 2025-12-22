@@ -11,9 +11,9 @@ from kafi.helpers import get_millis
 async def streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
     producer = sink_storage.producer(sink_topic_str, **kwargs)
     #
-    def sink_function(message_dict_list):
-        message_dict_list1 = [{"value": message_dict["value"],
-                               "key": message_dict["key"]} for message_dict in message_dict_list]
+    def sink_function(value_dict_list):
+        message_dict_list1 = [{"value": value_dict,
+                               "key": value_dict["id"]} for value_dict in value_dict_list]
         producer.produce_list(message_dict_list1, **kwargs)
     #
     def finally_function():

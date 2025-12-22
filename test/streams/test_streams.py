@@ -23,12 +23,12 @@ c.retouch(t2, partitions=2)
 c.retouch(t3)
 c.retouch(t4)
 #
-employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
-                            {"key": "1", "value": {"name": "mark"}},
-                            {"key": "2", "value": {"name": "mike"}}]
-salary_message_dict_list = [{"key": "2", "value": {"salary": 40000}},
-                            {"key": "0", "value": {"salary": 38750}},
-                            {"key": "1", "value": {"salary": 50000}}]
+employee_message_dict_list = [{"key": "0", "value": {"id": 0, "name": "kristjan"}},
+                            {"key": "1", "value": {"id": 1, "name": "mark"}},
+                            {"key": "2", "value": {"id": 2, "name": "mike"}}]
+salary_message_dict_list = [{"key": "2", "value": {"id": 2, "salary": 40000}},
+                            {"key": "0", "value": {"id": 0, "salary": 38750}},
+                            {"key": "1", "value": {"id": 1, "salary": 50000}}]
 #
 pr = c.producer(t1)
 partition_int = 0
@@ -44,16 +44,16 @@ for x in salary_message_dict_list:
     partition_int = 1 if partition_int == 0 else 0
 pr.close()
 #
-def map_function(message_dict):
-    message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
-    return message_dict
+def map_function(value_dict):
+    value_dict["name"] = value_dict["name"] + "_abc"
+    return value_dict
 
-def on_function(left_message_dict, right_message_dict):
-    return left_message_dict["key"] == right_message_dict["key"]
+def on_function(left_value_dict, right_value_dict):
+    return left_value_dict["id"] == right_value_dict["id"]
 
-def proj_function(left_message_dict, right_message_dict):
-    left_message_dict["value"].update(right_message_dict["value"])
-    return left_message_dict
+def proj_function(left_value_dict, right_value_dict):
+    left_value_dict.update(right_value_dict)
+    return left_value_dict
 
 def get_root_topologyNode():
     employees_source_topologyNode = source(t1)
@@ -61,7 +61,7 @@ def get_root_topologyNode():
     #
     root_topologyNode = (
         employees_source_topologyNode
-        .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
+        .filter(lambda value_dict: value_dict["name"] != "mark")
         .join(
             salaries_source_topologyNode,
             on_function=on_function,
@@ -102,7 +102,7 @@ async def test():
     thread.start()
     #
     pr = c.producer(t2)
-    pr.produce({"salary": 100000}, key="0")
+    pr.produce({"id": 0, "salary": 100000}, key="0")
     pr.close()
     #
     await asyncio.sleep(8)

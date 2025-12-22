@@ -2,10 +2,10 @@ import datetime, os, random, sys
 
 #
 
-if "test/streams" in os.path.basename(os.getcwd()):
-    sys.path.insert(1, "..")
-else:
+if os.path.basename(os.getcwd()) == "kafi":
     sys.path.insert(1, ".")
+else:
+    sys.path.insert(1, "../..")
 
 from kafi.streams.topologynode import agg_fun, as_fun, group_by_agg_fun, message_dict_list_to_ZSet, select_fun, select_as_fun, source
 
@@ -51,13 +51,13 @@ def setup():
 # create view credits as select to_account as account, sum(amount) as credits from transactions group by to_account;
     credits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(select_fun(["value", "to_account"]), group_by_agg_fun([(sum_fun, select_fun(["value", "amount"]), select_as_fun(["value", "credits"]), as_fun(["value", "account"]))]))
+        .group_by_agg(select_fun(["to_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["credits"]), as_fun(["account"]))]))
     )
     
 # create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
     debits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(select_fun(["value", "from_account"]), group_by_agg_fun([(sum_fun, select_fun(["value", "amount"]), select_as_fun(["value", "debits"]), as_fun(["value", "account"]))]))
+        .group_by_agg(select_fun(["from_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["debits"]), as_fun(["account"]))]))
     )
     #
 # create view balance as select credits.account as account, credits - debits as balance from credits inner join debits on credits.account = debits.account;
@@ -65,16 +65,16 @@ def setup():
         credits_topologyNode
         .join(
             debits_topologyNode,
-            on_function=lambda l, r: l["value"]["account"] == r["value"]["account"],
-            projection_function=lambda l, r: {"value": {"account": l["value"]["account"],
-                                                        "balance": l["value"]["credits"] - r["value"]["debits"]}}
+            on_function=lambda l, r: l["account"] == r["account"],
+            projection_function=lambda l, r: {"account": l["account"],
+                                              "balance": l["credits"] - r["debits"]}
         )
     )
     #
 # create view total as select sum(balance) from balance;
     root_topologyNode = (
         balance_topologyNode
-        .agg(agg_fun([(sum_fun, select_fun(["value", "balance"]), select_as_fun(["value", "sum"]))]))
+        .agg(agg_fun([(sum_fun, select_fun(["balance"]), select_as_fun(["sum"]))]))
     )
 
     return transactions_source_topologyNode, root_topologyNode

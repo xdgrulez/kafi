@@ -4,23 +4,23 @@ import cloudpickle as pickle
 
 #
 
-if "test/streams" in os.path.basename(os.getcwd()):
-    sys.path.insert(1, "..")
-else:
+if os.path.basename(os.getcwd()) == "kafi":
     sys.path.insert(1, ".")
+else:
+    sys.path.insert(1, "../..")
 
 from kafi.streams.topologynode import source, message_dict_list_to_ZSet
 
-def map_function(message_dict):
-    message_dict["value"]["name"] = message_dict["value"]["name"] + "_abc"
-    return message_dict
+def map_function(value_dict):
+    value_dict["name"] = value_dict["name"] + "_abc"
+    return value_dict
 
-def on_function(left_message_dict, right_message_dict):
-    return left_message_dict["key"] == right_message_dict["key"]
+def on_function(left_value_dict, right_value_dict):
+    return left_value_dict["id"] == right_value_dict["id"]
 
-def proj_function(left_message_dict, right_message_dict):
-    left_message_dict["value"].update(right_message_dict["value"])
-    return left_message_dict
+def proj_function(left_value_dict, right_value_dict):
+    left_value_dict.update(right_value_dict)
+    return left_value_dict
 
 def setup():
     employees_source_topologyNode = source("employees")
@@ -28,7 +28,7 @@ def setup():
     #
     root_topologyNode = (
         employees_source_topologyNode
-        .filter(lambda message_dict: message_dict["value"]["name"] != "mark")
+        .filter(lambda value_dict: value_dict["name"] != "mark")
         .join(
             salaries_source_topologyNode,
             on_function=on_function,
@@ -42,12 +42,12 @@ def setup():
 
 employees_source_topologyNode, salaries_source_topologyNode, root_topologyNode = setup()
 
-employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
-                            {"key": "1", "value": {"name": "mark"}},
-                            {"key": "2", "value": {"name": "mike"}}]
-salary_message_dict_list = [{"key": "2", "value": {"salary": 40000}},
-                            {"key": "0", "value": {"salary": 38750}},
-                            {"key": "1", "value": {"salary": 50000}}]
+employee_message_dict_list = [{"key": "0", "value": {"id": 0, "name": "kristjan"}},
+                            {"key": "1", "value": {"id": 1, "name": "mark"}},
+                            {"key": "2", "value": {"id": 2, "name": "mike"}}]
+salary_message_dict_list = [{"key": "2", "value": {"id": 2, "salary": 40000}},
+                            {"key": "0", "value": {"id": 0, "salary": 38750}},
+                            {"key": "1", "value": {"id": 1, "salary": 50000}}]
 
 employee_zset = message_dict_list_to_ZSet(employee_message_dict_list)
 salary_zset = message_dict_list_to_ZSet(salary_message_dict_list)
@@ -71,7 +71,7 @@ print(f"Latest: {root_topologyNode.latest()}")
 
 root_topologyNode = pickle.loads(pickle.dumps(root_topologyNode))
 
-salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
+salary_message_dict_list1 = [{"key": "0", "value": {"id": 0, "salary": 100000}}]
 salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 
 # salaries_source_topologyNode = root_topologyNode.get_node_by_id(salaries_source_topologyNode.id())
