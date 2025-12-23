@@ -13,7 +13,7 @@ async def streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage,
     #
     def sink_function(value_dict_list):
         message_dict_list1 = [{"value": value_dict,
-                               "key": value_dict["id"]} for value_dict in value_dict_list]
+                               "key": value_dict["_key"] if "_key" in value_dict else None} for value_dict in value_dict_list]
         producer.produce_list(message_dict_list1, **kwargs)
     #
     def finally_function():

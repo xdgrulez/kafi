@@ -1,12 +1,12 @@
 from kafi.helpers import get_value, set_value
 
-from pydbsp.stream import step_until_fixpoint, Stream, StreamHandle
-from pydbsp.zset.operators.linear import LiftedSelect, LiftedProject
+from pydbsp.stream import Stream, StreamHandle
+from pydbsp.zset.operators.linear import LiftedProject
 from pydbsp.stream.operators.linear import Differentiate, LiftedStreamIntroduction, LiftedStreamElimination
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset import ZSet, ZSetAddition
 
-from kafi.streams.pydbsp_sql import Difference, Intersection, Join, Union, GroupByThenAgg
+from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
 import json
 import uuid
@@ -23,33 +23,75 @@ class TopologyNode:
         #
         self.group = output_handle_function().get().group()
 
+    # def map(self, map_function):
+    #     def map_function1(value_json_str):
+    #         value_dict = json.loads(value_json_str)
+    #         return json.dumps(map_function(value_dict))
+    #     #
+    #     liftedProject = LiftedProject(self._output_handle_function(), map_function1)
+    #     #
+    #     def output_handle_function():
+    #         return liftedProject.output_handle()
+    #     #
+    #     def step_function():
+    #         liftedProject.step()
+    #     #
+    #     return TopologyNode("map_op", output_handle_function, step_function, [self])
+
     def map(self, map_function):
         def map_function1(value_json_str):
             value_dict = json.loads(value_json_str)
             return json.dumps(map_function(value_dict))
         #
-        liftedProject = LiftedProject(self._output_handle_function(), map_function1)
+        liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        selection = Selection(liftedStream.output_handle(), map_function1)
+        output_node = LiftedStreamElimination(selection.output_handle())
         #
         def output_handle_function():
-            return liftedProject.output_handle()
+            return output_node.output_handle()
         #
         def step_function():
-            liftedProject.step()
+            liftedStream.step()
+            #
+            selection.step()
+            #
+            output_node.step()
         #
         return TopologyNode("map_op", output_handle_function, step_function, [self])
+
+    # def filter(self, filter_function):
+    #     def filter_function1(value_json_str):
+    #         value_dict = json.loads(value_json_str)
+    #         return filter_function(value_dict)
+    #     #
+    #     liftedSelect = LiftedSelect(self._output_handle_function(), filter_function1)
+    #     #
+    #     def output_handle_function():
+    #         return liftedSelect.output_handle()
+    #     #
+    #     def step_function():
+    #         liftedSelect.step()
+    #     #
+    #     return TopologyNode("filter_op", output_handle_function, step_function, [self])
 
     def filter(self, filter_function):
         def filter_function1(value_json_str):
             value_dict = json.loads(value_json_str)
             return filter_function(value_dict)
         #
-        liftedSelect = LiftedSelect(self._output_handle_function(), filter_function1)
+        liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        filtering = Filtering(liftedStream.output_handle(), filter_function1)
+        output_node = LiftedStreamElimination(filtering.output_handle())
         #
         def output_handle_function():
-            return liftedSelect.output_handle()
+            return output_node.output_handle()
         #
         def step_function():
-            liftedSelect.step()
+            liftedStream.step()
+            #
+            filtering.step()
+            #
+            output_node.step()
         #
         return TopologyNode("filter_op", output_handle_function, step_function, [self])
 
@@ -146,6 +188,27 @@ class TopologyNode:
             output_node.step()
         #
         return TopologyNode("difference_op", output_handle_function, step_function, [self, other])
+
+    def product(self, other):
+        left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
+        #
+        cartesianProduct = CartesianProduct(left_liftedStream.output_handle(), right_liftedStream.output_handle())
+        #
+        output_node = LiftedStreamElimination(cartesianProduct.output_handle())
+        #
+        def output_handle_function():
+            return output_node.output_handle()
+        #
+        def step_function():
+            left_liftedStream.step()
+            right_liftedStream.step()
+            #
+            cartesianProduct.step()
+            #
+            output_node.step()
+        #
+        return TopologyNode("product_op", output_handle_function, step_function, [self, other])
 
     def group_by_agg(self, by_function, agg_function):
         def by_function1(value_json_str):
@@ -413,6 +476,12 @@ def source(name_str):
 
 
 def message_dict_list_to_ZSet(message_dict_list):
-    value_json_str_list = [json.dumps(message_dict["value"]) for message_dict in message_dict_list]
+    value_json_str_list = []
+    for message_dict in message_dict_list:
+        value_dict = message_dict["value"]
+        value_dict["_key"] = message_dict["key"]
+        value_json_str = json.dumps(value_dict)
+        value_json_str_list.append(value_json_str)
+    #
     zSet = ZSet({k: 1 for k in value_json_str_list})
     return zSet

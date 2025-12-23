@@ -16,7 +16,7 @@ def map_function(value_dict):
     return value_dict
 
 def on_function(left_value_dict, right_value_dict):
-    return left_value_dict["id"] == right_value_dict["id"]
+    return left_value_dict["_key"] == right_value_dict["_key"]
 
 def proj_function(left_value_dict, right_value_dict):
     left_value_dict.update(right_value_dict)
@@ -42,12 +42,12 @@ def setup():
 
 employees_source_topologyNode, salaries_source_topologyNode, root_topologyNode = setup()
 
-employee_message_dict_list = [{"key": "0", "value": {"id": 0, "name": "kristjan"}},
-                            {"key": "1", "value": {"id": 1, "name": "mark"}},
-                            {"key": "2", "value": {"id": 2, "name": "mike"}}]
-salary_message_dict_list = [{"key": "2", "value": {"id": 2, "salary": 40000}},
-                            {"key": "0", "value": {"id": 0, "salary": 38750}},
-                            {"key": "1", "value": {"id": 1, "salary": 50000}}]
+employee_message_dict_list = [{"key": "0", "value": {"name": "kristjan"}},
+                            {"key": "1", "value": {"name": "mark"}},
+                            {"key": "2", "value": {"name": "mike"}}]
+salary_message_dict_list = [{"key": "2", "value": {"salary": 40000}},
+                            {"key": "0", "value": {"salary": 38750}},
+                            {"key": "1", "value": {"salary": 50000}}]
 
 employee_zset = message_dict_list_to_ZSet(employee_message_dict_list)
 salary_zset = message_dict_list_to_ZSet(salary_message_dict_list)
@@ -71,7 +71,7 @@ print(f"Latest: {root_topologyNode.latest()}")
 
 root_topologyNode = pickle.loads(pickle.dumps(root_topologyNode))
 
-salary_message_dict_list1 = [{"key": "0", "value": {"id": 0, "salary": 100000}}]
+salary_message_dict_list1 = [{"key": "0", "value": {"salary": 100000}}]
 salary_zset1 = message_dict_list_to_ZSet(salary_message_dict_list1)
 
 # salaries_source_topologyNode = root_topologyNode.get_node_by_id(salaries_source_topologyNode.id())
