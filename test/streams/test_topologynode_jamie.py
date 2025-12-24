@@ -1,5 +1,10 @@
 import datetime, os, random, sys
 
+# import cProfile, pstats, io
+# from pstats import SortKey
+
+# import tracemalloc
+
 #
 
 if os.path.basename(os.getcwd()) == "kafi":
@@ -79,36 +84,66 @@ def setup():
 
     return transactions_source_topologyNode, root_topologyNode
 
+#
+
+# pr = cProfile.Profile()
+# pr.enable()
+
+#
+
+# tracemalloc.start()
+
+#
+
+def transactions(transactions_source_topologyNode, root_topologyNode):
+    n_int = 10000
+    random.seed(42)
+    transactions_message_dict_list = []
+    for id_int in range(0, n_int):
+        message_dict = {"key": str(id_int),
+                        "value": {"id": id_int,
+                                    "from_account": random.randint(0, 9),
+                                    "to_account": random.randint(0, 9),
+                                    "amount": 1,
+                                    "ts": datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")}}
+        transactions_message_dict_list.append(message_dict)
+    #
+    transactions_zset = message_dict_list_to_ZSet(transactions_message_dict_list)
+    transactions_source_topologyNode.output_handle_function().get().send(transactions_zset)
+    #
+    root_topologyNode.step()
+
+#
+
 transactions_source_topologyNode, root_topologyNode = setup()
 
 #
 
-n_int = 10000
-random.seed(42)
-transactions_message_dict_list = []
-for id_int in range(0, n_int):
-  message_dict = {"key": str(id_int),
-                  "value": {"id": id_int,
-                            "from_account": random.randint(0, 9),
-                            "to_account": random.randint(0, 9),
-                            "amount": 1,
-                            "ts": datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")}}
-  transactions_message_dict_list.append(message_dict)
+for i in range(3):
+    transactions(transactions_source_topologyNode, root_topologyNode)
+    print()
+    print(f"Latest: {root_topologyNode.latest()}")
 
 #
 
-transactions_zset = message_dict_list_to_ZSet(transactions_message_dict_list)
-transactions_source_topologyNode.output_handle_function()().get().send(transactions_zset)
+# print()
+# print(f"Topology: {root_topologyNode.topology()}")
+# print()
+# print(f"Mermaid:\n{root_topologyNode.mermaid()}")
+# print()
+# print(f"Topology: {root_topologyNode.topology(True)}")
+# print()
+# print(f"Mermaid:\n{root_topologyNode.mermaid(True)}")
+# print()
+# print(f"Latest: {root_topologyNode.latest()}")
 
-root_topologyNode.step()
+# pr.disable()
+# s = io.StringIO()
+# sortby = SortKey.CUMULATIVE
+# ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+# ps.print_stats()
+# print(s.getvalue())
 
-print()
-print(f"Topology: {root_topologyNode.topology()}")
-print()
-print(f"Mermaid:\n{root_topologyNode.mermaid()}")
-print()
-print(f"Topology: {root_topologyNode.topology(True)}")
-print()
-print(f"Mermaid:\n{root_topologyNode.mermaid(True)}")
-print()
-print(f"Latest: {root_topologyNode.latest()}")
+# current, peak = tracemalloc.get_traced_memory()
+# print(f"Current: {current / 10**6} MB; Peak: {peak / 10**6} MB")
+# tracemalloc.stop()

@@ -122,6 +122,13 @@ class TopologyNode:
             #
             join.step()
             #
+            self.gc(left_liftedStream.input_stream_handle)
+            self.gc(left_liftedStream.output_stream_handle)
+            self.gc(right_liftedStream.input_stream_handle)
+            self.gc(right_liftedStream.output_stream_handle)
+            self.gc(self._output_handle_function())
+            self.gc(other._output_handle_function())
+            #
             output_node.step()
         #
         return TopologyNode("join_op", output_handle_function, step_function, [self, other])
@@ -231,6 +238,10 @@ class TopologyNode:
             lifted_stream_introduction.step()
             group_by_then_agg.step()
             #
+            self.gc(lifted_stream_introduction.input_stream_handle)
+            self.gc(lifted_stream_introduction.output_stream_handle)
+            self.gc(stream_handle)
+            #
             lifted_stream_elimination.step()
             output_node.step()
         #
@@ -256,6 +267,10 @@ class TopologyNode:
             lifted_stream_introduction.step()
             group_by_then_agg.step()
             #
+            self.gc(lifted_stream_introduction.input_stream_handle)
+            self.gc(lifted_stream_introduction.output_stream_handle)
+            self.gc(stream_handle)
+            #
             lifted_stream_elimination.step()
             output_node.step()
         #
@@ -279,6 +294,13 @@ class TopologyNode:
     
     #
 
+    def gc(self, stream_handle):
+        for i in range(1, stream_handle.get().current_time()):
+            if i in stream_handle.get().inner:
+                del stream_handle.get().inner[i]
+
+    #
+
     def name(self):
         return self._name_str
 
@@ -286,7 +308,7 @@ class TopologyNode:
         return self._id_str
 
     def output_handle_function(self):
-        return self._output_handle_function
+        return self._output_handle_function()
 
     def step_function(self):
         return self._step_function
