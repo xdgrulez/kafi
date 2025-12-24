@@ -3,8 +3,9 @@ import datetime, os, random, sys
 # import cProfile, pstats, io
 # from pstats import SortKey
 
-# import tracemalloc
+import tracemalloc
 
+from pympler import muppy, summary
 #
 
 if os.path.basename(os.getcwd()) == "kafi":
@@ -144,6 +145,40 @@ for i in range(3):
 # ps.print_stats()
 # print(s.getvalue())
 
+# snapshot = tracemalloc.take_snapshot()
+# top_stats = snapshot.statistics('lineno')
+
+# print("[ Top 10 Allocation Sites ]")
+# for stat in top_stats[:10]:
+#     print(stat)
+    
+#
+
 # current, peak = tracemalloc.get_traced_memory()
 # print(f"Current: {current / 10**6} MB; Peak: {peak / 10**6} MB")
 # tracemalloc.stop()
+
+# from pympler import asizeof
+
+# print(asizeof.asizeof(root_topologyNode, code=-1, stats=1))
+
+# all_objs = muppy.get_objects()
+# sum1 = summary.summarize(all_objs)
+# summary.print_(sum1)
+
+# def print_biggest_attrs(obj, limit=20):
+#     attrs = []
+#     for attr in dir(obj):
+#         try:
+#             val = getattr(obj, attr)
+#             attrs.append((attr, asizeof.asizeof(val)))
+#         except:
+#             continue
+    
+#     attrs.sort(key=lambda x: x[1], reverse=True)
+#     for name, size in attrs[:limit]:
+#         print(f"  {name}: {size / 1024:.2f} KB")
+
+# print_biggest_attrs(root_topologyNode)
+
+# print(root_topologyNode.output_handle_function().get())
