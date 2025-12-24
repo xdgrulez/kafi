@@ -295,9 +295,10 @@ class TopologyNode:
     #
 
     def gc(self, stream_handle):
-        for i in range(1, stream_handle.get().current_time()):
-            if i in stream_handle.get().inner:
-                del stream_handle.get().inner[i]
+        pass
+        # for i in range(1, stream_handle.get().current_time()):
+        #     if i in stream_handle.get().inner:
+        #         del stream_handle.get().inner[i]
 
     #
 

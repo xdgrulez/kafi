@@ -97,7 +97,7 @@ def setup():
 #
 
 def transactions(transactions_source_topologyNode, root_topologyNode):
-    n_int = 10000
+    n_int = 100
     random.seed(42)
     transactions_message_dict_list = []
     for id_int in range(0, n_int):
@@ -120,7 +120,8 @@ transactions_source_topologyNode, root_topologyNode = setup()
 
 #
 
-for i in range(3):
+for i in range(50):
+    print(i)
     transactions(transactions_source_topologyNode, root_topologyNode)
     print()
     print(f"Latest: {root_topologyNode.latest()}")
@@ -158,26 +159,27 @@ for i in range(3):
 # print(f"Current: {current / 10**6} MB; Peak: {peak / 10**6} MB")
 # tracemalloc.stop()
 
-# from pympler import asizeof
+from pympler import asizeof
 
-# print(asizeof.asizeof(root_topologyNode, code=-1, stats=1))
+print(asizeof.asizeof(root_topologyNode, code=True) / 1024 / 1024)
+
 
 # all_objs = muppy.get_objects()
 # sum1 = summary.summarize(all_objs)
 # summary.print_(sum1)
 
-# def print_biggest_attrs(obj, limit=20):
-#     attrs = []
-#     for attr in dir(obj):
-#         try:
-#             val = getattr(obj, attr)
-#             attrs.append((attr, asizeof.asizeof(val)))
-#         except:
-#             continue
+def print_biggest_attrs(obj, limit=20):
+    attrs = []
+    for attr in dir(obj):
+        try:
+            val = getattr(obj, attr)
+            attrs.append((attr, asizeof.asizeof(val)))
+        except:
+            continue
     
-#     attrs.sort(key=lambda x: x[1], reverse=True)
-#     for name, size in attrs[:limit]:
-#         print(f"  {name}: {size / 1024:.2f} KB")
+    attrs.sort(key=lambda x: x[1], reverse=True)
+    for name, size in attrs[:limit]:
+        print(f"  {name}: {size / 1024:.2f} KB")
 
 # print_biggest_attrs(root_topologyNode)
 
