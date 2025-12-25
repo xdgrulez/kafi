@@ -1,9 +1,13 @@
-import datetime, os, random, sys
+import datetime, os, random, sys, time
 
 # import cProfile, pstats, io
 # from pstats import SortKey
 
 import tracemalloc
+
+import gc, types
+
+from pympler import asizeof
 
 from pympler import muppy, summary
 #
@@ -97,7 +101,7 @@ def setup():
 #
 
 def transactions(transactions_source_topologyNode, root_topologyNode):
-    n_int = 100
+    n_int = 10000
     random.seed(42)
     transactions_message_dict_list = []
     for id_int in range(0, n_int):
@@ -105,8 +109,8 @@ def transactions(transactions_source_topologyNode, root_topologyNode):
                         "value": {"id": id_int,
                                     "from_account": random.randint(0, 9),
                                     "to_account": random.randint(0, 9),
-                                    "amount": 1,
-                                    "ts": datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")}}
+                                    "amount": 1}}
+                                    # "ts": datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")}}
         transactions_message_dict_list.append(message_dict)
     #
     transactions_zset = message_dict_list_to_ZSet(transactions_message_dict_list)
@@ -120,12 +124,35 @@ transactions_source_topologyNode, root_topologyNode = setup()
 
 #
 
-for i in range(50):
-    print(i)
+def count_runtime_objects():
+    counts = {"code": 0, "function": 0, "lambda": 0}
+    for obj in gc.get_objects():
+        if isinstance(obj, types.CodeType):
+            counts["code"] += 1
+        if isinstance(obj, types.FunctionType):
+            counts["function"] += 1
+            if obj.__name__ == "<lambda>":
+                counts["lambda"] += 1
+    return counts
+
+start_time = time.time()
+for i in range(10):
+    start_time1 = time.time()
+    # print(i)
+    # obj_report = asizeof.asized(root_topologyNode, detail=1, code=True)
+    # print(obj_report.size)
+
+    # print(f"Code-Objekte davor: {count_runtime_objects()}")
     transactions(transactions_source_topologyNode, root_topologyNode)
+    # print(f"Code-Objekte danach: {count_runtime_objects()}")
+    end_time1 = time.time()
+    print(end_time1 - start_time1)
+
     print()
     print(f"Latest: {root_topologyNode.latest()}")
-
+#
+end_time = time.time()
+print(end_time - start_time)
 #
 
 # print()
@@ -159,10 +186,7 @@ for i in range(50):
 # print(f"Current: {current / 10**6} MB; Peak: {peak / 10**6} MB")
 # tracemalloc.stop()
 
-from pympler import asizeof
-
-print(asizeof.asizeof(root_topologyNode, code=True) / 1024 / 1024)
-
+# print(asizeof.asizeof(root_topologyNode, code=True) / 1024 / 1024)
 
 # all_objs = muppy.get_objects()
 # sum1 = summary.summarize(all_objs)

@@ -9,6 +9,8 @@ from pydbsp.zset import ZSet, ZSetAddition
 from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
 import json
+# import orjson as json
+import time
 import uuid
 
 #
@@ -117,10 +119,20 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            left_liftedStream.step()
+            x1 = time.time()
+            left_liftedStream.step()            
+            y1 = time.time()
+            print(f"join1: {y1-x1}")
+
+            x2 = time.time()
             right_liftedStream.step()
+            y2 = time.time()
+            print(f"join2: {y2-x2}")
             #
+            x3 = time.time()
             join.step()
+            y3 = time.time()
+            print(f"join3: {y3-x3}")
             #
             self.gc(left_liftedStream.input_stream_handle)
             self.gc(left_liftedStream.output_stream_handle)
@@ -129,7 +141,10 @@ class TopologyNode:
             self.gc(self._output_handle_function())
             self.gc(other._output_handle_function())
             #
+            x4 = time.time()
             output_node.step()
+            y4 = time.time()
+            print(f"join4: {y4-x4}")
         #
         return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
@@ -235,15 +250,29 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
+            x1 = time.time()
             lifted_stream_introduction.step()
+            y1 = time.time()
+            print(f"group_by_agg1: {y1-x1}")
+
+            x2 = time.time()
             group_by_then_agg.step()
+            y2 = time.time()
+            print(f"group_by_agg2: {y2-x2}")
             #
             self.gc(lifted_stream_introduction.input_stream_handle)
             self.gc(lifted_stream_introduction.output_stream_handle)
             self.gc(stream_handle)
             #
+            x3 = time.time()
             lifted_stream_elimination.step()
+            y3 = time.time()
+            print(f"group_by_agg3: {y3-x3}")
+
+            x4 = time.time()
             output_node.step()
+            y4 = time.time()
+            print(f"group_by_agg4: {y4-x4}")
         #
         return TopologyNode("group_by_agg_op", output_handle_function, step_function, [self])
 
@@ -264,15 +293,39 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
+            x1 = time.time()
             lifted_stream_introduction.step()
+            y1 = time.time()
+            print(f"agg1: {y1-x1}")
+
+            x2 = time.time()
             group_by_then_agg.step()
+            y2 = time.time()
+            print(f"agg2: {y2-x2}")
             #
             self.gc(lifted_stream_introduction.input_stream_handle)
             self.gc(lifted_stream_introduction.output_stream_handle)
             self.gc(stream_handle)
             #
+            x3 = time.time()
             lifted_stream_elimination.step()
+            y3 = time.time()
+            print(f"agg3: {y3-x3}")
+
+            x4 = time.time()
             output_node.step()
+            y4 = time.time()
+            print(f"agg4: {y4-x4}")
+
+            # lifted_stream_introduction.step()
+            # group_by_then_agg.step()
+            # #
+            # self.gc(lifted_stream_introduction.input_stream_handle)
+            # self.gc(lifted_stream_introduction.output_stream_handle)
+            # self.gc(stream_handle)
+            # #
+            # lifted_stream_elimination.step()
+            # output_node.step()
         #
         return TopologyNode("agg_op", output_handle_function, step_function, [self])
 
@@ -295,10 +348,10 @@ class TopologyNode:
     #
 
     def gc(self, stream_handle):
-        pass
-        # for i in range(1, stream_handle.get().current_time()):
-        #     if i in stream_handle.get().inner:
-        #         del stream_handle.get().inner[i]
+        # pass
+        for i in range(1, stream_handle.get().current_time()):
+            if i in stream_handle.get().inner:
+                del stream_handle.get().inner[i]
 
     #
 
@@ -466,6 +519,7 @@ def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_lis
         agg_group_any_value_str_dict = {}
         for agg_fun, select_fun, agg_select_as_fun, group_as_fun in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list:
             for (group_any, zset), _ in group_any_zset_tuple_zset.items():
+                # print(len(zset.inner))
                 for value_str, weight_int in zset.items():
                     value_dict = json.loads(value_str)
                     if group_any not in agg_group_any_value_str_dict:
@@ -508,3 +562,4 @@ def message_dict_list_to_ZSet(message_dict_list):
     #
     zSet = ZSet({k: 1 for k in value_json_str_list})
     return zSet
+    
