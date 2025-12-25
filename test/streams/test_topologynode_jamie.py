@@ -114,6 +114,7 @@ def transactions(transactions_source_topologyNode, root_topologyNode):
         transactions_message_dict_list.append(message_dict)
     #
     transactions_zset = message_dict_list_to_ZSet(transactions_message_dict_list)
+    print(sys.getrefcount(list(transactions_zset.inner.keys())[0]))
     transactions_source_topologyNode.output_handle_function().get().send(transactions_zset)
     #
     root_topologyNode.step()
