@@ -122,17 +122,17 @@ class TopologyNode:
             x1 = time.time()
             left_liftedStream.step()            
             y1 = time.time()
-            print(f"join1: {y1-x1}")
+            # print(f"join1: {y1-x1}")
 
             x2 = time.time()
             right_liftedStream.step()
             y2 = time.time()
-            print(f"join2: {y2-x2}")
+            # print(f"join2: {y2-x2}")
             #
             x3 = time.time()
             join.step()
             y3 = time.time()
-            print(f"join3: {y3-x3}")
+            # print(f"join3: {y3-x3}")
             #
             self.gc(left_liftedStream.input_stream_handle)
             self.gc(left_liftedStream.output_stream_handle)
@@ -144,7 +144,7 @@ class TopologyNode:
             x4 = time.time()
             output_node.step()
             y4 = time.time()
-            print(f"join4: {y4-x4}")
+            # print(f"join4: {y4-x4}")
         #
         return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
@@ -253,13 +253,19 @@ class TopologyNode:
             x1 = time.time()
             lifted_stream_introduction.step()
             y1 = time.time()
-            print(f"group_by_agg1: {y1-x1}")
+            # print(f"group_by_agg1: {y1-x1}")
 
             x2 = time.time()
             group_by_then_agg.step()
             y2 = time.time()
-            print(f"group_by_agg2: {y2-x2}")
+            # print(f"group_by_agg2: {y2-x2}")
             #
+            self.gc(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)
+            self.gc(group_by_then_agg.input_stream_handle)
+            self.gc(group_by_then_agg.integrated_stream.input_stream_handle)
+            self.gc(group_by_then_agg.integrated_stream.output_stream_handle)
+            self.gc(group_by_then_agg.lift_integrated_stream.input_stream_handle)
+            self.gc(group_by_then_agg.lift_integrated_stream.output_stream_handle)            
             self.gc(lifted_stream_introduction.input_stream_handle)
             self.gc(lifted_stream_introduction.output_stream_handle)
             self.gc(stream_handle)
@@ -267,12 +273,12 @@ class TopologyNode:
             x3 = time.time()
             lifted_stream_elimination.step()
             y3 = time.time()
-            print(f"group_by_agg3: {y3-x3}")
+            # print(f"group_by_agg3: {y3-x3}")
 
             x4 = time.time()
             output_node.step()
             y4 = time.time()
-            print(f"group_by_agg4: {y4-x4}")
+            # print(f"group_by_agg4: {y4-x4}")
         #
         return TopologyNode("group_by_agg_op", output_handle_function, step_function, [self])
 
@@ -296,13 +302,19 @@ class TopologyNode:
             x1 = time.time()
             lifted_stream_introduction.step()
             y1 = time.time()
-            print(f"agg1: {y1-x1}")
+            # print(f"agg1: {y1-x1}")
 
             x2 = time.time()
             group_by_then_agg.step()
             y2 = time.time()
-            print(f"agg2: {y2-x2}")
+            # print(f"agg2: {y2-x2}")
             #
+            self.gc(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)
+            self.gc(group_by_then_agg.input_stream_handle)
+            self.gc(group_by_then_agg.integrated_stream.input_stream_handle)
+            self.gc(group_by_then_agg.integrated_stream.output_stream_handle)
+            self.gc(group_by_then_agg.lift_integrated_stream.input_stream_handle)
+            self.gc(group_by_then_agg.lift_integrated_stream.output_stream_handle)            
             self.gc(lifted_stream_introduction.input_stream_handle)
             self.gc(lifted_stream_introduction.output_stream_handle)
             self.gc(stream_handle)
@@ -310,12 +322,12 @@ class TopologyNode:
             x3 = time.time()
             lifted_stream_elimination.step()
             y3 = time.time()
-            print(f"agg3: {y3-x3}")
+            # print(f"agg3: {y3-x3}")
 
             x4 = time.time()
             output_node.step()
             y4 = time.time()
-            print(f"agg4: {y4-x4}")
+            # print(f"agg4: {y4-x4}")
 
             # lifted_stream_introduction.step()
             # group_by_then_agg.step()
@@ -348,7 +360,6 @@ class TopologyNode:
     #
 
     def gc(self, stream_handle):
-        # pass
         for i in range(1, stream_handle.get().current_time()):
             if i in stream_handle.get().inner:
                 del stream_handle.get().inner[i]

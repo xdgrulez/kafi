@@ -1,4 +1,18 @@
-import datetime, os, random, sys, time
+# >>> x = (2, 49)
+# >>> y = (10, 69)
+# >>> z = (20, 93)
+# 30, 119
+# 2.5*20 + 44 
+
+# 2, 49
+# 10, 65
+# 20, 82
+# 30, 101
+# 1.9*20 + 44 
+
+import datetime, gc, os, random, sys, time
+
+import objgraph
 
 # import cProfile, pstats, io
 # from pstats import SortKey
@@ -114,7 +128,10 @@ def transactions(transactions_source_topologyNode, root_topologyNode):
         transactions_message_dict_list.append(message_dict)
     #
     transactions_zset = message_dict_list_to_ZSet(transactions_message_dict_list)
-    print(sys.getrefcount(list(transactions_zset.inner.keys())[0]))
+    # x = list(transactions_zset.inner.keys())[0]
+    # print(sys.getrefcount(x))
+    # print(gc.get_referrers(x))
+    # objgraph.show_backrefs(x, max_depth=2)
     transactions_source_topologyNode.output_handle_function().get().send(transactions_zset)
     #
     root_topologyNode.step()
@@ -137,7 +154,7 @@ def count_runtime_objects():
     return counts
 
 start_time = time.time()
-for i in range(10):
+for i in range(2):
     start_time1 = time.time()
     # print(i)
     # obj_report = asizeof.asized(root_topologyNode, detail=1, code=True)
