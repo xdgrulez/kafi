@@ -77,6 +77,7 @@ def setup():
     root_topologyNode = (
         transactions_source_topologyNode
         .agg(agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["sum"]))]))
+        # .group_by_agg(select_fun(["id"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["sum"]), as_fun(["id"]))]))
     )
 
     return transactions_source_topologyNode, root_topologyNode
@@ -98,7 +99,7 @@ def transactions(transactions_source_topologyNode, root_topologyNode, n_int, i):
     for id_int in range(i, i + n_int):
         message_dict = {"key": str(id_int),
                         "value": {
-                            # "id": id_int,
+                            "id": id_int,
                                     # "from_account": random.randint(0, 9),
                                     # "to_account": random.randint(0, 9),
                                     "amount": 1}}
@@ -161,13 +162,13 @@ for i in range(10):
     # end_time1 = time.time()
     # print(end_time1 - start_time1)
 
-    # del transactions_source_topologyNode.output_handle_function().get().inner[i + 1]
+    del transactions_source_topologyNode.output_handle_function().get().inner[i + 1]
 
     print()
     print(f"Latest: {root_topologyNode.latest()}")
-    # gc.collect()
+    gc.collect()
     print(transactions_source_topologyNode.output_handle_function().get().inner.keys())
-    print(len(pickle.dumps(transactions_source_topologyNode)) / 1024 / 1024)
+    # print(len(pickle.dumps(transactions_source_topologyNode)) / 1024 / 1024)
     print(len(pickle.dumps(root_topologyNode)) / 1024 / 1024)
     # print_biggest_attrs(root_topologyNode)
 

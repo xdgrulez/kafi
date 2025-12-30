@@ -91,6 +91,12 @@ class Integrate(UnaryOperator[T, T]):
         self.delayed_stream.step()
         self.integration_stream.step()
 
+        latest = self.input_stream_handle.get().current_time()
+        if latest > 2:
+            print(self.delayed_stream.output_stream_handle.get().inner.keys())
+            del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
+            
+
         return self.output().current_time() == self.input_a().current_time()
 
 
