@@ -351,9 +351,15 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
 
     def set_input(self, stream_handle: StreamHandle[Stream[ZSet[T]]]) -> None:
         self.input_stream_handle = stream_handle
-        self.integrated_stream = Integrate(stream_handle)
-        self.lift_integrated_stream = LiftedIntegrate(self.integrated_stream.output_handle())
-        self.lifted_lifted_aggregate = LiftedLiftedAggregate(self.lift_integrated_stream.output_handle(), self.by, self.aggregation)
+        a = stream_handle.get()
+        self.integrated_stream = Integrate(StreamHandle(lambda: a))
+        # self.integrated_stream = Integrate(stream_handle)
+        x = self.integrated_stream.output_stream_handle.get()
+        self.lift_integrated_stream = LiftedIntegrate(StreamHandle(lambda: x))
+        # self.lift_integrated_stream = LiftedIntegrate(self.integrated_stream.output_handle())
+        y = self.lift_integrated_stream.output_stream_handle.get()
+        self.lifted_lifted_aggregate = LiftedLiftedAggregate(StreamHandle(lambda: y), self.by, self.aggregation)
+        # self.lifted_lifted_aggregate = LiftedLiftedAggregate(self.lift_integrated_stream.output_handle(), self.by, self.aggregation)
 
         self.output_stream = self.lifted_lifted_aggregate.output()
         self.output_stream_handle = self.lifted_lifted_aggregate.output_handle()

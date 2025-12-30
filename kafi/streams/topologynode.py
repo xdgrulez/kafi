@@ -1,3 +1,7 @@
+import cloudpickle as pickle
+from pympler import asizeof
+
+
 from kafi.helpers import get_value, set_value
 
 from pydbsp.stream import Stream, StreamHandle
@@ -290,10 +294,18 @@ class TopologyNode:
             return agg_function(group_any_zset_tuple_zset)
         #
         stream_handle = self._output_handle_function()
-        lifted_stream_introduction = LiftedStreamIntroduction(stream_handle)
-        group_by_then_agg = GroupByThenAgg(lifted_stream_introduction.output_handle(), by_function1, agg_function1)
-        lifted_stream_elimination = LiftedStreamElimination(group_by_then_agg.output_handle())
-        output_node = Differentiate(lifted_stream_elimination.output_handle())
+        a = stream_handle.get()
+        lifted_stream_introduction = LiftedStreamIntroduction(StreamHandle(lambda: a))
+        # lifted_stream_introduction = LiftedStreamIntroduction(stream_handle)
+        x = lifted_stream_introduction.output_stream_handle.get()
+        group_by_then_agg = GroupByThenAgg(StreamHandle(lambda: x), by_function1, agg_function1)
+        # group_by_then_agg = GroupByThenAgg(lifted_stream_introduction.output_handle(), by_function1, agg_function1)
+        y = group_by_then_agg.output_stream_handle.get()
+        lifted_stream_elimination = LiftedStreamElimination(StreamHandle(lambda: y))
+        # lifted_stream_elimination = LiftedStreamElimination(group_by_then_agg.output_handle())
+        z = lifted_stream_elimination.output_stream_handle.get()
+        output_node = Differentiate(StreamHandle(lambda: z))
+        # output_node = Differentiate(lifted_stream_elimination.output_handle())
         #
         def output_handle_function():
             return output_node.output_handle()
@@ -309,15 +321,15 @@ class TopologyNode:
             y2 = time.time()
             # print(f"agg2: {y2-x2}")
             #
-            self.gc(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)
-            self.gc(group_by_then_agg.input_stream_handle)
-            self.gc(group_by_then_agg.integrated_stream.input_stream_handle)
-            self.gc(group_by_then_agg.integrated_stream.output_stream_handle)
-            self.gc(group_by_then_agg.lift_integrated_stream.input_stream_handle)
-            self.gc(group_by_then_agg.lift_integrated_stream.output_stream_handle)            
-            self.gc(lifted_stream_introduction.input_stream_handle)
-            self.gc(lifted_stream_introduction.output_stream_handle)
-            self.gc(stream_handle)
+            # self.gc(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)
+            # self.gc(group_by_then_agg.input_stream_handle)
+            # self.gc(group_by_then_agg.integrated_stream.input_stream_handle)
+            # self.gc(group_by_then_agg.integrated_stream.output_stream_handle)
+            # self.gc(group_by_then_agg.lift_integrated_stream.input_stream_handle)
+            # self.gc(group_by_then_agg.lift_integrated_stream.output_stream_handle)            
+            # self.gc(lifted_stream_introduction.input_stream_handle)
+            # self.gc(lifted_stream_introduction.output_stream_handle)
+            # self.gc(stream_handle)
             #
             x3 = time.time()
             lifted_stream_elimination.step()
@@ -328,6 +340,63 @@ class TopologyNode:
             output_node.step()
             y4 = time.time()
             # print(f"agg4: {y4-x4}")
+
+            print("HALLO1")
+            # print(len(pickle.dumps(lifted_stream_introduction)) / 1024 / 1024)
+            print("group_by_then_agg")
+            print(len(pickle.dumps(group_by_then_agg)) / 1024 / 1024)
+            # print(len(pickle.dumps(lifted_stream_elimination)) / 1024 / 1024)
+            # print(len(pickle.dumps(output_node)) / 1024 / 1024)
+
+            print("input_stream_handle")
+            print(len(pickle.dumps(group_by_then_agg.input_stream_handle)) / 1024 / 1024)
+            print("integrated_stream.input_stream_handle")
+            print(len(pickle.dumps(group_by_then_agg.integrated_stream.input_stream_handle)) / 1024 / 1024)
+            print("integrated_stream.output_stream_handle")
+            print(len(pickle.dumps(group_by_then_agg.integrated_stream.output_stream_handle)) / 1024 / 1024)
+            print("lift_integrated_stream.input_stream_handle")
+            print(len(pickle.dumps(group_by_then_agg.lift_integrated_stream.input_stream_handle)) / 1024 / 1024)
+            print("lift_integrated_stream.output_stream_handle")
+            print(len(pickle.dumps(group_by_then_agg.lift_integrated_stream.output_stream_handle)) / 1024 / 1024)
+            print("lifted_lifted_aggregate.input_stream_handle")
+            print(len(pickle.dumps(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)) / 1024 / 1024)
+            print("lifted_lifted_aggregate.output_stream_handle")
+            print(len(pickle.dumps(group_by_then_agg.lifted_lifted_aggregate.output_stream_handle)) / 1024 / 1024)
+            print("output_stream_handle")
+            print(len(pickle.dumps(group_by_then_agg.output_stream_handle)) / 1024 / 1024)
+
+            # print(len(pickle.dumps(lifted_stream_elimination.input_stream_handle)) / 1024 / 1024)
+            # for a, b in lifted_stream_elimination.input_stream_handle.__dict__.items():
+            #     print(a)
+            #     print_biggest_attrs(b)
+            # print_biggest_attrs(lifted_stream_elimination.input_stream_handle.__dict__["ref"].__closure__)
+            # print(len(pickle.dumps(list(lifted_stream_elimination.input_stream_handle.__dict__["ref"].__closure__)[0])) / 1024 / 1024)
+            # print(len(pickle.dumps(lifted_stream_elimination.input_stream_handle.get())) / 1024 / 1024)
+            # print_biggest_attrs(lifted_stream_elimination)
+            print("HALLO2")
+
+            latest = stream_handle.get().current_time()
+            if latest > 1:
+                del lifted_stream_introduction.output_stream_handle.get().inner[latest - 1]
+                del group_by_then_agg.integrated_stream.output_stream_handle.get().inner[latest - 1]
+                # del group_by_then_agg.lift_integrated_stream.input_stream_handle.get().inner[latest - 1]
+            # if latest > 2:
+            #     l = latest - 2
+            #     if l in lifted_stream_introduction.input_stream_handle.get().inner:
+            #         del lifted_stream_introduction.input_stream_handle.get().inner[l]
+
+            #     #
+
+            #     if l in lifted_stream_elimination.input_stream_handle.get().inner:
+            #         del lifted_stream_elimination.input_stream_handle.get().inner[l]
+            #     if l in lifted_stream_elimination.output_stream_handle.get().inner:
+            #         del lifted_stream_elimination.output_stream_handle.get().inner[l]
+            #     if l in output_node.delayed_stream.output_stream_handle.get().inner:
+            #         del output_node.delayed_stream.output_stream_handle.get().inner[l]
+            #     if l in output_node.delayed_negated_stream.output_stream_handle.get().inner:
+            #         del output_node.delayed_negated_stream.output_stream_handle.get().inner[l]
+            #     if l in output_node.differentiation_stream.output_stream_handle.get().inner:
+            #         del output_node.differentiation_stream.output_stream_handle.get().inner[l]
 
             # lifted_stream_introduction.step()
             # group_by_then_agg.step()
@@ -360,9 +429,10 @@ class TopologyNode:
     #
 
     def gc(self, stream_handle):
-        for i in range(1, stream_handle.get().current_time()):
-            if i in stream_handle.get().inner:
-                del stream_handle.get().inner[i]
+        pass
+        # for i in range(1, stream_handle.get().current_time()):
+        #     if i in stream_handle.get().inner:
+        #         del stream_handle.get().inner[i]
 
     #
 
@@ -574,3 +644,17 @@ def message_dict_list_to_ZSet(message_dict_list):
     zSet = ZSet({k: 1 for k in value_json_str_list})
     return zSet
     
+#
+
+def print_biggest_attrs(obj, limit=3):
+    attrs = []
+    for attr in dir(obj):
+        try:
+            val = getattr(obj, attr)
+            attrs.append((attr, asizeof.asizeof(val, code=True)))
+        except:
+            continue
+    
+    attrs.sort(key=lambda x: x[1], reverse=True)
+    for name, size in attrs[:limit]:
+        print(f"  {name}: {size / 1024:.2f} KB")

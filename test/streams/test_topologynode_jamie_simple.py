@@ -74,33 +74,9 @@ def sum_fun(i, j):
 def setup():
     transactions_source_topologyNode = source("transactions")
     #
-# create view credits as select to_account as account, sum(amount) as credits from transactions group by to_account;
-    credits_topologyNode = (
-        transactions_source_topologyNode
-        .group_by_agg(select_fun(["to_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["credits"]), as_fun(["account"]))]))
-    )
-    
-# create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
-    debits_topologyNode = (
-        transactions_source_topologyNode
-        .group_by_agg(select_fun(["from_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["debits"]), as_fun(["account"]))]))
-    )
-    #
-# create view balance as select credits.account as account, credits - debits as balance from credits inner join debits on credits.account = debits.account;
-    balance_topologyNode = (
-        credits_topologyNode
-        .join(
-            debits_topologyNode,
-            on_function=lambda l, r: l["account"] == r["account"],
-            projection_function=lambda l, r: {"account": l["account"],
-                                              "balance": l["credits"] - r["debits"]}
-        )
-    )
-    #
-# create view total as select sum(balance) from balance;
     root_topologyNode = (
-        balance_topologyNode
-        .agg(agg_fun([(sum_fun, select_fun(["balance"]), select_as_fun(["sum"]))]))
+        transactions_source_topologyNode
+        .agg(agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["sum"]))]))
     )
 
     return transactions_source_topologyNode, root_topologyNode
@@ -155,10 +131,23 @@ def count_runtime_objects():
                 counts["lambda"] += 1
     return counts
 
+def print_biggest_attrs(obj, limit=3):
+    attrs = []
+    for attr in dir(obj):
+        try:
+            val = getattr(obj, attr)
+            attrs.append((attr, asizeof.asizeof(val, code=True)))
+        except:
+            continue
+    
+    attrs.sort(key=lambda x: x[1], reverse=True)
+    for name, size in attrs[:limit]:
+        print(f"  {name}: {size / 1024:.2f} KB")
+
 # start_time = time.time()
 for i in range(10):
     # start_time1 = time.time()
-    # print(i)
+    print(i)
     # obj_report = asizeof.asized(root_topologyNode, detail=1, code=True)
     # print(obj_report.size)
 
@@ -168,10 +157,18 @@ for i in range(10):
     # end_time1 = time.time()
     # print(end_time1 - start_time1)
 
+    del transactions_source_topologyNode.output_handle_function().get().inner[i + 1]
+
     print()
     print(f"Latest: {root_topologyNode.latest()}")
     # gc.collect()
+    print(transactions_source_topologyNode.output_handle_function().get().inner.keys())
+    print(len(pickle.dumps(transactions_source_topologyNode)) / 1024 / 1024)
     print(len(pickle.dumps(root_topologyNode)) / 1024 / 1024)
+    # print_biggest_attrs(root_topologyNode)
+
+# objgraph.show_growth()
+
 #
 # end_time = time.time()
 # print(end_time - start_time)
@@ -213,19 +210,6 @@ for i in range(10):
 # all_objs = muppy.get_objects()
 # sum1 = summary.summarize(all_objs)
 # summary.print_(sum1)
-
-def print_biggest_attrs(obj, limit=20):
-    attrs = []
-    for attr in dir(obj):
-        try:
-            val = getattr(obj, attr)
-            attrs.append((attr, asizeof.asizeof(val)))
-        except:
-            continue
-    
-    attrs.sort(key=lambda x: x[1], reverse=True)
-    for name, size in attrs[:limit]:
-        print(f"  {name}: {size / 1024:.2f} KB")
 
 # print_biggest_attrs(root_topologyNode)
 
