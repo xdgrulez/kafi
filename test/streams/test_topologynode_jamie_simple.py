@@ -92,15 +92,15 @@ def setup():
 
 #
 
-def transactions(transactions_source_topologyNode, root_topologyNode):
-    n_int = 10000
+def transactions(transactions_source_topologyNode, root_topologyNode, n_int, i):
     random.seed(42)
     transactions_message_dict_list = []
-    for id_int in range(0, n_int):
+    for id_int in range(i, i + n_int):
         message_dict = {"key": str(id_int),
-                        "value": {"id": id_int,
-                                    "from_account": random.randint(0, 9),
-                                    "to_account": random.randint(0, 9),
+                        "value": {
+                            # "id": id_int,
+                                    # "from_account": random.randint(0, 9),
+                                    # "to_account": random.randint(0, 9),
                                     "amount": 1}}
                                     # "ts": datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")}}
         transactions_message_dict_list.append(message_dict)
@@ -113,6 +113,8 @@ def transactions(transactions_source_topologyNode, root_topologyNode):
     transactions_source_topologyNode.output_handle_function().get().send(transactions_zset)
     #
     root_topologyNode.step()
+    #
+    return id_int
 
 #
 
@@ -145,6 +147,7 @@ def print_biggest_attrs(obj, limit=3):
         print(f"  {name}: {size / 1024:.2f} KB")
 
 # start_time = time.time()
+last_id_int = 0
 for i in range(10):
     # start_time1 = time.time()
     print(i)
@@ -152,12 +155,13 @@ for i in range(10):
     # print(obj_report.size)
 
     # print(f"Code-Objekte davor: {count_runtime_objects()}")
-    transactions(transactions_source_topologyNode, root_topologyNode)
+    # last_id_int = transactions(transactions_source_topologyNode, root_topologyNode, 10000, last_id_int)
+    last_id_int = transactions(transactions_source_topologyNode, root_topologyNode, 10000, 0)
     # print(f"Code-Objekte danach: {count_runtime_objects()}")
     # end_time1 = time.time()
     # print(end_time1 - start_time1)
 
-    del transactions_source_topologyNode.output_handle_function().get().inner[i + 1]
+    # del transactions_source_topologyNode.output_handle_function().get().inner[i + 1]
 
     print()
     print(f"Latest: {root_topologyNode.latest()}")

@@ -382,4 +382,10 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
         self.lift_integrated_stream.step()
         self.lifted_lifted_aggregate.step()
 
+        # if latest > 1:
+        #     del self.input_stream_handle.get().inner[latest - 1]
+        #     del self.integrated_stream.output_stream_handle.get().inner[latest - 1]
+        #     del self.lift_integrated_stream.output_stream_handle.get().inner[latest - 1]
+        #     del self.lifted_lifted_aggregate.output_stream_handle.get().inner[latest - 1]
+
         return 

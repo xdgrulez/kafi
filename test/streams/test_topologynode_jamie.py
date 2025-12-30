@@ -122,7 +122,8 @@ def transactions(transactions_source_topologyNode, root_topologyNode):
     transactions_message_dict_list = []
     for id_int in range(0, n_int):
         message_dict = {"key": str(id_int),
-                        "value": {"id": id_int,
+                        "value": {
+                            # "id": id_int,
                                     "from_account": random.randint(0, 9),
                                     "to_account": random.randint(0, 9),
                                     "amount": 1}}
@@ -158,7 +159,7 @@ def count_runtime_objects():
 # start_time = time.time()
 for i in range(10):
     # start_time1 = time.time()
-    # print(i)
+    print(i)
     # obj_report = asizeof.asized(root_topologyNode, detail=1, code=True)
     # print(obj_report.size)
 
@@ -167,6 +168,8 @@ for i in range(10):
     # print(f"Code-Objekte danach: {count_runtime_objects()}")
     # end_time1 = time.time()
     # print(end_time1 - start_time1)
+
+    # del transactions_source_topologyNode.output_handle_function().get().inner[i + 1]
 
     print()
     print(f"Latest: {root_topologyNode.latest()}")

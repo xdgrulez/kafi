@@ -283,6 +283,14 @@ class TopologyNode:
             output_node.step()
             y4 = time.time()
             # print(f"group_by_agg4: {y4-x4}")
+            
+            print("group_by_agg1")
+            print(len(pickle.dumps(lifted_stream_introduction)) / 1024 / 1024)
+            print(len(pickle.dumps(group_by_then_agg)) / 1024 / 1024)
+            print(len(pickle.dumps(lifted_stream_elimination)) / 1024 / 1024)
+            print(len(pickle.dumps(output_node)) / 1024 / 1024)
+            print("group_by_agg2")
+
         #
         return TopologyNode("group_by_agg_op", output_handle_function, step_function, [self])
 
@@ -341,29 +349,29 @@ class TopologyNode:
             y4 = time.time()
             # print(f"agg4: {y4-x4}")
 
-            print("HALLO1")
-            # print(len(pickle.dumps(lifted_stream_introduction)) / 1024 / 1024)
-            print("group_by_then_agg")
+            print("agg1")
+            print(len(pickle.dumps(lifted_stream_introduction)) / 1024 / 1024)
             print(len(pickle.dumps(group_by_then_agg)) / 1024 / 1024)
-            # print(len(pickle.dumps(lifted_stream_elimination)) / 1024 / 1024)
-            # print(len(pickle.dumps(output_node)) / 1024 / 1024)
+            print(len(pickle.dumps(lifted_stream_elimination)) / 1024 / 1024)
+            print(len(pickle.dumps(output_node)) / 1024 / 1024)
+            print("agg2")
 
-            print("input_stream_handle")
-            print(len(pickle.dumps(group_by_then_agg.input_stream_handle)) / 1024 / 1024)
-            print("integrated_stream.input_stream_handle")
-            print(len(pickle.dumps(group_by_then_agg.integrated_stream.input_stream_handle)) / 1024 / 1024)
-            print("integrated_stream.output_stream_handle")
-            print(len(pickle.dumps(group_by_then_agg.integrated_stream.output_stream_handle)) / 1024 / 1024)
-            print("lift_integrated_stream.input_stream_handle")
-            print(len(pickle.dumps(group_by_then_agg.lift_integrated_stream.input_stream_handle)) / 1024 / 1024)
-            print("lift_integrated_stream.output_stream_handle")
-            print(len(pickle.dumps(group_by_then_agg.lift_integrated_stream.output_stream_handle)) / 1024 / 1024)
-            print("lifted_lifted_aggregate.input_stream_handle")
-            print(len(pickle.dumps(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)) / 1024 / 1024)
-            print("lifted_lifted_aggregate.output_stream_handle")
-            print(len(pickle.dumps(group_by_then_agg.lifted_lifted_aggregate.output_stream_handle)) / 1024 / 1024)
-            print("output_stream_handle")
-            print(len(pickle.dumps(group_by_then_agg.output_stream_handle)) / 1024 / 1024)
+            # print("input_stream_handle")
+            # print(len(pickle.dumps(group_by_then_agg.input_stream_handle)) / 1024 / 1024)
+            # print("integrated_stream.input_stream_handle")
+            # print(len(pickle.dumps(group_by_then_agg.integrated_stream.input_stream_handle)) / 1024 / 1024)
+            # print("integrated_stream.output_stream_handle")
+            # print(len(pickle.dumps(group_by_then_agg.integrated_stream.output_stream_handle)) / 1024 / 1024)
+            # print("lift_integrated_stream.input_stream_handle")
+            # print(len(pickle.dumps(group_by_then_agg.lift_integrated_stream.input_stream_handle)) / 1024 / 1024)
+            # print("lift_integrated_stream.output_stream_handle")
+            # print(len(pickle.dumps(group_by_then_agg.lift_integrated_stream.output_stream_handle)) / 1024 / 1024)
+            # print("lifted_lifted_aggregate.input_stream_handle")
+            # print(len(pickle.dumps(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)) / 1024 / 1024)
+            # print("lifted_lifted_aggregate.output_stream_handle")
+            # print(len(pickle.dumps(group_by_then_agg.lifted_lifted_aggregate.output_stream_handle)) / 1024 / 1024)
+            # print("output_stream_handle")
+            # print(len(pickle.dumps(group_by_then_agg.output_stream_handle)) / 1024 / 1024)
 
             # print(len(pickle.dumps(lifted_stream_elimination.input_stream_handle)) / 1024 / 1024)
             # for a, b in lifted_stream_elimination.input_stream_handle.__dict__.items():
@@ -373,12 +381,13 @@ class TopologyNode:
             # print(len(pickle.dumps(list(lifted_stream_elimination.input_stream_handle.__dict__["ref"].__closure__)[0])) / 1024 / 1024)
             # print(len(pickle.dumps(lifted_stream_elimination.input_stream_handle.get())) / 1024 / 1024)
             # print_biggest_attrs(lifted_stream_elimination)
-            print("HALLO2")
+            # print("HALLO2")
 
-            latest = stream_handle.get().current_time()
-            if latest > 1:
-                del lifted_stream_introduction.output_stream_handle.get().inner[latest - 1]
-                del group_by_then_agg.integrated_stream.output_stream_handle.get().inner[latest - 1]
+            # latest = stream_handle.get().current_time()
+            # if latest > 1:
+            #     del lifted_stream_introduction.output_stream_handle.get().inner[latest - 1]
+            #     print(group_by_then_agg.integrated_stream.output_stream_handle.get().inner)
+            #     del group_by_then_agg.integrated_stream.output_stream_handle.get().inner[latest - 1]
                 # del group_by_then_agg.lift_integrated_stream.input_stream_handle.get().inner[latest - 1]
             # if latest > 2:
             #     l = latest - 2
@@ -637,7 +646,7 @@ def message_dict_list_to_ZSet(message_dict_list):
     value_json_str_list = []
     for message_dict in message_dict_list:
         value_dict = message_dict["value"]
-        value_dict["_key"] = message_dict["key"]
+        # value_dict["_key"] = message_dict["key"]
         value_json_str = json.dumps(value_dict)
         value_json_str_list.append(value_json_str)
     #
