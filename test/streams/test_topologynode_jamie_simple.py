@@ -10,6 +10,8 @@
 # 30, 101
 # 1.9*20 + 44 
 
+from copy import deepcopy
+
 import cloudpickle as pickle
 
 import datetime, gc, os, random, sys, time
@@ -149,7 +151,7 @@ def print_biggest_attrs(obj, limit=3):
 
 # start_time = time.time()
 last_id_int = 0
-for i in range(10):
+for i in range(100):
     # start_time1 = time.time()
     print(i)
     # obj_report = asizeof.asized(root_topologyNode, detail=1, code=True)
@@ -166,7 +168,7 @@ for i in range(10):
 
     print()
     print(f"Latest: {root_topologyNode.latest()}")
-    gc.collect()
+    # gc.collect()
     print(transactions_source_topologyNode.output_handle_function().get().inner.keys())
     # print(len(pickle.dumps(transactions_source_topologyNode)) / 1024 / 1024)
     print(len(pickle.dumps(root_topologyNode)) / 1024 / 1024)

@@ -65,6 +65,29 @@ class Differentiate(UnaryOperator[T, T]):
         self.delayed_negated_stream.step()
         self.differentiation_stream.step()
 
+        # gc
+        print("1")
+        print(self.input_stream_handle.get().inner.keys())
+        print("2")
+        print(self.delayed_stream.input_stream_handle.get().inner.keys())
+        print(self.delayed_stream.output_stream_handle.get().inner.keys())
+        print("3")
+        print(self.delayed_negated_stream.input_stream_handle.get().inner.keys())
+        print(self.delayed_negated_stream.output_stream_handle.get().inner.keys())
+        print("4")
+        print(self.differentiation_stream.input_stream_handle_a.get().inner.keys())
+        print(self.differentiation_stream.input_stream_handle_b.get().inner.keys())
+        print(self.differentiation_stream.output_stream_handle.get().inner.keys())
+        
+        latest = self.input_stream_handle.get().current_time()
+        if latest > 2:
+            # jamie_simple
+            del self.delayed_stream.input_stream_handle.get().inner[latest - 1]
+            del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
+            del self.delayed_negated_stream.output_stream_handle.get().inner[latest - 1]
+            # jamie_simple
+            del self.differentiation_stream.output_stream_handle.get().inner[latest - 1]
+
         return self.output().current_time() == self.input_a().current_time()
 
 
@@ -91,12 +114,13 @@ class Integrate(UnaryOperator[T, T]):
         self.delayed_stream.step()
         self.integration_stream.step()
 
+        # gc
         latest = self.input_stream_handle.get().current_time()
         if latest > 2:
             print(self.delayed_stream.output_stream_handle.get().inner.keys())
             del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
+        #
             
-
         return self.output().current_time() == self.input_a().current_time()
 
 

@@ -383,7 +383,8 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
         self.lifted_lifted_aggregate.step()
 
         if latest > 1:
-            # del self.input_stream_handle.get().inner[latest - 1]
+            # jamie_simple
+            del self.input_stream_handle.get().inner[latest - 1]
             # print(self.input_stream_handle.get().inner.keys())
             del self.integrated_stream.output_stream_handle.get().inner[latest - 1]
             # print(self.integrated_stream.output_stream_handle.get().inner.keys())

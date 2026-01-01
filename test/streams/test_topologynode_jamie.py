@@ -102,7 +102,7 @@ def setup():
         balance_topologyNode
         .agg(agg_fun([(sum_fun, select_fun(["balance"]), select_as_fun(["sum"]))]))
     )
-
+    #
     return transactions_source_topologyNode, root_topologyNode
 
 #
