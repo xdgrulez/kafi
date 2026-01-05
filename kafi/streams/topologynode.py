@@ -15,11 +15,12 @@ import uuid
 #
 
 class TopologyNode:
-    def __init__(self, name_str, output_handle_function, step_function, daughter_topologyNode_list=[]):
+    def __init__(self, name_str, output_handle_function, step_function, gc_function, daughter_topologyNode_list=[]):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
         self._output_handle_function = output_handle_function
         self._step_function = step_function
+        self._gc_function = gc_function
         self._daughter_topologyNode_list = daughter_topologyNode_list
         #
         self.group = output_handle_function().get().group()
@@ -51,14 +52,17 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function(gc_boolean=True):
-            liftedStream.step(gc_boolean)
+        def step_function():
+            liftedStream.step()
             #
-            selection.step(gc_boolean)
+            selection.step()
             #
-            output_node.step(gc_boolean)
+            output_node.step()
         #
-        return TopologyNode("map_op", output_handle_function, step_function, [self])
+        def gc_function():
+            pass
+        #
+        return TopologyNode("map_op", output_handle_function, step_function, gc_function, [self])
 
     # def filter(self, filter_function):
     #     def filter_function1(value_json_str):
@@ -87,14 +91,17 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function(gc_boolean=True):
-            liftedStream.step(gc_boolean)
+        def step_function():
+            liftedStream.step()
             #
-            filtering.step(gc_boolean)
+            filtering.step()
             #
-            output_node.step(gc_boolean)
+            output_node.step()
         #
-        return TopologyNode("filter_op", output_handle_function, step_function, [self])
+        def gc_function():
+            pass
+        #
+        return TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self])
 
     def join(self, other, on_function, projection_function):
         def on_function1(left_value_json_str, right_value_json_str):
@@ -117,15 +124,20 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function(gc_boolean=True):
-            left_liftedStream.step(gc_boolean)
-            right_liftedStream.step(gc_boolean)
+        def step_function():
+            left_liftedStream.step()
+            right_liftedStream.step()
             #
-            join.step(gc_boolean)
+            join.step()
             #
-            output_node.step(gc_boolean)
+            output_node.step()
         #
-        return TopologyNode("join_op", output_handle_function, step_function, [self, other])
+        def gc_function():
+            join.gc()
+            #
+            output_node.gc()
+        #
+        return TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other])
 
     def union(self, other):
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
@@ -138,15 +150,18 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function(gc_boolean=True):
-            left_liftedStream.step(gc_boolean)
-            right_liftedStream.step(gc_boolean)
+        def step_function():
+            left_liftedStream.step()
+            right_liftedStream.step()
             #
-            union.step(gc_boolean)
+            union.step()
             #
-            output_node.step(gc_boolean)
+            output_node.step()
         #
-        return TopologyNode("union_op", output_handle_function, step_function, [self, other])
+        def gc_function():
+            pass
+        #
+        return TopologyNode("union_op", output_handle_function, step_function, gc_function, [self, other])
 
     def intersect(self, other):
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
@@ -159,15 +174,18 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function(gc_boolean=True):
-            left_liftedStream.step(gc_boolean)
-            right_liftedStream.step(gc_boolean)
+        def step_function():
+            left_liftedStream.step()
+            right_liftedStream.step()
             #
-            intersection.step(gc_boolean)
+            intersection.step()
             #
-            output_node.step(gc_boolean)
+            output_node.step()
         #
-        return TopologyNode("intersect_op", output_handle_function, step_function, [self, other])
+        def gc_function():
+            pass
+        #
+        return TopologyNode("intersect_op", output_handle_function, step_function, gc_function, [self, other])
 
     def difference(self, other):
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
@@ -180,15 +198,18 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function(gc_boolean=True):
-            left_liftedStream.step(gc_boolean)
-            right_liftedStream.step(gc_boolean)
+        def step_function():
+            left_liftedStream.step()
+            right_liftedStream.step()
             #
-            difference.step(gc_boolean)
+            difference.step()
             #
-            output_node.step(gc_boolean)
+            output_node.step()
         #
-        return TopologyNode("difference_op", output_handle_function, step_function, [self, other])
+        def gc_function():
+            pass
+        #
+        return TopologyNode("difference_op", output_handle_function, step_function, gc_function, [self, other])
 
     def product(self, other):
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
@@ -201,15 +222,18 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function(gc_boolean=True):
-            left_liftedStream.step(gc_boolean)
-            right_liftedStream.step(gc_boolean)
+        def step_function():
+            left_liftedStream.step()
+            right_liftedStream.step()
             #
-            cartesianProduct.step(gc_boolean)
+            cartesianProduct.step()
             #
-            output_node.step(gc_boolean)
+            output_node.step()
         #
-        return TopologyNode("product_op", output_handle_function, step_function, [self, other])
+        def gc_function():
+            pass
+        #
+        return TopologyNode("product_op", output_handle_function, step_function, gc_function, [self, other])
 
     def group_by_agg(self, by_function, agg_function):
         def by_function1(value_json_str):
@@ -228,16 +252,21 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function(gc_boolean=True):
-            lifted_stream_introduction.step(gc_boolean)
+        def step_function():
+            lifted_stream_introduction.step()
             #
-            group_by_then_agg.step(gc_boolean)
+            group_by_then_agg.step()
             #
-            lifted_stream_elimination.step(gc_boolean)
+            lifted_stream_elimination.step()
             #
-            output_node.step(gc_boolean)
+            output_node.step()
         #
-        return TopologyNode("group_by_agg_op", output_handle_function, step_function, [self])
+        def gc_function():
+            group_by_then_agg.gc()
+            #
+            output_node.gc()
+        #
+        return TopologyNode("group_by_agg_op", output_handle_function, step_function, gc_function, [self])
 
     def agg(self, agg_function):
         group_by_agg_topologyNode = self.group_by_agg(lambda _: None, agg_function)
@@ -255,10 +284,13 @@ class TopologyNode:
         def output_handle_function():
             return liftedProject.output_handle()
         #
-        def step_function(gc_boolean=True):
-            liftedProject.step(gc_boolean)
+        def step_function():
+            liftedProject.step()
         #
-        return TopologyNode("peek_op", output_handle_function, step_function, [self])
+        def gc_function():
+            pass
+        #
+        return TopologyNode("peek_op", output_handle_function, step_function, gc_function, [self])
     
     #
 
@@ -273,6 +305,9 @@ class TopologyNode:
 
     def step_function(self):
         return self._step_function
+    
+    def gc_function(self):
+        return self._gc_function
 
     def daughters(self):
         return self._daughter_topologyNode_list    
@@ -340,6 +375,13 @@ class TopologyNode:
         return name_str_topologyNode_dict[name_str]
 
     #
+
+    def gc(self):
+        print(self._name_str)
+        self.gc_function()()
+        #
+        for topologyNode in self._daughter_topologyNode_list:
+            topologyNode.gc()
 
     def topology(self, include_ids=False):
         include_ids_bool = include_ids
@@ -456,16 +498,18 @@ def source(name_str):
     def output_handle_function():
         return stream_handle
     #
-    def step_function(gc_boolean=True):
-        # gc
-        if gc_boolean:
-            current_time_int = stream_handle.get().current_time()
-            if current_time_int > 1:
-                pass
-                # jamie_simple
-                # del stream_handle.get().inner[current_time_int - 1]
+    def step_function():
+        pass
     #
-    return TopologyNode(name_str, output_handle_function, step_function)
+    def gc_function():
+        stream = stream_handle.get()
+        current_time_int = stream.current_time()
+        if current_time_int > 1:
+            # jamie_simple
+            if current_time_int - 1 in stream.inner:
+                del stream.inner[current_time_int - 1]
+    #
+    return TopologyNode(name_str, output_handle_function, step_function, gc_function)
 
 
 def message_dict_list_to_ZSet(message_dict_list):

@@ -252,9 +252,11 @@ class Join(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T,
         if stream_b is not None:
             self.set_input_b(stream_b)
 
-    def step(self, gc: bool = False) -> bool:
-        return self.join.step(gc)
+    def step(self) -> bool:
+        return self.join.step()
 
+    def gc(self) -> None:
+        self.join.gc()
 
 class Intersection(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[T]], Stream[ZSet[T]]]):
     """
@@ -364,7 +366,7 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
         self.frontier = 0
         self.set_input(stream)
     
-    def step(self, gc: bool = False) -> bool:
+    def step(self) -> bool:
         latest = self.input_stream_handle.get().current_time()
 
         if latest == self.frontier:
@@ -372,14 +374,19 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
 
         self.frontier += 1
 
-        self.integrated_stream.step(gc)
-        self.lift_integrated_stream.step(gc)
-        self.lifted_lifted_aggregate.step(gc)
+        self.integrated_stream.step()
+        self.lift_integrated_stream.step()
+        self.lifted_lifted_aggregate.step()
 
-        # gc
+        return 
+
+    def gc(self) -> None:
+        self.integrated_stream.gc()
+        latest = self.input_stream_handle.get().current_time()
         if latest > 1:
             # jamie_simple
-            # del self.input_stream_handle.get().inner[latest - 1]
+            if latest - 1 in self.input_stream_handle.get().inner:
+                del self.input_stream_handle.get().inner[latest - 1]
             # print(self.input_stream_handle.get().inner.keys())
             del self.integrated_stream.output_stream_handle.get().inner[latest - 1]
             # print(self.integrated_stream.output_stream_handle.get().inner.keys())
@@ -387,5 +394,3 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
             # print(self.lift_integrated_stream.output_stream_handle.get().inner.keys())
             del self.lifted_lifted_aggregate.output_stream_handle.get().inner[latest - 1]
             # print(self.lifted_lifted_aggregate.output_stream_handle.get().inner.keys())
-
-        return 

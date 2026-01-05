@@ -138,6 +138,7 @@ def transactions(transactions_source_topologyNode, root_topologyNode):
     transactions_source_topologyNode.output_handle_function().get().send(transactions_zset)
     #
     root_topologyNode.step()
+    root_topologyNode.gc()
 
 #
 
@@ -179,8 +180,8 @@ for i in range(10):
 # print(end_time - start_time)
 #
 
-print()
-print(f"Topology: {root_topologyNode.topology()}")
+# print()
+# print(f"Topology: {root_topologyNode.topology()}")
 # print()
 # print(f"Mermaid:\n{root_topologyNode.mermaid()}")
 # print()

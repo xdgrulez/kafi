@@ -116,6 +116,7 @@ def transactions(transactions_source_topologyNode, root_topologyNode, n_int, i):
     transactions_source_topologyNode.output_handle_function().get().send(transactions_zset)
     #
     root_topologyNode.step()
+    root_topologyNode.gc()
     #
     return id_int
 

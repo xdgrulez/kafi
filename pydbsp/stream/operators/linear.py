@@ -24,7 +24,7 @@ class Delay(UnaryOperator[T, T]):
     def __init__(self, stream: Optional[StreamHandle[T]]) -> None:
         super().__init__(stream, None)
 
-    def step(self, gc: bool = False) -> bool:
+    def step(self) -> bool:
         """
         Outputs the previous value from the input stream.
         """
@@ -33,10 +33,7 @@ class Delay(UnaryOperator[T, T]):
 
         if output_timestamp <= input_timestamp:
             self.output().send(self.input_a()[output_timestamp])
-
             return False
-
-        # gc
 
         return True
 
@@ -59,31 +56,27 @@ class Differentiate(UnaryOperator[T, T]):
         )
         self.output_stream_handle = self.differentiation_stream.output_handle()
 
-    def step(self, gc: bool = False) -> bool:
+    def step(self) -> bool:
         """
         Outputs the difference between the latest element from the input stream with the one before
         """
-        self.delayed_stream.step(gc)
-        self.delayed_negated_stream.step(gc)
-        self.differentiation_stream.step(gc)
+        self.delayed_stream.step()
+        self.delayed_negated_stream.step()
+        self.differentiation_stream.step()
 
-        # gc
-        # if gc:
-        #     current_time_int = self.output_stream_handle.get().current_time()
-        #     if current_time_int > 2:
-        #         del self.delayed_stream.output_stream_handle.get().inner[current_time_int - 1]
-        #         del self.delayed_negated_stream.output_stream_handle.get().inner[current_time_int - 1]
-        #         del self.differentiation_stream.output_stream_handle.get().inner[current_time_int - 1]
+        return self.output().current_time() == self.input_a().current_time()
+
+    def gc(self) -> None:
         latest = self.input_stream_handle.get().current_time()
         if latest > 2:
             # jamie_simple
-            # del self.delayed_stream.input_stream_handle.get().inner[latest - 1]
+            if latest - 1 in self.delayed_stream.input_stream_handle.get().inner:
+                del self.delayed_stream.input_stream_handle.get().inner[latest - 1]
             del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
             del self.delayed_negated_stream.output_stream_handle.get().inner[latest - 1]
             # jamie_simple
-            # del self.differentiation_stream.output_stream_handle.get().inner[latest - 1]
-
-        return self.output().current_time() == self.input_a().current_time()
+            if latest - 1 in self.differentiation_stream.output_stream_handle.get().inner:
+                del self.differentiation_stream.output_stream_handle.get().inner[latest - 1]
 
 
 class Integrate(UnaryOperator[T, T]):
@@ -102,25 +95,20 @@ class Integrate(UnaryOperator[T, T]):
 
         self.output_stream_handle = self.integration_stream.output_handle()
 
-    def step(self, gc: bool = False) -> bool:
+    def step(self) -> bool:
         """
         Adds the latest element from the input stream to the running sum
         """
         self.delayed_stream.step()
-        self.integration_stream.step(gc)
+        self.integration_stream.step()
 
-        # gc
-        # if gc:
-        #     current_time_int = self.output_stream_handle.get().current_time()
-        #     if current_time_int > 2:
-        #         del self.delayed_stream.output_stream_handle.get().inner[current_time_int - 1]
-        #         del self.integration_stream.output_stream_handle.get().inner[current_time_int - 1]
+        return self.output().current_time() == self.input_a().current_time()
+
+    def gc(self) -> None:
         latest = self.input_stream_handle.get().current_time()
         if latest > 2:
             # print(self.delayed_stream.output_stream_handle.get().inner.keys())
             del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
-
-        return self.output().current_time() == self.input_a().current_time()
 
 
 def step_until_fixpoint_set_new_default_then_return[T](

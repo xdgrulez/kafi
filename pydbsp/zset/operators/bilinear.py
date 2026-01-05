@@ -157,7 +157,7 @@ class DeltaLiftedDeltaLiftedJoin(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]
     def output(self) -> Stream[Stream[ZSet[S]]]:
         return self.output_stream
 
-    def step(self, gc: bool = False) -> bool:
+    def step(self) -> bool:
         current_a_timestamp = self.input_a().current_time()
         current_b_timestamp = self.input_b().current_time()
         # Not sure about this.
@@ -188,7 +188,10 @@ class DeltaLiftedDeltaLiftedJoin(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]
         self.frontier_a += 1
         self.frontier_b += 1
 
-        # gc
+        return False
+
+    # gc
+    def gc(self) -> None:
         latest_a = self.frontier_a
         for i in range(1, latest_a):
             if i in self.integrated_stream_a.delayed_stream.output_stream_handle.get().inner:
@@ -265,5 +268,6 @@ class DeltaLiftedDeltaLiftedJoin(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]
             if i in self.join_4.output_stream_handle.get().inner:
                 del self.join_4.output_stream_handle.get().inner[latest_b - 1]
         # print(self.join_4.output_handle().get().inner.keys())
-
-        return False
+        for i in range(1, latest_b):
+            if i in self.output_stream_handle.get().inner:
+                del self.output_stream_handle.get().inner[latest_b - 1]

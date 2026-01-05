@@ -273,7 +273,7 @@ class Lift1(UnaryOperator[T, R]):
         self.frontier = 0
         super().__init__(stream, output_stream_group)
 
-    def step(self, gc: bool = False) -> bool:
+    def step(self) -> bool:
         """Applies the lifted function to the next element in the input stream."""
         output_timestamp = self.output().current_time()
         input_timestamp = self.input_a().current_time()
@@ -287,13 +287,13 @@ class Lift1(UnaryOperator[T, R]):
         self.output().send(self.f1(self.input_a()[next_frontier]))
         self.frontier = next_frontier
 
-        # gc
-        # if gc:
-        #     current_time_int = self.output_stream_handle.get().current_time()
-        #     if current_time_int > 2:
-        #         del self.output_stream_handle.get().inner[current_time_int - 1]
-
         return False
+    
+    def gc(self) -> None:
+        latest = self.input_stream_handle.get().current_time()
+        if latest > 2:
+            if latest - 1 in self.output_stream_handle.get().inner:
+                del self.output_stream_handle.get().inner[latest - 1]
 
 
 F2 = Callable[[T, R], S]
@@ -319,7 +319,7 @@ class Lift2(BinaryOperator[T, R, S]):
 
         super().__init__(stream_a, stream_b, output_stream_group)
 
-    def step(self, gc: bool = False) -> bool:
+    def step(self) -> bool:
         """Applies the lifted function to the most recently arrived elements in both input streams."""
         a_timestamp = self.input_a().current_time()
         b_timestamp = self.input_b().current_time()

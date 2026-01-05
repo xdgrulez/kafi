@@ -1,5 +1,3 @@
-# idea: step(gc: bool = False) bis tief unten rein
-
 import os, sys
 
 import cloudpickle as pickle
