@@ -1,3 +1,5 @@
+# idea: step(gc: bool = False) bis tief unten rein
+
 import os, sys
 
 import cloudpickle as pickle
@@ -50,12 +52,29 @@ root_topologyNode.step()
 print()
 print(f"Latest: {root_topologyNode.latest()}")
 
-del employees_source_topologyNode1.output_handle_function().get().inner[1]
-del employees_source_topologyNode2.output_handle_function().get().inner[1]
+#
 
-employee_message_dict_list21 = [{"key": "1", "value": {"name": "mark"}}]
-employee_zset21 = message_dict_list_to_ZSet(employee_message_dict_list21)
-employees_source_topologyNode2.output_handle_function().get().send(employee_zset21)
+for i in range(10):
+    print(i)
+    del employees_source_topologyNode2.output_handle_function().get().inner[i + 1]
+
+    employee_message_dict_list21 = [{"key": "0", "value": {"name": "kristjan"}}]
+    employee_zset21 = message_dict_list_to_ZSet(employee_message_dict_list21)
+    employees_source_topologyNode2.output_handle_function().get().send(employee_zset21)
+
+    root_topologyNode.step()
+
+    print()
+    print(f"Latest: {root_topologyNode.latest()}")
+    print(len(pickle.dumps(root_topologyNode)) / 1024 / 1024)
+
+#
+
+# del employees_source_topologyNode2.output_handle_function().get().inner[i + 1]
+
+employee_message_dict_list22 = [{"key": "1", "value": {"name": "mark"}}]
+employee_zset22 = message_dict_list_to_ZSet(employee_message_dict_list22)
+employees_source_topologyNode2.output_handle_function().get().send(employee_zset22)
 
 root_topologyNode.step()
 

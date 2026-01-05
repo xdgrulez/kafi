@@ -193,77 +193,77 @@ class DeltaLiftedDeltaLiftedJoin(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]
         for i in range(1, latest_a):
             if i in self.integrated_stream_a.delayed_stream.output_stream_handle.get().inner:
                 del self.integrated_stream_a.delayed_stream.output_stream_handle.get().inner[latest_a - 1]
-        print(self.integrated_stream_a.delayed_stream.output_stream_handle.get().inner.keys())
+        # print(self.integrated_stream_a.delayed_stream.output_stream_handle.get().inner.keys())
         for i in range(1, latest_a):
             if i in self.integrated_stream_a.output_stream_handle.get().inner:
                 del self.integrated_stream_a.output_stream_handle.get().inner[latest_a - 1]
-        print(self.integrated_stream_a.output_stream_handle.get().inner.keys())
+        # print(self.integrated_stream_a.output_stream_handle.get().inner.keys())
         #
         for i in range(1, latest_a):
             if i in self.delayed_integrated_stream_a.output_stream_handle.get().inner:
                 del self.delayed_integrated_stream_a.output_stream_handle.get().inner[latest_a - 1]
-        print(self.delayed_integrated_stream_a.output_handle().get().inner.keys())
+        # print(self.delayed_integrated_stream_a.output_handle().get().inner.keys())
         #
         for i in range(1, latest_a):
             if i in self.lift_integrated_stream_a.output_stream_handle.get().inner:
                 del self.lift_integrated_stream_a.output_stream_handle.get().inner[latest_a - 1]
-        print(self.lift_integrated_stream_a.output_handle().get().inner.keys())
+        # print(self.lift_integrated_stream_a.output_handle().get().inner.keys())
         #
         for i in range(1, latest_a):
             if i in self.integrated_lift_integrated_stream_a.output_stream_handle.get().inner:
                 del self.integrated_lift_integrated_stream_a.output_stream_handle.get().inner[latest_a - 1]
-        print(self.integrated_lift_integrated_stream_a.output_handle().get().inner.keys())
+        # print(self.integrated_lift_integrated_stream_a.output_handle().get().inner.keys())
         
         latest_b = self.frontier_b
         for i in range(1, latest_b):
             if i in self.integrated_stream_b.delayed_stream.output_stream_handle.get().inner:
                 del self.integrated_stream_b.delayed_stream.output_stream_handle.get().inner[latest_b - 1]
-        print(self.integrated_stream_b.delayed_stream.output_stream_handle.get().inner.keys())
+        # print(self.integrated_stream_b.delayed_stream.output_stream_handle.get().inner.keys())
         for i in range(1, latest_b):
             if i in self.integrated_stream_b.output_stream_handle.get().inner:
                 del self.integrated_stream_b.output_stream_handle.get().inner[latest_b - 1]
-        print(self.integrated_stream_b.output_stream_handle.get().inner.keys())
+        # print(self.integrated_stream_b.output_stream_handle.get().inner.keys())
         #
         for i in range(1, latest_b):
             if i in self.delayed_integrated_stream_b.output_stream_handle.get().inner:
                 del self.delayed_integrated_stream_b.output_stream_handle.get().inner[latest_b - 1]
-        print(self.delayed_integrated_stream_b.output_handle().get().inner.keys())
+        # print(self.delayed_integrated_stream_b.output_handle().get().inner.keys())
         #
         for i in range(1, latest_b):
             if i in self.lift_integrated_stream_b.output_stream_handle.get().inner:
                 del self.lift_integrated_stream_b.output_stream_handle.get().inner[latest_b - 1]
-        print(self.lift_integrated_stream_b.output_handle().get().inner.keys())
+        # print(self.lift_integrated_stream_b.output_handle().get().inner.keys())
         #
         for i in range(1, latest_b):
             if i in self.integrated_lift_integrated_stream_b.output_stream_handle.get().inner:
                 del self.integrated_lift_integrated_stream_b.output_stream_handle.get().inner[latest_b - 1]
-        print(self.integrated_lift_integrated_stream_b.output_handle().get().inner.keys())
+        # print(self.integrated_lift_integrated_stream_b.output_handle().get().inner.keys())
 
         for i in range(1, latest_b):
             if i in self.lift_delayed_integrated_lift_integrated_stream_b.output_stream_handle.get().inner:
                 del self.lift_delayed_integrated_lift_integrated_stream_b.output_stream_handle.get().inner[latest_b - 1]
-        print(self.lift_delayed_integrated_lift_integrated_stream_b.output_handle().get().inner.keys())
+        # print(self.lift_delayed_integrated_lift_integrated_stream_b.output_handle().get().inner.keys())
         #
         for i in range(1, latest_b):
             if i in self.lift_delayed_lift_integrated_stream_b.output_stream_handle.get().inner:
                 del self.lift_delayed_lift_integrated_stream_b.output_stream_handle.get().inner[latest_b - 1]
-        print(self.lift_delayed_lift_integrated_stream_b.output_handle().get().inner.keys())
+        # print(self.lift_delayed_lift_integrated_stream_b.output_handle().get().inner.keys())
 
         for i in range(1, latest_b):
             if i in self.join_1.output_stream_handle.get().inner:
                 del self.join_1.output_stream_handle.get().inner[latest_b - 1]
-        print(self.join_1.output_handle().get().inner.keys())
+        # print(self.join_1.output_handle().get().inner.keys())
         for i in range(1, latest_b):
             if i in self.join_2.output_stream_handle.get().inner:
                 del self.join_2.output_stream_handle.get().inner[latest_b - 1]
-        print(self.join_2.output_handle().get().inner.keys())
+        # print(self.join_2.output_handle().get().inner.keys())
         for i in range(1, latest_b):
             if i in self.join_3.output_stream_handle.get().inner:
                 del self.join_3.output_stream_handle.get().inner[latest_b - 1]
-        print(self.join_3.output_handle().get().inner.keys())
+        # print(self.join_3.output_handle().get().inner.keys())
         for i in range(1, latest_b):
             if i in self.join_4.output_stream_handle.get().inner:
                 del self.join_4.output_stream_handle.get().inner[latest_b - 1]
-        print(self.join_4.output_handle().get().inner.keys())
+        # print(self.join_4.output_handle().get().inner.keys())
 
         return False

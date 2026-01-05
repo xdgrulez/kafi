@@ -91,7 +91,7 @@ class Differentiate(UnaryOperator[T, T]):
         return self.output().current_time() == self.input_a().current_time()
 
 
-class Integrate(UnaryOperator[T, T]):
+class  Integrate(UnaryOperator[T, T]):
     """
     Computes the running sum of the input stream.
     """
@@ -117,7 +117,7 @@ class Integrate(UnaryOperator[T, T]):
         # gc
         latest = self.input_stream_handle.get().current_time()
         if latest > 2:
-            print(self.delayed_stream.output_stream_handle.get().inner.keys())
+            # print(self.delayed_stream.output_stream_handle.get().inner.keys())
             del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
         #
             
