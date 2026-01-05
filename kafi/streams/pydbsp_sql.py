@@ -10,6 +10,8 @@ from pydbsp.zset.operators.bilinear import DeltaLiftedDeltaLiftedJoin, JoinCmp, 
 from pydbsp.zset.operators.linear import Cmp, LiftedLiftedProject, LiftedLiftedSelect, Projection as project
 from pydbsp.zset.operators.unary import DeltaLiftedDeltaLiftedDistinct
 
+import time
+
 # We assume that the aggregation function is linear, that is, f(a + b) = f(a) + f(b)
 # Mind you, Lift1 and Lift2 functions are for direct manipulation of ZSets, not of their values.
 Aggregation = Callable[[ZSet[tuple[I, ZSet[T]]]], ZSet[tuple[I, R]]]

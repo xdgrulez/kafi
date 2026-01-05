@@ -78,7 +78,7 @@ def setup():
     #
     root_topologyNode = (
         transactions_source_topologyNode
-        .agg(agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["sum"]))]))
+        .agg(agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["sum"]))]), True)
         # .group_by_agg(select_fun(["id"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["sum"]), as_fun(["id"]))]))
     )
 
