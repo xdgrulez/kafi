@@ -157,7 +157,7 @@ class DeltaLiftedDeltaLiftedJoin(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]
     def output(self) -> Stream[Stream[ZSet[S]]]:
         return self.output_stream
 
-    def step(self) -> bool:
+    def step(self, gc: bool = False) -> bool:
         current_a_timestamp = self.input_a().current_time()
         current_b_timestamp = self.input_b().current_time()
         # Not sure about this.

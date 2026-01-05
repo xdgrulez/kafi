@@ -164,12 +164,9 @@ for i in range(100):
     # end_time1 = time.time()
     # print(end_time1 - start_time1)
 
-    del transactions_source_topologyNode.output_handle_function().get().inner[i + 1]
-
     print()
     print(f"Latest: {root_topologyNode.latest()}")
-    # gc.collect()
-    print(transactions_source_topologyNode.output_handle_function().get().inner.keys())
+    # print(transactions_source_topologyNode.output_handle_function().get().inner.keys())
     # print(len(pickle.dumps(transactions_source_topologyNode)) / 1024 / 1024)
     print(len(pickle.dumps(root_topologyNode)) / 1024 / 1024)
     # print_biggest_attrs(root_topologyNode)

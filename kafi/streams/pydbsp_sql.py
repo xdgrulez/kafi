@@ -252,8 +252,8 @@ class Join(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T,
         if stream_b is not None:
             self.set_input_b(stream_b)
 
-    def step(self) -> bool:
-        return self.join.step()
+    def step(self, gc: bool = False) -> bool:
+        return self.join.step(gc)
 
 
 class Intersection(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[T]], Stream[ZSet[T]]]):
@@ -351,14 +351,8 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
 
     def set_input(self, stream_handle: StreamHandle[Stream[ZSet[T]]]) -> None:
         self.input_stream_handle = stream_handle
-        # a = stream_handle.get()
-        # self.integrated_stream = Integrate(StreamHandle(lambda: a))
         self.integrated_stream = Integrate(stream_handle)
-        # x = self.integrated_stream.output_stream_handle.get()
-        # self.lift_integrated_stream = LiftedIntegrate(StreamHandle(lambda: x))
         self.lift_integrated_stream = LiftedIntegrate(self.integrated_stream.output_handle())
-        # y = self.lift_integrated_stream.output_stream_handle.get()
-        # self.lifted_lifted_aggregate = LiftedLiftedAggregate(StreamHandle(lambda: y), self.by, self.aggregation)
         self.lifted_lifted_aggregate = LiftedLiftedAggregate(self.lift_integrated_stream.output_handle(), self.by, self.aggregation)
 
         self.output_stream = self.lifted_lifted_aggregate.output()
@@ -370,7 +364,7 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
         self.frontier = 0
         self.set_input(stream)
     
-    def step(self) -> bool:
+    def step(self, gc: bool = False) -> bool:
         latest = self.input_stream_handle.get().current_time()
 
         if latest == self.frontier:
@@ -378,13 +372,14 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
 
         self.frontier += 1
 
-        self.integrated_stream.step()
-        self.lift_integrated_stream.step()
-        self.lifted_lifted_aggregate.step()
+        self.integrated_stream.step(gc)
+        self.lift_integrated_stream.step(gc)
+        self.lifted_lifted_aggregate.step(gc)
 
+        # gc
         if latest > 1:
             # jamie_simple
-            del self.input_stream_handle.get().inner[latest - 1]
+            # del self.input_stream_handle.get().inner[latest - 1]
             # print(self.input_stream_handle.get().inner.keys())
             del self.integrated_stream.output_stream_handle.get().inner[latest - 1]
             # print(self.integrated_stream.output_stream_handle.get().inner.keys())

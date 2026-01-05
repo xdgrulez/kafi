@@ -173,15 +173,14 @@ for i in range(10):
 
     print()
     print(f"Latest: {root_topologyNode.latest()}")
-    # gc.collect()
     print(len(pickle.dumps(root_topologyNode)) / 1024 / 1024)
 #
 # end_time = time.time()
 # print(end_time - start_time)
 #
 
-# print()
-# print(f"Topology: {root_topologyNode.topology()}")
+print()
+print(f"Topology: {root_topologyNode.topology()}")
 # print()
 # print(f"Mermaid:\n{root_topologyNode.mermaid()}")
 # print()

@@ -24,7 +24,7 @@ class Delay(UnaryOperator[T, T]):
     def __init__(self, stream: Optional[StreamHandle[T]]) -> None:
         super().__init__(stream, None)
 
-    def step(self) -> bool:
+    def step(self, gc: bool = False) -> bool:
         """
         Outputs the previous value from the input stream.
         """
@@ -35,6 +35,8 @@ class Delay(UnaryOperator[T, T]):
             self.output().send(self.input_a()[output_timestamp])
 
             return False
+
+        # gc
 
         return True
 
@@ -57,41 +59,34 @@ class Differentiate(UnaryOperator[T, T]):
         )
         self.output_stream_handle = self.differentiation_stream.output_handle()
 
-    def step(self) -> bool:
+    def step(self, gc: bool = False) -> bool:
         """
         Outputs the difference between the latest element from the input stream with the one before
         """
-        self.delayed_stream.step()
-        self.delayed_negated_stream.step()
-        self.differentiation_stream.step()
+        self.delayed_stream.step(gc)
+        self.delayed_negated_stream.step(gc)
+        self.differentiation_stream.step(gc)
 
         # gc
-        print("1")
-        print(self.input_stream_handle.get().inner.keys())
-        print("2")
-        print(self.delayed_stream.input_stream_handle.get().inner.keys())
-        print(self.delayed_stream.output_stream_handle.get().inner.keys())
-        print("3")
-        print(self.delayed_negated_stream.input_stream_handle.get().inner.keys())
-        print(self.delayed_negated_stream.output_stream_handle.get().inner.keys())
-        print("4")
-        print(self.differentiation_stream.input_stream_handle_a.get().inner.keys())
-        print(self.differentiation_stream.input_stream_handle_b.get().inner.keys())
-        print(self.differentiation_stream.output_stream_handle.get().inner.keys())
-        
+        # if gc:
+        #     current_time_int = self.output_stream_handle.get().current_time()
+        #     if current_time_int > 2:
+        #         del self.delayed_stream.output_stream_handle.get().inner[current_time_int - 1]
+        #         del self.delayed_negated_stream.output_stream_handle.get().inner[current_time_int - 1]
+        #         del self.differentiation_stream.output_stream_handle.get().inner[current_time_int - 1]
         latest = self.input_stream_handle.get().current_time()
         if latest > 2:
             # jamie_simple
-            del self.delayed_stream.input_stream_handle.get().inner[latest - 1]
+            # del self.delayed_stream.input_stream_handle.get().inner[latest - 1]
             del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
             del self.delayed_negated_stream.output_stream_handle.get().inner[latest - 1]
             # jamie_simple
-            del self.differentiation_stream.output_stream_handle.get().inner[latest - 1]
+            # del self.differentiation_stream.output_stream_handle.get().inner[latest - 1]
 
         return self.output().current_time() == self.input_a().current_time()
 
 
-class  Integrate(UnaryOperator[T, T]):
+class Integrate(UnaryOperator[T, T]):
     """
     Computes the running sum of the input stream.
     """
@@ -107,20 +102,24 @@ class  Integrate(UnaryOperator[T, T]):
 
         self.output_stream_handle = self.integration_stream.output_handle()
 
-    def step(self) -> bool:
+    def step(self, gc: bool = False) -> bool:
         """
         Adds the latest element from the input stream to the running sum
         """
         self.delayed_stream.step()
-        self.integration_stream.step()
+        self.integration_stream.step(gc)
 
         # gc
+        # if gc:
+        #     current_time_int = self.output_stream_handle.get().current_time()
+        #     if current_time_int > 2:
+        #         del self.delayed_stream.output_stream_handle.get().inner[current_time_int - 1]
+        #         del self.integration_stream.output_stream_handle.get().inner[current_time_int - 1]
         latest = self.input_stream_handle.get().current_time()
         if latest > 2:
             # print(self.delayed_stream.output_stream_handle.get().inner.keys())
             del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
-        #
-            
+
         return self.output().current_time() == self.input_a().current_time()
 
 

@@ -1,7 +1,3 @@
-import cloudpickle as pickle
-from pympler import asizeof
-
-
 from kafi.helpers import get_value, set_value
 
 from pydbsp.stream import Stream, StreamHandle
@@ -14,13 +10,12 @@ from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Int
 
 import json
 # import orjson as json
-import time
 import uuid
 
 #
 
 class TopologyNode:
-    def __init__(self, name_str, output_handle_function=lambda: None, step_function=lambda: None, daughter_topologyNode_list=[]):
+    def __init__(self, name_str, output_handle_function, step_function, daughter_topologyNode_list=[]):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
         self._output_handle_function = output_handle_function
@@ -56,12 +51,12 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function():
-            liftedStream.step()
+        def step_function(gc_boolean=True):
+            liftedStream.step(gc_boolean)
             #
-            selection.step()
+            selection.step(gc_boolean)
             #
-            output_node.step()
+            output_node.step(gc_boolean)
         #
         return TopologyNode("map_op", output_handle_function, step_function, [self])
 
@@ -92,12 +87,12 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function():
-            liftedStream.step()
+        def step_function(gc_boolean=True):
+            liftedStream.step(gc_boolean)
             #
-            filtering.step()
+            filtering.step(gc_boolean)
             #
-            output_node.step()
+            output_node.step(gc_boolean)
         #
         return TopologyNode("filter_op", output_handle_function, step_function, [self])
 
@@ -122,33 +117,13 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function():
-            x1 = time.time()
-            left_liftedStream.step()            
-            y1 = time.time()
-            # print(f"join1: {y1-x1}")
-
-            x2 = time.time()
-            right_liftedStream.step()
-            y2 = time.time()
-            # print(f"join2: {y2-x2}")
+        def step_function(gc_boolean=True):
+            left_liftedStream.step(gc_boolean)
+            right_liftedStream.step(gc_boolean)
             #
-            x3 = time.time()
-            join.step()
-            y3 = time.time()
-            # print(f"join3: {y3-x3}")
+            join.step(gc_boolean)
             #
-            self.gc(left_liftedStream.input_stream_handle)
-            self.gc(left_liftedStream.output_stream_handle)
-            self.gc(right_liftedStream.input_stream_handle)
-            self.gc(right_liftedStream.output_stream_handle)
-            self.gc(self._output_handle_function())
-            self.gc(other._output_handle_function())
-            #
-            x4 = time.time()
-            output_node.step()
-            y4 = time.time()
-            # print(f"join4: {y4-x4}")
+            output_node.step(gc_boolean)
         #
         return TopologyNode("join_op", output_handle_function, step_function, [self, other])
 
@@ -163,13 +138,13 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function():
-            left_liftedStream.step()
-            right_liftedStream.step()
+        def step_function(gc_boolean=True):
+            left_liftedStream.step(gc_boolean)
+            right_liftedStream.step(gc_boolean)
             #
-            union.step()
+            union.step(gc_boolean)
             #
-            output_node.step()
+            output_node.step(gc_boolean)
         #
         return TopologyNode("union_op", output_handle_function, step_function, [self, other])
 
@@ -184,13 +159,13 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function():
-            left_liftedStream.step()
-            right_liftedStream.step()
+        def step_function(gc_boolean=True):
+            left_liftedStream.step(gc_boolean)
+            right_liftedStream.step(gc_boolean)
             #
-            intersection.step()
+            intersection.step(gc_boolean)
             #
-            output_node.step()
+            output_node.step(gc_boolean)
         #
         return TopologyNode("intersect_op", output_handle_function, step_function, [self, other])
 
@@ -205,13 +180,13 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function():
-            left_liftedStream.step()
-            right_liftedStream.step()
+        def step_function(gc_boolean=True):
+            left_liftedStream.step(gc_boolean)
+            right_liftedStream.step(gc_boolean)
             #
-            difference.step()
+            difference.step(gc_boolean)
             #
-            output_node.step()
+            output_node.step(gc_boolean)
         #
         return TopologyNode("difference_op", output_handle_function, step_function, [self, other])
 
@@ -226,13 +201,13 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function():
-            left_liftedStream.step()
-            right_liftedStream.step()
+        def step_function(gc_boolean=True):
+            left_liftedStream.step(gc_boolean)
+            right_liftedStream.step(gc_boolean)
             #
-            cartesianProduct.step()
+            cartesianProduct.step(gc_boolean)
             #
-            output_node.step()
+            output_node.step(gc_boolean)
         #
         return TopologyNode("product_op", output_handle_function, step_function, [self, other])
 
@@ -253,171 +228,21 @@ class TopologyNode:
         def output_handle_function():
             return output_node.output_handle()
         #
-        def step_function():
-            x1 = time.time()
-            lifted_stream_introduction.step()
-            y1 = time.time()
-            # print(f"group_by_agg1: {y1-x1}")
-
-            x2 = time.time()
-            group_by_then_agg.step()
-            y2 = time.time()
-            # print(f"group_by_agg2: {y2-x2}")
+        def step_function(gc_boolean=True):
+            lifted_stream_introduction.step(gc_boolean)
             #
-            self.gc(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)
-            self.gc(group_by_then_agg.input_stream_handle)
-            self.gc(group_by_then_agg.integrated_stream.input_stream_handle)
-            self.gc(group_by_then_agg.integrated_stream.output_stream_handle)
-            self.gc(group_by_then_agg.lift_integrated_stream.input_stream_handle)
-            self.gc(group_by_then_agg.lift_integrated_stream.output_stream_handle)            
-            self.gc(lifted_stream_introduction.input_stream_handle)
-            self.gc(lifted_stream_introduction.output_stream_handle)
-            self.gc(stream_handle)
+            group_by_then_agg.step(gc_boolean)
             #
-            x3 = time.time()
-            lifted_stream_elimination.step()
-            y3 = time.time()
-            # print(f"group_by_agg3: {y3-x3}")
-
-            x4 = time.time()
-            output_node.step()
-            y4 = time.time()
-            # print(f"group_by_agg4: {y4-x4}")
-            
-            print("group_by_agg1")
-            print(len(pickle.dumps(lifted_stream_introduction)) / 1024 / 1024)
-            print(len(pickle.dumps(group_by_then_agg)) / 1024 / 1024)
-            print(len(pickle.dumps(lifted_stream_elimination)) / 1024 / 1024)
-            print(len(pickle.dumps(output_node)) / 1024 / 1024)
-            print("group_by_agg2")
-
+            lifted_stream_elimination.step(gc_boolean)
+            #
+            output_node.step(gc_boolean)
         #
         return TopologyNode("group_by_agg_op", output_handle_function, step_function, [self])
 
     def agg(self, agg_function):
-        def by_function1(_):
-            return None
-        #
-        def agg_function1(group_any_zset_tuple_zset):
-            return agg_function(group_any_zset_tuple_zset)
-        #
-        stream_handle = self._output_handle_function()
-        # a = stream_handle.get()
-        # lifted_stream_introduction = LiftedStreamIntroduction(StreamHandle(lambda: a))
-        lifted_stream_introduction = LiftedStreamIntroduction(stream_handle)
-        # x = lifted_stream_introduction.output_stream_handle.get()
-        # group_by_then_agg = GroupByThenAgg(StreamHandle(lambda: x), by_function1, agg_function1)
-        group_by_then_agg = GroupByThenAgg(lifted_stream_introduction.output_handle(), by_function1, agg_function1)
-        # y = group_by_then_agg.output_stream_handle.get()
-        # lifted_stream_elimination = LiftedStreamElimination(StreamHandle(lambda: y))
-        lifted_stream_elimination = LiftedStreamElimination(group_by_then_agg.output_handle())
-        # z = lifted_stream_elimination.output_stream_handle.get()
-        # output_node = Differentiate(StreamHandle(lambda: z))
-        output_node = Differentiate(lifted_stream_elimination.output_handle())
-        #
-        def output_handle_function():
-            return output_node.output_handle()
-        #
-        def step_function():
-            x1 = time.time()
-            lifted_stream_introduction.step()
-            y1 = time.time()
-            # print(f"agg1: {y1-x1}")
-
-            x2 = time.time()
-            group_by_then_agg.step()
-            y2 = time.time()
-            # print(f"agg2: {y2-x2}")
-            #
-            # self.gc(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)
-            # self.gc(group_by_then_agg.input_stream_handle)
-            # self.gc(group_by_then_agg.integrated_stream.input_stream_handle)
-            # self.gc(group_by_then_agg.integrated_stream.output_stream_handle)
-            # self.gc(group_by_then_agg.lift_integrated_stream.input_stream_handle)
-            # self.gc(group_by_then_agg.lift_integrated_stream.output_stream_handle)            
-            # self.gc(lifted_stream_introduction.input_stream_handle)
-            # self.gc(lifted_stream_introduction.output_stream_handle)
-            # self.gc(stream_handle)
-            #
-            x3 = time.time()
-            lifted_stream_elimination.step()
-            y3 = time.time()
-            # print(f"agg3: {y3-x3}")
-
-            x4 = time.time()
-            output_node.step()
-            y4 = time.time()
-            # print(f"agg4: {y4-x4}")
-
-            print("agg1")
-            print(len(pickle.dumps(lifted_stream_introduction)) / 1024 / 1024)
-            print(len(pickle.dumps(group_by_then_agg)) / 1024 / 1024)
-            print(len(pickle.dumps(lifted_stream_elimination)) / 1024 / 1024)
-            print(len(pickle.dumps(output_node)) / 1024 / 1024)
-            print("agg2")
-
-            # print("input_stream_handle")
-            # print(len(pickle.dumps(group_by_then_agg.input_stream_handle)) / 1024 / 1024)
-            # print("integrated_stream.input_stream_handle")
-            # print(len(pickle.dumps(group_by_then_agg.integrated_stream.input_stream_handle)) / 1024 / 1024)
-            # print("integrated_stream.output_stream_handle")
-            # print(len(pickle.dumps(group_by_then_agg.integrated_stream.output_stream_handle)) / 1024 / 1024)
-            # print("lift_integrated_stream.input_stream_handle")
-            # print(len(pickle.dumps(group_by_then_agg.lift_integrated_stream.input_stream_handle)) / 1024 / 1024)
-            # print("lift_integrated_stream.output_stream_handle")
-            # print(len(pickle.dumps(group_by_then_agg.lift_integrated_stream.output_stream_handle)) / 1024 / 1024)
-            # print("lifted_lifted_aggregate.input_stream_handle")
-            # print(len(pickle.dumps(group_by_then_agg.lifted_lifted_aggregate.input_stream_handle)) / 1024 / 1024)
-            # print("lifted_lifted_aggregate.output_stream_handle")
-            # print(len(pickle.dumps(group_by_then_agg.lifted_lifted_aggregate.output_stream_handle)) / 1024 / 1024)
-            # print("output_stream_handle")
-            # print(len(pickle.dumps(group_by_then_agg.output_stream_handle)) / 1024 / 1024)
-
-            # print(len(pickle.dumps(lifted_stream_elimination.input_stream_handle)) / 1024 / 1024)
-            # for a, b in lifted_stream_elimination.input_stream_handle.__dict__.items():
-            #     print(a)
-            #     print_biggest_attrs(b)
-            # print_biggest_attrs(lifted_stream_elimination.input_stream_handle.__dict__["ref"].__closure__)
-            # print(len(pickle.dumps(list(lifted_stream_elimination.input_stream_handle.__dict__["ref"].__closure__)[0])) / 1024 / 1024)
-            # print(len(pickle.dumps(lifted_stream_elimination.input_stream_handle.get())) / 1024 / 1024)
-            # print_biggest_attrs(lifted_stream_elimination)
-            # print("HALLO2")
-
-            # latest = stream_handle.get().current_time()
-            # if latest > 1:
-            #     del lifted_stream_introduction.output_stream_handle.get().inner[latest - 1]
-            #     print(group_by_then_agg.integrated_stream.output_stream_handle.get().inner)
-            #     del group_by_then_agg.integrated_stream.output_stream_handle.get().inner[latest - 1]
-                # del group_by_then_agg.lift_integrated_stream.input_stream_handle.get().inner[latest - 1]
-            # if latest > 2:
-            #     l = latest - 2
-            #     if l in lifted_stream_introduction.input_stream_handle.get().inner:
-            #         del lifted_stream_introduction.input_stream_handle.get().inner[l]
-
-            #     #
-
-            #     if l in lifted_stream_elimination.input_stream_handle.get().inner:
-            #         del lifted_stream_elimination.input_stream_handle.get().inner[l]
-            #     if l in lifted_stream_elimination.output_stream_handle.get().inner:
-            #         del lifted_stream_elimination.output_stream_handle.get().inner[l]
-            #     if l in output_node.delayed_stream.output_stream_handle.get().inner:
-            #         del output_node.delayed_stream.output_stream_handle.get().inner[l]
-            #     if l in output_node.delayed_negated_stream.output_stream_handle.get().inner:
-            #         del output_node.delayed_negated_stream.output_stream_handle.get().inner[l]
-            #     if l in output_node.differentiation_stream.output_stream_handle.get().inner:
-            #         del output_node.differentiation_stream.output_stream_handle.get().inner[l]
-
-            # lifted_stream_introduction.step()
-            # group_by_then_agg.step()
-            # #
-            # self.gc(lifted_stream_introduction.input_stream_handle)
-            # self.gc(lifted_stream_introduction.output_stream_handle)
-            # self.gc(stream_handle)
-            # #
-            # lifted_stream_elimination.step()
-            # output_node.step()
-        #
-        return TopologyNode("agg_op", output_handle_function, step_function, [self])
+        group_by_agg_topologyNode = self.group_by_agg(lambda _: None, agg_function)
+        group_by_agg_topologyNode._name_str = "agg_op"
+        return group_by_agg_topologyNode
 
     def peek(self, peek_function):
         def peek_function1(value_json_str):
@@ -430,19 +255,11 @@ class TopologyNode:
         def output_handle_function():
             return liftedProject.output_handle()
         #
-        def step_function():
-            liftedProject.step()
+        def step_function(gc_boolean=True):
+            liftedProject.step(gc_boolean)
         #
         return TopologyNode("peek_op", output_handle_function, step_function, [self])
     
-    #
-
-    def gc(self, stream_handle):
-        pass
-        # for i in range(1, stream_handle.get().current_time()):
-        #     if i in stream_handle.get().inner:
-        #         del stream_handle.get().inner[i]
-
     #
 
     def name(self):
@@ -478,21 +295,21 @@ class TopologyNode:
     def latest(self):
         return self._output_handle_function().get().latest()
 
-    def latest_until_fixpoint(self):
-        latest_summed_zSet = ZSet({})
-        latest_zSet = ZSet({})
-        zSetAddition = ZSetAddition()
-        while True:
-            self.step()
-            latest_zSet1 = self.latest()
-            if latest_zSet1 != latest_zSet:
-                if latest_zSet1.is_identity():
-                    break
-                latest_summed_zSet = zSetAddition.add(latest_summed_zSet, latest_zSet1)
-                latest_zSet = latest_zSet1
-            else:
-                break
-        return latest_summed_zSet
+    # def latest_until_fixpoint(self):
+    #     latest_summed_zSet = ZSet({})
+    #     latest_zSet = ZSet({})
+    #     zSetAddition = ZSetAddition()
+    #     while True:
+    #         self.step()
+    #         latest_zSet1 = self.latest()
+    #         if latest_zSet1 != latest_zSet:
+    #             if latest_zSet1.is_identity():
+    #                 break
+    #             latest_summed_zSet = zSetAddition.add(latest_summed_zSet, latest_zSet1)
+    #             latest_zSet = latest_zSet1
+    #         else:
+    #             break
+    #     return latest_summed_zSet
 
     #
 
@@ -639,7 +456,16 @@ def source(name_str):
     def output_handle_function():
         return stream_handle
     #
-    return TopologyNode(name_str, output_handle_function)
+    def step_function(gc_boolean=True):
+        # gc
+        if gc_boolean:
+            current_time_int = stream_handle.get().current_time()
+            if current_time_int > 1:
+                pass
+                # jamie_simple
+                # del stream_handle.get().inner[current_time_int - 1]
+    #
+    return TopologyNode(name_str, output_handle_function, step_function)
 
 
 def message_dict_list_to_ZSet(message_dict_list):
@@ -652,18 +478,3 @@ def message_dict_list_to_ZSet(message_dict_list):
     #
     zSet = ZSet({k: 1 for k in value_json_str_list})
     return zSet
-    
-#
-
-def print_biggest_attrs(obj, limit=3):
-    attrs = []
-    for attr in dir(obj):
-        try:
-            val = getattr(obj, attr)
-            attrs.append((attr, asizeof.asizeof(val, code=True)))
-        except:
-            continue
-    
-    attrs.sort(key=lambda x: x[1], reverse=True)
-    for name, size in attrs[:limit]:
-        print(f"  {name}: {size / 1024:.2f} KB")
