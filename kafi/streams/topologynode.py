@@ -133,6 +133,9 @@ class TopologyNode:
             output_node.step()
         #
         def gc_function():
+            left_liftedStream.gc()
+            right_liftedStream.gc()
+            #
             join.gc()
             #
             output_node.gc()
@@ -262,7 +265,11 @@ class TopologyNode:
             output_node.step()
         #
         def gc_function():
+            lifted_stream_introduction.gc()
+            #
             group_by_then_agg.gc()
+            #
+            lifted_stream_elimination.gc()
             #
             output_node.gc()
         #
@@ -377,7 +384,6 @@ class TopologyNode:
     #
 
     def gc(self):
-        print(self._name_str)
         self.gc_function()()
         #
         for topologyNode in self._daughter_topologyNode_list:

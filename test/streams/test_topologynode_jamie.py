@@ -158,7 +158,7 @@ def count_runtime_objects():
     return counts
 
 # start_time = time.time()
-for i in range(10):
+for i in range(100):
     # start_time1 = time.time()
     print(i)
     # obj_report = asizeof.asized(root_topologyNode, detail=1, code=True)

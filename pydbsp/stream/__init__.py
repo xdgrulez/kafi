@@ -291,7 +291,7 @@ class Lift1(UnaryOperator[T, R]):
     
     def gc(self) -> None:
         latest = self.input_stream_handle.get().current_time()
-        if latest > 2:
+        if latest > 1:
             if latest - 1 in self.output_stream_handle.get().inner:
                 del self.output_stream_handle.get().inner[latest - 1]
 
@@ -342,6 +342,12 @@ class Lift2(BinaryOperator[T, R, S]):
         self.frontier_b = next_frontier_b
 
         return False
+    
+    def gc(self) -> None:
+        latest = self.output_stream_handle.get().current_time()
+        if latest > 1:
+            if latest - 1 in self.output_stream_handle.get().inner:
+                del self.output_stream_handle.get().inner[latest - 1]
 
 
 class LiftedGroupAdd(Lift2[T, T, T]):

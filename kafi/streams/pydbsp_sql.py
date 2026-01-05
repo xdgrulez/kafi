@@ -382,15 +382,5 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
 
     def gc(self) -> None:
         self.integrated_stream.gc()
-        latest = self.input_stream_handle.get().current_time()
-        if latest > 1:
-            # jamie_simple
-            if latest - 1 in self.input_stream_handle.get().inner:
-                del self.input_stream_handle.get().inner[latest - 1]
-            # print(self.input_stream_handle.get().inner.keys())
-            del self.integrated_stream.output_stream_handle.get().inner[latest - 1]
-            # print(self.integrated_stream.output_stream_handle.get().inner.keys())
-            del self.lift_integrated_stream.output_stream_handle.get().inner[latest - 1]
-            # print(self.lift_integrated_stream.output_stream_handle.get().inner.keys())
-            del self.lifted_lifted_aggregate.output_stream_handle.get().inner[latest - 1]
-            # print(self.lifted_lifted_aggregate.output_stream_handle.get().inner.keys())
+        self.lift_integrated_stream.gc()
+        self.lifted_lifted_aggregate.gc()

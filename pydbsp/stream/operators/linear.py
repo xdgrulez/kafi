@@ -36,6 +36,12 @@ class Delay(UnaryOperator[T, T]):
             return False
 
         return True
+    
+    def gc(self) -> None:
+        latest = self.output_stream_handle.get().current_time()
+        if latest > 1:
+            if latest - 1 in self.output_stream_handle.get().inner:
+                del self.output_stream_handle.get().inner[latest - 1]
 
 
 class Differentiate(UnaryOperator[T, T]):
@@ -67,16 +73,9 @@ class Differentiate(UnaryOperator[T, T]):
         return self.output().current_time() == self.input_a().current_time()
 
     def gc(self) -> None:
-        latest = self.input_stream_handle.get().current_time()
-        if latest > 2:
-            # jamie_simple
-            if latest - 1 in self.delayed_stream.input_stream_handle.get().inner:
-                del self.delayed_stream.input_stream_handle.get().inner[latest - 1]
-            del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
-            del self.delayed_negated_stream.output_stream_handle.get().inner[latest - 1]
-            # jamie_simple
-            if latest - 1 in self.differentiation_stream.output_stream_handle.get().inner:
-                del self.differentiation_stream.output_stream_handle.get().inner[latest - 1]
+        self.delayed_stream.gc()
+        self.delayed_negated_stream.gc()
+        self.differentiation_stream.gc()
 
 
 class Integrate(UnaryOperator[T, T]):
@@ -105,10 +104,8 @@ class Integrate(UnaryOperator[T, T]):
         return self.output().current_time() == self.input_a().current_time()
 
     def gc(self) -> None:
-        latest = self.input_stream_handle.get().current_time()
-        if latest > 2:
-            # print(self.delayed_stream.output_stream_handle.get().inner.keys())
-            del self.delayed_stream.output_stream_handle.get().inner[latest - 1]
+        self.delayed_stream.gc()
+        self.integration_stream.gc()
 
 
 def step_until_fixpoint_set_new_default_then_return[T](
