@@ -100,7 +100,7 @@ def setup():
 # create view total as select sum(balance) from balance;
     root_topologyNode = (
         balance_topologyNode
-        .agg(agg_fun([(sum_fun, select_fun(["balance"]), select_as_fun(["sum"]))]))
+        .agg(agg_fun([(sum_fun, select_fun(["balance"]), select_as_fun(["sum"]))]), True)
     )
     #
     return transactions_source_topologyNode, root_topologyNode
