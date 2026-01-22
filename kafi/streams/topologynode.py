@@ -9,6 +9,7 @@ from pydbsp.zset import ZSet, ZSetAddition
 from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
 import json
+import jsonpath_ng
 # import orjson as json
 import time
 import uuid
@@ -133,6 +134,9 @@ class TopologyNode:
             join.step()
             #
             output_node.step()
+            #
+            # print(topologyNode.name())
+            # print(output_node.output_handle().get())
         #
         def gc_function():
             left_liftedStream.gc()
@@ -142,7 +146,8 @@ class TopologyNode:
             #
             output_node.gc()
         #
-        return TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_boolean)
+        topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_boolean)
+        return topologyNode
 
     def union(self, other, profile_boolean=False):
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
@@ -265,6 +270,9 @@ class TopologyNode:
             topologyNode.profile(lifted_stream_elimination.step, "LiftedStreamElimination")
             #
             topologyNode.profile(output_node.step, "Differentiate")
+            #
+            # print(topologyNode.name())
+            # print(output_node.output_handle().get())
         #
         def gc_function():
             lifted_stream_introduction.gc()
@@ -451,28 +459,44 @@ class TopologyNode:
 
 #
 
-def select_fun(key_str_list):
+def get_value_jsonpath(value_dict, jsonpath_str):
+    child = jsonpath_ng.parse(jsonpath_str)
+    datumInContextList = child.find(value_dict)
+    if len(datumInContextList) == 1:
+        return datumInContextList[0].value
+    elif len(datumInContextList) == 0:
+        raise Exception(f"Could not find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict}")
+    else:
+        raise Exception(f"Could not unambiguously find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict} (found: {[datumInContext.value for datumInContext in datumInContextList]})")
+
+def set_value_jsonpath(value_dict, jsonpath_str, any):
+    child = jsonpath_ng.parse(jsonpath_str)
+    child.update_or_create(value_dict, any)
+
+def select_fun(*jsonpath_str_tuple):
     def select_fun1(value_dict):
-        return get_value(value_dict, key_str_list)
+        if len(jsonpath_str_tuple) == 1:
+            return get_value_jsonpath(value_dict, jsonpath_str_tuple[0])
+        else:
+            return tuple(get_value_jsonpath(value_dict, jsonpath_str) for jsonpath_str in jsonpath_str_tuple)
     #
     return select_fun1
 
-
-def as_fun(key_str_list):
+def as_fun(jsonpath_str):
     def as_fun1(value_dict, any):
-        set_value(value_dict, key_str_list, any)
+        set_value_jsonpath(value_dict, jsonpath_str, any)
         return value_dict
     #
     return as_fun1
 
 
-def select_as_fun(key_str_list):
+def select_as_fun(jsonpath_str):
     def select_as_fun1(value_dict, any=None):
         if any is not None:
-            set_value(value_dict, key_str_list, any)
+            set_value_jsonpath(value_dict, jsonpath_str, any)
             return value_dict
         else:
-            return get_value(value_dict, key_str_list)
+            return get_value_jsonpath(value_dict, jsonpath_str)
     #
     return select_as_fun1
 
@@ -486,6 +510,7 @@ def agg_fun(agg_fun_select_fun_agg_select_as_fun_tuple_list):
 def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
     def group_by_agg_fun1(group_any_zset_tuple_zset):
         agg_group_any_value_str_dict = {}
+        #
         for agg_fun, select_fun, agg_select_as_fun, group_as_fun in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list:
             for (group_any, zset), _ in group_any_zset_tuple_zset.items():
                 for value_str, weight_int in zset.items():

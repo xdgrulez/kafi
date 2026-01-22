@@ -77,13 +77,15 @@ def setup():
 # create view credits as select to_account as account, sum(amount) as credits from transactions group by to_account;
     credits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(select_fun("$.to_account"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.credits"), as_fun("$.account"))]))
+        .group_by_agg(select_fun("$.to_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun(["credits"]), as_fun(["account"]))]))
+        # .group_by_agg(select_fun(["to_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["credits"]), as_fun(["account"]))]))
     )
     
 # create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
     debits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(select_fun("$.from_account"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.debits"), as_fun("$.account"))]))
+        .group_by_agg(select_fun("$.from_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun(["debits"]), as_fun(["account"]))]))
+        # .group_by_agg(select_fun(["from_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["debits"]), as_fun(["account"]))]))
     )
     #
 # create view balance as select credits.account as account, credits - debits as balance from credits inner join debits on credits.account = debits.account;
@@ -100,7 +102,7 @@ def setup():
 # create view total as select sum(balance) from balance;
     root_topologyNode = (
         balance_topologyNode
-        .agg(agg_fun([(sum_fun, select_fun("$.balance"), select_as_fun("$.sum"))]))
+        .agg(agg_fun([(sum_fun, select_fun("$.balance"), select_as_fun(["sum"]))]))
     )
     #
     return transactions_source_topologyNode, root_topologyNode
@@ -120,17 +122,20 @@ def transactions(transactions_source_topologyNode, root_topologyNode):
     n_int = 10000
     random.seed(42)
     transactions_message_dict_list = []
+    country_str_account_int_list_dict = {"de": list(range(0, 10)), "ch": list(range(0, 10))}
+    country_str_amount_int_dict = {"de": 5, "ch": 10}
     for id_int in range(0, n_int):
-        message_dict = {"key": str(id_int),
+      country_str = list(country_str_account_int_list_dict.keys())[random.randint(0, 1)]
+      message_dict = {"key": str(id_int),
                         "value": {
                             # "id": id_int,
                                     "from_account": random.randint(0, 9),
                                     "to_account": random.randint(0, 9),
-                                    "amount": 1}}
+                                    "country": country_str,
+                                    "amount": country_str_amount_int_dict[country_str]}}
                                     # "ts": datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")}}
-        transactions_message_dict_list.append(message_dict)
+      transactions_message_dict_list.append(message_dict)
     #
-    # transactions_message_dict_list = [{'key': '0', 'value': {'from_account': 1, 'to_account': 0, 'amount': 1}}, {'key': '1', 'value': {'from_account': 4, 'to_account': 3, 'amount': 1}}, {'key': '2', 'value': {'from_account': 3, 'to_account': 2, 'amount': 1}}, {'key': '3', 'value': {'from_account': 1, 'to_account': 8, 'amount': 1}}, {'key': '4', 'value': {'from_account': 1, 'to_account': 9, 'amount': 1}}, {'key': '5', 'value': {'from_account': 6, 'to_account': 0, 'amount': 1}}, {'key': '6', 'value': {'from_account': 0, 'to_account': 1, 'amount': 1}}, {'key': '7', 'value': {'from_account': 3, 'to_account': 3, 'amount': 1}}, {'key': '8', 'value': {'from_account': 8, 'to_account': 9, 'amount': 1}}, {'key': '9', 'value': {'from_account': 0, 'to_account': 8, 'amount': 1}}]
     transactions_zset = message_dict_list_to_ZSet(transactions_message_dict_list)
     # x = list(transactions_zset.inner.keys())[0]
     # print(sys.getrefcount(x))
@@ -159,7 +164,7 @@ def count_runtime_objects():
     return counts
 
 # start_time = time.time()
-for i in range(10):
+for i in range(100):
     # start_time1 = time.time()
     print(i)
     # obj_report = asizeof.asized(root_topologyNode, detail=1, code=True)
