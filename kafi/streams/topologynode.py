@@ -1,4 +1,4 @@
-from kafi.helpers import get_value, set_value
+from kafi.helpers import get_value_jsonpath, set_value_jsonpath
 
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset.operators.linear import LiftedProject
@@ -9,7 +9,6 @@ from pydbsp.zset import ZSet, ZSetAddition
 from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
 import json
-import jsonpath_ng
 # import orjson as json
 import time
 import uuid
@@ -244,8 +243,16 @@ class TopologyNode:
             pass
         #
         return TopologyNode("product_op", output_handle_function, step_function, gc_function, [self, other], profile_boolean)
+    
+    def group_by_agg(self, select_jsonpath_str_tuple, as_json_str, agg_fun1, agg_select_jsonpath_str, agg_as_jsonpath_str, profile_boolean=False):
+        by_function = select_fun(*select_jsonpath_str_tuple)
+        agg_function = group_by_agg_fun([(agg_fun1, select_fun(agg_select_jsonpath_str), select_as_fun(agg_as_jsonpath_str), as_fun(as_json_str))])
+        #
+        group_by_agg__topologyNode = self.group_by_agg_(by_function, agg_function, profile_boolean=profile_boolean)
+        #
+        return group_by_agg__topologyNode
 
-    def group_by_agg(self, by_function, agg_function, profile_boolean=False):
+    def group_by_agg_(self, by_function, agg_function, profile_boolean=False):
         def by_function1(value_json_str):
             value_dict = json.loads(value_json_str)
             return by_function(value_dict)
@@ -271,8 +278,8 @@ class TopologyNode:
             #
             topologyNode.profile(output_node.step, "Differentiate")
             #
-            # print(topologyNode.name())
-            # print(output_node.output_handle().get())
+            print(topologyNode.name())
+            print(output_node.output_handle().get())
         #
         def gc_function():
             lifted_stream_introduction.gc()
@@ -286,10 +293,13 @@ class TopologyNode:
         topologyNode = TopologyNode("group_by_agg_op", output_handle_function, step_function, gc_function, [self], profile_boolean)
         return topologyNode 
 
-    def agg(self, agg_function, profile_boolean=False):
-        group_by_agg_topologyNode = self.group_by_agg(lambda _: None, agg_function, profile_boolean)
-        group_by_agg_topologyNode._name_str = "agg_op"
-        return group_by_agg_topologyNode
+    def agg(self, agg_fun1, agg_select_jsonpath_str, agg_as_jsonpath_str, profile_boolean=False):
+        agg_function = agg_fun([(agg_fun1, select_fun(agg_select_jsonpath_str), select_as_fun(agg_as_jsonpath_str))])
+        #
+        group_by_agg__topologyNode = self.group_by_agg_(lambda _: None, agg_function, profile_boolean=profile_boolean)
+        group_by_agg__topologyNode._name_str = "agg_op"
+        #
+        return group_by_agg__topologyNode
 
     def peek(self, peek_function, profile_boolean=False):
         def peek_function1(value_json_str):
@@ -459,20 +469,6 @@ class TopologyNode:
 
 #
 
-def get_value_jsonpath(value_dict, jsonpath_str):
-    child = jsonpath_ng.parse(jsonpath_str)
-    datumInContextList = child.find(value_dict)
-    if len(datumInContextList) == 1:
-        return datumInContextList[0].value
-    elif len(datumInContextList) == 0:
-        raise Exception(f"Could not find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict}")
-    else:
-        raise Exception(f"Could not unambiguously find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict} (found: {[datumInContext.value for datumInContext in datumInContextList]})")
-
-def set_value_jsonpath(value_dict, jsonpath_str, any):
-    child = jsonpath_ng.parse(jsonpath_str)
-    child.update_or_create(value_dict, any)
-
 def select_fun(*jsonpath_str_tuple):
     def select_fun1(value_dict):
         if len(jsonpath_str_tuple) == 1:
@@ -482,21 +478,28 @@ def select_fun(*jsonpath_str_tuple):
     #
     return select_fun1
 
-def as_fun(jsonpath_str):
+
+def as_fun(*jsonpath_str_tuple):
     def as_fun1(value_dict, any):
-        set_value_jsonpath(value_dict, jsonpath_str, any)
+        for jsonpath_str in jsonpath_str_tuple:
+            set_value_jsonpath(value_dict, jsonpath_str, any)
+        #
         return value_dict
     #
     return as_fun1
 
 
-def select_as_fun(jsonpath_str):
+def select_as_fun(*jsonpath_str_tuple):
     def select_as_fun1(value_dict, any=None):
         if any is not None:
-            set_value_jsonpath(value_dict, jsonpath_str, any)
+            for jsonpath_str in jsonpath_str_tuple:
+                set_value_jsonpath(value_dict, jsonpath_str, any)
             return value_dict
         else:
-            return get_value_jsonpath(value_dict, jsonpath_str)
+            if len(jsonpath_str_tuple) == 1:
+                return get_value_jsonpath(value_dict, jsonpath_str_tuple[0])
+            else:
+                return tuple(get_value_jsonpath(value_dict, jsonpath_str) for jsonpath_str in jsonpath_str_tuple)
     #
     return select_as_fun1
 

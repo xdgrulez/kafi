@@ -6,6 +6,8 @@ requests==2.32.3
 azure-storage-blob==12.24.0
 # Cloudpickle
 cloudpickle==3.1.1
+# jsonpath_ng
+jsonpath_ng=1.7.0
 # MinIO/S3
 minio==7.2.14
 # Pandas
