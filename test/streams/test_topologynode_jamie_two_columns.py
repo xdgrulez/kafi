@@ -74,17 +74,19 @@ def sum_fun(i, j):
 def setup():
     transactions_source_topologyNode = source("transactions")
     #
-# create view credits as select to_account as account, sum(amount) as credits from transactions group by to_account;
+# create view credits as select to_account as account, sum(amount) as credits from transactions group by to_account, country;
     credits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(select_fun("$.to_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun(["credits"]), as_fun(["account"]))]))
+        .group_by_agg(("$.to_account", "$.country"), "$.account", sum_fun, "$.amount", "$.credits")
+        # .group_by_agg_(select_fun("$.to_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.credits"), as_fun("$.account"))]))
         # .group_by_agg(select_fun(["to_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["credits"]), as_fun(["account"]))]))
     )
     
 # create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
     debits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(select_fun("$.from_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun(["debits"]), as_fun(["account"]))]))
+        .group_by_agg(("$.from_account", "$.country"), "$.account", sum_fun, "$.amount", "$.debits")
+        # .group_by_agg_(select_fun("$.from_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.debits"), as_fun("$.account"))]))
         # .group_by_agg(select_fun(["from_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["debits"]), as_fun(["account"]))]))
     )
     #
@@ -102,7 +104,8 @@ def setup():
 # create view total as select sum(balance) from balance;
     root_topologyNode = (
         balance_topologyNode
-        .agg(agg_fun([(sum_fun, select_fun("$.balance"), select_as_fun(["sum"]))]))
+        .agg(sum_fun, "$.balance", "$.sum")
+        # .agg(agg_fun([(sum_fun, select_fun("$.balance"), select_as_fun("$.sum"))]))
     )
     #
     return transactions_source_topologyNode, root_topologyNode
