@@ -14,8 +14,6 @@ import cloudpickle as pickle
 
 import datetime, gc, os, random, sys, time
 
-import objgraph
-
 # import cProfile, pstats, io
 # from pstats import SortKey
 
@@ -74,10 +72,10 @@ def sum_fun(i, j):
 def setup():
     transactions_source_topologyNode = source("transactions")
     #
-# create view credits as select to_account as account, sum(amount) as credits from transactions group by to_account, country;
+# create view credits as select to_account as account, country, sum(amount) as credits from transactions group by to_account, country;
     credits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(("$.to_account", "$.country"), "$.account", sum_fun, "$.amount", "$.credits")
+        .group_by_agg(("$.to_account", "$.country"), "$.account", [(sum_fun, "$.amount", "$.credits")])
         # .group_by_agg_(select_fun("$.to_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.credits"), as_fun("$.account"))]))
         # .group_by_agg(select_fun(["to_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["credits"]), as_fun(["account"]))]))
     )
@@ -85,7 +83,7 @@ def setup():
 # create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
     debits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(("$.from_account", "$.country"), "$.account", sum_fun, "$.amount", "$.debits")
+        .group_by_agg(("$.from_account", "$.country"), "$.account", [(sum_fun, "$.amount", "$.debits")])
         # .group_by_agg_(select_fun("$.from_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.debits"), as_fun("$.account"))]))
         # .group_by_agg(select_fun(["from_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["debits"]), as_fun(["account"]))]))
     )
@@ -104,7 +102,7 @@ def setup():
 # create view total as select sum(balance) from balance;
     root_topologyNode = (
         balance_topologyNode
-        .agg(sum_fun, "$.balance", "$.sum")
+        .agg([(sum_fun, "$.balance", "$.sum")])
         # .agg(agg_fun([(sum_fun, select_fun("$.balance"), select_as_fun("$.sum"))]))
     )
     #
@@ -122,7 +120,7 @@ def setup():
 #
 
 def transactions(transactions_source_topologyNode, root_topologyNode):
-    n_int = 10000
+    n_int = 100
     random.seed(42)
     transactions_message_dict_list = []
     country_str_account_int_list_dict = {"de": list(range(0, 10)), "ch": list(range(0, 10))}
