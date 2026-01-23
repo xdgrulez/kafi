@@ -75,15 +75,15 @@ def setup():
 # create view credits as select to_account as account, country, sum(amount) as credits from transactions group by to_account, country;
     credits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(("$.to_account", "$.country"), "$.account", [(sum_fun, "$.amount", "$.credits")])
+        .group_by_agg(("$.to_account", "$.country"), "$.account", [(sum_fun, "$.amount", "$.credits")], True)
+        # .group_by_agg((lambda x: x["to_account"], lambda x: x["country"]), lambda x, y: x.update({"account": y}), [(sum_fun, lambda x: x["amount"], lambda x, y: x.update({"credits": y}))])
         # .group_by_agg_(select_fun("$.to_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.credits"), as_fun("$.account"))]))
         # .group_by_agg(select_fun(["to_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["credits"]), as_fun(["account"]))]))
     )
-    
 # create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
     debits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(("$.from_account", "$.country"), "$.account", [(sum_fun, "$.amount", "$.debits")])
+        .group_by_agg(("$.from_account", "$.country"), "$.account", [(sum_fun, "$.amount", "$.debits")], True)
         # .group_by_agg_(select_fun("$.from_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.debits"), as_fun("$.account"))]))
         # .group_by_agg(select_fun(["from_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["debits"]), as_fun(["account"]))]))
     )
@@ -95,14 +95,14 @@ def setup():
             debits_topologyNode,
             on_function=lambda l, r: l["account"] == r["account"],
             projection_function=lambda l, r: {"account": l["account"],
-                                              "balance": l["credits"] - r["debits"]}
-        )
+                                              "balance": l["credits"] - r["debits"]},
+            profile_boolean=True)
     )
-    #
-# create view total as select sum(balance) from balance;
+#     #
+# # create view total as select sum(balance) from balance;
     root_topologyNode = (
         balance_topologyNode
-        .agg([(sum_fun, "$.balance", "$.sum")])
+        .agg([(sum_fun, "$.balance", "$.sum")], True)
         # .agg(agg_fun([(sum_fun, select_fun("$.balance"), select_as_fun("$.sum"))]))
     )
     #
@@ -120,7 +120,7 @@ def setup():
 #
 
 def transactions(transactions_source_topologyNode, root_topologyNode):
-    n_int = 100
+    n_int = 10000
     random.seed(42)
     transactions_message_dict_list = []
     country_str_account_int_list_dict = {"de": list(range(0, 10)), "ch": list(range(0, 10))}
