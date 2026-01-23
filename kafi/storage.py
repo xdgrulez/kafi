@@ -1,6 +1,6 @@
 import glob
 import os
-import re
+from pathlib import Path
 
 from piny import YamlLoader
 
@@ -165,8 +165,8 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         yaml_config_path_str_list = glob.glob(f"{configs_path_str}/{pattern_str}.yaml")
         yml_config_path_str_list = glob.glob(f"{configs_path_str}/{pattern_str}.yml")
         #
-        yaml_config_str_list = [re.search(f"{configs_path_str}/(.*)\.yaml", yaml_config_path_str).group(1) for yaml_config_path_str in yaml_config_path_str_list if re.search(".*/(.*)\.yaml", yaml_config_path_str) is not None]
-        yml_config_str_list = [re.search(".*/(.*)\.yml", yml_config_path_str).group(1) for yml_config_path_str in yml_config_path_str_list if re.search(".*/(.*)\.yml", yml_config_path_str) is not None]
+        yml_config_str_list = [ Path(p).stem for p in yml_config_path_str_list if p and Path(p).suffix == ".yml" ]
+        yaml_config_str_list = [ Path(p).stem for p in yaml_config_path_str_list if p and Path(p).suffix == ".yaml" ]
         #
         config_str_list = yaml_config_str_list + yml_config_str_list
         #
