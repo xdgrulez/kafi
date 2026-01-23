@@ -1,21 +1,21 @@
 # other TODOs
 
-* streams: group_by -> tuples for multiple columns (test!); better syntax; agg -> better syntax
-* group_by mit avg von Bruno ausprobieren - GC?
-* tests schöner
-* andere joins? bisher nur inner...
+* profiling (mem/time), debugging everywhere, clean up and focus on what we have now
+* TopologyNode-Tests -> unittests
+* streams-Test -> unittests (share all TopologyNode-Tests with/without kafi-streams on top)
 
 * catch ctrl-c for functional not only streams
-* aio support...
 * support all kwargs that make sense globally in config yamls (e.g. the new ones or (de)serializer configs)?
 * do not list internal _topics
 * Schema Registry: support patterns
 * better error handling (e.g. if topic does not yet exists and auto creation is off, GroupAuthorization, TopicAuthorization...)
-* add Perftest?
-* local topic consume performance
+* Kafka-Perftest add-on?
+* Kafka emulation performance - indexing?
 * debug mode - e.g. show all HTTPS calls (and also confluent_kafka, Local, S3, AzureBlob)
-* support schemaregistry-rules (confluent_kafka 2.7.0)
-* SR: remove custom API calls for missing ones in ck 2.6.x (and check whether 2.7.0 supports all it should...)
+* support schemaregistry-rules (confluent_kafka 2.13.0)
+* SR: remove custom API calls for missing ones in ck 2.6.x (and check whether 2.13.0 supports all it should...)
+* check what 2.13.0 can do and support it ;)
+* aio support?
 
 # Methods
 
