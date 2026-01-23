@@ -1,4 +1,4 @@
-from kafi.helpers import get_value_jsonpath, set_value_jsonpath
+from kafi.helpers import get_value_jsonpath, set_value_jsonpath, get_value, set_value
 
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset.operators.linear import LiftedProject
@@ -301,6 +301,11 @@ class TopologyNode:
         #
         return group_by_agg__topologyNode
 
+    def agg_(self, agg_function, profile_boolean=False):
+        group_by_agg_topologyNode = self.group_by_agg_(lambda _: None, agg_function, profile_boolean)
+        group_by_agg_topologyNode._name_str = "agg_op"
+        return group_by_agg_topologyNode
+
     def peek(self, peek_function, profile_boolean=False):
         def peek_function1(value_json_str):
             value_dict = json.loads(value_json_str)
@@ -469,39 +474,66 @@ class TopologyNode:
 
 #
 
-def select_fun(*jsonpath_str_tuple):
+# def select_fun(*jsonpath_str_tuple):
+#     def select_fun1(value_dict):
+#         if len(jsonpath_str_tuple) == 1:
+#             return get_value_jsonpath(value_dict, jsonpath_str_tuple[0])
+#         else:
+#             return tuple(get_value_jsonpath(value_dict, jsonpath_str) for jsonpath_str in jsonpath_str_tuple)
+#     #
+#     return select_fun1
+
+
+# def as_fun(*jsonpath_str_tuple):
+#     def as_fun1(value_dict, any):
+#         for jsonpath_str in jsonpath_str_tuple:
+#             set_value_jsonpath(value_dict, jsonpath_str, any)
+#         #
+#         return value_dict
+#     #
+#     return as_fun1
+
+
+# def select_as_fun(*jsonpath_str_tuple):
+#     def select_as_fun1(value_dict, any=None):
+#         if any is not None:
+#             for jsonpath_str in jsonpath_str_tuple:
+#                 set_value_jsonpath(value_dict, jsonpath_str, any)
+#             return value_dict
+#         else:
+#             if len(jsonpath_str_tuple) == 1:
+#                 return get_value_jsonpath(value_dict, jsonpath_str_tuple[0])
+#             else:
+#                 return tuple(get_value_jsonpath(value_dict, jsonpath_str) for jsonpath_str in jsonpath_str_tuple)
+#     #
+#     return select_as_fun1
+
+
+def select_fun(key_str_list):
     def select_fun1(value_dict):
-        if len(jsonpath_str_tuple) == 1:
-            return get_value_jsonpath(value_dict, jsonpath_str_tuple[0])
-        else:
-            return tuple(get_value_jsonpath(value_dict, jsonpath_str) for jsonpath_str in jsonpath_str_tuple)
+        return get_value(value_dict, key_str_list)
     #
     return select_fun1
 
 
-def as_fun(*jsonpath_str_tuple):
+def as_fun(key_str_list):
     def as_fun1(value_dict, any):
-        for jsonpath_str in jsonpath_str_tuple:
-            set_value_jsonpath(value_dict, jsonpath_str, any)
-        #
+        set_value(value_dict, key_str_list, any)
         return value_dict
     #
     return as_fun1
 
 
-def select_as_fun(*jsonpath_str_tuple):
+def select_as_fun(key_str_list):
     def select_as_fun1(value_dict, any=None):
         if any is not None:
-            for jsonpath_str in jsonpath_str_tuple:
-                set_value_jsonpath(value_dict, jsonpath_str, any)
+            set_value(value_dict, key_str_list, any)
             return value_dict
         else:
-            if len(jsonpath_str_tuple) == 1:
-                return get_value_jsonpath(value_dict, jsonpath_str_tuple[0])
-            else:
-                return tuple(get_value_jsonpath(value_dict, jsonpath_str) for jsonpath_str in jsonpath_str_tuple)
+            return get_value(value_dict, key_str_list)
     #
     return select_as_fun1
+
 
 
 def agg_fun(agg_fun_select_fun_agg_select_as_fun_tuple_list):
@@ -510,63 +542,63 @@ def agg_fun(agg_fun_select_fun_agg_select_as_fun_tuple_list):
     return group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list)
 
 
-def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
-    def group_by_agg_fun1(group_any_zset_tuple_zset):
-        agg_group_any_bla_dict = {}
-        for i, (agg_fun, select_fun, agg_select_as_fun, group_as_fun) in enumerate(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
-            for (group_any, zset), _ in group_any_zset_tuple_zset.items():
-                bla = [None for _ in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list]
-                for value_str, weight_int in zset.items():
-                    value_dict = json.loads(value_str)
-                    if group_any not in agg_group_any_bla_dict:
-                        any = select_fun(value_dict)
-                        bla[i] = any * weight_int
-                    else:
-                        any = select_fun(value_dict)
-                        bla[i] = agg_fun(bla[i], any * weight_int)
-                    #
-                    agg_group_any_bla_dict[group_any] = (group_any, bla)
-        #
-        xd = {}
-        for _, x in agg_group_any_bla_dict.items():
-            d2 = {}
-            g = x[0]
-            a = x[1]
-            for i, (_, _, agg_select_as_fun, group_as_fun) in enumerate(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):                
-                if group_as_fun is not None:
-                    group_as_fun(d2, g)
-                agg_select_as_fun(d2, a[i])
-            xd[json.dumps(d2)] = 1
-        return ZSet(xd)
-        # return ZSet({x: 1 for _, x in agg_group_any_bla_dict.items()})
-    #
-    return group_by_agg_fun1
-
-
 # def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
 #     def group_by_agg_fun1(group_any_zset_tuple_zset):
-#         agg_group_any_value_str_dict = {}
-#         for agg_fun, select_fun, agg_select_as_fun, group_as_fun in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list:
+#         agg_group_any_bla_dict = {}
+#         for i, (agg_fun, select_fun, agg_select_as_fun, group_as_fun) in enumerate(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
 #             for (group_any, zset), _ in group_any_zset_tuple_zset.items():
+#                 bla = [None for _ in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list]
 #                 for value_str, weight_int in zset.items():
 #                     value_dict = json.loads(value_str)
-#                     if group_any not in agg_group_any_value_str_dict:
+#                     if group_any not in agg_group_any_bla_dict:
 #                         any = select_fun(value_dict)
-#                         value_dict1 = {}
-#                         value_dict1 = agg_select_as_fun(value_dict1, any * weight_int)
+#                         bla[i] = any * weight_int
 #                     else:
 #                         any = select_fun(value_dict)
-#                         value_dict1 = json.loads(agg_group_any_value_str_dict[group_any])
-#                         any1 = agg_select_as_fun(value_dict1)
-#                         value_dict1 = agg_select_as_fun(value_dict1, agg_fun(any1, any * weight_int))
+#                         bla[i] = agg_fun(bla[i], any * weight_int)
 #                     #
-#                     if group_any is not None:
-#                         value_dict1 = group_as_fun(value_dict1, group_any)
-#                     agg_group_any_value_str_dict[group_any] = json.dumps(value_dict1)
+#                     agg_group_any_bla_dict[group_any] = (group_any, bla)
 #         #
-#         return ZSet({value_str: 1 for _, value_str in agg_group_any_value_str_dict.items()})
+#         xd = {}
+#         for _, x in agg_group_any_bla_dict.items():
+#             d2 = {}
+#             g = x[0]
+#             a = x[1]
+#             for i, (_, _, agg_select_as_fun, group_as_fun) in enumerate(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):                
+#                 if group_as_fun is not None:
+#                     group_as_fun(d2, g)
+#                 agg_select_as_fun(d2, a[i])
+#             xd[json.dumps(d2)] = 1
+#         return ZSet(xd)
+#         # return ZSet({x: 1 for _, x in agg_group_any_bla_dict.items()})
 #     #
 #     return group_by_agg_fun1
+
+
+def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
+    def group_by_agg_fun1(group_any_zset_tuple_zset):
+        agg_group_any_value_str_dict = {}
+        for agg_fun, select_fun, agg_select_as_fun, group_as_fun in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list:
+            for (group_any, zset), _ in group_any_zset_tuple_zset.items():
+                for value_str, weight_int in zset.items():
+                    value_dict = json.loads(value_str)
+                    if group_any not in agg_group_any_value_str_dict:
+                        any = select_fun(value_dict)
+                        value_dict1 = {}
+                        value_dict1 = agg_select_as_fun(value_dict1, any * weight_int)
+                    else:
+                        any = select_fun(value_dict)
+                        value_dict1 = json.loads(agg_group_any_value_str_dict[group_any])
+                        any1 = agg_select_as_fun(value_dict1)
+                        value_dict1 = agg_select_as_fun(value_dict1, agg_fun(any1, any * weight_int))
+                    #
+                    if group_any is not None:
+                        value_dict1 = group_as_fun(value_dict1, group_any)
+                    agg_group_any_value_str_dict[group_any] = json.dumps(value_dict1)
+        #
+        return ZSet({value_str: 1 for _, value_str in agg_group_any_value_str_dict.items()})
+    #
+    return group_by_agg_fun1
 
 #
 
