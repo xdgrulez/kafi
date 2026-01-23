@@ -31,7 +31,7 @@ if os.path.basename(os.getcwd()) == "kafi":
 else:
     sys.path.insert(1, "../..")
 
-from kafi.streams.topologynode import agg_fun, as_fun, group_by_agg_fun, message_dict_list_to_ZSet, select_fun, select_as_fun, source
+from kafi.streams.topologynode import as_fun, group_by_agg_fun, message_dict_list_to_ZSet, select_fun, source
 
 # create table if not exists transactions (
 #    id int, from_account int, to_account int, amount int, ts timestamp
@@ -75,17 +75,24 @@ def setup():
 # create view credits as select to_account as account, country, sum(amount) as credits from transactions group by to_account, country;
     credits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(("$.to_account", "$.country"), "$.account", [(sum_fun, "$.amount", "$.credits")], True)
-        # .group_by_agg((lambda x: x["to_account"], lambda x: x["country"]), lambda x, y: x.update({"account": y}), [(sum_fun, lambda x: x["amount"], lambda x, y: x.update({"credits": y}))])
-        # .group_by_agg_(select_fun("$.to_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.credits"), as_fun("$.account"))]))
-        # .group_by_agg(select_fun(["to_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["credits"]), as_fun(["account"]))]))
+        .group_by_agg(by_function_tuple=(lambda x: x["to_account"], 
+                                         lambda x: x["country"]),
+                      as_function=lambda x, y: x.update({"account": y}),
+                      agg_function_agg_select_function_agg_as_function_tuple_list=[(lambda x, y: x + y, 
+                                                                                    lambda x: x["amount"], 
+                                                                                    lambda x, y: x.update({"credits": y}))])
+        # .group_by_agg_(select_fun(["to_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), as_fun(["credits"]), as_fun(["account"]))]))
     )
 # create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
     debits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(("$.from_account", "$.country"), "$.account", [(sum_fun, "$.amount", "$.debits")], True)
-        # .group_by_agg_(select_fun("$.from_account", "$.country"), group_by_agg_fun([(sum_fun, select_fun("$.amount"), select_as_fun("$.debits"), as_fun("$.account"))]))
-        # .group_by_agg(select_fun(["from_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), select_as_fun(["debits"]), as_fun(["account"]))]))
+        .group_by_agg(by_function_tuple=(lambda x: x["from_account"], 
+                                         lambda x: x["country"]),
+                      as_function=lambda x, y: x.update({"account": y}),
+                      agg_function_agg_select_function_agg_as_function_tuple_list=[(lambda x, y: x + y, 
+                                                                                    lambda x: x["amount"], 
+                                                                                    lambda x, y: x.update({"debits": y}))])
+        # .group_by_agg_(select_fun(["from_account"]), group_by_agg_fun([(sum_fun, select_fun(["amount"]), as_fun(["debits"]), as_fun(["account"]))]))
     )
     #
 # create view balance as select credits.account as account, credits - debits as balance from credits inner join debits on credits.account = debits.account;
@@ -102,8 +109,10 @@ def setup():
 # # create view total as select sum(balance) from balance;
     root_topologyNode = (
         balance_topologyNode
-        .agg([(sum_fun, "$.balance", "$.sum")], True)
-        # .agg(agg_fun([(sum_fun, select_fun("$.balance"), select_as_fun("$.sum"))]))
+        .agg(agg_function_agg_select_function_agg_as_function_tuple_list=[(lambda x, y: x + y, 
+                                                                           lambda x: x["balance"], 
+                                                                           lambda x, y: x.update({"sum": y}))])
+        # .agg_(agg_fun([(sum_fun, select_fun(["balance"]), as_fun(["sum"]))]))
     )
     #
     return transactions_source_topologyNode, root_topologyNode
@@ -164,7 +173,7 @@ def count_runtime_objects():
                 counts["lambda"] += 1
     return counts
 
-# start_time = time.time()
+start_time = time.time()
 for i in range(100):
     # start_time1 = time.time()
     print(i)
@@ -183,8 +192,8 @@ for i in range(100):
     print(f"Latest: {root_topologyNode.latest()}")
     print(len(pickle.dumps(root_topologyNode)) / 1024 / 1024)
 #
-# end_time = time.time()
-# print(end_time - start_time)
+end_time = time.time()
+print(end_time - start_time)
 #
 
 # print()
