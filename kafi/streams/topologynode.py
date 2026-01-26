@@ -134,8 +134,8 @@ class TopologyNode:
             #
             output_node.step()
             #
-            # print(topologyNode.name())
-            # print(output_node.output_handle().get())
+            print(topologyNode.name())
+            print(output_node.output_handle().get())
         #
         def gc_function():
             left_liftedStream.gc()
@@ -244,9 +244,10 @@ class TopologyNode:
         #
         return TopologyNode("product_op", output_handle_function, step_function, gc_function, [self, other], profile_boolean)
     
-    def group_by_agg(self, by_function_tuple, as_function, agg_function_agg_select_function_agg_as_function_tuple_list, profile_boolean=False):
-        by_function = by_function_tuple[0]
-        agg_function = group_by_agg_fun([(agg_function, agg_select_function, agg_as_function, as_function) for agg_function, agg_select_function, agg_as_function in agg_function_agg_select_function_agg_as_function_tuple_list])
+    def group_by_agg(self, by_function_list, as_function, agg_tuple_list, profile_boolean=False):
+        by_function = lambda value_dict: tuple(by_function(value_dict) for by_function in by_function_list)
+        agg_select_function_agg_function_agg_as_function_tuple_list = agg_tuple_list
+        agg_function = group_by_agg_fun([(agg_select_function, agg_function, agg_as_function, as_function) for agg_select_function, agg_function, agg_as_function in agg_select_function_agg_function_agg_as_function_tuple_list])
         #
         group_by_agg__topologyNode = self.group_by_agg_(by_function, agg_function, profile_boolean=profile_boolean)
         #
@@ -293,8 +294,9 @@ class TopologyNode:
         topologyNode = TopologyNode("group_by_agg_op", output_handle_function, step_function, gc_function, [self], profile_boolean)
         return topologyNode 
 
-    def agg(self, agg_function_agg_select_function_agg_as_function_tuple_list, profile_boolean=False):
-        agg_function = group_by_agg_fun([(agg_function, agg_select_function, agg_as_function, None) for agg_function, agg_select_function, agg_as_function in agg_function_agg_select_function_agg_as_function_tuple_list])
+    def agg(self, agg_tuple_list, profile_boolean=False):
+        agg_select_function_agg_function_agg_as_function_tuple_list = agg_tuple_list
+        agg_function = group_by_agg_fun([(agg_select_function, agg_function, agg_as_function, None) for agg_select_function, agg_function, agg_as_function in agg_select_function_agg_function_agg_as_function_tuple_list])
         #
         group_by_agg__topologyNode = self.group_by_agg_(lambda _: None, agg_function, profile_boolean=profile_boolean)
         group_by_agg__topologyNode._name_str = "agg_op"
@@ -489,16 +491,13 @@ def as_fun(key_str_list):
     return as_fun1
 
 
-# old
-def agg_fun(agg_fun_select_fun_agg_as_fun_tuple_list):
-    agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list = [(agg_fun, select_fun, agg_select_as_fun, None) for agg_fun, select_fun, agg_select_as_fun in agg_fun_select_fun_agg_as_fun_tuple_list]
-    #
-    return group_by_agg_fun(agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list)
+def agg_tuple(select_function, agg_function, as_function):
+    return (select_function, agg_function, as_function)
 
 
-def group_by_agg_fun(agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list):
+def group_by_agg_fun(agg_select_function_agg_function_agg_as_function_group_as_function_tuple_list):
     def group_by_agg_fun1(group_any_zset_tuple_zset):
-        aggs_int = len(agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list)
+        aggs_int = len(agg_select_function_agg_function_agg_as_function_group_as_function_tuple_list)
         #
         agg_group_any_group_any_agg_any_list_tuple_dict = {}
         for (group_any, zset), _ in group_any_zset_tuple_zset.items():
@@ -507,13 +506,13 @@ def group_by_agg_fun(agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list):
             for value_str, weight_int in zset.items():
                 value_dict = json.loads(value_str)
                 #
-                for i, (agg_fun, select_fun, _, _) in enumerate(agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list):
-                    any = select_fun(value_dict)
+                for i, (agg_select_function, agg_function, _, _) in enumerate(agg_select_function_agg_function_agg_as_function_group_as_function_tuple_list):
+                    any = agg_select_function(value_dict)
                     #
                     if group_any not in agg_group_any_group_any_agg_any_list_tuple_dict:
                         agg_any_list[i] = any * weight_int
                     else:
-                        agg_any_list[i] = agg_fun(agg_any_list[i], any * weight_int)
+                        agg_any_list[i] = agg_function(agg_any_list[i], any * weight_int)
                 #
                 agg_group_any_group_any_agg_any_list_tuple_dict[group_any] = (group_any, agg_any_list)
         #
@@ -521,7 +520,7 @@ def group_by_agg_fun(agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list):
         for _, (group_any, agg_any_list) in agg_group_any_group_any_agg_any_list_tuple_dict.items():
             agg_value_dict = {}
             #
-            for i, (_, _, agg_as_fun, group_as_fun) in enumerate(agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list):                
+            for i, (_, _, agg_as_fun, group_as_fun) in enumerate(agg_select_function_agg_function_agg_as_function_group_as_function_tuple_list):                
                 if group_as_fun is not None:
                     group_as_fun(agg_value_dict, group_any)
                 #
@@ -532,68 +531,6 @@ def group_by_agg_fun(agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list):
         return ZSet(agg_value_str_weight_int_dict)
     #
     return group_by_agg_fun1
-
-
-# def group_by_agg_fun(agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list):
-#     def group_by_agg_fun1(group_any_zset_tuple_zset):
-#         # Pre-processing: Konfiguration aufbereiten
-#         agg_configs = agg_fun_select_fun_agg_as_fun_group_as_fun_tuple_list
-#         num_aggs = len(agg_configs)
-#         agg_funcs = [cfg[0] for cfg in agg_configs]
-#         select_funcs = [cfg[1] for cfg in agg_configs]
-#         agg_as_funcs = [cfg[2] for cfg in agg_configs]
-#         group_as_funcs = [cfg[3] for cfg in agg_configs]
-        
-#         agg_group_dict = {}
-        
-#         for (group_any, zset), _ in group_any_zset_tuple_zset.items():
-#             agg_any_list = agg_group_dict.setdefault(group_any, [None] * num_aggs)
-            
-#             for value_str, weight_int in zset.items():
-#                 value_dict = json.loads(value_str)
-                
-#                 for i in range(num_aggs):
-#                     weighted_val = select_funcs[i](value_dict) * weight_int
-#                     agg_any_list[i] = weighted_val if agg_any_list[i] is None else agg_funcs[i](agg_any_list[i], weighted_val)
-        
-#         # Optimierung 14: Inline function für Dictionary-Bau
-#         def build_agg_dict(group_any, agg_any_list):
-#             agg_value_dict = {}
-#             for i in range(num_aggs):
-#                 if group_as_funcs[i] is not None:
-#                     group_as_funcs[i](agg_value_dict, group_any)
-#                 agg_as_funcs[i](agg_value_dict, agg_any_list[i])
-#             return json.dumps(agg_value_dict)
-        
-#         return ZSet({build_agg_dict(g, a): 1 for g, a in agg_group_dict.items()})
-#     #
-#     return group_by_agg_fun1
-    
-
-# def group_by_agg_fun(agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list):
-#     def group_by_agg_fun1(group_any_zset_tuple_zset):
-#         agg_group_any_value_str_dict = {}
-#         for agg_fun, select_fun, agg_select_as_fun, group_as_fun in agg_fun_select_fun_agg_select_as_fun_group_as_fun_tuple_list:
-#             for (group_any, zset), _ in group_any_zset_tuple_zset.items():
-#                 for value_str, weight_int in zset.items():
-#                     value_dict = json.loads(value_str)
-#                     if group_any not in agg_group_any_value_str_dict:
-#                         any = select_fun(value_dict)
-#                         value_dict1 = {}
-#                         value_dict1 = agg_select_as_fun(value_dict1, any * weight_int)
-#                     else:
-#                         any = select_fun(value_dict)
-#                         value_dict1 = json.loads(agg_group_any_value_str_dict[group_any])
-#                         any1 = agg_select_as_fun(value_dict1)
-#                         value_dict1 = agg_select_as_fun(value_dict1, agg_fun(any1, any * weight_int))
-#                     #
-#                     if group_any is not None:
-#                         value_dict1 = group_as_fun(value_dict1, group_any)
-#                     agg_group_any_value_str_dict[group_any] = json.dumps(value_dict1)
-#         #
-#         return ZSet({value_str: 1 for _, value_str in agg_group_any_value_str_dict.items()})
-#     #
-#     return group_by_agg_fun1
 
 #
 
