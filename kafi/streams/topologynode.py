@@ -146,6 +146,7 @@ class TopologyNode:
             output_node.gc()
         #
         topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_boolean)
+        print(topologyNode._id_str)
         return topologyNode
 
     def union(self, other, profile_boolean=False):
@@ -440,14 +441,14 @@ class TopologyNode:
                     return self._name_str
             case 1:
                 if include_ids_bool:
-                    return f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology()})"
+                    return f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)})"
                 else:
-                    return f"{self._name_str}({self._daughter_topologyNode_list[0].topology()})"
+                    return f"{self._name_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)})"
             case 2:
                 if include_ids_bool:
-                    return  f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology()}, {self._daughter_topologyNode_list[1].topology()})"
+                    return  f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)}, {self._daughter_topologyNode_list[1].topology(include_ids_bool)})"
                 else:
-                    return  f"{self._name_str}({self._daughter_topologyNode_list[0].topology()}, {self._daughter_topologyNode_list[1].topology()})"
+                    return  f"{self._name_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)}, {self._daughter_topologyNode_list[1].topology(include_ids_bool)})"
 
     def mermaid(self, include_ids=False):
         def collect_nodes_and_edges(topologyNode, name_str_set, edge_str_list):
@@ -458,7 +459,7 @@ class TopologyNode:
             #
             for daughter_topologyNode in topologyNode.daughters():
                 if include_ids:
-                    edge_str_list.append(f"{daughter_topologyNode.name()}_{topologyNode.id()} --> {topologyNode.name()}_{topologyNode.id()}")
+                    edge_str_list.append(f"{daughter_topologyNode.name()}_{daughter_topologyNode.id()} --> {topologyNode.name()}_{topologyNode.id()}")
                 else:
                     edge_str_list.append(f"{daughter_topologyNode.name()} --> {topologyNode.name()}")
                 #
@@ -476,19 +477,23 @@ class TopologyNode:
 
 #
 
-def select_fun(key_str_list):
-    def select_fun1(value_dict):
-        return get_value(value_dict, key_str_list)
+def get(*key_str_tuple):
+    def get1(value_dict):
+        return get_value(value_dict, list(key_str_tuple))
     #
-    return select_fun1
+    return get1
 
 
-def as_fun(key_str_list):
-    def as_fun1(value_dict, any):
-        set_value(value_dict, key_str_list, any)
+def update(*key_str_tuple):
+    def update1(value_dict, any):
+        set_value(value_dict, list(key_str_tuple), any)
         return value_dict
     #
-    return as_fun1
+    return update1
+
+
+def sum(x, y):
+    return x + y
 
 
 def agg_tuple(select_function, agg_function, as_function):
