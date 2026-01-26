@@ -116,7 +116,7 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
                         #
                         zSet = message_dict_list_to_ZSet(message_dict_list)
                         #
-                        stream = source_topologyNode.output_handle_function()().get()
+                        stream = source_topologyNode.output_handle_function().get()
                         stream.send(zSet)
                         sent_bool = True
                 #

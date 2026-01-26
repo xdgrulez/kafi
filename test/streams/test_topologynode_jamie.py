@@ -34,11 +34,14 @@ def setup():
 # create view debits as select from_account as account, sum(amount) as debits from transactions group by from_account;
     debits_topologyNode = (
         transactions_source_topologyNode
-        .group_by_agg(by_function_list=[get("from_account")],
-                      as_function=update("account"),
-                      agg_tuple_list=[agg_tuple(select_function=get("amount"),
-                                                agg_function=sum,
-                                                as_function=update("debits"))])
+        .group_by_agg([get("from_account")],
+                      update("account"),
+                      [agg_tuple(get("amount"), sum, update("debits"))])
+        # .group_by_agg(by_function_list=[get("from_account")],
+        #               as_function=update("account"),
+        #               agg_tuple_list=[agg_tuple(select_function=get("amount"),
+        #                                         agg_function=sum,
+        #                                         as_function=update("debits"))])
         # .group_by_agg(by_function_list=[lambda x: x["from_account"]],
         #               as_function=lambda x, y: x.update({"account": y}),
         #               agg_tuple_list=[agg_tuple(select_function=lambda x: x["amount"],

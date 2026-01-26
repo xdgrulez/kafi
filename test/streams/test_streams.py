@@ -49,7 +49,7 @@ def map_function(value_dict):
     return value_dict
 
 def on_function(left_value_dict, right_value_dict):
-    return left_value_dict["_key"] == right_value_dict["_key"]
+    return left_value_dict["id"] == right_value_dict["id"]
 
 def proj_function(left_value_dict, right_value_dict):
     left_value_dict.update(right_value_dict)

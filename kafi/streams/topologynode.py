@@ -134,8 +134,8 @@ class TopologyNode:
             #
             output_node.step()
             #
-            print(topologyNode.name())
-            print(output_node.output_handle().get())
+            # print(topologyNode.name())
+            # print(output_node.output_handle().get())
         #
         def gc_function():
             left_liftedStream.gc()
