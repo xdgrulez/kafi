@@ -99,7 +99,7 @@ def setup():
             on_function=lambda l, r: l["account"] == r["account"],
             projection_function=lambda l, r: {"account": l["account"],
                                               "balance": l["credits"] - r["debits"]},
-            profile_boolean=True)
+            profile_dict=True)
     )
 #     #
 # # create view total as select sum(balance) from balance;

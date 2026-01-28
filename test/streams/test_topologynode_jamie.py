@@ -13,9 +13,9 @@ from kafi.streams.topologynode import get, update, sum, agg_tuple, message_dict_
 
 #
 
-from pympler import asizeof
+# from pympler import asizeof
 
-import gc
+# import gc
 
 #
 
@@ -30,7 +30,7 @@ def setup():
                       agg_tuple_list=[agg_tuple(select_function=get("amount"),
                                                 agg_function=sum,
                                                 as_function=update("credits"))],
-                      profile_boolean=True)
+                      profile_dict={"time": True, "memory": {"before": True, "after": True, "delta": True, "unit": "MB"}, "include": ["GroupByThenAgg"]})
         # .group_by_agg(by_function_list=[lambda x: x["to_account"]],
         #               as_function=lambda x, y: x.update({"account": y}),
         #               agg_tuple_list=[agg_tuple(select_function=lambda x: x["amount"],
@@ -44,7 +44,7 @@ def setup():
         .group_by_agg([get("from_account")],
                       update("account"),
                       [agg_tuple(get("amount"), sum, update("debits"))],
-                      profile_boolean=False)
+                      profile_dict=None)
         # .group_by_agg(by_function_list=[get("from_account")],
         #               as_function=update("account"),
         #               agg_tuple_list=[agg_tuple(select_function=get("amount"),
@@ -65,7 +65,7 @@ def setup():
             on_function=lambda l, r: l["account"] == r["account"],
             projection_function=lambda l, r: {"account": l["account"],
                                               "balance": l["credits"] - r["debits"]},
-            profile_boolean=False)
+            profile_dict=None)
     )
     #
 # create view total as select sum(balance) from balance;
@@ -74,7 +74,7 @@ def setup():
         .agg(agg_tuple_list=[agg_tuple(select_function=get("balance"), 
                                        agg_function=sum,
                                        as_function=update("sum"))],
-             profile_boolean=False)
+             profile_dict=None)
         # .agg(agg_tuple_list=[agg_tuple(select_function=lambda x: x["balance"], 
         #                                agg_function=lambda x, y: x + y,
         #                                as_function=lambda x, y: x.update({"sum": y}))])
@@ -112,7 +112,7 @@ transactions_source_topologyNode, root_topologyNode = setup()
 #
 
 start_time = time.time()
-for i in range(10000):
+for i in range(100):
     print(i)
     #
     transactions(transactions_source_topologyNode, root_topologyNode)
