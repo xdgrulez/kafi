@@ -1,4 +1,4 @@
-from kafi.helpers import get_value_jsonpath, set_value_jsonpath, get_value, set_value
+from kafi.helpers import get_value, set_value
 
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset.operators.linear import LiftedProject
@@ -8,10 +8,16 @@ from pydbsp.zset import ZSet, ZSetAddition
 
 from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
+import cloudpickle as pickle
+
 import json
 # import orjson as json
 import time
 import uuid
+
+#
+
+import gc
 
 #
 
@@ -127,12 +133,12 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            left_liftedStream.step()
-            right_liftedStream.step()
+            topologyNode.profile(left_liftedStream.step, "Join - LiftedStreamIntroduction")
+            topologyNode.profile(right_liftedStream.step, "Join - LiftedStreamIntroduction")
             #
-            join.step()
+            topologyNode.profile(join.step, "Join - Join")
             #
-            output_node.step()
+            topologyNode.profile(output_node.step, "Join - LiftedStreamElimination")
             #
             # print(topologyNode.name())
             # print(output_node.output_handle().get())
@@ -146,7 +152,6 @@ class TopologyNode:
             output_node.gc()
         #
         topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_boolean)
-        print(topologyNode._id_str)
         return topologyNode
 
     def union(self, other, profile_boolean=False):
@@ -272,13 +277,20 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            topologyNode.profile(lifted_stream_introduction.step, "LiftedStreamIntroduction")
+            # print(len(group_by_then_agg.integrated_stream.delayed_stream.output_stream_handle.get().inner.keys()))
+            # print(len(group_by_then_agg.integrated_stream.integration_stream.output_stream_handle.get().inner.keys()))
+
+            # print(len(group_by_then_agg.lift_integrated_stream.output_stream_handle.get().inner.keys()))
+            
+            # print(len(group_by_then_agg.lifted_lifted_aggregate.output_stream_handle.get().inner.keys()))
             #
-            topologyNode.profile(group_by_then_agg.step, "GroupByThenAgg")
+            topologyNode.profile(lifted_stream_introduction.step, "GroupByAgg - LiftedStreamIntroduction")
             #
-            topologyNode.profile(lifted_stream_elimination.step, "LiftedStreamElimination")
+            topologyNode.profile(group_by_then_agg.step, "GroupByAgg - GroupByThenAgg")
             #
-            topologyNode.profile(output_node.step, "Differentiate")
+            topologyNode.profile(lifted_stream_elimination.step, "GroupByAgg - LiftedStreamElimination")
+            #
+            topologyNode.profile(output_node.step, "GroupByAgg - Differentiate")
             #
             # print(topologyNode.name())
             # print(output_node.output_handle().get())
@@ -421,12 +433,14 @@ class TopologyNode:
     
     def profile(self, function, function_str):
         if self._profile_boolean:
-            x = time.time()
-            function()
-            y = time.time()
-            print(f"{function_str}: {y - x}")
+            if function_str == "GroupByAgg - GroupByThenAgg":
+                # x = time.time()
+                function()
+                # y = time.time()
+                # j = len(pickle.dumps(self)) / 1024
+                # print(f"{function_str}: Time: {y - x}; Memory: {j}")
         else:
-            function() 
+            function()
     #
 
     def topology(self, include_ids=False):

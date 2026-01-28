@@ -13,6 +13,12 @@ from kafi.streams.topologynode import get, update, sum, agg_tuple, message_dict_
 
 #
 
+from pympler import asizeof
+
+import gc
+
+#
+
 def setup():
     transactions_source_topologyNode = source("transactions")
     #
@@ -23,7 +29,8 @@ def setup():
                       as_function=update("account"),
                       agg_tuple_list=[agg_tuple(select_function=get("amount"),
                                                 agg_function=sum,
-                                                as_function=update("credits"))])
+                                                as_function=update("credits"))],
+                      profile_boolean=True)
         # .group_by_agg(by_function_list=[lambda x: x["to_account"]],
         #               as_function=lambda x, y: x.update({"account": y}),
         #               agg_tuple_list=[agg_tuple(select_function=lambda x: x["amount"],
@@ -36,7 +43,8 @@ def setup():
         transactions_source_topologyNode
         .group_by_agg([get("from_account")],
                       update("account"),
-                      [agg_tuple(get("amount"), sum, update("debits"))])
+                      [agg_tuple(get("amount"), sum, update("debits"))],
+                      profile_boolean=False)
         # .group_by_agg(by_function_list=[get("from_account")],
         #               as_function=update("account"),
         #               agg_tuple_list=[agg_tuple(select_function=get("amount"),
@@ -56,8 +64,8 @@ def setup():
             debits_topologyNode,
             on_function=lambda l, r: l["account"] == r["account"],
             projection_function=lambda l, r: {"account": l["account"],
-                                              "balance": l["credits"] - r["debits"]}
-        )
+                                              "balance": l["credits"] - r["debits"]},
+            profile_boolean=False)
     )
     #
 # create view total as select sum(balance) from balance;
@@ -65,7 +73,8 @@ def setup():
         balance_topologyNode
         .agg(agg_tuple_list=[agg_tuple(select_function=get("balance"), 
                                        agg_function=sum,
-                                       as_function=update("sum"))])
+                                       as_function=update("sum"))],
+             profile_boolean=False)
         # .agg(agg_tuple_list=[agg_tuple(select_function=lambda x: x["balance"], 
         #                                agg_function=lambda x, y: x + y,
         #                                as_function=lambda x, y: x.update({"sum": y}))])
@@ -76,8 +85,11 @@ def setup():
 #
 
 def transactions(transactions_source_topologyNode, root_topologyNode):
-    n_int = 10000
-    random.seed(42)
+    n_int = 100
+
+    # obj_report = asizeof.asized(root_topologyNode, detail=1, code=True)
+    # print(obj_report.size)
+
     transactions_message_dict_list = []
     for id_int in range(0, n_int):
         message_dict = {"key": str(id_int),
@@ -90,6 +102,7 @@ def transactions(transactions_source_topologyNode, root_topologyNode):
     transactions_source_topologyNode.output_handle_function().get().send(transactions_zset)
     #
     root_topologyNode.step()
+    # gc.collect()
     root_topologyNode.gc()
 
 #
@@ -99,27 +112,27 @@ transactions_source_topologyNode, root_topologyNode = setup()
 #
 
 start_time = time.time()
-for i in range(1):
+for i in range(10000):
     print(i)
     #
     transactions(transactions_source_topologyNode, root_topologyNode)
     #
     print()
     print(f"Latest: {root_topologyNode.latest()}")
-    print(len(pickle.dumps(root_topologyNode)) / 1024 / 1024)
+    print(len(pickle.dumps(root_topologyNode)) / 1024)
 #
 end_time = time.time()
 print(end_time - start_time)
 
 #
 
-print()
-print(f"Topology: {root_topologyNode.topology()}")
-print()
-print(f"Topology: {root_topologyNode.topology(True)}")
-print()
-print(f"Mermaid:\n{root_topologyNode.mermaid()}")
-print()
-print(f"Mermaid:\n{root_topologyNode.mermaid(True)}")
-print()
-print(f"Latest: {root_topologyNode.latest()}")
+# print()
+# print(f"Topology: {root_topologyNode.topology()}")
+# print()
+# print(f"Topology: {root_topologyNode.topology(True)}")
+# print()
+# print(f"Mermaid:\n{root_topologyNode.mermaid()}")
+# print()
+# print(f"Mermaid:\n{root_topologyNode.mermaid(True)}")
+# print()
+# print(f"Latest: {root_topologyNode.latest()}")

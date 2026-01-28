@@ -5,7 +5,7 @@ import dateutil.parser
 from fnmatch import fnmatch
 from functools import reduce
 import json
-import jsonpath_ng
+# import jsonpath_ng
 # import logging
 import pandas as pd
 import requests
@@ -353,19 +353,19 @@ def set_value(d, key_str_list, any):
     d[key_str_list[-1]] = any
 
 
-def get_value_jsonpath(value_dict, jsonpath_str):
-    child = jsonpath_ng.parse(jsonpath_str)
-    datumInContextList = child.find(value_dict)
-    if len(datumInContextList) == 1:
-        return datumInContextList[0].value
-    elif len(datumInContextList) == 0:
-        raise Exception(f"Could not find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict}")
-    else:
-        raise Exception(f"Could not unambiguously find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict} (found: {[datumInContext.value for datumInContext in datumInContextList]})")
+# def get_value_jsonpath(value_dict, jsonpath_str):
+#     child = jsonpath_ng.parse(jsonpath_str)
+#     datumInContextList = child.find(value_dict)
+#     if len(datumInContextList) == 1:
+#         return datumInContextList[0].value
+#     elif len(datumInContextList) == 0:
+#         raise Exception(f"Could not find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict}")
+#     else:
+#         raise Exception(f"Could not unambiguously find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict} (found: {[datumInContext.value for datumInContext in datumInContextList]})")
 
-def set_value_jsonpath(value_dict, jsonpath_str, any):
-    child = jsonpath_ng.parse(jsonpath_str)
-    child.update_or_create(value_dict, any)
+# def set_value_jsonpath(value_dict, jsonpath_str, any):
+#     child = jsonpath_ng.parse(jsonpath_str)
+#     child.update_or_create(value_dict, any)
 
 
 # Partitioners
