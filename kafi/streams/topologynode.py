@@ -21,7 +21,7 @@ class TopologyNode:
     # Constructor
     ###
     
-    def __init__(self, name_str, output_handle_function, step_function, gc_function, daughter_topologyNode_list=[], profile_dict=None):
+    def __init__(self, name_str, output_handle_function, step_function, gc_function, daughter_topologyNode_list=[], profile_config_dict=None):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
         self._output_handle_function = output_handle_function
@@ -31,12 +31,13 @@ class TopologyNode:
         #
         self._group = output_handle_function().get().group()
         #
-        self.init_profile_dict(profile_dict)
+        self.profile_config(profile_config_dict)
+        self._profile_dict = {}
 
     #
 
-    def init_profile_dict(self, profile_dict):
-        if profile_dict is None:
+    def profile_config(self, profile_config_dict):
+        if profile_config_dict is None:
             self._profile_dict = None
             return
         
@@ -47,11 +48,11 @@ class TopologyNode:
             "TB": 1024 ** 4
         }
         
-        memory_dict = profile_dict.get("memory", {})
+        memory_dict = profile_config_dict.get("memory", {})
         unit_str = memory_dict.get("unit", "KB").upper()
         
         self._profile_dict = {
-            "time": profile_dict.get("time", False),
+            "time": profile_config_dict.get("time", False),
             "memory": {
                 "before": memory_dict.get("before", False),
                 "after": memory_dict.get("after", False),
@@ -59,12 +60,12 @@ class TopologyNode:
                 "unit": unit_str,
                 "divisor": memory_unit_str_divisor_int_dict.get(unit_str, 1024)
             },
-            "include": profile_dict.get("include", [])
+            "include": profile_config_dict.get("include", [])
         }            
         
     #
 
-    def map(self, map_function, profile_dict=None):
+    def map(self, map_function, profile_config_dict=None):
         def map_function1(value_json_str):
             value_dict = json.loads(value_json_str)
             return json.dumps(map_function(value_dict))
@@ -86,10 +87,10 @@ class TopologyNode:
         def gc_function():
             pass
         #
-        topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_dict)
+        topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
 
-    def filter(self, filter_function, profile_dict=None):
+    def filter(self, filter_function, profile_config_dict=None):
         def filter_function1(value_json_str):
             value_dict = json.loads(value_json_str)
             return filter_function(value_dict)
@@ -111,10 +112,10 @@ class TopologyNode:
         def gc_function():
             pass
         #
-        topologyNode = TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self], profile_dict)
+        topologyNode = TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
 
-    def join(self, other, on_function, projection_function, profile_dict=None):
+    def join(self, other, on_function, projection_function, profile_config_dict=None):
         def on_function1(left_value_json_str, right_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             right_value_dict = json.loads(right_value_json_str)
@@ -151,10 +152,10 @@ class TopologyNode:
             #
             output_node.gc()
         #
-        topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_dict)
+        topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
 
-    def union(self, other, profile_dict=None):
+    def union(self, other, profile_config_dict=None):
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
         right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
         #
@@ -176,10 +177,10 @@ class TopologyNode:
         def gc_function():
             pass
         #
-        topologyNode = TopologyNode("union_op", output_handle_function, step_function, gc_function, [self, other], profile_dict)
+        topologyNode = TopologyNode("union_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
 
-    def intersect(self, other, profile_dict=None):
+    def intersect(self, other, profile_config_dict=None):
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
         right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
         #
@@ -201,10 +202,10 @@ class TopologyNode:
         def gc_function():
             pass
         #
-        topologyNode = TopologyNode("intersect_op", output_handle_function, step_function, gc_function, [self, other], profile_dict)
+        topologyNode = TopologyNode("intersect_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
 
-    def difference(self, other, profile_dict=None):
+    def difference(self, other, profile_config_dict=None):
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
         right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
         #
@@ -226,10 +227,10 @@ class TopologyNode:
         def gc_function():
             pass
         #
-        topologyNode = TopologyNode("difference_op", output_handle_function, step_function, gc_function, [self, other], profile_dict)
+        topologyNode = TopologyNode("difference_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
 
-    def product(self, other, profile_dict=None):
+    def product(self, other, profile_config_dict=None):
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
         right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
         #
@@ -251,10 +252,10 @@ class TopologyNode:
         def gc_function():
             pass
         #
-        topologyNode = TopologyNode("product_op", output_handle_function, step_function, gc_function, [self, other], profile_dict)
+        topologyNode = TopologyNode("product_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
     
-    def group_by_agg(self, by_function_list, as_function, agg_tuple_list, profile_dict=None):
+    def group_by_agg(self, by_function_list, as_function, agg_tuple_list, profile_config_dict=None):
         by_function = lambda value_dict: tuple(by_function(value_dict) for by_function in by_function_list)
         agg_select_function_agg_function_agg_as_function_tuple_list = agg_tuple_list
         agg_function = group_by_agg_fun([(agg_select_function, agg_function, agg_as_function, as_function) for agg_select_function, agg_function, agg_as_function in agg_select_function_agg_function_agg_as_function_tuple_list])
@@ -263,7 +264,7 @@ class TopologyNode:
         #
         return group_by_agg__topologyNode
 
-    def group_by_agg_(self, by_function, agg_function, profile_dict=None):
+    def group_by_agg_(self, by_function, agg_function, profile_config_dict=None):
         def by_function1(value_json_str):
             value_dict = json.loads(value_json_str)
             return by_function(value_dict)
@@ -298,10 +299,10 @@ class TopologyNode:
             #
             output_node.gc()
         #
-        topologyNode = TopologyNode("group_by_agg_op", output_handle_function, step_function, gc_function, [self], profile_dict)
+        topologyNode = TopologyNode("group_by_agg_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode 
 
-    def agg(self, agg_tuple_list, profile_dict=None):
+    def agg(self, agg_tuple_list, profile_config_dict=None):
         agg_select_function_agg_function_agg_as_function_tuple_list = agg_tuple_list
         agg_function = group_by_agg_fun([(agg_select_function, agg_function, agg_as_function, None) for agg_select_function, agg_function, agg_as_function in agg_select_function_agg_function_agg_as_function_tuple_list])
         #
@@ -310,7 +311,7 @@ class TopologyNode:
         #
         return group_by_agg__topologyNode
 
-    def peek(self, peek_function, profile_dict=None):
+    def peek(self, peek_function, profile_config_dict=None):
         def peek_function1(value_json_str):
             value_dict = json.loads(value_json_str)
             peek_function(value_dict)
@@ -327,7 +328,7 @@ class TopologyNode:
         def gc_function():
             pass
         #
-        topologyNode = TopologyNode("peek_op", output_handle_function, step_function, gc_function, [self], profile_dict)
+        topologyNode = TopologyNode("peek_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
     
     #
@@ -364,13 +365,11 @@ class TopologyNode:
         while stack:
             topologyNode = stack.pop()
             #
-            if topologyNode._profile_dict is not None:
-                profile_before_tuple = topologyNode.profile_before(None, f"Profiling TopologyNode step {topologyNode._name_str}_{topologyNode._id_str}...")
+            topologyNode.profile_before_step(topologyNode, "topologyNode_step")
             #
             topologyNode._step_function()
             #
-            if topologyNode._profile_dict is not None:
-                topologyNode.profile_after(profile_before_tuple, None, "...done.")
+            topologyNode.profile_after_step(topologyNode, "topologyNode_step")
     
     def latest(self):
         return self._output_handle_function().get().latest()
@@ -424,66 +423,46 @@ class TopologyNode:
     def gc(self):
         self.gc_function()()
         #
+        self.print_profile()
+        #
         for topologyNode in self._daughter_topologyNode_list:
             topologyNode.gc()
     #
     
     # profile_dict: {"time": boolean, "memory": {"before": boolean, "after": boolean, "delta": boolean, "unit": str ("KB", "MB", "GB", "TB"), "divisor": int}, "include": operator_class_name_str_list}
     
-    def pydbsp_step(self, pydbsp_operator):
+    def pydbsp_step(self, pydbsp_operator_object):
         if self._profile_dict is not None:
-            profile_before_tuple = self.profile_before(pydbsp_operator, f"  Profiling pyDBSP step {pydbsp_operator.__class__.__name__}...", "    ")
+            self.profile_before(pydbsp_operator_object, "pydbsp_step")
         #
-        pydbsp_operator.step()
+        pydbsp_operator_object.step()
         #
         if self._profile_dict is not None:
-            self.profile_after(profile_before_tuple, pydbsp_operator, "  ...done.", "    ")
+            self.profile_after(pydbsp_operator_object, "pydbsp_step")
             
-    def profile_before(self, pydbsp_operator_object, before_str, indent_str=""):
-        time_before_float = None
-        memory_before_int = None
+    def profile_before(self, operator_object, step_or_gc_str):
+        operator_name_str = operator_object.__class__.__name__
         #
         if self._profile_dict is not None:
-            print_boolean = pydbsp_operator_object is None or pydbsp_operator_object.__class__.__name__ in self._profile_dict["include"]
-            #
-            if print_boolean:
-                print(before_str)
-            #
             if self._profile_dict["time"]:
-                time_before_float = time.time()
+                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(operator_name_str, {})["time_before"]  = time.time()
             #
             if self._profile_dict["memory"]["before"] or self._profile_dict["memory"]["delta"]:
-                memory_before_int = len(pickle.dumps(self)) / self._profile_dict["memory"]["divisor"]
-                if self._profile_dict["memory"]["before"]:
-                    if print_boolean:
-                        print(f"{indent_str}Memory before: {memory_before_int} {self._profile_dict['memory']['unit']}")
-        #
-        profile_before_tuple = (time_before_float, memory_before_int)
-        return profile_before_tuple
+                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(operator_name_str, {})["memory_before"] = len(pickle.dumps(self)) / self._profile_dict["memory"]["divisor"]
 
-    def profile_after(self, profile_before_tuple, pydbsp_operator_object, after_str, indent_str=""):
+    def profile_after(self, operator_object, step_or_gc_str):
+        operator_name_str = operator_object.__class__.__name__
+        #
         if self._profile_dict is not None:
-            print_boolean = pydbsp_operator_object is None or pydbsp_operator_object.__class__.__name__ in self._profile_dict["include"]
-            #
-            time_before_float, memory_before_int = profile_before_tuple
-            #
-            if self._profile_dict["memory"]["after"] or self._profile_dict["memory"]["delta"]:
-                memory_after_int = len(pickle.dumps(self)) / self._profile_dict["memory"]["divisor"]
-                #
-                if self._profile_dict["memory"]["after"]:
-                    if print_boolean:
-                        print(f"{indent_str}Memory after: {memory_after_int} {self._profile_dict['memory']['unit']}")
-                if self._profile_dict["memory"]["delta"]:
-                    if print_boolean:
-                        print(f"{indent_str}Memory delta: {memory_after_int - memory_before_int} {self._profile_dict['memory']['unit']}")
             #
             if self._profile_dict["time"]:
-                time_after_float = time.time()
-                if print_boolean:
-                    print(f"{indent_str}Time: {time_after_float - time_before_float}s")
+                self._profile_before_step_dict.setdefault(step_or_gc_str, {}).setdefault(operator_name_str, {})["time_after"] = time.time()
             #
-            if print_boolean:
-                print(after_str)
+            if self._profile_dict["memory"]["after"] or self._profile_dict["memory"]["delta"]:
+                self._profile_before_step_dict.setdefault(step_or_gc_str, {}).setdefault(operator_name_str, {})["memory_after"] = len(pickle.dumps(self)) / self._profile_dict["memory"]["divisor"]
+
+    def print_profile(self):
+        pass
 
     #
 
@@ -597,7 +576,7 @@ def group_by_agg_fun(agg_select_function_agg_function_agg_as_function_group_as_f
 
 #
 
-def source(name_str, profile_dict=None):
+def source(name_str, profile_config_dict=None):
     stream = Stream(ZSetAddition())
     stream_handle = StreamHandle(lambda: stream)
     #
@@ -614,7 +593,7 @@ def source(name_str, profile_dict=None):
             if current_time_int - 1 in stream.inner:
                 del stream.inner[current_time_int - 1]
     #
-    topologyNode = TopologyNode(name_str, output_handle_function, step_function, gc_function, [], profile_dict)
+    topologyNode = TopologyNode(name_str, output_handle_function, step_function, gc_function, [], profile_config_dict)
     return topologyNode
 
 
