@@ -17,6 +17,10 @@ import cloudpickle as pickle
 #
 
 class TopologyNode:
+    ###
+    # Constructor
+    ###
+    
     def __init__(self, name_str, output_handle_function, step_function, gc_function, daughter_topologyNode_list=[], profile_dict=None):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
@@ -27,37 +31,39 @@ class TopologyNode:
         #
         self._group = output_handle_function().get().group()
         #
-        if profile_dict is not None:
-            self._profile_dict = {}
-            self._profile_dict["time"] = profile_dict["time"] if "time" in profile_dict else False
-            #
-            self._profile_dict["memory"] = {}
-            self._profile_dict["memory"]["before"] = profile_dict["memory"]["before"] if "memory" in profile_dict and "before" in profile_dict["memory"] else False
-            self._profile_dict["memory"]["after"] = profile_dict["memory"]["after"] if "memory" in profile_dict and "after" in profile_dict["memory"] else False
-            self._profile_dict["memory"]["delta"] = profile_dict["memory"]["delta"] if "memory" in profile_dict and "delta" in profile_dict["memory"] else False
-            self._profile_dict["memory"]["delta"] = profile_dict["memory"]["delta"] if "memory" in profile_dict and "delta" in profile_dict["memory"] else False
-            self._profile_dict["memory"]["unit"] = profile_dict["memory"]["unit"].upper() if "memory" in profile_dict and "unit" in profile_dict["memory"] else "KB"
-            self._profile_dict["memory"]["divisor"] = profile_dict["memory"]["divisor"].upper() if "memory" in profile_dict and "divisor" in profile_dict["memory"] else 1024
-            #
-            if "memory" in profile_dict and "unit" in profile_dict["memory"]:
-                match profile_dict["memory"]["unit"]:
-                    case "KB":
-                        memory_divisor_int = 1024
-                    case "MB":
-                        memory_divisor_int = 1024 * 1024
-                    case "GB":
-                        memory_divisor_int = 1024 * 1024 * 1024
-                    case "TB":
-                        memory_divisor_int = 1024 * 1024 * 1024 * 1024
-                    case _:
-                        memory_divisor_int = 1024
-                #
-                self._profile_dict["memory"]["divisor"] = memory_divisor_int
-            #
-            self._profile_dict["include"] = profile_dict["include"] if "include" in profile_dict else []
-        else:
+        self.init_profile_dict(profile_dict)
+
+    #
+
+    def init_profile_dict(self, profile_dict):
+        if profile_dict is None:
             self._profile_dict = None
-            
+            return
+        
+        memory_unit_str_divisor_int_dict = {
+            "KB": 1024,
+            "MB": 1024 ** 2,
+            "GB": 1024 ** 3,
+            "TB": 1024 ** 4
+        }
+        
+        memory_dict = profile_dict.get("memory", {})
+        unit_str = memory_dict.get("unit", "KB").upper()
+        
+        self._profile_dict = {
+            "time": profile_dict.get("time", False),
+            "memory": {
+                "before": memory_dict.get("before", False),
+                "after": memory_dict.get("after", False),
+                "delta": memory_dict.get("delta", False),
+                "unit": unit_str,
+                "divisor": memory_unit_str_divisor_int_dict.get(unit_str, 1024)
+            },
+            "include": profile_dict.get("include", [])
+        }            
+        
+    #
+
     def map(self, map_function, profile_dict=None):
         def map_function1(value_json_str):
             value_dict = json.loads(value_json_str)
@@ -359,12 +365,12 @@ class TopologyNode:
             topologyNode = stack.pop()
             #
             if topologyNode._profile_dict is not None:
-                profile_before_tuple = topologyNode.profile_before(None, f"Profiling step of {topologyNode._name_str}_{topologyNode._id_str}...")
+                profile_before_tuple = topologyNode.profile_before(None, f"Profiling TopologyNode step {topologyNode._name_str}_{topologyNode._id_str}...")
             #
             topologyNode._step_function()
             #
             if topologyNode._profile_dict is not None:
-                topologyNode.profile_after(None, profile_before_tuple, "...done.")
+                topologyNode.profile_after(profile_before_tuple, None, "...done.")
     
     def latest(self):
         return self._output_handle_function().get().latest()
@@ -431,53 +437,52 @@ class TopologyNode:
         pydbsp_operator.step()
         #
         if self._profile_dict is not None:
-            self.profile_after(profile_before_tuple, pydbsp_operator, "...done.", "    ")
+            self.profile_after(profile_before_tuple, pydbsp_operator, "  ...done.", "    ")
             
     def profile_before(self, pydbsp_operator_object, before_str, indent_str=""):
         time_before_float = None
         memory_before_int = None
         #
         if self._profile_dict is not None:
-            if pydbsp_operator_object is None:
+            print_boolean = pydbsp_operator_object is None or pydbsp_operator_object.__class__.__name__ in self._profile_dict["include"]
+            #
+            if print_boolean:
                 print(before_str)
-            else:                
-                if pydbsp_operator_object.__class__.__name__ in self._profile_dict["include"]:
-                    print(before_str)
-                    #
-                    if self._profile_dict["time"]:
-                        time_before_float = time.time()
-                    #
-                    if self._profile_dict["memory"]["before"] or self._profile_dict["memory"]["delta"]:
-                        memory_before_int = len(pickle.dumps(self)) / self._profile_dict["memory"]["divisor"]
-                        if self._profile_dict["memory"]["before"]:
-                            print(f"{indent_str}Memory before: {memory_before_int} {self._profile_dict['memory']['unit']}")
+            #
+            if self._profile_dict["time"]:
+                time_before_float = time.time()
+            #
+            if self._profile_dict["memory"]["before"] or self._profile_dict["memory"]["delta"]:
+                memory_before_int = len(pickle.dumps(self)) / self._profile_dict["memory"]["divisor"]
+                if self._profile_dict["memory"]["before"]:
+                    if print_boolean:
+                        print(f"{indent_str}Memory before: {memory_before_int} {self._profile_dict['memory']['unit']}")
         #
         profile_before_tuple = (time_before_float, memory_before_int)
         return profile_before_tuple
 
     def profile_after(self, profile_before_tuple, pydbsp_operator_object, after_str, indent_str=""):
         if self._profile_dict is not None:
-            if pydbsp_operator_object is None:
-                print("...done")
-        if self._profile_dict is not None and pydbsp_operator_object is not None and pydbsp_operator_object.__class__.__name__ in self._profile_dict["include"]:
-            time_before_float, memory_before_int = profile_before_tuple
+            print_boolean = pydbsp_operator_object is None or pydbsp_operator_object.__class__.__name__ in self._profile_dict["include"]
             #
-            if self._profile_dict["time"]:
-                time_after_float = time.time()
-                print(f"{indent_str}Time: {time_after_float - time_before_float}s")
+            time_before_float, memory_before_int = profile_before_tuple
             #
             if self._profile_dict["memory"]["after"] or self._profile_dict["memory"]["delta"]:
                 memory_after_int = len(pickle.dumps(self)) / self._profile_dict["memory"]["divisor"]
                 #
                 if self._profile_dict["memory"]["after"]:
-                    print(f"{indent_str}Memory after: {memory_after_int} {self._profile_dict['memory']['unit']}")
+                    if print_boolean:
+                        print(f"{indent_str}Memory after: {memory_after_int} {self._profile_dict['memory']['unit']}")
                 if self._profile_dict["memory"]["delta"]:
-                    print(f"{indent_str}Memory delta: {memory_after_int - memory_before_int} {self._profile_dict['memory']['unit']}")
+                    if print_boolean:
+                        print(f"{indent_str}Memory delta: {memory_after_int - memory_before_int} {self._profile_dict['memory']['unit']}")
             #
-            print(after_str)
-        #
-        if self._profile_dict is not None:
-            if pydbsp_operator_object is None:
+            if self._profile_dict["time"]:
+                time_after_float = time.time()
+                if print_boolean:
+                    print(f"{indent_str}Time: {time_after_float - time_before_float}s")
+            #
+            if print_boolean:
                 print(after_str)
 
     #
@@ -606,11 +611,11 @@ def source(name_str, profile_dict=None):
         stream = stream_handle.get()
         current_time_int = stream.current_time()
         if current_time_int > 1:
-            # jamie_simple
             if current_time_int - 1 in stream.inner:
                 del stream.inner[current_time_int - 1]
     #
-    return TopologyNode(name_str, output_handle_function, step_function, gc_function, [], profile_dict)
+    topologyNode = TopologyNode(name_str, output_handle_function, step_function, gc_function, [], profile_dict)
+    return topologyNode
 
 
 def message_dict_list_to_ZSet(message_dict_list):
