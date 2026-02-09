@@ -31,38 +31,47 @@ class TopologyNode:
         #
         self._group = output_handle_function().get().group()
         #
-        self.profile_config(profile_config_dict)
+        self._profile_config_dict = self.profile_config(profile_config_dict)
+        #
         self._profile_dict = {}
 
     #
 
     def profile_config(self, profile_config_dict):
         if profile_config_dict is None:
-            self._profile_dict = None
-            return
+            return None
         
+        _profile_config_dict = {}
+        for step_or_gc_str in ["step", "gc"]:
+            profile_config_dict1 = profile_config_dict.get(step_or_gc_str, {})
+            memory_dict = profile_config_dict1.get("memory", {})
+            
+            _profile_config_dict1 = {
+                "time": profile_config_dict1.get("time", False),
+                "memory": {
+                    "before": memory_dict.get("before", False),
+                    "after": memory_dict.get("after", False),
+                    "delta": memory_dict.get("delta", False)                    
+                }
+            }
+            
+            _profile_config_dict[step_or_gc_str] = _profile_config_dict1
+
         memory_unit_str_divisor_int_dict = {
             "KB": 1024,
             "MB": 1024 ** 2,
             "GB": 1024 ** 3,
             "TB": 1024 ** 4
         }
-        
-        memory_dict = profile_config_dict.get("memory", {})
         unit_str = memory_dict.get("unit", "KB").upper()
+        divisor_int = memory_unit_str_divisor_int_dict.get(unit_str, 1024)
         
-        self._profile_dict = {
-            "time": profile_config_dict.get("time", False),
-            "memory": {
-                "before": memory_dict.get("before", False),
-                "after": memory_dict.get("after", False),
-                "delta": memory_dict.get("delta", False),
-                "unit": unit_str,
-                "divisor": memory_unit_str_divisor_int_dict.get(unit_str, 1024)
-            },
-            "include": profile_config_dict.get("include", [])
-        }            
+        _profile_config_dict["unit"] = unit_str
+        _profile_config_dict["divisor"] = divisor_int
+        _profile_config_dict["include"] = profile_config_dict.get("include", [])
         
+        return _profile_config_dict
+
     #
 
     def map(self, map_function, profile_config_dict=None):
@@ -145,12 +154,12 @@ class TopologyNode:
             topologyNode.pydbsp_step(output_node)
         #
         def gc_function():
-            left_liftedStream.gc()
-            right_liftedStream.gc()
+            topologyNode.pydbsp_gc(left_liftedStream)
+            topologyNode.pydbsp_gc(right_liftedStream)
             #
-            join.gc()
+            topologyNode.pydbsp_gc(join)
             #
-            output_node.gc()
+            topologyNode.pydbsp_gc(output_node)
         #
         topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
@@ -260,7 +269,7 @@ class TopologyNode:
         agg_select_function_agg_function_agg_as_function_tuple_list = agg_tuple_list
         agg_function = group_by_agg_fun([(agg_select_function, agg_function, agg_as_function, as_function) for agg_select_function, agg_function, agg_as_function in agg_select_function_agg_function_agg_as_function_tuple_list])
         #
-        group_by_agg__topologyNode = self.group_by_agg_(by_function, agg_function, profile_dict=profile_dict)
+        group_by_agg__topologyNode = self.group_by_agg_(by_function, agg_function, profile_config_dict=profile_config_dict)
         #
         return group_by_agg__topologyNode
 
@@ -291,13 +300,13 @@ class TopologyNode:
             topologyNode.pydbsp_step(output_node)
         #
         def gc_function():
-            lifted_stream_introduction.gc()
+            topologyNode.pydbsp_gc(lifted_stream_introduction)
             #
-            group_by_then_agg.gc()
+            topologyNode.pydbsp_gc(group_by_then_agg)
             #
-            lifted_stream_elimination.gc()
+            topologyNode.pydbsp_gc(lifted_stream_elimination)
             #
-            output_node.gc()
+            topologyNode.pydbsp_gc(output_node)
         #
         topologyNode = TopologyNode("group_by_agg_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode 
@@ -306,7 +315,7 @@ class TopologyNode:
         agg_select_function_agg_function_agg_as_function_tuple_list = agg_tuple_list
         agg_function = group_by_agg_fun([(agg_select_function, agg_function, agg_as_function, None) for agg_select_function, agg_function, agg_as_function in agg_select_function_agg_function_agg_as_function_tuple_list])
         #
-        group_by_agg__topologyNode = self.group_by_agg_(lambda _: None, agg_function, profile_dict=profile_dict)
+        group_by_agg__topologyNode = self.group_by_agg_(lambda _: None, agg_function, profile_config_dict=profile_config_dict)
         group_by_agg__topologyNode._name_str = "agg_op"
         #
         return group_by_agg__topologyNode
@@ -354,22 +363,52 @@ class TopologyNode:
     #
 
     def step(self):
-        def traverse(topologyNode, stack):
-            stack.append(topologyNode)
-            for daughter in topologyNode.daughters():
-                traverse(daughter, stack)
-            return stack
+        def traverse(topologyNode, stack_topologyNode_list):
+            stack_topologyNode_list.append(topologyNode)
+            for daughter_topologyNode in topologyNode.daughters():
+                traverse(daughter_topologyNode, stack_topologyNode_list)
+            return stack_topologyNode_list
         #
-        stack = traverse(self, [])
+        stack_topologyNode_list = traverse(self, [])
         #
-        while stack:
-            topologyNode = stack.pop()
+        while stack_topologyNode_list:
+            topologyNode = stack_topologyNode_list.pop()
             #
-            topologyNode.profile_before_step(topologyNode, "topologyNode_step")
+            topologyNode.profile_before("step")
             #
             topologyNode._step_function()
             #
-            topologyNode.profile_after_step(topologyNode, "topologyNode_step")
+            topologyNode.profile_after("step")
+    
+    def gc(self):
+        def traverse(topologyNode, stack_topologyNode_list):
+            stack_topologyNode_list.append(topologyNode)
+            for daughter_topologyNode in topologyNode.daughters():
+                traverse(daughter_topologyNode, stack_topologyNode_list)
+            return stack_topologyNode_list
+        #
+        stack_topologyNode_list = traverse(self, [])
+        #
+        while stack_topologyNode_list:
+            topologyNode = stack_topologyNode_list.pop()
+            #
+            topologyNode.profile_before("gc")
+            #
+            topologyNode._gc_function()
+            #
+            topologyNode.profile_after("gc")
+            #
+            topologyNode.print_profile()
+
+    # def gc(self):
+    #     self.profile_before("gc")
+    #     #
+    #     self._gc_function()
+    #     #
+    #     self.profile_after("gc")
+    #     #
+    #     for topologyNode in self._daughter_topologyNode_list:
+    #         topologyNode.gc()
     
     def latest(self):
         return self._output_handle_function().get().latest()
@@ -418,51 +457,70 @@ class TopologyNode:
         #
         return name_str_topologyNode_dict[name_str]
 
-    #
-
-    def gc(self):
-        self.gc_function()()
-        #
-        self.print_profile()
-        #
-        for topologyNode in self._daughter_topologyNode_list:
-            topologyNode.gc()
-    #
-    
-    # profile_dict: {"time": boolean, "memory": {"before": boolean, "after": boolean, "delta": boolean, "unit": str ("KB", "MB", "GB", "TB"), "divisor": int}, "include": operator_class_name_str_list}
+    # profile_config_dict: {"step"/"gc": {"time": boolean, "memory": {"before": boolean, "after": boolean, "delta": boolean}, "unit": str ("KB", "MB", "GB", "TB"), "divisor": int, "include": pydbsp_operator_class_name_str_list}
     
     def pydbsp_step(self, pydbsp_operator_object):
-        if self._profile_dict is not None:
-            self.profile_before(pydbsp_operator_object, "pydbsp_step")
+        if self._profile_config_dict is not None:
+            self.pydbsp_profile_before(pydbsp_operator_object, "step")
         #
         pydbsp_operator_object.step()
         #
-        if self._profile_dict is not None:
-            self.profile_after(pydbsp_operator_object, "pydbsp_step")
-            
-    def profile_before(self, operator_object, step_or_gc_str):
-        operator_name_str = operator_object.__class__.__name__
+        if self._profile_config_dict is not None:
+            self.pydbsp_profile_after(pydbsp_operator_object, "step")
+       
+    def pydbsp_gc(self, pydbsp_operator_object):
+        if self._profile_config_dict is not None:
+            self.pydbsp_profile_before(pydbsp_operator_object, "gc")
         #
-        if self._profile_dict is not None:
-            if self._profile_dict["time"]:
-                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(operator_name_str, {})["time_before"]  = time.time()
-            #
-            if self._profile_dict["memory"]["before"] or self._profile_dict["memory"]["delta"]:
-                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(operator_name_str, {})["memory_before"] = len(pickle.dumps(self)) / self._profile_dict["memory"]["divisor"]
+        pydbsp_operator_object.gc()
+        #
+        if self._profile_config_dict is not None:
+            self.pydbsp_profile_after(pydbsp_operator_object, "gc")
 
-    def profile_after(self, operator_object, step_or_gc_str):
-        operator_name_str = operator_object.__class__.__name__
+    #        
+
+    def profile(self, step_or_gc_str, before_or_after_str):
+        topologyNode_str = f"{self._name_str}_{self._id_str}"
         #
-        if self._profile_dict is not None:
+        if self._profile_config_dict is not None:
+            _profile_config_dict1 = self._profile_config_dict[step_or_gc_str]
             #
-            if self._profile_dict["time"]:
-                self._profile_before_step_dict.setdefault(step_or_gc_str, {}).setdefault(operator_name_str, {})["time_after"] = time.time()
+            if _profile_config_dict1["time"]:
+                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {})[f"time_{before_or_after_str}"]  = time.time()
             #
-            if self._profile_dict["memory"]["after"] or self._profile_dict["memory"]["delta"]:
-                self._profile_before_step_dict.setdefault(step_or_gc_str, {}).setdefault(operator_name_str, {})["memory_after"] = len(pickle.dumps(self)) / self._profile_dict["memory"]["divisor"]
+            if _profile_config_dict1["memory"][before_or_after_str] or _profile_config_dict1["memory"]["delta"]:
+                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {})[f"memory_{before_or_after_str}"] = len(pickle.dumps(self)) / self._profile_config_dict["divisor"]
+
+    def profile_before(self, step_or_gc_str):
+        self.profile(step_or_gc_str, "before")
+
+    def profile_after(self, step_or_gc_str):
+        self.profile(step_or_gc_str, "after")
+
+    #
+    
+    def pydbsp_profile(self, pydbsp_operator, step_or_gc_str, before_or_after_str):
+        topologyNode_str = f"{self._name_str}_{self._id_str}"
+        pydbsp_operator_str = pydbsp_operator.__class__.__name__
+        #
+        if self._profile_config_dict is not None and pydbsp_operator_str in self._profile_config_dict["include"]:
+            _profile_config_dict1 = self._profile_config_dict[step_or_gc_str]
+            #
+            if _profile_config_dict1["time"]:
+                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {}).setdefault(pydbsp_operator_str, {})[f"time_{before_or_after_str}"]  = time.time()
+            #
+            if (_profile_config_dict1["memory"][before_or_after_str] or _profile_config_dict1["memory"]["delta"]) and pydbsp_operator_str in self._profile_config_dict["include"]:
+                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {}).setdefault(pydbsp_operator_str, {})[f"memory_{before_or_after_str}"] = len(pickle.dumps(pydbsp_operator)) / self._profile_config_dict["divisor"]
+
+    def pydbsp_profile_before(self, pydbsp_operator, step_or_gc_str):
+        self.pydbsp_profile(pydbsp_operator, step_or_gc_str, "before")
+
+    def pydbsp_profile_after(self, pydbsp_operator, step_or_gc_str):
+        self.pydbsp_profile(pydbsp_operator, step_or_gc_str, "after")
 
     def print_profile(self):
-        pass
+        if self._profile_config_dict is not None:
+            print(json.dumps(self._profile_dict, indent=2))
 
     #
 

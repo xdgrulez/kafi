@@ -1,4 +1,4 @@
-import os, random, sys, time
+import json, os, random, sys, time
 #
 import cloudpickle as pickle
 
@@ -21,7 +21,8 @@ from kafi.streams.topologynode import get, update, sum, agg_tuple, message_dict_
 
 def setup():
     # profile_dict = {"time": False, "memory": {"before": False, "after": False, "delta": True, "unit": "MB"}, "include": ["GroupByThenAgg"]}
-    profile_dict = {"memory": {"after": True}}
+    profile_config_dict = {"gc": {"memory": {"after": True}}, "include": ["Join", "LiftedStreamIntroduction", "LiftedStreamElimination"]}
+    # profile_config_dict = {"gc": {"memory": {"after": True}}}
     #
     transactions_source_topologyNode = source("transactions")
     #
@@ -33,7 +34,7 @@ def setup():
                       agg_tuple_list=[agg_tuple(select_function=get("amount"),
                                                 agg_function=sum,
                                                 as_function=update("credits"))],
-                      profile_dict=None)
+                      profile_config_dict=None)
         # .group_by_agg(by_function_list=[lambda x: x["to_account"]],
         #               as_function=lambda x, y: x.update({"account": y}),
         #               agg_tuple_list=[agg_tuple(select_function=lambda x: x["amount"],
@@ -47,7 +48,7 @@ def setup():
         .group_by_agg([get("from_account")],
                       update("account"),
                       [agg_tuple(get("amount"), sum, update("debits"))],
-                      profile_dict=None)
+                      profile_config_dict=None)
         # .group_by_agg(by_function_list=[get("from_account")],
         #               as_function=update("account"),
         #               agg_tuple_list=[agg_tuple(select_function=get("amount"),
@@ -68,7 +69,7 @@ def setup():
             on_function=lambda l, r: l["account"] == r["account"],
             projection_function=lambda l, r: {"account": l["account"],
                                               "balance": l["credits"] - r["debits"]},
-                      profile_dict=None)
+                      profile_config_dict=profile_config_dict)
     )
     #
 # create view total as select sum(balance) from balance;
@@ -77,7 +78,8 @@ def setup():
         .agg(agg_tuple_list=[agg_tuple(select_function=get("balance"), 
                                        agg_function=sum,
                                        as_function=update("sum"))],
-                      profile_dict=profile_dict)
+                      profile_config_dict=None)
+                    #   profile_config_dict=profile_config_dict)
         # .agg(agg_tuple_list=[agg_tuple(select_function=lambda x: x["balance"], 
         #                                agg_function=lambda x, y: x + y,
         #                                as_function=lambda x, y: x.update({"sum": y}))])
