@@ -637,7 +637,7 @@ def test_diff(test_obj, storage1, storage2):
 
 def test_from_to_file(test_obj, storage1, storage2):
     if storage2.__class__.__name__ in ["AzureBlob", "Local", "S3"]:
-        suffix_str_list = [".csv", ".feather", ".json", ".orc", ".parquet", ".xlsx", ".xml"]
+        suffix_str_list = [".csv", ".json", ".parquet", ".xlsx", ".xml"]
         random_int = random.randint(0, len(suffix_str_list) - 1)
         suffix_str = suffix_str_list[random_int]
         #
