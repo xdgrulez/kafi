@@ -19,8 +19,8 @@ class Files(Pandas):
         file_str = file
         #
         suffix_str = pathlib.Path(file_str).suffix
-        if suffix_str not in [".csv", ".feather", ".json", ".orc", ".parquet", ".xlsx", ".xml", ".bytes"]:
-            raise Exception("Only \".csv\", \".feather\", \".json\", \".orc\", \".parquet\", \".xlsx\", \".xml\" and \".bytes\" supported.")
+        if suffix_str not in [".csv", ".json", ".parquet", ".xlsx", ".xml", ".bytes"]:
+            raise Exception("Only \".csv\", \".json\", \".parquet\", \".xlsx\", \".xml\" and \".bytes\" supported.")
         #
         if suffix_str == ".bytes":
             message_dict_list = self.cat(topic, n, type="bytes", **kwargs)
@@ -35,17 +35,12 @@ class Files(Pandas):
             if suffix_str == ".csv":
                 index_bool = kwargs["index"] if "index" in kwargs else False
                 df.to_csv(data_bytesIO, index=index_bool)
-            elif suffix_str == ".feather":
-                df.to_feather(data_bytesIO)
             elif suffix_str == ".json":
                 index_bool = kwargs["index"] if "index" in kwargs else None
                 df.to_json(data_bytesIO, orient="records")
-            elif suffix_str == ".orc":
-                index_bool = kwargs["index"] if "index" in kwargs else None
-                df.to_orc(data_bytesIO, index=index_bool)
             elif suffix_str == ".parquet":
                 index_bool = kwargs["index"] if "index" in kwargs else None
-                df.to_parquet(data_bytesIO, index=index_bool)
+                df.to_parquet(data_bytesIO, index=index_bool, engine="fastparquet")
             elif suffix_str == ".xlsx":
                 index_bool = kwargs["index"] if "index" in kwargs else False
                 df.to_excel(data_bytesIO, index=index_bool)
@@ -69,8 +64,8 @@ class Files(Pandas):
         file_str = file
         #
         suffix_str = pathlib.Path(file_str).suffix
-        if suffix_str not in [".csv", ".feather", ".json", ".orc", ".parquet", ".xlsx", ".xml"]:
-            raise Exception("Only \".csv\", \".feather\", \".json\", \".orc\", \".parquet\", \".xlsx\" and \".xml\" supported.")
+        if suffix_str not in [".csv", ".json", ".parquet", ".xlsx", ".xml"]:
+            raise Exception("Only \".csv\", \".json\", \".parquet\", \".xlsx\" and \".xml\" supported.")
         #
         file_abs_path_str = self.admin.get_file_abs_path_str(file_str)
         data_bytes = self.admin.read_bytes(file_abs_path_str)
@@ -78,12 +73,8 @@ class Files(Pandas):
         #
         if suffix_str == ".csv":
             df = pd.read_csv(data_bytesIO)
-        elif suffix_str == ".feather":
-            df = pd.read_feather(data_bytesIO)
         elif suffix_str == ".json":
             df = pd.read_json(data_bytesIO)
-        elif suffix_str == ".orc":
-            df = pd.read_orc(data_bytesIO)
         elif suffix_str == ".parquet":
             df = pd.read_parquet(data_bytesIO)
         elif suffix_str == ".xlsx":

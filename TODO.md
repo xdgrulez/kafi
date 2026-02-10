@@ -1,7 +1,6 @@
 * aio support...
 * support all kwargs that make sense globally in config yamls (e.g. the new ones or (de)serializer configs)?
 * do not list internal _topics
-* "string" as an alias for "str"
 * Schema Registry: support patterns
 * better error handling (e.g. if topic does not yet exists and auto creation is off, GroupAuthorization, TopicAuthorization...)
 * add Perftest?
