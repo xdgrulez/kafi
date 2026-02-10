@@ -13,6 +13,8 @@ from pydbsp.stream import (
 )
 from pydbsp.stream.functions.linear import stream_elimination, stream_introduction
 
+import cloudpickle as pickle
+
 T = TypeVar("T")
 
 
@@ -38,13 +40,10 @@ class Delay(UnaryOperator[T, T]):
         return True
     
     def gc(self) -> None:
-        latest = self.output_stream_handle.get().current_time()
-        if latest > 1:
-            if latest - 1 in self.output_stream_handle.get().inner:
-                del self.output_stream_handle.get().inner[latest - 1]
+        self.output_stream_handle.get().gc()
 
     def profile(self, config: str) -> Dict:
-        return {"output_stream_handle": self.output_stream_handle.get().inner if config == "dict" else len(self.output_stream_handle.get().inner.keys())}
+        self.output_stream_handle.get().profile(config)
 
 
 class Differentiate(UnaryOperator[T, T]):

@@ -5,6 +5,8 @@ from typing import Callable, Iterator, List, Optional, OrderedDict, Protocol, Ty
 
 from pydbsp.core import AbelianGroupOperation
 
+import cloudpickle as pickle
+
 INFINITY = sys.maxsize
 
 
@@ -110,6 +112,22 @@ class Stream[T]:
             return False
 
         return self.inner == other.inner  # type: ignore
+
+    def gc(self) -> None:
+        current_time_int = self.current_time()
+        if current_time_int > 1:
+            if current_time_int - 1 in self.inner:
+                del self.inner[current_time_int - 1]
+
+    def profile(self, config: str) -> Dict:
+        if config == "dict":
+            profile = self.inner
+        elif config == "len":
+            profile = len(self.inner.keys())
+        elif config == "size":
+            profile = len(pickle.dumps(self)) / 1024
+        return profile
+
 
 
 T = TypeVar("T")
@@ -290,13 +308,11 @@ class Lift1(UnaryOperator[T, R]):
         return False
     
     def gc(self) -> None:
-        latest = self.output_stream_handle.get().current_time()
-        if latest > 1:
-            if latest - 1 in self.output_stream_handle.get().inner:
-                del self.output_stream_handle.get().inner[latest - 1]
+        self.output_stream_handle.get().gc()
 
     def profile(self, config: str) -> Dict:
-        return {"output_stream_handle": self.output_stream_handle.get().inner if config == "dict" else len(self.output_stream_handle.get().inner.keys())}
+        self.output_stream_handle.get().profile(config)
+
 
 F2 = Callable[[T, R], S]
 
@@ -346,13 +362,10 @@ class Lift2(BinaryOperator[T, R, S]):
         return False
     
     def gc(self) -> None:
-        latest = self.output_stream_handle.get().current_time()
-        if latest > 1:
-            if latest - 1 in self.output_stream_handle.get().inner:
-                del self.output_stream_handle.get().inner[latest - 1]
+        self.output_stream_handle.get().gc()
 
     def profile(self, config: str) -> Dict:
-        return {"output_stream_handle": self.output_stream_handle.get().inner if config == "dict" else len(self.output_stream_handle.get().inner.keys())}
+        self.output_stream_handle.get().profile(config)
 
 
 class LiftedGroupAdd(Lift2[T, T, T]):

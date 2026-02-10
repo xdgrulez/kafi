@@ -20,7 +20,8 @@ from kafi.streams.topologynode import get, update, sum, agg_tuple, message_dict_
 #
 
 def setup():
-    profile_config_dict = {"gc": {"memory": {"after": True, "delta": True}}, "include": ["Join", "LiftedStreamIntroduction", "LiftedStreamElimination"], "streams": None}
+    # profile_config_dict = {"gc": {"memory": {"after": True, "delta": True}}, "include": ["Join", "LiftedStreamIntroduction", "LiftedStreamElimination"], "streams": "dict"}
+    profile_config_dict = {"gc": {"memory": {"after": True, "delta": True}, "streams": "size"}, "include": []}
     #
     transactions_source_topologyNode = source("transactions")
     #
@@ -88,7 +89,7 @@ def setup():
 #
 
 def transactions(transactions_source_topologyNode, root_topologyNode):
-    n_int = 10000
+    n_int = 100
 
     # obj_report = asizeof.asized(root_topologyNode, detail=1, code=True)
     # print(obj_report.size)

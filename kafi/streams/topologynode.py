@@ -52,7 +52,8 @@ class TopologyNode:
                     "before": memory_dict.get("before", False),
                     "after": memory_dict.get("after", False),
                     "delta": memory_dict.get("delta", False),
-                }
+                },
+                "streams": profile_config_dict1.get("streams", None)
             }
             #
             _profile_config_dict[step_or_gc_str] = _profile_config_dict1
@@ -70,8 +71,6 @@ class TopologyNode:
         _profile_config_dict["divisor"] = divisor_int
         #
         _profile_config_dict["include"] = profile_config_dict.get("include", [])
-        #
-        _profile_config_dict["streams"] = profile_config_dict.get("streams", None)
         
         return _profile_config_dict
 
@@ -460,7 +459,7 @@ class TopologyNode:
         #
         return name_str_topologyNode_dict[name_str]
 
-    # profile_config_dict: {"step"/"gc": {"time": boolean, "memory": {"before": bool, "after": bool, "delta": bool}}, "unit": str ("KB", "MB", "GB", "TB"), "divisor": int, "include": pydbsp_operator_class_name_str_list, "streams": str ["dict", "len"]}
+    # profile_config_dict: {"step"/"gc": {"time": boolean, "memory": {"before": bool, "after": bool, "delta": bool}, "streams": str ["dict", "len", "size"]}, "unit": str ("KB", "MB", "GB", "TB"), "divisor": int, "include": pydbsp_operator_class_name_str_list}
     
     def pydbsp_step(self, pydbsp_operator_object):
         if self._profile_config_dict is not None:
@@ -521,8 +520,8 @@ class TopologyNode:
             if _profile_config_dict1["memory"][before_or_after_str] and pydbsp_operator_str in self._profile_config_dict["include"]:
                 self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {}).setdefault(pydbsp_operator_str, {})[f"memory_{before_or_after_str}"] = len(pickle.dumps(pydbsp_operator)) / self._profile_config_dict["divisor"]
             #
-            if self._profile_config_dict["streams"] is not None:
-                pydbsp_profile_dict = pydbsp_operator.profile(self._profile_config_dict["streams"])
+            if _profile_config_dict1["streams"] is not None:
+                pydbsp_profile_dict = pydbsp_operator.profile(_profile_config_dict1["streams"])
                 self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {}).setdefault(pydbsp_operator_str, {})["streams"] = pydbsp_profile_dict
 
     def pydbsp_profile_before(self, pydbsp_operator, step_or_gc_str):
@@ -533,7 +532,7 @@ class TopologyNode:
 
     def print_profile(self):
         if self._profile_config_dict is not None:
-           print(json.dumps(self._profile_dict, indent=2))
+            print(json.dumps(self._profile_dict, indent=2))
             # print(self._profile_dict)
 
     #
@@ -659,11 +658,7 @@ def source(name_str, profile_config_dict=None):
         pass
     #
     def gc_function():
-        stream = stream_handle.get()
-        current_time_int = stream.current_time()
-        if current_time_int > 1:
-            if current_time_int - 1 in stream.inner:
-                del stream.inner[current_time_int - 1]
+        stream_handle.get().gc()
     #
     topologyNode = TopologyNode(name_str, output_handle_function, step_function, gc_function, [], profile_config_dict)
     return topologyNode

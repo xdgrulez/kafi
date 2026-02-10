@@ -205,6 +205,7 @@ class DeltaLiftedDeltaLiftedJoin(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]
         self.join_2.gc()
         self.join_3.gc()
         self.join_4.gc()
+        self.output_stream.gc()
 
     def profile(self, config: str) -> Dict:
         return {"integrated_stream_a": self.integrated_stream_a.profile(config),
@@ -220,5 +221,6 @@ class DeltaLiftedDeltaLiftedJoin(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]
                 "join_1": self.join_1.profile(config),
                 "join_2": self.join_2.profile(config),
                 "join_3": self.join_3.profile(config),
-                "join_4": self.join_4.profile(config)
+                "join_4": self.join_4.profile(config),
+                "output_stream": self.output_stream.profile(config)
                 }
