@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict
 
 from pydbsp.indexed_zset import Indexer, I
 
@@ -259,6 +259,9 @@ class Join(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T,
 
     def gc(self) -> None:
         self.join.gc()
+        
+    def profile(self, config: str) -> Dict:
+        return self.join.profile(config)
 
 class Intersection(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[T]], Stream[ZSet[T]]]):
     """
@@ -386,3 +389,8 @@ class GroupByThenAgg(UnaryOperator[ZSet[T], ZSet[tuple[I, R]]]):
         self.integrated_stream.gc()
         self.lift_integrated_stream.gc()
         self.lifted_lifted_aggregate.gc()
+
+    def profile(self, config: str) -> Dict:
+        return {"integrated_stream": self.integrated_stream.profile(config),
+                "lift_integrated_stream": self.lift_integrated_stream.profile(config),
+                "lifted_lifted_aggregate": self.lifted_lifted_aggregate.profile(config)}

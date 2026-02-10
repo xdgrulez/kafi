@@ -1,7 +1,7 @@
 import sys
 from abc import abstractmethod
 from types import NotImplementedType
-from typing import Callable, Iterator, List, Optional, OrderedDict, Protocol, TypeVar, cast
+from typing import Callable, Iterator, List, Optional, OrderedDict, Protocol, TypeVar, cast, Dict
 
 from pydbsp.core import AbelianGroupOperation
 
@@ -290,11 +290,13 @@ class Lift1(UnaryOperator[T, R]):
         return False
     
     def gc(self) -> None:
-        latest = self.input_stream_handle.get().current_time()
+        latest = self.output_stream_handle.get().current_time()
         if latest > 1:
             if latest - 1 in self.output_stream_handle.get().inner:
                 del self.output_stream_handle.get().inner[latest - 1]
 
+    def profile(self, config: str) -> Dict:
+        return {"output_stream_handle": self.output_stream_handle.get().inner if config == "dict" else len(self.output_stream_handle.get().inner.keys())}
 
 F2 = Callable[[T, R], S]
 
@@ -348,6 +350,9 @@ class Lift2(BinaryOperator[T, R, S]):
         if latest > 1:
             if latest - 1 in self.output_stream_handle.get().inner:
                 del self.output_stream_handle.get().inner[latest - 1]
+
+    def profile(self, config: str) -> Dict:
+        return {"output_stream_handle": self.output_stream_handle.get().inner if config == "dict" else len(self.output_stream_handle.get().inner.keys())}
 
 
 class LiftedGroupAdd(Lift2[T, T, T]):

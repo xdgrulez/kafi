@@ -1,4 +1,4 @@
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Dict
 
 from pydbsp.stream import (
     Lift1,
@@ -43,6 +43,9 @@ class Delay(UnaryOperator[T, T]):
             if latest - 1 in self.output_stream_handle.get().inner:
                 del self.output_stream_handle.get().inner[latest - 1]
 
+    def profile(self, config: str) -> Dict:
+        return {"output_stream_handle": self.output_stream_handle.get().inner if config == "dict" else len(self.output_stream_handle.get().inner.keys())}
+
 
 class Differentiate(UnaryOperator[T, T]):
     """
@@ -77,6 +80,11 @@ class Differentiate(UnaryOperator[T, T]):
         self.delayed_negated_stream.gc()
         self.differentiation_stream.gc()
 
+    def profile(self, config: str) -> Dict:
+        return {"delayed_stream": self.delayed_stream.profile(config),
+                "delayed_negated_stream": self.delayed_negated_stream.profile(config),
+                "differentiation_stream": self.differentiation_stream.profile(config)}
+
 
 class Integrate(UnaryOperator[T, T]):
     """
@@ -106,6 +114,10 @@ class Integrate(UnaryOperator[T, T]):
     def gc(self) -> None:
         self.delayed_stream.gc()
         self.integration_stream.gc()
+
+    def profile(self, config: str) -> Dict:
+        return {"delayed_stream": self.delayed_stream.profile(config),
+                "integration_stream": self.integration_stream.profile(config)}
 
 
 def step_until_fixpoint_set_new_default_then_return[T](

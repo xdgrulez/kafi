@@ -40,23 +40,23 @@ class TopologyNode:
     def profile_config(self, profile_config_dict):
         if profile_config_dict is None:
             return None
-        
+        #
         _profile_config_dict = {}
         for step_or_gc_str in ["step", "gc"]:
             profile_config_dict1 = profile_config_dict.get(step_or_gc_str, {})
             memory_dict = profile_config_dict1.get("memory", {})
-            
+            #
             _profile_config_dict1 = {
                 "time": profile_config_dict1.get("time", False),
                 "memory": {
                     "before": memory_dict.get("before", False),
                     "after": memory_dict.get("after", False),
-                    "delta": memory_dict.get("delta", False)                    
+                    "delta": memory_dict.get("delta", False),
                 }
             }
-            
+            #
             _profile_config_dict[step_or_gc_str] = _profile_config_dict1
-
+        #
         memory_unit_str_divisor_int_dict = {
             "KB": 1024,
             "MB": 1024 ** 2,
@@ -65,10 +65,13 @@ class TopologyNode:
         }
         unit_str = memory_dict.get("unit", "KB").upper()
         divisor_int = memory_unit_str_divisor_int_dict.get(unit_str, 1024)
-        
+        #
         _profile_config_dict["unit"] = unit_str
         _profile_config_dict["divisor"] = divisor_int
+        #
         _profile_config_dict["include"] = profile_config_dict.get("include", [])
+        #
+        _profile_config_dict["streams"] = profile_config_dict.get("streams", None)
         
         return _profile_config_dict
 
@@ -457,7 +460,7 @@ class TopologyNode:
         #
         return name_str_topologyNode_dict[name_str]
 
-    # profile_config_dict: {"step"/"gc": {"time": boolean, "memory": {"before": boolean, "after": boolean, "delta": boolean}, "unit": str ("KB", "MB", "GB", "TB"), "divisor": int, "include": pydbsp_operator_class_name_str_list}
+    # profile_config_dict: {"step"/"gc": {"time": boolean, "memory": {"before": bool, "after": bool, "delta": bool}}, "unit": str ("KB", "MB", "GB", "TB"), "divisor": int, "include": pydbsp_operator_class_name_str_list, "streams": str ["dict", "len"]}
     
     def pydbsp_step(self, pydbsp_operator_object):
         if self._profile_config_dict is not None:
@@ -488,7 +491,10 @@ class TopologyNode:
             if _profile_config_dict1["time"]:
                 self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {})[f"time_{before_or_after_str}"]  = time.time()
             #
-            if _profile_config_dict1["memory"][before_or_after_str] or _profile_config_dict1["memory"]["delta"]:
+            if _profile_config_dict1["memory"]["delta"] and before_or_after_str == "after":
+                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {})["memory_delta"] = len(pickle.dumps(self)) / self._profile_config_dict["divisor"] - self._profile_dict.get(step_or_gc_str, {}).get(topologyNode_str, {}).get("memory_after", 0)
+            #
+            if _profile_config_dict1["memory"][before_or_after_str]:
                 self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {})[f"memory_{before_or_after_str}"] = len(pickle.dumps(self)) / self._profile_config_dict["divisor"]
 
     def profile_before(self, step_or_gc_str):
@@ -509,8 +515,15 @@ class TopologyNode:
             if _profile_config_dict1["time"]:
                 self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {}).setdefault(pydbsp_operator_str, {})[f"time_{before_or_after_str}"]  = time.time()
             #
-            if (_profile_config_dict1["memory"][before_or_after_str] or _profile_config_dict1["memory"]["delta"]) and pydbsp_operator_str in self._profile_config_dict["include"]:
+            if _profile_config_dict1["memory"]["delta"] and before_or_after_str == "after" and pydbsp_operator_str in self._profile_config_dict["include"]:
+                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {}).setdefault(pydbsp_operator_str, {})["memory_delta"] = len(pickle.dumps(pydbsp_operator)) / self._profile_config_dict["divisor"] - self._profile_dict.get(step_or_gc_str, {}).get(topologyNode_str, {}).get(pydbsp_operator_str, {}).get("memory_after", 0)
+            #
+            if _profile_config_dict1["memory"][before_or_after_str] and pydbsp_operator_str in self._profile_config_dict["include"]:
                 self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {}).setdefault(pydbsp_operator_str, {})[f"memory_{before_or_after_str}"] = len(pickle.dumps(pydbsp_operator)) / self._profile_config_dict["divisor"]
+            #
+            if self._profile_config_dict["streams"] is not None:
+                pydbsp_profile_dict = pydbsp_operator.profile(self._profile_config_dict["streams"])
+                self._profile_dict.setdefault(step_or_gc_str, {}).setdefault(topologyNode_str, {}).setdefault(pydbsp_operator_str, {})["streams"] = pydbsp_profile_dict
 
     def pydbsp_profile_before(self, pydbsp_operator, step_or_gc_str):
         self.pydbsp_profile(pydbsp_operator, step_or_gc_str, "before")
@@ -520,7 +533,8 @@ class TopologyNode:
 
     def print_profile(self):
         if self._profile_config_dict is not None:
-            print(json.dumps(self._profile_dict, indent=2))
+           print(json.dumps(self._profile_dict, indent=2))
+            # print(self._profile_dict)
 
     #
 
