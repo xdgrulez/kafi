@@ -15,7 +15,7 @@ kafi:
   flush.timeout: -1.0
   produce.batch.size: 1000
   retention.ms: 604800000
-  consume.timeout: 5.0
+  consume.timeout: 10.0
   consume.batch.size: 1000
   consumer.group.prefix: ""
   enable.auto.commit: false

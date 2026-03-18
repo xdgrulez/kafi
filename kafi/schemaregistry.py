@@ -133,6 +133,13 @@ class SchemaRegistry:
     def srm(self, pattern, permanent=False):
         return self.delete_subject(pattern, permanent)
 
+    def delete_subject_force(self, pattern):
+        self.delete_subject(pattern)
+        return self.delete_subject(pattern, permanent=True)
+
+    def srmf(self, pattern):
+        return self.delete_subject_force(pattern)
+
     def get_latest_version(self, subject_name):
         subject_name_str = subject_name
         #
