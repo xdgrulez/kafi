@@ -126,6 +126,24 @@ class TopologyNode:
         topologyNode = TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
 
+#     def left_join():
+# (
+#     SELECT a.id, a.name, b.value
+#     FROM table_a a
+#     INNER JOIN table_b b ON a.id = b.id
+# )
+# UNION
+# (
+#     SELECT a.id, a.name, NULL AS value
+#     FROM table_a a
+#     WHERE (a.id, a.name) NOT IN (
+#         SELECT a.id, a.name
+#         FROM table_a a
+#         INNER JOIN table_b b ON a.id = b.id
+#     )
+# );
+
+
     def join(self, other, on_function, projection_function, profile_config_dict=None):
         def on_function1(left_value_json_str, right_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
