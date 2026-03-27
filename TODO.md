@@ -1,6 +1,7 @@
 # other TODOs
 
 * profiling (mem/time), debugging everywhere, clean up and focus on what we have now
+* build left join + test
 * TopologyNode-Tests -> unittests
 * streams-Test -> unittests (share all TopologyNode-Tests with/without kafi-streams on top)
 
