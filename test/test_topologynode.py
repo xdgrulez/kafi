@@ -41,6 +41,22 @@ class TestTopologyNode(unittest.TestCase):
 
     #
 
+    def get_latest(self, root_topologyNode, source_topologyNode):
+        table_str = source_topologyNode.name()
+        zset = table_str_zset_dict[table_str]
+        source_topologyNode.output_handle_function().get().send(zset)
+        #
+        root_topologyNode.step()
+        root_topologyNode.gc()
+        #
+        latest_zset = root_topologyNode.latest()
+        #
+        value_dict_list = [json.loads(value_str) for value_str in list(latest_zset.inner.keys())]
+        #
+        return value_dict_list
+
+    #
+
     def test_sqlzoo_limit(self):
         world_source_topologyNode = source("world")
         #
@@ -49,17 +65,11 @@ class TestTopologyNode(unittest.TestCase):
             .limit(100)
         )
         #
-        world_zset = table_str_zset_dict["world"]
-        world_source_topologyNode.output_handle_function().get().send(world_zset)
+        value_dict_list = self.get_latest(root_topologyNode, world_source_topologyNode)
         #
-        root_topologyNode.step()
-        root_topologyNode.gc()
+        self.assertEqual(100, len(value_dict_list))
         #
-        latest_zset = root_topologyNode.latest()
-        #
-        self.assertEqual(100, len(latest_zset.inner))
-        #
-        value_dict = json.loads(list(latest_zset.inner.keys())[78])
+        value_dict = value_dict_list[78]
         self.assertEqual("Iran", value_dict["name"])
         self.assertEqual("Asia", value_dict["continent"])
         self.assertEqual(1648195, value_dict["area"])
@@ -80,17 +90,11 @@ class TestTopologyNode(unittest.TestCase):
             .map(lambda value_dict: {"population": value_dict["population"]})
         )
         #
-        world_zset = table_str_zset_dict["world"]
-        world_source_topologyNode.output_handle_function().get().send(world_zset)
+        value_dict_list = self.get_latest(root_topologyNode, world_source_topologyNode)
         #
-        root_topologyNode.step()
-        root_topologyNode.gc()
+        self.assertEqual(1, len(value_dict_list))
         #
-        latest_zset = root_topologyNode.latest()
-        #
-        self.assertEqual(1, len(latest_zset.inner))
-        #
-        value_dict = json.loads(list(latest_zset.inner.keys())[0])
+        value_dict = value_dict_list[0]
         self.assertEqual({"population": 83149300}, value_dict)
 
 # SELECT name, population FROM world
@@ -105,17 +109,10 @@ class TestTopologyNode(unittest.TestCase):
                                      "population": value_dict["population"]})
         )
         #
-        world_zset = table_str_zset_dict["world"]
-        world_source_topologyNode.output_handle_function().get().send(world_zset)
+        value_dict_list = self.get_latest(root_topologyNode, world_source_topologyNode)
         #
-        root_topologyNode.step()
-        root_topologyNode.gc()
+        self.assertEqual(3, len(value_dict_list))
         #
-        latest_zset = root_topologyNode.latest()
-        #
-        self.assertEqual(3, len(latest_zset.inner))
-        #
-        value_dict_list = [json.loads(value_str) for value_str in list(latest_zset.inner.keys())]
         self.assertEqual({"name": "Denmark", "population": 5822763}, value_dict_list[0])
         self.assertEqual({"name": "Norway", "population": 5367580}, value_dict_list[1])
         self.assertEqual({"name": "Sweden", "population": 10338368}, value_dict_list[2])
@@ -132,17 +129,10 @@ class TestTopologyNode(unittest.TestCase):
                                      "area": value_dict["area"]})
         )
         #
-        world_zset = table_str_zset_dict["world"]
-        world_source_topologyNode.output_handle_function().get().send(world_zset)
+        value_dict_list = self.get_latest(root_topologyNode, world_source_topologyNode)
         #
-        root_topologyNode.step()
-        root_topologyNode.gc()
+        self.assertEqual(8, len(value_dict_list))
         #
-        latest_zset = root_topologyNode.latest()
-        #
-        self.assertEqual(8, len(latest_zset.inner))
-        #
-        value_dict_list = [json.loads(value_str) for value_str in list(latest_zset.inner.keys())]
         self.assertEqual({"name": "Belarus", "area": 207600}, value_dict_list[0])
         self.assertEqual({"name": "Ghana", "area": 238533}, value_dict_list[1])
         self.assertEqual({"name": "Guinea", "area": 245857}, value_dict_list[2])
