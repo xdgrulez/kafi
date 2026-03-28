@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import unittest
@@ -55,4 +56,15 @@ class TestTopologyNode(unittest.TestCase):
         limit_topologyNode.gc()
         #
         latest_zset = limit_topologyNode.latest()
+        #
         self.assertEqual(100, len(latest_zset.inner))
+        #
+        value_dict = json.loads(list(latest_zset.inner.keys())[78])
+        self.assertEqual("Iran", value_dict["name"])
+        self.assertEqual("Asia", value_dict["continent"])
+        self.assertEqual(1648195, value_dict["area"])
+        self.assertEqual(83396540, value_dict["population"])
+        self.assertEqual(460976000000, value_dict["gdp"])
+        self.assertEqual("Tehran", value_dict["capital"])
+        self.assertEqual(".ir", value_dict["tld"])
+        self.assertEqual("//upload.wikimedia.org/wikipedia/commons/c/ca/Flag_of_Iran.svg", value_dict["flag"])
