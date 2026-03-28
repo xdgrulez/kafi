@@ -31,6 +31,8 @@ class TopologyNode:
         #
         self._group = output_handle_function().get().group()
         #
+        self._counter_int = 0
+        #
         self._profile_config_dict = self.profile_config(profile_config_dict)
         #
         self._profile_dict = {}
@@ -99,6 +101,16 @@ class TopologyNode:
             pass
         #
         topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
+        return topologyNode
+
+    def limit(self, limit_int, profile_config_dict=None):
+        def filter_function(_):
+            self._counter_int += 1
+            return self._counter_int <= limit_int
+        #
+        topologyNode = self.filter(filter_function, profile_config_dict=profile_config_dict)
+        topologyNode._name_str = "limit_op"
+        #
         return topologyNode
 
     def filter(self, filter_function, profile_config_dict=None):

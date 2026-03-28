@@ -1,0 +1,196 @@
+name,continent,area,population,gdp,capital,tld,flag
+"Afghanistan","Asia",652230,32225560,21992000000,"Kabul",.af,//upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Afghanistan.svg
+"Albania","Europe",28748,2845955,13039000000,"Tirana",.al,//upload.wikimedia.org/wikipedia/commons/3/36/Flag_of_Albania.svg
+"Algeria","Africa",2381741,43000000,167555000000,"Algiers",.dz,//upload.wikimedia.org/wikipedia/commons/7/77/Flag_of_Algeria.svg
+"Andorra","Europe",468,77543,3278000000,"Andorra la Vella",.ad,//upload.wikimedia.org/wikipedia/commons/1/19/Flag_of_Andorra.svg
+"Angola","Africa",1246700,31127674,126505000000,"Luanda",.ao,//upload.wikimedia.org/wikipedia/commons/9/9d/Flag_of_Angola.svg
+"Antigua and Barbuda","Caribbean",442,96453,1248000000,"St. John's",.ag,//upload.wikimedia.org/wikipedia/commons/8/89/Flag_of_Antigua_and_Barbuda.svg
+"Argentina","South America",2780400,44938712,637486000000,"Buenos Aires",.ar,//upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg
+"Armenia","Eurasia",29743,2957500,11536000000,"Yerevan",.am,//upload.wikimedia.org/wikipedia/commons/2/2f/Flag_of_Armenia.svg
+"Australia","Oceania",7692024,25690023,1408675000000,"Canberra",.au,//upload.wikimedia.org/wikipedia/commons/8/88/Flag_of_Australia_%28converted%29.svg
+"Austria","Europe",83871,8902600,416835000000,"Vienna",.at,//upload.wikimedia.org/wikipedia/commons/4/41/Flag_of_Austria.svg
+"Azerbaijan","Asia",86600,10067108,40748000000,"Baku",.az,//upload.wikimedia.org/wikipedia/commons/d/dd/Flag_of_Azerbaijan.svg
+"Bahamas","Caribbean",13878,385340,8043000000,"Nassau",.bs,//upload.wikimedia.org/wikipedia/commons/9/93/Flag_of_the_Bahamas.svg
+"Bahrain","Asia",765,1543300,35325000000,"Manama",.bh,//upload.wikimedia.org/wikipedia/commons/2/2c/Flag_of_Bahrain.svg
+"Bangladesh","Asia",147570,168506944,254646000000,"Dhaka",.bd,//upload.wikimedia.org/wikipedia/commons/f/f9/Flag_of_Bangladesh.svg
+"Barbados","Caribbean",430,287025,4353000000,"Bridgetown",.bb,//upload.wikimedia.org/wikipedia/commons/e/ef/Flag_of_Barbados.svg
+"Belarus","Europe",207600,9408400,54441000000,"Minsk",.by,//upload.wikimedia.org/wikipedia/commons/8/85/Flag_of_Belarus.svg
+"Belgium","Europe",30528,11524454,494763000000,"City of Brussels",.be,//upload.wikimedia.org/wikipedia/commons/9/92/Flag_of_Belgium_%28civil%29.svg
+"Belize","North America",22966,408487,1902000000,"Belmopan",.bz,//upload.wikimedia.org/wikipedia/commons/e/e7/Flag_of_Belize.svg
+"Benin","Africa",112622,11733059,9236000000,"Porto-Novo",.bj,//upload.wikimedia.org/wikipedia/commons/0/0a/Flag_of_Benin.svg
+"Bhutan","Asia",38394,741672,2562000000,"Thimphu",.bt,//upload.wikimedia.org/wikipedia/commons/9/91/Flag_of_Bhutan.svg
+"Bolivia","South America",1098581,11469896,37508000000,"Sucre",.bo,//upload.wikimedia.org/wikipedia/commons/4/48/Flag_of_Bolivia.svg
+"Bosnia and Herzegovina","Europe",51209,3301000,18169000000,"Sarajevo",.ba,//upload.wikimedia.org/wikipedia/commons/b/bf/Flag_of_Bosnia_and_Herzegovina.svg
+"Botswana","Africa",582000,2338851,17406000000,"Gaborone",.bw,//upload.wikimedia.org/wikipedia/commons/f/fa/Flag_of_Botswana.svg
+"Brazil","South America",8515767,211442625,2055512000000,"Brasília",.br,//upload.wikimedia.org/wikipedia/en/0/05/Flag_of_Brazil.svg
+"Brunei","Asia",5765,442400,12128000000,"Bandar Seri Begawan",.bn,//upload.wikimedia.org/wikipedia/commons/9/9c/Flag_of_Brunei.svg
+"Bulgaria","Europe",110879,6951482,58222000000,"Sofia",.bg,//upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Bulgaria.svg
+"Burkina Faso","Africa",272967,20870060,12324000000,"Ouagadougou",.bf,//upload.wikimedia.org/wikipedia/commons/3/31/Flag_of_Burkina_Faso.svg
+"Burundi","Africa",27834,10953317,2869000000,"Bujumbura",.bi,//upload.wikimedia.org/wikipedia/commons/5/50/Flag_of_Burundi.svg
+"Cabo Verde","Africa",4033,491875,1987000000,"Praia",.cv,//upload.wikimedia.org/wikipedia/commons/3/38/Flag_of_Cape_Verde.svg
+"Cambodia","Asia",181035,15288489,22121000000,"Phnom Penh",.kh,//upload.wikimedia.org/wikipedia/commons/8/83/Flag_of_Cambodia.svg
+"Cameroon","Africa",475442,26545864,34924000000,"Yaoundé",.cm,//upload.wikimedia.org/wikipedia/commons/4/4f/Flag_of_Cameroon.svg
+"Canada","North America",9984670,38007166,1647120000000,"Ottowa",.ca,//upload.wikimedia.org/wikipedia/commons/d/d9/Flag_of_Canada_%28Pantone%29.svg
+"Central African Republic","Africa",622984,5496011,1992000000,"Bangui",.cf,//upload.wikimedia.org/wikipedia/commons/6/6f/Flag_of_the_Central_African_Republic.svg
+"Chad","Africa",1284000,16244513,10716000000,"N'Djamena",.td,//upload.wikimedia.org/wikipedia/commons/4/4b/Flag_of_Chad.svg
+"Chile","South America",756102,19107216,277080000000,"Santiago",.cl,//upload.wikimedia.org/wikipedia/commons/7/78/Flag_of_Chile.svg
+"China","Asia",9596961,1402378640,12234781000000,"Beijing",.cn,//upload.wikimedia.org/wikipedia/commons/f/fa/Flag_of_the_People%27s_Republic_of_China.svg
+"Colombia","South America",1141748,49395678,309191000000,"Bogotá",.co,//upload.wikimedia.org/wikipedia/commons/2/21/Flag_of_Colombia.svg
+"Comoros","Africa",1862,873724,648000000,"Moroni",.km,//upload.wikimedia.org/wikipedia/commons/9/94/Flag_of_the_Comoros.svg
+"Congo, Democratic Republic of",Africa,2345000,69360000,NULL,Kinshasa,.cd,//upload.wikimedia.org/wikipedia/commons/6/6f/Flag_of_the_Democratic_Republic_of_the_Congo.svg
+"Congo, Republic of",Africa,342000,4559000,NULL,Brazzaville,.cg,//upload.wikimedia.org/wikipedia/commons/9/92/Flag_of_the_Republic_of_the_Congo.svg
+"Costa Rica","North America",51100,5058007,57564000000,"San José",.cr,//upload.wikimedia.org/wikipedia/commons/f/f2/Flag_of_Costa_Rica.svg
+"Côte d'Ivoire","Africa",322483,23919000,38054000000,"Yamoussoukro",.ci,//upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_C%C3%B4te_d%27Ivoire.svg
+"Croatia","Europe",56594,4076246,55201000000,"Zagreb",.hr,//upload.wikimedia.org/wikipedia/commons/1/1b/Flag_of_Croatia.svg
+"Cuba","Caribbean",109884,11209628,96851000000,"Havana",.cu,//upload.wikimedia.org/wikipedia/commons/b/bd/Flag_of_Cuba.svg
+"Cyprus","Asia",9251,875900,22054000000,"Nicosia",.cy,//upload.wikimedia.org/wikipedia/commons/d/d4/Flag_of_Cyprus.svg
+"Czech Republic","Europe",78865,10693939,215824000000,"Prague",.cz,//upload.wikimedia.org/wikipedia/commons/c/cb/Flag_of_the_Czech_Republic.svg
+"Denmark","Europe",43094,5822763,329865000000,"Copenhagen",.dk,//upload.wikimedia.org/wikipedia/commons/9/9c/Flag_of_Denmark.svg
+"Djibouti","Africa",23200,1078373,1844000000,"Djibouti",.dj,//upload.wikimedia.org/wikipedia/commons/3/34/Flag_of_Djibouti.svg
+"Dominica","Caribbean",751,71808,533000000,"Roseau",.dm,//upload.wikimedia.org/wikipedia/commons/c/c4/Flag_of_Dominica.svg
+"Dominican Republic","Caribbean",48671,10358320,75931000000,"Santo Domingo",.do,//upload.wikimedia.org/wikipedia/commons/9/9f/Flag_of_the_Dominican_Republic.svg
+"Ecuador","South America",276841,17472948,104295000000,"Quito",.ec,//upload.wikimedia.org/wikipedia/commons/e/e8/Flag_of_Ecuador.svg
+"Egypt","Asia",1002450,100300578,195135000000,"Cairo",.eg,//upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_Egypt.svg
+"El Salvador","North America",21041,6486201,24805000000,"San Salvador",.sv,//upload.wikimedia.org/wikipedia/commons/3/34/Flag_of_El_Salvador.svg
+"Equatorial Guinea","Africa",28051,1358276,12487000000,"Malabo",.gq,//upload.wikimedia.org/wikipedia/commons/3/31/Flag_of_Equatorial_Guinea.svg
+"Eritrea","Africa",117600,3497117,3858000000,"Asmara",.er,//upload.wikimedia.org/wikipedia/commons/2/29/Flag_of_Eritrea.svg
+"Estonia","Europe",45227,1328360,25921000000,"Tallinn",.ee,//upload.wikimedia.org/wikipedia/commons/8/8f/Flag_of_Estonia.svg
+"Eswani","Africa",17364,1268000,3861000000,"Lobamba",.sz,//upload.wikimedia.org/wikipedia/commons/1/1e/Flag_of_Swaziland.svg
+"Ethiopia","Africa",1104300,98665000,75605000000,"Addis Ababa",.et,//upload.wikimedia.org/wikipedia/commons/7/71/Flag_of_Ethiopia.svg
+"Fiji","Oceania",18272,884887,4532000000,"Suva",.fj,//upload.wikimedia.org/wikipedia/commons/b/ba/Flag_of_Fiji.svg
+"Finland","Europe",338424,5527573,252246000000,"Helsinki",.fi,//upload.wikimedia.org/wikipedia/commons/b/bc/Flag_of_Finland.svg
+"France","Europe",640679,67076000,2582492000000,"Paris",.fr,//upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg
+"Gabon","Africa",267668,2172579,14623000000,"Libreville",.ga,//upload.wikimedia.org/wikipedia/commons/0/04/Flag_of_Gabon.svg
+"Gambia","Africa",11295,2347706,1773000000,"Banjul",.gm,//upload.wikimedia.org/wikipedia/commons/7/77/Flag_of_The_Gambia.svg
+"Georgia","Asia",69700,3723464,15159000000,"Tbilisi",.ge,//upload.wikimedia.org/wikipedia/commons/0/0f/Flag_of_Georgia.svg
+"Germany","Europe",357114,83149300,3693204000000,"Bonn",.de,//upload.wikimedia.org/wikipedia/en/b/ba/Flag_of_Germany.svg
+"Ghana","Africa",238533,30280811,58996000000,"Accra",.gh,//upload.wikimedia.org/wikipedia/commons/1/19/Flag_of_Ghana.svg
+"Greece","Europe",131990,10724599,203085000000,"Athens",.gr,//upload.wikimedia.org/wikipedia/commons/5/5c/Flag_of_Greece.svg
+"Grenada","Caribbean",344,112003,884000000,"St. George's",.gd,//upload.wikimedia.org/wikipedia/commons/b/bc/Flag_of_Grenada.svg
+"Guatemala","North America",108889,16604026,75619000000,"Guatemala City",.gt,//upload.wikimedia.org/wikipedia/commons/e/ec/Flag_of_Guatemala.svg
+"Guinea","Africa",245857,12218357,10208000000,"Conakry",.gn,//upload.wikimedia.org/wikipedia/commons/e/ed/Flag_of_Guinea.svg
+"Guinea-Bissau","Africa",36125,1604528,1209000000,"Bissau",.gw,//upload.wikimedia.org/wikipedia/commons/0/01/Flag_of_Guinea-Bissau.svg
+"Guyana","South America",214969,782766,3086000000,"Georgetown",.gy,//upload.wikimedia.org/wikipedia/commons/9/99/Flag_of_Guyana.svg
+"Haiti","Caribbean",27750,11577779,8521000000,"Port-au-Prince",.ht,//upload.wikimedia.org/wikipedia/commons/5/56/Flag_of_Haiti.svg
+"Honduras","North America",112492,9158345,22978000000,"Tegucigalpa",.hn,//upload.wikimedia.org/wikipedia/commons/8/82/Flag_of_Honduras.svg
+"Hungary","Europe",93028,9772756,139761000000,"Budapest",.hu,//upload.wikimedia.org/wikipedia/commons/c/c1/Flag_of_Hungary.svg
+"Iceland","Europe",103000,364260,24476000000,"Reykjavík",.is,//upload.wikimedia.org/wikipedia/commons/c/ce/Flag_of_Iceland.svg
+"India","Asia",3166414,1361503224,2575666000000,"New Delhi",.in,//upload.wikimedia.org/wikipedia/en/4/41/Flag_of_India.svg
+"Indonesia","Asia",1904569,266911900,1015539000000,"Jakarta",.id,//upload.wikimedia.org/wikipedia/commons/9/9f/Flag_of_Indonesia.svg
+"Iran","Asia",1648195,83396540,460976000000,"Tehran",.ir,//upload.wikimedia.org/wikipedia/commons/c/ca/Flag_of_Iran.svg
+"Iraq","Asia",438317,39127900,182023000000,"Baghdad",.iq,//upload.wikimedia.org/wikipedia/commons/f/f6/Flag_of_Iraq.svg
+"Ireland","Europe",70273,4921500,331430000000,"Dublin",.ie,//upload.wikimedia.org/wikipedia/commons/4/45/Flag_of_Ireland.svg
+"Israel","Asia",20770,9190800,353268000000,"Jerusalem",.il,//upload.wikimedia.org/wikipedia/commons/d/d4/Flag_of_Israel.svg
+"Italy","Europe",301336,60238522,1943835000000,"Rome",.it,//upload.wikimedia.org/wikipedia/en/0/03/Flag_of_Italy.svg
+"Jamaica","Caribbean",10991,2726667,14826000000,"Kingston",.jm,//upload.wikimedia.org/wikipedia/commons/0/0a/Flag_of_Jamaica.svg
+"Japan","Asia",377930,125950000,4872415000000,"Imperial Tokyo",.jp,//upload.wikimedia.org/wikipedia/en/9/9e/Flag_of_Japan.svg
+"Jordan","Asia",89342,10666772,40708000000,"Amman",.jo,//upload.wikimedia.org/wikipedia/commons/c/c0/Flag_of_Jordan.svg
+"Kazakhstan","Europe",2724900,18689256,159406000000,"Astana",.kz,//upload.wikimedia.org/wikipedia/commons/d/d3/Flag_of_Kazakhstan.svg
+"Kenya","Africa",580367,47564296,74938000000,"Nairobi",.ke,//upload.wikimedia.org/wikipedia/commons/4/49/Flag_of_Kenya.svg
+"Kiribati","Oceania",811,120100,180000000,"South Tarawa",.ki,//upload.wikimedia.org/wikipedia/commons/d/d3/Flag_of_Kiribati.svg
+"Kuwait","Asia",17818,4420110,119534000000,"Kuwait City",.kw,//upload.wikimedia.org/wikipedia/commons/a/aa/Flag_of_Kuwait.svg
+"Kyrgyzstan","Asia",199951,6533500,7564000000,"Bishkek",.kg,//upload.wikimedia.org/wikipedia/commons/c/c7/Flag_of_Kyrgyzstan.svg
+"Laos","Asia",236800,7123205,16853000000,"Vientiane",.la,//upload.wikimedia.org/wikipedia/commons/5/56/Flag_of_Laos.svg
+"Latvia","Europe",64559,1906800,30463000000,"Riga",.lv,//upload.wikimedia.org/wikipedia/commons/8/84/Flag_of_Latvia.svg
+"Lebanon","Asia",10452,6825442,53393000000,"Beirut",.lb,//upload.wikimedia.org/wikipedia/commons/5/59/Flag_of_Lebanon.svg
+"Lesotho","Africa",30355,2007201,2081000000,"Maseru",.ls,//upload.wikimedia.org/wikipedia/commons/4/4a/Flag_of_Lesotho.svg
+"Liberia","Africa",111369,4475353,2122000000,"Monrovia",.lr,//upload.wikimedia.org/wikipedia/commons/b/b8/Flag_of_Liberia.svg
+"Libya","Africa",1759540,6871287,25127000000,"Tripoli",.ly,//upload.wikimedia.org/wikipedia/commons/0/05/Flag_of_Libya.svg
+"Liechtenstein","Europe",160,38749,6295000000,"Vaduz",.li,//upload.wikimedia.org/wikipedia/commons/4/47/Flag_of_Liechtenstein.svg
+"Lithuania","Europe",65300,2793471,47544000000,"Vilnius",.lt,//upload.wikimedia.org/wikipedia/commons/1/11/Flag_of_Lithuania.svg
+"Luxembourg","Europe",2586,626108,62316000000,"Luxembourg",.lu,//upload.wikimedia.org/wikipedia/commons/d/da/Flag_of_Luxembourg.svg
+"Madagascar","Africa",587041,26251309,10674000000,"Antananarivo",.mg,//upload.wikimedia.org/wikipedia/commons/b/bc/Flag_of_Madagascar.svg
+"Malawi","Africa",118484,19129952,6339000000,"Lilongwe",.mw,//upload.wikimedia.org/wikipedia/commons/d/d1/Flag_of_Malawi.svg
+"Malaysia","Asia",330803,32761760,314707000000,"Kuala Lumpur",.my,//upload.wikimedia.org/wikipedia/commons/6/66/Flag_of_Malaysia.svg
+"Maldives","Asia",300,374775,3032000000,"Malé",.mv,//upload.wikimedia.org/wikipedia/commons/0/0f/Flag_of_Maldives.svg
+"Mali","Africa",1240192,20250833,15235000000,"Bamako",.ml,//upload.wikimedia.org/wikipedia/commons/9/92/Flag_of_Mali.svg
+"Malta","Europe",316,493559,12553000000,"Valletta",.mt,//upload.wikimedia.org/wikipedia/commons/7/73/Flag_of_Malta.svg
+"Marshall Islands","Oceania",181,55500,209000000,"Majuro",.mh,//upload.wikimedia.org/wikipedia/commons/2/2e/Flag_of_the_Marshall_Islands.svg
+"Mauritania","Africa",1030700,4077347,5092000000,"Nouakchott",.mr,//upload.wikimedia.org/wikipedia/commons/4/43/Flag_of_Mauritania.svg
+"Mauritius","Africa",2040,1265985,13366000000,"Port Louis",.mu,//upload.wikimedia.org/wikipedia/commons/7/77/Flag_of_Mauritius.svg
+"Mexico","North America",1964375,126577691,1158229000000,"Mexico City",.mx,//upload.wikimedia.org/wikipedia/commons/f/fc/Flag_of_Mexico.svg
+"Micronesia"," Federated States of,Oceania",702,101351,308000000,"Palikir",.fm,//upload.wikimedia.org/wikipedia/commons/e/e4/Flag_of_the_Federated_States_of_Micronesia.svg
+"Moldova","Europe",33846,2681735,8128000000,"Chișinău",.md,//upload.wikimedia.org/wikipedia/commons/2/27/Flag_of_Moldova.svg
+"Monaco","Europe",2,38300,6400000000,"Monaco-Ville",.mc,//upload.wikimedia.org/wikipedia/commons/e/ea/Flag_of_Monaco.svg
+"Mongolia","Asia",1564110,3314524,11135000000,"Ulaanbaatar",.mn,//upload.wikimedia.org/wikipedia/commons/4/4c/Flag_of_Mongolia.svg
+"Montenegro","Europe",13812,622359,4588000000,"Podgorica",.me,//upload.wikimedia.org/wikipedia/commons/6/64/Flag_of_Montenegro.svg
+"Morocco","Africa",446550,35879846,109708000000,"Rabat",.ma,//upload.wikimedia.org/wikipedia/commons/2/2c/Flag_of_Morocco.svg
+"Mozambique","Africa",801590,30066648,12651000000,"Maputo",.mz,//upload.wikimedia.org/wikipedia/commons/d/d0/Flag_of_Mozambique.svg
+"Myanmar","Asia",676578,54339766,67101000000,"Naypyidaw",.mm,//upload.wikimedia.org/wikipedia/commons/8/8c/Flag_of_Myanmar.svg
+"Namibia","Africa",825615,2458936,13244000000,"Windhoek",.na,//upload.wikimedia.org/wikipedia/commons/0/00/Flag_of_Namibia.svg
+"Nauru","Oceania",21,11000,182000000,"Yaren District",.nr,//upload.wikimedia.org/wikipedia/commons/3/30/Flag_of_Nauru.svg
+"Nepal","Asia",147181,29996478,24870000000,"Kathmandu",.np,//upload.wikimedia.org/wikipedia/commons/9/9b/Flag_of_Nepal.svg
+"Netherlands","Europe",41543,17459431,830572000000,"Amsterdam",.nl,//upload.wikimedia.org/wikipedia/commons/2/20/Flag_of_the_Netherlands.svg
+"New Zealand","Oceania",270467,4981058,202044000000,"Wellington",.nz,//upload.wikimedia.org/wikipedia/commons/3/3e/Flag_of_New_Zealand.svg
+"Nicaragua","North America",130373,6460411,13814000000,"Managua",.ni,//upload.wikimedia.org/wikipedia/commons/1/19/Flag_of_Nicaragua.svg
+"Niger","Africa",1267000,22314743,8119000000,"Niamey",.ne,//upload.wikimedia.org/wikipedia/commons/f/f4/Flag_of_Niger.svg
+"Nigeria","Africa",923768,206139587,375769000000,"Abuja",.ng,//upload.wikimedia.org/wikipedia/commons/7/79/Flag_of_Nigeria.svg
+"North Korea","Asia",120538,25450000,14411000000,"Pyongyang",.kp,//upload.wikimedia.org/wikipedia/commons/5/51/Flag_of_North_Korea.svg
+"North Macedonia","Europe",25713,2077132,11279000000,"Skopje",.mk,//upload.wikimedia.org/wikipedia/commons/7/79/Flag_of_North_Macedonia.svg
+"Norway","Europe",323802,5367580,399470000000,"Oslo",.no,//upload.wikimedia.org/wikipedia/commons/d/d9/Flag_of_Norway.svg
+"Oman","Asia",309500,4664790,70783000000,"Muscat",.om,//upload.wikimedia.org/wikipedia/commons/d/dd/Flag_of_Oman.svg
+"Pakistan","Asia",881912,219412520,302139000000,"Islamabad",.pk,//upload.wikimedia.org/wikipedia/commons/3/32/Flag_of_Pakistan.svg
+"Palau","Oceania",459,17900,234000000,"Ngerulmud",.pw,//upload.wikimedia.org/wikipedia/commons/4/48/Flag_of_Palau.svg
+"Panama","North America",75417,4218808,61838000000,"Panama City",.pa,//upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg
+"Papua New Guinea","Oceania",462840,8935000,22005000000,"Port Moresby",.pg,//upload.wikimedia.org/wikipedia/commons/e/e3/Flag_of_Papua_New_Guinea.svg
+"Paraguay","South America",406752,7252672,29435000000,"Asunción",.py,//upload.wikimedia.org/wikipedia/commons/2/27/Flag_of_Paraguay.svg
+"Peru","South America",1285216,32131400,211402000000,"Lima",.pe,//upload.wikimedia.org/wikipedia/commons/c/cf/Flag_of_Peru.svg
+"Philippines","Asia",342353,108545308,313595000000,"Manila",.ph,//upload.wikimedia.org/wikipedia/commons/9/99/Flag_of_the_Philippines.svg
+"Poland","Europe",312679,38379000,526211000000,"Warsaw",.pl,//upload.wikimedia.org/wikipedia/en/1/12/Flag_of_Poland.svg
+"Portugal","Europe",92090,10276617,195041000000,"Lisbon",.pt,//upload.wikimedia.org/wikipedia/commons/5/5c/Flag_of_Portugal.svg
+"Qatar","Asia",11586,2747282,167605000000,"Doha",.qa,//upload.wikimedia.org/wikipedia/commons/6/65/Flag_of_Qatar.svg
+"Romania","Europe",238391,19405156,211803000000,"Bucharest",.ro,//upload.wikimedia.org/wikipedia/commons/7/73/Flag_of_Romania.svg
+"Russia","Eurasia",17125242,146745098,1530750000000,"Moscow",.ru,//upload.wikimedia.org/wikipedia/en/f/f3/Flag_of_Russia.svg
+"Rwanda","Africa",26338,12374397,9136000000,"Kigali",.rw,//upload.wikimedia.org/wikipedia/commons/1/17/Flag_of_Rwanda.svg
+"Saint Kitts and Nevis","North America",261,52823,852000000,"Basseterre",.kn,//upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_Saint_Kitts_and_Nevis.svg
+"Saint Lucia","Caribbean",616,178696,1718000000,"Castries",.lc,//upload.wikimedia.org/wikipedia/commons/9/9f/Flag_of_Saint_Lucia.svg
+"Saint Vincent and the Grenadines","South America",389,110608,729000000,"Kingstown",.vc,//upload.wikimedia.org/wikipedia/commons/6/6d/Flag_of_Saint_Vincent_and_the_Grenadines.svg
+"Samoa","Oceania",2842,200874,824000000,"Apia",.ws,//upload.wikimedia.org/wikipedia/commons/3/31/Flag_of_Samoa.svg
+"San Marino","Europe",61,33574,1689000000,"San Marino",.sm,//upload.wikimedia.org/wikipedia/commons/b/b1/Flag_of_San_Marino.svg
+"Sao Tomé and Príncipe","Africa",964,201784,337000000,"São Tomé",.st,//upload.wikimedia.org/wikipedia/commons/4/4f/Flag_of_Sao_Tome_and_Principe.svg
+"Saudi Arabia","Asia",2149690,34218169,683827000000,"Riyadh",.sa,//upload.wikimedia.org/wikipedia/commons/0/0d/Flag_of_Saudi_Arabia.svg
+"Senegal","Africa",196722,16209125,21126000000,"Dakar",.sn,//upload.wikimedia.org/wikipedia/commons/f/fd/Flag_of_Senegal.svg
+"Serbia","Europe",88361,6963764,41589000000,"Belgrade",.rs,//upload.wikimedia.org/wikipedia/commons/f/ff/Flag_of_Serbia.svg
+"Seychelles","Africa",452,97625,1486000000,"Victoria",.sc,//upload.wikimedia.org/wikipedia/commons/f/fc/Flag_of_Seychelles.svg
+"Sierra Leone","Africa",71740,7901454,4893000000,"Freetown",.sl,//upload.wikimedia.org/wikipedia/commons/1/17/Flag_of_Sierra_Leone.svg
+"Singapore","Asia",710,5703600,323901000000,"Singapore",.sg,//upload.wikimedia.org/wikipedia/commons/4/48/Flag_of_Singapore.svg
+"Slovakia","Europe",49037,5456362,95617000000,"Bratislava",.sk,//upload.wikimedia.org/wikipedia/commons/e/e6/Flag_of_Slovakia.svg
+"Slovenia","Europe",20273,2094060,48455000000,"Ljubljana",.si,//upload.wikimedia.org/wikipedia/commons/f/f0/Flag_of_Slovenia.svg
+"Solomon Islands","Oceania",28896,680806,1103000000,"Honiara",.sb,//upload.wikimedia.org/wikipedia/commons/7/74/Flag_of_the_Solomon_Islands.svg
+"Somalia","Africa",637657,15893219,1535000000,"Mogadishu",.so,//upload.wikimedia.org/wikipedia/commons/a/a0/Flag_of_Somalia.svg
+"South Africa","Africa",1221037,58775022,348872000000,"Pretoria",.za,//upload.wikimedia.org/wikipedia/commons/a/af/Flag_of_South_Africa.svg
+"South Korea","Asia",100210,51780579,1129598000000,"Seoul",.kr,//upload.wikimedia.org/wikipedia/commons/0/09/Flag_of_South_Korea.svg
+"South Sudan","Africa",619745,12778250,5693000000,"Juba",.ss,//upload.wikimedia.org/wikipedia/commons/7/7a/Flag_of_South_Sudan.svg
+"Spain","Europe",505992,47100396,1314314000000,"Madrid",.es,//upload.wikimedia.org/wikipedia/en/9/9a/Flag_of_Spain.svg
+"Sri Lanka","Asia",65610,21803000,87356000000,"Sri Jayawardenepura Kotte",.lk,//upload.wikimedia.org/wikipedia/commons/1/11/Flag_of_Sri_Lanka.svg
+"Sudan","Africa",1886068,42456380,120265000000,"Khartoum",.sd,//upload.wikimedia.org/wikipedia/commons/0/01/Flag_of_Sudan.svg
+"Suriname","South America",163820,581372,5210000000,"Paramaribo",.sr,//upload.wikimedia.org/wikipedia/commons/6/60/Flag_of_Suriname.svg
+"Sweden","Europe",450295,10338368,535607000000,"Stockholm",.se,//upload.wikimedia.org/wikipedia/en/4/4c/Flag_of_Sweden.svg
+"Switzerland","Europe",41284,8603899,678938000000,"Bern",.ch,//upload.wikimedia.org/wikipedia/commons/f/f3/Flag_of_Switzerland.svg
+"Syria","Asia",185180,17500657,60043000000,"Damascus",.sy,//upload.wikimedia.org/wikipedia/commons/5/53/Flag_of_Syria.svg
+"Taiwan","Asia",36193,23604265,579865000000,"Taipei",.tw,//upload.wikimedia.org/wikipedia/commons/7/72/Flag_of_the_Republic_of_China.svg
+"Tajikistan","Asia",143100,9127000,7145000000,"Dushanbe",.tj,//upload.wikimedia.org/wikipedia/commons/d/d0/Flag_of_Tajikistan.svg
+"Tanzania","Africa",945087,55890747,52090000000,"Dodoma",.tz,//upload.wikimedia.org/wikipedia/commons/3/38/Flag_of_Tanzania.svg
+"Thailand","Asia",513120,66497905,455302000000,"Bangkok",.th,//upload.wikimedia.org/wikipedia/commons/a/a9/Flag_of_Thailand.svg
+"Timor-Leste","Asia",14874,1212107,4970000000,"Dili",.tl,//upload.wikimedia.org/wikipedia/commons/2/26/Flag_of_East_Timor.svg
+"Togo","Africa",56785,7538000,4576000000,"Lomé",.tg,//upload.wikimedia.org/wikipedia/commons/6/68/Flag_of_Togo.svg
+"Tonga","Oceania",747,100651,435000000,"Nuku'alofa",.to,//upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg
+"Trinidad and Tobago","Caribbean",5130,1363985,22104000000,"Port of Spain",.tt,//upload.wikimedia.org/wikipedia/commons/6/64/Flag_of_Trinidad_and_Tobago.svg
+"Tunisia","Africa",163610,11722038,40068000000,"Tunis",.tn,//upload.wikimedia.org/wikipedia/commons/c/ce/Flag_of_Tunisia.svg
+"Turkey","Asia",783562,83154997,851541000000,"Ankara",.tr,//upload.wikimedia.org/wikipedia/commons/b/b4/Flag_of_Turkey.svg
+"Turkmenistan","Asia",488100,6031187,37915000000,"Aşgabat",.tm,//upload.wikimedia.org/wikipedia/commons/1/1b/Flag_of_Turkmenistan.svg
+"Tuvalu","Oceania",26,10200,38000000,"Funafuti",.tv,//upload.wikimedia.org/wikipedia/commons/3/38/Flag_of_Tuvalu.svg
+"Uganda","Africa",241550,40299300,27698000000,"Kampala",.ug,//upload.wikimedia.org/wikipedia/commons/4/4e/Flag_of_Uganda.svg
+"Ukraine","Europe",603500,41858119,112154000000,"Kiev",.ua,//upload.wikimedia.org/wikipedia/commons/4/49/Flag_of_Ukraine.svg
+"United Arab Emirates","Asia",83600,9890400,382575000000,"Abu Dhabi",.ae,//upload.wikimedia.org/wikipedia/commons/c/cb/Flag_of_the_United_Arab_Emirates.svg
+"United Kingdom","Europe",242900,66435550,2631228000000,"London",.uk,//upload.wikimedia.org/wikipedia/en/a/ae/Flag_of_the_United_Kingdom.svg
+"United States","North America",9826675,329583916,19485394000000,"Washington, D.C.",.us,//upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg
+"Uruguay","South America",181034,3518552,59180000000,"Montevideo",.uy,//upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_Uruguay.svg
+"Uzbekistan","Asia",447400,34148357,49677000000,"Tashkent",.uz,//upload.wikimedia.org/wikipedia/commons/8/84/Flag_of_Uzbekistan.svg
+"Vanuatu","Oceania",12189,304500,812000000,"Port Vila",.vu,//upload.wikimedia.org/wikipedia/commons/b/bc/Flag_of_Vanuatu.svg
+Vatican City,Europe,0,825,NULL,NULL,.va,//upload.wikimedia.org/wikipedia/commons/0/00/Flag_of_the_Vatican_City.svg
+"Venezuela","South America",916445,32219521,255092000000,"Caracas",.ve,//upload.wikimedia.org/wikipedia/commons/0/06/Flag_of_Venezuela.svg
+"Vietnam","Asia",331212,96208984,223779000000,"Hanoi",.vn,//upload.wikimedia.org/wikipedia/commons/2/21/Flag_of_Vietnam.svg
+"Yemen","Asia",527968,29825968,27956000000,"Sana‘a",.ye,//upload.wikimedia.org/wikipedia/commons/8/89/Flag_of_Yemen.svg
+"Zambia","Africa",752612,17885422,25868000000,"Lusaka",.zm,//upload.wikimedia.org/wikipedia/commons/0/06/Flag_of_Zambia.svg
+"Zimbabwe","Africa",390757,15159624,18036000000,"Harare",.zw,//upload.wikimedia.org/wikipedia/commons/6/6a/Flag_of_Zimbabwe.svg
