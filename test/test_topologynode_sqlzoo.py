@@ -22,7 +22,6 @@ table_str_zset_dict = {}
 
 class TestTopologyNode(unittest.TestCase):
     def setUp(self):
-        #
         df = pd.read_csv("test/sqlzoo/world.csv")
         world_message_dict_list = []
         for _, row_series in df.iterrows():

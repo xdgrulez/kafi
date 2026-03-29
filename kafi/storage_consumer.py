@@ -61,7 +61,7 @@ class StorageConsumer(Dechunker):
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
         #
-        dechunk_bool = kwargs["dechunk"] if "dechunk" in kwargs else True
+        dechunk_bool = kwargs["dechunk"] if "dechunk" in kwargs else False
         #
         topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
         topic_str_offsets_dict_dict = {topic_str: {partition_int: 0 for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}

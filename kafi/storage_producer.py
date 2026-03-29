@@ -26,7 +26,10 @@ class StorageProducer(Chunker):
         self.schema_hash_int_generalizedProtocolMessageType_dict = {}
         #
         # Cache the number of partitions of the topic (e.g. for custom partitioner functions).
-        self.partitions_int = self.storage_obj.partitions(self.topic_str)[self.topic_str]
+        if len(self.storage_obj.admin.list_topics(self.topic_str)) > 0:
+            self.partitions_int = self.storage_obj.partitions(self.topic_str)[self.topic_str]
+        else:
+            self.partitions_int = 1
         #
         super().__init__(storage_obj.schema_registry_config_dict, **kwargs)
 
