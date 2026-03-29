@@ -1,0 +1,8 @@
+{
+    "name": "shoe_clickstream",
+    "config": {
+        "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
+        "kafka.topic": "shoe_clickstream",
+        "quickstart": "shoe_clickstream"
+    }
+}

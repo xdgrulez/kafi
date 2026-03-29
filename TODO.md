@@ -1,5 +1,38 @@
 # other TODOs
 
+* flatmap:
+# zset/functions/linear.py — neue Funktion hinzufügen
+
+from typing import Callable, Iterable
+
+FlatProjection = Callable[[T], Iterable[R]]
+
+def flat_project[T, R](zset: ZSet[T], f: FlatProjection[T, R]) -> ZSet[R]:
+    """
+    Projects a Z-set to a new Z-set by applying a function that returns
+    multiple elements per input. Weights are inherited from the source element.
+    """
+    output: Dict[R, int] = {}
+    for value, weight in zset.items():
+        for fvalue in f(value):
+            if fvalue not in output:
+                output[fvalue] = weight
+            else:
+                output[fvalue] += weight
+    return ZSet(output)
+
+# zset/operators/linear.py — neuer Operator, exakt analog zu LiftedProject
+
+class LiftedFlatProject(Lift1[ZSet[T], ZSet[R]]):
+    def __init__(self, stream: Optional[StreamHandle[ZSet[T]]], f: FlatProjection[T, R]):
+        super().__init__(stream, lambda z: flat_project(z, f), None)
+
+
+class LiftedLiftedFlatProject(Lift1[Stream[ZSet[T]], Stream[ZSet[R]]]):
+    def __init__(self, stream: Optional[StreamHandle[Stream[ZSet[T]]]], f: FlatProjection[T, R]):
+        super().__init__(
+            stream, lambda x: step_until_fixpoint_and_return(LiftedFlatProject(StreamHandle(lambda: x), f)), None
+        )
 * profiling (mem/time), debugging everywhere, clean up and focus on what we have now
 * build left join + test
 * TopologyNode-Tests -> unittests

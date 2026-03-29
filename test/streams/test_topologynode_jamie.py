@@ -116,7 +116,7 @@ transactions_source_topologyNode, root_topologyNode = setup()
 #
 
 start_time = time.time()
-for i in range(10):
+for i in range(100):
     print(i)
     #
     transactions(transactions_source_topologyNode, root_topologyNode)
