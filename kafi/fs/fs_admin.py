@@ -391,10 +391,11 @@ class FSAdmin(StorageAdmin):
         #
         group_dict = self.read_dict_from_file(abs_path_file_str)
         #
+        if "offsets" not in group_dict:
+            group_dict["offsets"] = {}
+        #
         if "offsets" in new_group_dict:
             for topic_str, offsets_dict in new_group_dict["offsets"].items():
-                if "offsets" not in group_dict:
-                    group_dict["offsets"] = {}
                 if topic_str not in group_dict["offsets"]:
                     group_dict["offsets"][topic_str] = {}
                 #
