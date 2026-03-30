@@ -95,11 +95,17 @@ class TopologyNode:
         #
         def step_function():
             self.pydbsp_step(liftedStream)
+            #
             self.pydbsp_step(selection)
+            #
             self.pydbsp_step(output_node)
         #
         def gc_function():
-            pass
+            self.pydbsp_gc(liftedStream)
+            #
+            self.pydbsp_gc(selection)
+            #
+            self.pydbsp_gc(output_node)
         #
         topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
@@ -130,11 +136,17 @@ class TopologyNode:
         #
         def step_function():
             topologyNode.pydbsp_step(liftedStream)
+            #
             topologyNode.pydbsp_step(filtering)
+            #
             topologyNode.pydbsp_step(output_node)
         #
         def gc_function():
-            pass
+            topologyNode.pydbsp_gc(liftedStream)
+            #
+            topologyNode.pydbsp_gc(filtering)
+            #
+            topologyNode.pydbsp_gc(output_node)
         #
         topologyNode = TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode

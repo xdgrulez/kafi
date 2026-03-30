@@ -54,3 +54,10 @@ class DeltaLiftedDeltaLiftedDistinct(UnaryOperator[Stream[ZSet[T]], Stream[ZSet[
             and fixedpoint_lift_lift_H
             and fixedpoint_diff_lift_lift_H
         )
+
+    def gc(self) -> bool:
+        self.integrated_diff_stream_a.gc()
+        self.lift_integrated_diff_stream_a.gc()
+        self.lift_delay_lift_integrated_diff_stream_a.gc()
+        self.lift_lift_H.gc()
+        self.diff_lift_lift_H.gc()

@@ -196,6 +196,11 @@ class Selection(UnaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]]):
 
         return self.distinct.step()
 
+    def gc(self) -> None:
+        self.lifted_lifted_project.gc()
+
+        self.distinct.gc()
+
 
 class CartesianProduct(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T, R]]]]):
     """
