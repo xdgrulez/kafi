@@ -8,6 +8,7 @@ from pydbsp.zset import ZSet, ZSetAddition
 
 from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
+import datetime
 import json
 import time
 import uuid
@@ -694,12 +695,22 @@ def source(name_str, profile_config_dict=None):
     return topologyNode
 
 
+def json_default(obj):
+    if isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    # if isinstance(obj, Decimal):
+    #     return float(obj)
+    # if isinstance(obj, UUID):
+    #     return str(obj)
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+
 def message_dict_list_to_ZSet(message_dict_list):
     value_json_str_list = []
     for message_dict in message_dict_list:
         value_dict = message_dict["value"]
         # value_dict["_key"] = message_dict["key"]
-        value_json_str = json.dumps(value_dict)
+        value_json_str = json.dumps(value_dict, default=json_default)
         value_json_str_list.append(value_json_str)
     #
     zSet = ZSet({k: 1 for k in value_json_str_list})

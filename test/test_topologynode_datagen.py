@@ -66,6 +66,8 @@ class TestTopologyNodeDatagen(unittest.TestCase):
             #
             if len(clickstream_message_dict_list) == 0 and len(customers_message_dict_list) == 0:
                 break
+            #
+            break
         #
         clickstream_consumer.close()
         customers_consumer.close()

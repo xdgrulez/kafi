@@ -144,7 +144,11 @@ class StorageConsumer(Dechunker):
             #
             return message_dict_list
         #
-        return self.foldl(foldl_function, [], n)
+        n_int = n
+        if n_int == ALL_MESSAGES:
+            n_int = self.storage_obj.consume_batch_size()
+        #
+        return self.foldl(foldl_function, [], n_int)
 
     #
 
