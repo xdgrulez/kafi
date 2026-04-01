@@ -84,21 +84,21 @@ FROM join_1_view;
 
 --kafka-sink
 
-CREATE TABLE kafka_sink (
-    user_id STRING,
-    first_name STRING,
-    ip STRING
-) WITH (
-    'connector' = 'kafka',
-    'topic' = '1_join_kafka_sink',
-    'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'avro-confluent',
-    'avro-confluent.url' = 'http://localhost:8081'
-);
+-- CREATE TABLE kafka_sink (
+--     user_id STRING,
+--     first_name STRING,
+--     ip STRING
+-- ) WITH (
+--     'connector' = 'kafka',
+--     'topic' = '1_join_kafka_sink',
+--     'properties.bootstrap.servers' = 'localhost:9092',
+--     'format' = 'avro-confluent',
+--     'avro-confluent.url' = 'http://localhost:8081'
+-- );
 
-INSERT INTO kafka_sink
-SELECT 
-    user_id,
-    first_name,
-    ip
-FROM join_1_view;
+-- INSERT INTO kafka_sink
+-- SELECT 
+--     user_id,
+--     first_name,
+--     ip
+-- FROM join_1_view;

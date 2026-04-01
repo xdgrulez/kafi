@@ -100,7 +100,6 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         print(f"Would have produced {n} outputs in {end_time_int - start_time_int}")
 
-
     def test_2_joins(self):
         click_topic_str = "shoe_clickstream"
         customer_topic_str = "shoe_customers"
@@ -203,12 +202,12 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         source_product_topologyNode = source(product_topic_str)
         source_order_topologyNode = source(order_topic_str)
         #
-        clickstream_topologyNode = (
+        click_topologyNode = (
             source_click_topologyNode
             .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
         )
         #
-        customers_topologyNode = (
+        customer_topologyNode = (
             source_customer_topologyNode
             .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
         )
@@ -224,31 +223,54 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         )
         #
         root_topologyNode = (
-            clickstream_topologyNode
-            .join(customers_topologyNode,
-                  on_function=lambda l, r: l["user_id"] == r["id"],
-                  projection_function=lambda l, r: {"user_id": l["user_id"],
-                                                    "ip": l["ip"],
-                                                    "product_id": l["product_id"],
-                                                    "first_name": r["first_name"]})
-                  .join(product_topologyNode,
-                        on_function=lambda l, r: l["product_id"] == r["id"],
-                        projection_function=lambda l, r: {"user_id": l["user_id"],
-                                                          "ip": l["ip"],
-                                                          "product_id": l["product_id"],
-                                                          "first_name": l["first_name"],
-                                                          "brand": r["brand"]})
-                        .join(order_topologyNode,
-                              on_function=lambda l, r: l["product_id"] == r["product_id"] and
-                              l["user_id"] == r["customer_id"],
-                              projection_function=lambda l, r: {"user_id": l["user_id"],
-                                                                "ip": l["ip"],
-                                                                "product_id": l["product_id"],
-                                                                "first_name": l["first_name"],
-                                                                "brand": l["brand"],
-                                                                "order_id": r["order_id"]},
-                              profile_config_dict = None)
-                            #   profile_config_dict = {"gc": {"memory": {"after": True, "delta": True}, "streams": "size"}, "include": []})
+            click_topologyNode.join(
+                order_topologyNode,
+                on_function=lambda l, r: l["product_id"] == r["product_id"]
+                and l["user_id"] == r["customer_id"],
+                projection_function=lambda l, r: {
+                    "user_id": l["user_id"],
+                    "ip": l["ip"],
+                    "product_id": l["product_id"],
+                    "order_id": r["order_id"]
+                },
+                # profile_config_dict={
+                #     "gc": {"memory": {"after": True, "delta": True}, "streams": "size"},
+                #     "include": []
+                # }
+                profile_config_dict=None
+            )
+            .join(
+                customer_topologyNode,
+                on_function=lambda l, r: l["user_id"] == r["id"],
+                projection_function=lambda l, r: {
+                    "user_id": l["user_id"],
+                    "ip": l["ip"],
+                    "product_id": l["product_id"],
+                    "order_id": l["order_id"],
+                    "first_name": r["first_name"]
+                },
+                # profile_config_dict={
+                #     "gc": {"memory": {"after": True, "delta": True}, "streams": "size"},
+                #     "include": []
+                # }
+                profile_config_dict=None
+            )
+            .join(
+                product_topologyNode,
+                on_function=lambda l, r: l["product_id"] == r["id"],
+                projection_function=lambda l, r: {
+                    "user_id": l["user_id"],
+                    "ip": l["ip"],
+                    "product_id": l["product_id"],
+                    "first_name": l["first_name"],
+                    "brand": r["brand"]
+                },
+                # profile_config_dict={
+                #     "gc": {"memory": {"after": True, "delta": True}, "streams": "size"},
+                #     "include": []
+                # }
+                profile_config_dict=None
+            )
         )
         #
         cluster = Cluster("local")

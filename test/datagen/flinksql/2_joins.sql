@@ -121,25 +121,25 @@ FROM join_2_view;
 
 --kafka-sink
 
-CREATE TABLE kafka_sink (
-    user_id STRING,
-    ip STRING,
-    product_id STRING,
-    first_name STRING,
-    brand STRING
-) WITH (
-    'connector' = 'kafka',
-    'topic' = '2_joins_kafka_sink',
-    'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'avro-confluent',
-    'avro-confluent.url' = 'http://localhost:8081'
-);
+-- CREATE TABLE kafka_sink (
+--     user_id STRING,
+--     ip STRING,
+--     product_id STRING,
+--     first_name STRING,
+--     brand STRING
+-- ) WITH (
+--     'connector' = 'kafka',
+--     'topic' = '2_joins_kafka_sink',
+--     'properties.bootstrap.servers' = 'localhost:9092',
+--     'format' = 'avro-confluent',
+--     'avro-confluent.url' = 'http://localhost:8081'
+-- );
 
-INSERT INTO kafka_sink
-SELECT 
-    user_id,
-    ip,
-    product_id,
-    first_name,
-    brand
-FROM join_2_view;
+-- INSERT INTO kafka_sink
+-- SELECT 
+--     user_id,
+--     ip,
+--     product_id,
+--     first_name,
+--     brand
+-- FROM join_2_view;

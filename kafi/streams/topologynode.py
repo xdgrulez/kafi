@@ -110,16 +110,6 @@ class TopologyNode:
         topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
 
-    def limit(self, limit_int, profile_config_dict=None):
-        def filter_function(_):
-            self._counter_int += 1
-            return self._counter_int <= limit_int
-        #
-        topologyNode = self.filter(filter_function, profile_config_dict=profile_config_dict)
-        topologyNode._name_str = "limit_op"
-        #
-        return topologyNode
-
     def filter(self, filter_function, profile_config_dict=None):
         def filter_function1(value_json_str):
             value_dict = json.loads(value_json_str)
@@ -151,6 +141,16 @@ class TopologyNode:
         topologyNode = TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
 
+    def limit(self, limit_int, profile_config_dict=None):
+        def filter_function(_):
+            self._counter_int += 1
+            return self._counter_int <= limit_int
+        #
+        topologyNode = self.filter(filter_function, profile_config_dict=profile_config_dict)
+        topologyNode._name_str = "limit_op"
+        #
+        return topologyNode
+
 #     def left_join():
 # (
 #     SELECT a.id, a.name, b.value
@@ -167,7 +167,6 @@ class TopologyNode:
 #         INNER JOIN table_b b ON a.id = b.id
 #     )
 # );
-
 
     def join(self, other, on_function, projection_function, profile_config_dict=None):
         def on_function1(left_value_json_str, right_value_json_str):

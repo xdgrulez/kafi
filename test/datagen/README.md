@@ -15,17 +15,6 @@ ts long
 
 --
 
-shoe_orders
--
-order_id INT
-product_id STRING
-customer_id STRING
-ts long
-
-10000
-
---
-
 shoe_customers
 -
 id STRING
@@ -40,6 +29,17 @@ country STRING
 country_code STRING
 
 1000
+
+--
+
+shoe_orders
+-
+order_id INT
+product_id STRING
+customer_id STRING
+ts long
+
+10000
 
 --
 
