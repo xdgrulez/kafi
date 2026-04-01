@@ -3,6 +3,7 @@
     "config": {
         "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
         "kafka.topic": "shoe_customers",
-        "quickstart": "shoe_customers"
+        "quickstart": "shoe_customers",
+        "max.interval": 0
     }
 }

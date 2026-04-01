@@ -31,6 +31,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
 
     #
 
+    # Would have produced 15058 outputs in 42.62823438644409
     def test_1_join(self):
         click_topic_str = "shoe_clickstream"
         customer_topic_str = "shoe_customers"
@@ -100,6 +101,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         print(f"Would have produced {n} outputs in {end_time_int - start_time_int}")
 
 
+    # Would have produced 20764 outputs in 174.58808875083923
     def test_2_joins(self):
         click_topic_str = "shoe_clickstream"
         customer_topic_str = "shoe_customers"
