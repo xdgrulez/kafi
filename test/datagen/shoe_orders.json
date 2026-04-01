@@ -1,0 +1,8 @@
+{
+    "name": "shoe_orders",
+    "config": {
+        "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
+        "kafka.topic": "shoe_orders",
+        "quickstart": "shoe_orders"
+    }
+}

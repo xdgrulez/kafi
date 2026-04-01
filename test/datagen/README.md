@@ -1,3 +1,60 @@
+* what customer? join with customers (user_id/id)
+* what order? join with orders (product_id, user_id, ts (10min?) + product_id, customer_id, ts (10min?))
+* what product? join with product
+
+shoe_clickstream
+-
+product_id STRING
+user_id STRING
+view_time INT
+page_url STRING
+ip STRING
+ts long
+
+10000
+
+--
+
+shoe_orders
+-
+order_id STRING
+product_id STRING
+customer_id STRING
+ts long
+
+10000
+
+--
+
+shoe_customers
+-
+id STRING
+first_name STRING
+last_name STRING
+email STRING
+phone STRING
+street_address STRING
+state STRING
+zip_code STRING
+country STRING
+country_code STRING
+
+1000
+
+--
+
+shoe_product
+-
+id STRING
+brand STRING
+name STRING
+sale_price INT
+rating DOUBLE
+
+1000
+
+--
+
 CREATE TABLE shoe_clickstream (
     product_id STRING,
     user_id STRING,
