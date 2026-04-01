@@ -122,35 +122,44 @@ class AddOns(Functional):
 
     #
 
-    def recreate(self, topic, partitions=None, config={}, **kwargs):
-        topic_str = topic
+    def recreate(self, pattern, partitions=None, config={}, **kwargs):
+        pattern_str_or_str_list = pattern
         #
-        if self.exists(topic_str):
-            if partitions is None:
-                partitions_int = self.partitions(topic_str)[topic_str]
-            else:
-                partitions_int = partitions
-            #
-            old_config_dict = self.config(topic_str)[topic_str]
-            config_dict = {}
-            for key_str, value_str in old_config_dict.items():
-                if key_str in config:
-                    config_dict[key_str] = config[key_str]
+        topic_str_list = self.admin.list_topics(pattern_str_or_str_list)
+        #
+        if topic_str_list:
+            for topic_str in topic_str_list:
+                if partitions is None:
+                    partitions_int = self.partitions(topic_str)[topic_str]
                 else:
-                    config_dict[key_str] = value_str
-            #
-            self.delete(topic_str)
-            #
-            self.create(topic_str, partitions=partitions_int, config=config_dict, **kwargs)
+                    partitions_int = partitions
+                #
+                old_config_dict = self.config(topic_str)[topic_str]
+                config_dict = {}
+                for key_str, value_str in old_config_dict.items():
+                    if key_str in config:
+                        config_dict[key_str] = config[key_str]
+                    else:
+                        config_dict[key_str] = value_str
+                #
+                self.delete(topic_str)
+                #
+                self.create(topic_str, partitions=partitions_int, config=config_dict, **kwargs)
         else:
-            if partitions is None:
-                partitions_int = 1
-            else:
-                partitions_int = partitions
+            if isinstance(pattern_str_or_str_list, str):
+                topic_str_list = [pattern_str_or_str_list]
+            elif isinstance(pattern_str_or_str_list, list):
+                topic_str_list = pattern_str_or_str_list
             #
-            self.create(topic_str, partitions=partitions_int, config=config, **kwargs)
+            for topic_str in topic_str_list:
+                if partitions is None:
+                    partitions_int = 1
+                else:
+                    partitions_int = partitions
+                #
+                self.create(topic_str, partitions=partitions_int, config=config, **kwargs)
         #
-        return topic_str
+        return topic_str_list
 
     retouch = recreate
 

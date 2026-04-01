@@ -49,8 +49,8 @@ class StorageAdmin():
                 return topic_str_partitions_dict_dict
             else:
                 # e.g. ["topic"]
-                topic_str_list = self.list_topics(pattern_str_or_str_list)
-                filtered_topic_str_list = pattern_match(topic_str_list, pattern_str_or_str_list)
+                topic_str_list = self.list_topics(pattern_str_or_str_list, **kwargs)
+                filtered_topic_str_list = self.storage_obj.filter_topics(topic_str_list, pattern_str_or_str_list)
                 return filtered_topic_str_list
 
     #

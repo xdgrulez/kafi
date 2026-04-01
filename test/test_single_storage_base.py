@@ -442,6 +442,35 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str_partitions_dict_dict = s.l(pattern=topic_str, size=False, partitions=True)
         self.assertEqual(topic_str_partitions_dict_dict[topic_str][0], 3)
 
+    def test_ignore_topics(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str1 = self.create_test_topic_name()
+        topic_str2 = "_" + topic_str1
+        s.create(topic_str1)
+        s.create(topic_str2)
+        #
+        s.topic_ignore_patterns([topic_str1, topic_str2])
+        topic_str_list1 = s.ls()
+        self.assertNotIn(topic_str1, topic_str_list1)
+        self.assertNotIn(topic_str2, topic_str_list1)
+        #
+        s.topic_ignore_patterns([topic_str1])
+        topic_str_list2 = s.ls()
+        self.assertNotIn(topic_str1, topic_str_list2)
+        self.assertIn(topic_str2, topic_str_list2)
+        #
+        s.topic_ignore_patterns(["_*"])
+        topic_str_list3 = s.ls()
+        self.assertIn(topic_str1, topic_str_list3)
+        self.assertNotIn(topic_str2, topic_str_list3)
+        #
+        s.delete(topic_str2)
+
+
     def test_offsets_for_times(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return

@@ -263,13 +263,13 @@ def pattern_match(input_str_list, pattern_str_or_str_list):
     if pattern_str_or_str_list is not None:
         if isinstance(pattern_str_or_str_list, str):
             pattern_str_or_str_list = [pattern_str_or_str_list]
-        output_topic_str_list = [input_str for input_str in input_str_list if any(fnmatch(input_str, pattern_str) for pattern_str in pattern_str_or_str_list)]
+        output_str_list = [input_str for input_str in input_str_list if any(fnmatch(input_str, pattern_str) for pattern_str in pattern_str_or_str_list)]
     else:
-        output_topic_str_list = input_str_list
+        output_str_list = input_str_list
     #
-    output_topic_str_list.sort()
+    output_str_list.sort()
     #
-    return output_topic_str_list
+    return output_str_list
 
 
 def explode_normalize(df):
@@ -409,3 +409,7 @@ def key_to_chunk_key(key_bytes, chunk_int):
         chunk_key_bytes = key_bytes + bytes(f"_{chunk_int:06}", "UTF-8")
     #
     return chunk_key_bytes
+
+
+def is_internal(resource_str):
+    return resource_str.startswith("_")

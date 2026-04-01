@@ -9,7 +9,7 @@ from kafi.shell import Shell
 from kafi.files import Files
 from kafi.addons import AddOns
 from kafi.schemaregistry import SchemaRegistry
-from kafi.helpers import bytes_or_str_to_bytes, hash_dict, is_interactive
+from kafi.helpers import bytes_or_str_to_bytes, hash_dict, is_interactive, pattern_match
 
 class Storage(Shell, Files, AddOns, SchemaRegistry):
     def __init__(self, dir_str, config_str_or_dict, mandatory_section_str_list, optional_section_str_list):
@@ -82,6 +82,11 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
             self.cluster_kind("kafka")
         else:
             self.cluster_kind(str(self.kafi_config_dict["cluster.kind"]))
+        #
+        if "topic.ignore.patterns" not in self.kafi_config_dict:
+            self.topic_ignore_patterns(["_*"])
+        else:
+            self.topic_ignore_patterns(list(self.kafi_config_dict["topic.ignore.patterns"]))
 
     #
 
@@ -117,6 +122,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
     def cluster_kind(self, new_value=None): # str
         return self.get_set_config("cluster.kind", new_value)
+
+    def topic_ignore_patterns(self, new_value=None): # bool
+        return self.get_set_config("topic.ignore.patterns", new_value)
+
     #
 
     def get_set_config(self, config_key_str, new_value=None, dict=None):
@@ -310,3 +319,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
             value_type = kwargs["value_type"]
         #
         return (key_type, value_type)
+
+    def filter_topics(self, topic_str_list, pattern_str_or_str_list):
+        matched_topic_str_list = pattern_match(topic_str_list, pattern_str_or_str_list)
+        #
+        to_be_ignored_topic_str_list = pattern_match(topic_str_list, self.topic_ignore_patterns())
+        #
+        return [topic_str for topic_str in matched_topic_str_list if topic_str not in to_be_ignored_topic_str_list]

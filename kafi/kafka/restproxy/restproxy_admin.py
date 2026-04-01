@@ -1,6 +1,6 @@
 from fnmatch import fnmatch
 
-from kafi.helpers import get, delete, post, is_pattern, pattern_match
+from kafi.helpers import get, delete, post, is_internal, is_pattern, pattern_match
 
 from kafi.kafka.kafka_admin import *
 
@@ -305,7 +305,7 @@ class RestProxyAdmin(KafkaAdmin):
         kafkaTopic_dict_list = response_dict["data"]
         topic_str_list = [kafkaTopic_dict["topic_name"] for kafkaTopic_dict in kafkaTopic_dict_list]
         #
-        filtered_topic_str_list = pattern_match(topic_str_list, pattern)
+        filtered_topic_str_list = self.storage_obj.filter_topics(topic_str_list, pattern)
         #
         return filtered_topic_str_list
 

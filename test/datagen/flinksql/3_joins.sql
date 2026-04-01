@@ -17,7 +17,8 @@ CREATE TABLE click_table (
 CREATE VIEW click_view AS
 SELECT
     user_id,
-    ip
+    ip,
+    product_id
 from
     click_table;
 
@@ -52,6 +53,54 @@ FROM
 
 --
 
+CREATE TABLE product_table (
+    id STRING,
+    brand STRING,
+    name STRING,
+    sale_price INT,
+    rating DOUBLE
+) WITH (
+    'connector' = 'kafka',
+    'topic' = 'shoes',
+    'scan.startup.mode' = 'earliest-offset',
+    'properties.bootstrap.servers' = 'localhost:9092',
+    'format' = 'avro-confluent',
+    'avro-confluent.url' = 'http://localhost:8081'
+);
+
+CREATE VIEW product_view AS
+SELECT
+    id,
+    brand
+FROM
+    product_table;
+
+--
+
+CREATE TABLE order_table (
+    order_id STRING,
+    product_id STRING,
+    customer_id STRING,
+    ts TIMESTAMP(3)
+) WITH (
+    'connector' = 'kafka',
+    'topic' = 'shoe_orders',
+    'scan.startup.mode' = 'earliest-offset',
+    'properties.bootstrap.servers' = 'localhost:9092',
+    'format' = 'avro-confluent',
+    'avro-confluent.url' = 'http://localhost:8081'
+);
+
+CREATE VIEW order_view AS
+SELECT
+    order_id,
+    product_id,
+    customer_id
+FROM
+    order_table;
+
+--
+
 CREATE VIEW join_1_view AS
 SELECT
     *
@@ -59,16 +108,34 @@ FROM
     click_view
     JOIN customer_view ON click_view.user_id = customer_view.id;
 
+
+CREATE VIEW join_2_view AS
+SELECT
+    *
+FROM
+    join_1_view
+    JOIN product_view ON join_1_view.product_id = product_view.id;
+
+CREATE VIEW join_3_view AS
+SELECT
+    *
+FROM
+    join_2_view
+    JOIN order_view ON join_2_view.product_id = order_view.id AND join_2_view.user_id = order_view.customer_id;
+
 --upsert-kafka sink
 
 CREATE TABLE upsert_kafka_sink (
     user_id STRING,
-    first_name STRING,
     ip STRING,
+    product_id STRING,
+    first_name STRING,
+    brand STRING,
+    order_id STRING
     PRIMARY KEY (user_id) NOT ENFORCED
 ) WITH (
     'connector' = 'upsert-kafka',
-    'topic' = '1_join_upsert_kafka_sink',
+    'topic' = '3_joins_upsert_kafka_sink',
     'properties.bootstrap.servers' = 'localhost:9092',
     'key.format' = 'raw',
     'value.format' = 'avro-confluent',
@@ -78,19 +145,25 @@ CREATE TABLE upsert_kafka_sink (
 INSERT INTO upsert_kafka_sink
 SELECT 
     user_id,
+    ip,
+    product_id,
     first_name,
-    ip
-FROM join_1_view;
+    brand,
+    order_id
+FROM join_3_view;
 
 --kafka-sink
 
 CREATE TABLE kafka_sink (
     user_id STRING,
+    ip STRING,
+    product_id STRING,
     first_name STRING,
-    ip STRING
+    brand STRING,
+    order_id STRING
 ) WITH (
     'connector' = 'kafka',
-    'topic' = '1_join_kafka_sink',
+    'topic' = '2_join_kafka_sink',
     'properties.bootstrap.servers' = 'localhost:9092',
     'format' = 'avro-confluent',
     'avro-confluent.url' = 'http://localhost:8081'
@@ -99,6 +172,9 @@ CREATE TABLE kafka_sink (
 INSERT INTO kafka_sink
 SELECT 
     user_id,
+    ip,
+    product_id,
     first_name,
-    ip
-FROM join_1_view;
+    brand,
+    order_id
+FROM join_3_view;

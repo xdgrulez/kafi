@@ -19,3 +19,4 @@ kafi:
   progress.num.messages: 1000
   key.type: str
   value.type: json
+  topic.ignore.patterns: ["_*", "*connect-configs", "*connect-offsets", "*connect-status"]

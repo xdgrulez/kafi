@@ -19,9 +19,9 @@ class FSAdmin(StorageAdmin):
         #
         all_topic_str_list = [rel_dir_str for rel_dir_str in rel_dir_str_list if not rel_dir_str.endswith("partitions")]
         #
-        topic_or_file_str_list = pattern_match(all_topic_str_list, pattern)
+        filtered_topic_or_file_str_list = self.storage_obj.filter_topics(all_topic_str_list, pattern)
         #
-        return topic_or_file_str_list
+        return filtered_topic_or_file_str_list
 
     def list_groups(self, pattern=None):
         root_dir_str = self.storage_obj.root_dir()
@@ -155,7 +155,7 @@ class FSAdmin(StorageAdmin):
 
     def watermarks(self, pattern, **kwargs):
         topic_str_list = self.list_topics(pattern)
-        filtered_topic_str_list = pattern_match(topic_str_list, pattern)
+        filtered_topic_str_list = self.storage_obj.filter_topics(topic_str_list, pattern)
         #
         def get_watermark_offsets(topic_str, partition_int):
             topic_abs_dir_str = self.get_topic_abs_path_str(topic_str)
