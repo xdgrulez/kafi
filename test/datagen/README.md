@@ -17,7 +17,7 @@ ts long
 
 shoe_orders
 -
-order_id STRING
+order_id INT
 product_id STRING
 customer_id STRING
 ts long

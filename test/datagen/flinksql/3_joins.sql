@@ -78,7 +78,7 @@ FROM
 --
 
 CREATE TABLE order_table (
-    order_id STRING,
+    order_id INT,
     product_id STRING,
     customer_id STRING,
     ts TIMESTAMP(3)
@@ -121,7 +121,7 @@ SELECT
     *
 FROM
     join_2_view
-    JOIN order_view ON join_2_view.product_id = order_view.id AND join_2_view.user_id = order_view.customer_id;
+    JOIN order_view ON join_2_view.product_id = order_view.product_id AND join_2_view.user_id = order_view.customer_id;
 
 --upsert-kafka sink
 
@@ -131,7 +131,7 @@ CREATE TABLE upsert_kafka_sink (
     product_id STRING,
     first_name STRING,
     brand STRING,
-    order_id STRING
+    order_id INT,
     PRIMARY KEY (user_id) NOT ENFORCED
 ) WITH (
     'connector' = 'upsert-kafka',
@@ -160,7 +160,7 @@ CREATE TABLE kafka_sink (
     product_id STRING,
     first_name STRING,
     brand STRING,
-    order_id STRING
+    order_id INT
 ) WITH (
     'connector' = 'kafka',
     'topic' = '2_join_kafka_sink',

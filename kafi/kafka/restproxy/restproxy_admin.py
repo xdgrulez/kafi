@@ -1,6 +1,6 @@
 from fnmatch import fnmatch
 
-from kafi.helpers import get, delete, post, is_internal, is_pattern, pattern_match
+from kafi.helpers import get, delete, post, is_pattern
 
 from kafi.kafka.kafka_admin import *
 

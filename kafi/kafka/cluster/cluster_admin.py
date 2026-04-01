@@ -1,7 +1,6 @@
 from fnmatch import fnmatch
 import time
 
-from kafi.helpers import is_internal, pattern_match
 from kafi.kafka.kafka_admin import KafkaAdmin
 
 from confluent_kafka import Consumer, TopicPartition

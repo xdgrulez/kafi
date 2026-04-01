@@ -1,7 +1,6 @@
 import glob
 import os
 from pathlib import Path
-import re
 
 from piny import YamlLoader
 
