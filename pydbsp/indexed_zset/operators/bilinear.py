@@ -171,3 +171,19 @@ class DeltaLiftedDeltaLiftedSortMergeJoin[I, T, R, S](
         self.frontier_b += 1
 
         return False
+
+    def gc(self) -> None:
+        self.integrated_stream_a.gc()
+        self.delayed_integrated_stream_a.gc()
+        self.lift_integrated_stream_a.gc()
+        self.integrated_lift_integrated_stream_a.gc()
+        self.integrated_stream_b.gc()
+        self.delayed_integrated_stream_b.gc()
+        self.lift_integrated_stream_b.gc()
+        self.integrated_lift_integrated_stream_b.gc()
+        self.lift_delayed_integrated_lift_integrated_stream_b.gc()
+        self.lift_delayed_lift_integrated_stream_b.gc()
+        self.join_1.gc()
+        self.join_2.gc()
+        self.join_3.gc()
+        self.join_4.gc()

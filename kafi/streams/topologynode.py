@@ -5,6 +5,10 @@ from pydbsp.zset.operators.linear import LiftedProject
 from pydbsp.stream.operators.linear import Differentiate, LiftedStreamIntroduction, LiftedStreamElimination
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset import ZSet, ZSetAddition
+from pydbsp.indexed_zset.operators.linear import LiftedIndex, LiftedLiftedIndex
+from pydbsp.indexed_zset.operators.bilinear import DeltaLiftedDeltaLiftedSortMergeJoin
+from pydbsp.indexed_zset.functions.bilinear import join_with_index
+from pydbsp.stream.operators.bilinear import Incrementalize2
 
 from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
@@ -206,6 +210,101 @@ class TopologyNode:
             topologyNode.pydbsp_gc(output_node)
         #
         topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
+        return topologyNode
+
+    def join1(self, other, left_on_function, right_on_function, projection_function, profile_config_dict=None):
+        def left_on_function1(left_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            return json.dumps(left_on_function(left_value_dict))
+        #
+        def right_on_function1(right_value_json_str):
+            right_value_dict = json.loads(right_value_json_str)
+            return json.dumps(right_on_function(right_value_dict))
+        #
+        def projection_function1(key, left_value_json_str, right_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            right_value_dict = json.loads(right_value_json_str)
+            return json.dumps(projection_function(key, left_value_dict, right_value_dict))
+        #
+        left_liftedIndex = LiftedIndex(self._output_handle_function(), left_on_function1)
+        right_liftedIndex = LiftedIndex(other._output_handle_function(), right_on_function1)
+        incrementalize2 = Incrementalize2(
+            left_liftedIndex.output_handle(),
+            right_liftedIndex.output_handle(),
+            lambda l, r: join_with_index(l, r, projection_function1),
+            self._group)
+        #
+        def output_handle_function():
+            return incrementalize2.output_handle()
+        #
+        def step_function():
+            topologyNode.pydbsp_step(left_liftedIndex)
+            topologyNode.pydbsp_step(right_liftedIndex)
+            #
+            topologyNode.pydbsp_step(incrementalize2)
+        #
+        def gc_function():
+            topologyNode.pydbsp_gc(left_liftedIndex)
+            topologyNode.pydbsp_gc(right_liftedIndex)
+            #
+            topologyNode.pydbsp_gc(incrementalize2)
+        #
+        topologyNode = TopologyNode("join1_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
+        return topologyNode
+
+    def join2(self, other, left_on_function, right_on_function, projection_function, profile_config_dict=None):
+        def left_on_function1(left_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            return json.dumps(left_on_function(left_value_dict))
+        #
+        def right_on_function1(right_value_json_str):
+            right_value_dict = json.loads(right_value_json_str)
+            return json.dumps(right_on_function(right_value_dict))
+        #
+        def projection_function1(key, left_value_json_str, right_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            right_value_dict = json.loads(right_value_json_str)
+            return json.dumps(projection_function(key, left_value_dict, right_value_dict))
+        #
+        left_liftedStreamIntroduction = LiftedStreamIntroduction(self._output_handle_function())
+        right_liftedStreamIntroduction = LiftedStreamIntroduction(other._output_handle_function())
+        #
+        left_liftedLiftedIndex = LiftedLiftedIndex(left_liftedStreamIntroduction.output_handle(), left_on_function1)
+        right_liftedLiftedIndex = LiftedLiftedIndex(right_liftedStreamIntroduction.output_handle(), right_on_function1)
+        #
+        deltaLiftedDeltaLiftedSortMergeJoin = DeltaLiftedDeltaLiftedSortMergeJoin(
+            left_liftedLiftedIndex.output_handle(),
+            right_liftedLiftedIndex.output_handle(),
+            projection_function1)
+        #
+        output_node = LiftedStreamElimination(deltaLiftedDeltaLiftedSortMergeJoin.output_handle())
+        #
+        def output_handle_function():
+            return output_node.output_handle()
+        #
+        def step_function():
+            topologyNode.pydbsp_step(left_liftedStreamIntroduction)
+            topologyNode.pydbsp_step(right_liftedStreamIntroduction)
+            #
+            topologyNode.pydbsp_step(left_liftedLiftedIndex)
+            topologyNode.pydbsp_step(right_liftedLiftedIndex)
+            #
+            topologyNode.pydbsp_step(deltaLiftedDeltaLiftedSortMergeJoin)
+            #
+            topologyNode.pydbsp_step(output_node)
+        #
+        def gc_function():
+            topologyNode.pydbsp_gc(left_liftedStreamIntroduction)
+            topologyNode.pydbsp_gc(right_liftedStreamIntroduction)
+            #
+            topologyNode.pydbsp_gc(left_liftedLiftedIndex)
+            topologyNode.pydbsp_gc(right_liftedLiftedIndex)
+            #
+            topologyNode.pydbsp_gc(deltaLiftedDeltaLiftedSortMergeJoin)
+            #
+            topologyNode.pydbsp_gc(output_node)
+        #
+        topologyNode = TopologyNode("join2_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
 
     def union(self, other, profile_config_dict=None):

@@ -78,3 +78,14 @@ class Incrementalize2(BinaryOperator[T, R, S]):
         self.output().send(group.add(group.add(ab, adib), diab))
 
         return True
+
+    def gc(self) -> None:
+        self.integrated_stream_a.gc()
+        self.delayed_integrated_stream_a.gc()
+
+        self.integrated_stream_b.gc()
+        self.delayed_integrated_stream_b.gc()
+
+        self.f2_a_b.gc()
+        self.f2_a_delayed_integrated_b.gc()
+        self.f2_delayed_integrated_a_b.gc()
