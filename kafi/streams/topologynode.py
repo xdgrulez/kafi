@@ -13,7 +13,8 @@ from pydbsp.stream.operators.bilinear import Incrementalize2
 from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
 import datetime
-import json
+# import json
+import ujson as json
 import time
 import uuid
 

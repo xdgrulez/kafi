@@ -1,5 +1,32 @@
 # other TODOs
 
+enable.partition.eof=true
+damit bekommt man laut claude error-messages auf jeder partition, die das ende der partition ansagen:
+from confluent_kafka import Consumer, KafkaError
+
+consumer = Consumer({
+    'bootstrap.servers': '...',
+    'group.id': '...',
+    'enable.partition.eof': True
+})
+
+eof_partitions = set()
+assignment = consumer.assignment()
+
+while True:
+    msg = consumer.poll(timeout=10.0)  # timeout hoch für Confluent Cloud, kein Problem
+    if msg is None:
+        continue
+    if msg.error():
+        if msg.error().code() == KafkaError._PARTITION_EOF:
+            eof_partitions.add((msg.topic(), msg.partition()))
+            if len(eof_partitions) == len(assignment):
+                break  # alle Partitionen fertig → sofort raus
+    else:
+        process(msg)
+
+d.h. wir müssten nicht mehr umsonst consume_timeout lang warten :)
+
 * flatmap:
 # zset/functions/linear.py — neue Funktion hinzufügen
 
