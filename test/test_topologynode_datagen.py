@@ -240,7 +240,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
             #         "product_id": l["product_id"],
             #         "order_id": r["order_id"]
             #     },
-            click_topologyNode.join2(
+            click_topologyNode.join1(
                 order_topologyNode,
                 left_on_function=lambda l: {"product_id": l["product_id"], "user_id": l["user_id"]},
                 right_on_function=lambda r: {"product_id": r["product_id"], "user_id": r["customer_id"]},
@@ -256,7 +256,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
                 # }
                 profile_config_dict=None
             )
-            .join2(
+            .join1(
                 customer_topologyNode,
                 left_on_function=lambda l: l["user_id"],
                 right_on_function=lambda r: r["id"],
@@ -283,7 +283,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
                 # }
                 profile_config_dict=None
             )
-            .join2(
+            .join1(
                 product_topologyNode,
                 left_on_function=lambda l: l["product_id"],
                 right_on_function=lambda r: r["id"],
@@ -313,7 +313,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         )
         #
         cluster = Cluster("local")
-        cluster.consume_batch_size(100)
+        cluster.consume_batch_size(1000)
         click_consumer = cluster.consumer(click_topic_str, value_type="avro")
         customer_consumer = cluster.consumer(customer_topic_str, value_type="avro")
         product_consumer = cluster.consumer(product_topic_str, value_type="avro")
