@@ -128,6 +128,9 @@ def step_until_fixpoint_set_new_default_then_return[T](
     latest = out.latest()
     out.set_default(latest)
 
+    print(operator.__class__)
+    print(len(out.inner))
+
     return out
 
 

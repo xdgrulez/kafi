@@ -119,16 +119,17 @@ class Stream[T]:
         # if current_time_int > 1:
         #     if current_time_int - 1 in self.inner:
         #         del self.inner[current_time_int - 1]
-        for time_int in range(0, current_time_int):
+        for time_int in range(1, current_time_int):
             if time_int in self.inner:
                 del self.inner[time_int]
         #
-        values = list(self.inner.values())
-        if len(values) > 1:
-            value0 = values[0]
-            print(type(value0))
-            if isinstance(value0, Stream):
-                value0.gc()
+        # values = list(self.inner.values())
+        # if len(values) > 1:
+        #     value0 = values[0]
+        #     print(type(value0))
+        #     if isinstance(value0, Stream):
+        #         for value in values:
+        #             value.gc()
 
     def profile(self, config: str) -> Dict:
         profile = {}
@@ -138,6 +139,17 @@ class Stream[T]:
             profile["len"] = len(self.inner.keys())
         if "size" in config:
             profile["size"] = len(pickle.dumps(self)) / 1024
+        #
+        # values = list(self.inner.values())
+        # profiles = []
+        # if len(values) > 1:
+        #     value0 = values[0]
+        #     print(type(value0))
+        #     if isinstance(value0, Stream):
+        #         for value in values:
+        #             profiles.append(value.profile(config))
+        #
+        # profile["bla"] = profiles
         return profile
 
 
@@ -377,8 +389,7 @@ class Lift2(BinaryOperator[T, R, S]):
         self.output_stream_handle.get().gc()
 
     def profile(self, config: str) -> Dict:
-        return self.output_stream_handle.get().profile(config)
-
+        return {1: self.output_stream_handle.get().profile(config), 2: self.input_a().profile(config), 3: self.input_b().profile(config)}
 
 class LiftedGroupAdd(Lift2[T, T, T]):
     def __init__(self, stream_a: StreamHandle[T], stream_b: Optional[StreamHandle[T]]):

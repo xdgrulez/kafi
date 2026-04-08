@@ -1,7 +1,7 @@
 from kafi.helpers import get_value, set_value
 
 from pydbsp.stream import Stream, StreamHandle
-from pydbsp.zset.operators.linear import LiftedProject
+from pydbsp.zset.operators.linear import LiftedProject, LiftedSelect
 from pydbsp.stream.operators.linear import Differentiate, LiftedStreamIntroduction, LiftedStreamElimination
 from pydbsp.stream import Stream, StreamHandle
 from pydbsp.zset import ZSet, ZSetAddition
@@ -13,8 +13,8 @@ from pydbsp.stream.operators.bilinear import Incrementalize2
 from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
 import datetime
-# import json
-import ujson as json
+import json
+# import ujson as json
 import time
 import uuid
 
@@ -84,64 +84,102 @@ class TopologyNode:
 
     #
 
+    # def map(self, map_function, profile_config_dict=None):
+    #     def map_function1(value_json_str):
+    #         value_dict = json.loads(value_json_str)
+    #         return json.dumps(map_function(value_dict))
+    #     #
+    #     liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+    #     #
+    #     selection = Selection(liftedStream.output_handle(), map_function1)
+    #     #
+    #     output_node = LiftedStreamElimination(selection.output_handle())
+    #     #
+    #     def output_handle_function():
+    #         return output_node.output_handle()
+    #     #
+    #     def step_function():
+    #         topologyNode.pydbsp_step(liftedStream)
+    #         #
+    #         topologyNode.pydbsp_step(selection)
+    #         #
+    #         topologyNode.pydbsp_step(output_node)
+    #     #
+    #     def gc_function():
+    #         topologyNode.pydbsp_gc(liftedStream)
+    #         #
+    #         topologyNode.pydbsp_gc(selection)
+    #         #
+    #         topologyNode.pydbsp_gc(output_node)
+    #     #
+    #     topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
+    #     return topologyNode
+
     def map(self, map_function, profile_config_dict=None):
         def map_function1(value_json_str):
             value_dict = json.loads(value_json_str)
             return json.dumps(map_function(value_dict))
         #
-        liftedStream = LiftedStreamIntroduction(self._output_handle_function())
-        #
-        selection = Selection(liftedStream.output_handle(), map_function1)
-        #
-        output_node = LiftedStreamElimination(selection.output_handle())
+        liftedProject = LiftedProject(self._output_handle_function(), map_function1)
         #
         def output_handle_function():
-            return output_node.output_handle()
+            return liftedProject.output_handle()
         #
         def step_function():
-            topologyNode.pydbsp_step(liftedStream)
-            #
-            topologyNode.pydbsp_step(selection)
-            #
-            topologyNode.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(liftedProject)
         #
         def gc_function():
-            topologyNode.pydbsp_gc(liftedStream)
-            #
-            topologyNode.pydbsp_gc(selection)
-            #
-            topologyNode.pydbsp_gc(output_node)
+            topologyNode.pydbsp_gc(liftedProject)
         #
         topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
+
+    # def filter(self, filter_function, profile_config_dict=None):
+    #     def filter_function1(value_json_str):
+    #         value_dict = json.loads(value_json_str)
+    #         return filter_function(value_dict)
+    #     #
+    #     liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+    #     #
+    #     filtering = Filtering(liftedStream.output_handle(), filter_function1)
+    #     #
+    #     output_node = LiftedStreamElimination(filtering.output_handle())
+    #     #
+    #     def output_handle_function():
+    #         return output_node.output_handle()
+    #     #
+    #     def step_function():
+    #         topologyNode.pydbsp_step(liftedStream)
+    #         #
+    #         topologyNode.pydbsp_step(filtering)
+    #         #
+    #         topologyNode.pydbsp_step(output_node)
+    #     #
+    #     def gc_function():
+    #         topologyNode.pydbsp_gc(liftedStream)
+    #         #
+    #         topologyNode.pydbsp_gc(filtering)
+    #         #
+    #         topologyNode.pydbsp_gc(output_node)
+    #     #
+    #     topologyNode = TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
+    #     return topologyNode
 
     def filter(self, filter_function, profile_config_dict=None):
         def filter_function1(value_json_str):
             value_dict = json.loads(value_json_str)
             return filter_function(value_dict)
         #
-        liftedStream = LiftedStreamIntroduction(self._output_handle_function())
-        #
-        filtering = Filtering(liftedStream.output_handle(), filter_function1)
-        #
-        output_node = LiftedStreamElimination(filtering.output_handle())
+        liftedSelect = LiftedSelect(self._output_handle_function(), filter_function1)
         #
         def output_handle_function():
-            return output_node.output_handle()
+            return liftedSelect.output_handle()
         #
         def step_function():
-            topologyNode.pydbsp_step(liftedStream)
-            #
-            topologyNode.pydbsp_step(filtering)
-            #
-            topologyNode.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(liftedSelect)
         #
         def gc_function():
-            topologyNode.pydbsp_gc(liftedStream)
-            #
-            topologyNode.pydbsp_gc(filtering)
-            #
-            topologyNode.pydbsp_gc(output_node)
+            topologyNode.pydbsp_gc(liftedSelect)
         #
         topologyNode = TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
