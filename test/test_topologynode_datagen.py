@@ -211,24 +211,24 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         click_topologyNode = (
             source_click_topologyNode
-            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
+            .map1(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
                 #  profile_config_dict={
                 #      "gc": {"memory": {"after": True, "delta": True}, "streams": ["size", "len"]}, "include": ["LiftedStreamIntroduction", "Selection", "LiftedStreamElimination"]})
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
-            .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
+            .map1(lambda x: {"id": x["id"], "first_name": x["first_name"]})
         )
         #
         product_topologyNode = (
             source_product_topologyNode
-            .map(lambda x: {"id": x["id"], "brand": x["brand"]})
+            .map1(lambda x: {"id": x["id"], "brand": x["brand"]})
         )
         #
         order_topologyNode = (
             source_order_topologyNode
-            .map(lambda x: {"order_id": x["order_id"], "product_id": x["product_id"], "customer_id": x["customer_id"]})
+            .map1(lambda x: {"order_id": x["order_id"], "product_id": x["product_id"], "customer_id": x["customer_id"]})
         )
         #
         root_topologyNode = (
@@ -242,7 +242,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
             #         "product_id": l["product_id"],
             #         "order_id": r["order_id"]
             #     },
-            click_topologyNode.join2(
+            click_topologyNode.join1(
                 order_topologyNode,
                 left_on_function=lambda l: {"product_id": l["product_id"], "user_id": l["user_id"]},
                 right_on_function=lambda r: {"product_id": r["product_id"], "user_id": r["customer_id"]},
@@ -258,7 +258,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
                 # }
                 profile_config_dict=None
             )
-            .join2(
+            .join1(
                 customer_topologyNode,
                 left_on_function=lambda l: l["user_id"],
                 right_on_function=lambda r: r["id"],
@@ -285,7 +285,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
                 # }
                 profile_config_dict=None
             )
-            .join2(
+            .join1(
                 product_topologyNode,
                 left_on_function=lambda l: l["product_id"],
                 right_on_function=lambda r: r["id"],
@@ -294,7 +294,8 @@ class TestTopologyNodeDatagen(unittest.TestCase):
                     "ip": l["ip"],
                     "product_id": l["product_id"],
                     "first_name": l["first_name"],
-                    "brand": r["brand"]
+                    "brand": r["brand"],
+                    "order_id": l["order_id"]
                 },
             # .join(
             #     product_topologyNode,

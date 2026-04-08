@@ -108,7 +108,6 @@ FROM
     click_view
     JOIN customer_view ON click_view.user_id = customer_view.id;
 
-
 CREATE VIEW join_2_view AS
 SELECT
     *

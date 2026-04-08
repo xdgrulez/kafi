@@ -84,36 +84,36 @@ class TopologyNode:
 
     #
 
-    # def map(self, map_function, profile_config_dict=None):
-    #     def map_function1(value_json_str):
-    #         value_dict = json.loads(value_json_str)
-    #         return json.dumps(map_function(value_dict))
-    #     #
-    #     liftedStream = LiftedStreamIntroduction(self._output_handle_function())
-    #     #
-    #     selection = Selection(liftedStream.output_handle(), map_function1)
-    #     #
-    #     output_node = LiftedStreamElimination(selection.output_handle())
-    #     #
-    #     def output_handle_function():
-    #         return output_node.output_handle()
-    #     #
-    #     def step_function():
-    #         topologyNode.pydbsp_step(liftedStream)
-    #         #
-    #         topologyNode.pydbsp_step(selection)
-    #         #
-    #         topologyNode.pydbsp_step(output_node)
-    #     #
-    #     def gc_function():
-    #         topologyNode.pydbsp_gc(liftedStream)
-    #         #
-    #         topologyNode.pydbsp_gc(selection)
-    #         #
-    #         topologyNode.pydbsp_gc(output_node)
-    #     #
-    #     topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
-    #     return topologyNode
+    def map1(self, map_function, profile_config_dict=None):
+        def map_function1(value_json_str):
+            value_dict = json.loads(value_json_str)
+            return json.dumps(map_function(value_dict))
+        #
+        liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        #
+        selection = Selection(liftedStream.output_handle(), map_function1)
+        #
+        output_node = LiftedStreamElimination(selection.output_handle())
+        #
+        def output_handle_function():
+            return output_node.output_handle()
+        #
+        def step_function():
+            topologyNode.pydbsp_step(liftedStream)
+            #
+            topologyNode.pydbsp_step(selection)
+            #
+            topologyNode.pydbsp_step(output_node)
+        #
+        def gc_function():
+            topologyNode.pydbsp_gc(liftedStream)
+            #
+            topologyNode.pydbsp_gc(selection)
+            #
+            topologyNode.pydbsp_gc(output_node)
+        #
+        topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
+        return topologyNode
 
     def map(self, map_function, profile_config_dict=None):
         def map_function1(value_json_str):

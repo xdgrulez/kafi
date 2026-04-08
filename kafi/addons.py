@@ -1,4 +1,4 @@
-import time
+import json
 
 from kafi.functional import Functional
 
@@ -261,3 +261,15 @@ class AddOns(Functional):
         stats_dict = {"messages": n_int, "total_size": total_size_int, "average_size": total_size_int/n_int, "max_size": max_dict, "min_size": min_dict}
         #
         return stats_dict
+
+
+    def collect_value_set(self, topic_str, **kwargs):
+        value_json_str_set = set()
+        #
+        def collect(message_dict):
+            value_json_str = json.dumps(message_dict["value"])
+            value_json_str_set.add(value_json_str)
+        #
+        self.foreach(topic_str, foreach_function=collect, **kwargs)
+        #
+        return value_json_str_set
