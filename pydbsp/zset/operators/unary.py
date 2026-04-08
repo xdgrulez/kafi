@@ -1,4 +1,4 @@
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Dict
 
 from pydbsp.core import AbelianGroupOperation
 from pydbsp.stream import Stream, StreamHandle, UnaryOperator
@@ -38,6 +38,7 @@ class DeltaLiftedDeltaLiftedDistinct(UnaryOperator[Stream[ZSet[T]], Stream[ZSet[
         self.output_stream_handle = self.diff_lift_lift_H.output_handle()
 
     def __init__(self, diff_stream_a: Optional[StreamHandle[Stream[ZSet[T]]]]):
+        self.diff_stream_a = diff_stream_a
         super().__init__(diff_stream_a, None)
 
     def step(self) -> bool:
@@ -61,3 +62,10 @@ class DeltaLiftedDeltaLiftedDistinct(UnaryOperator[Stream[ZSet[T]], Stream[ZSet[
         self.lift_delay_lift_integrated_diff_stream_a.gc()
         self.lift_lift_H.gc()
         self.diff_lift_lift_H.gc()
+
+    def profile(self, config: str) -> Dict:
+        return {"integrated_diff_stream_a": self.integrated_diff_stream_a.profile(config),
+                "lift_integrated_diff_stream_a": self.lift_integrated_diff_stream_a.profile(config),
+                "lift_delay_lift_integrated_diff_stream_a": self.lift_delay_lift_integrated_diff_stream_a.profile(config),
+                "lift_lift_H": self.lift_lift_H.profile(config),
+                "diff_lift_lift_H": self.diff_lift_lift_H.profile(config)}

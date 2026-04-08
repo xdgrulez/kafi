@@ -4,6 +4,7 @@ from types import NotImplementedType
 from typing import Callable, Iterator, List, Optional, OrderedDict, Protocol, TypeVar, cast, Dict
 
 from pydbsp.core import AbelianGroupOperation
+from pydbsp.zset import ZSet
 
 import cloudpickle as pickle
 
@@ -115,17 +116,28 @@ class Stream[T]:
 
     def gc(self) -> None:
         current_time_int = self.current_time()
-        if current_time_int > 1:
-            if current_time_int - 1 in self.inner:
-                del self.inner[current_time_int - 1]
+        # if current_time_int > 1:
+        #     if current_time_int - 1 in self.inner:
+        #         del self.inner[current_time_int - 1]
+        for time_int in range(0, current_time_int):
+            if time_int in self.inner:
+                del self.inner[time_int]
+        #
+        values = list(self.inner.values())
+        if len(values) > 1:
+            value0 = values[0]
+            print(type(value0))
+            if isinstance(value0, Stream):
+                value0.gc()
 
     def profile(self, config: str) -> Dict:
-        if config == "dict":
-            profile = self.inner
-        elif config == "len":
-            profile = len(self.inner.keys())
-        elif config == "size":
-            profile = len(pickle.dumps(self)) / 1024
+        profile = {}
+        if "dict" in config:
+            profile["dict"] = self.inner
+        if "len" in config:
+            profile["len"] = len(self.inner.keys())
+        if "size" in config:
+            profile["size"] = len(pickle.dumps(self)) / 1024
         return profile
 
 
@@ -311,7 +323,7 @@ class Lift1(UnaryOperator[T, R]):
         self.output_stream_handle.get().gc()
 
     def profile(self, config: str) -> Dict:
-        self.output_stream_handle.get().profile(config)
+        return self.output_stream_handle.get().profile(config)
 
 
 F2 = Callable[[T, R], S]
@@ -365,7 +377,7 @@ class Lift2(BinaryOperator[T, R, S]):
         self.output_stream_handle.get().gc()
 
     def profile(self, config: str) -> Dict:
-        self.output_stream_handle.get().profile(config)
+        return self.output_stream_handle.get().profile(config)
 
 
 class LiftedGroupAdd(Lift2[T, T, T]):

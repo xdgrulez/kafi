@@ -43,7 +43,7 @@ class Delay(UnaryOperator[T, T]):
         self.output_stream_handle.get().gc()
 
     def profile(self, config: str) -> Dict:
-        self.output_stream_handle.get().profile(config)
+        return self.output_stream_handle.get().profile(config)
 
 
 class Differentiate(UnaryOperator[T, T]):

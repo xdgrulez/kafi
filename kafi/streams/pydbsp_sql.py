@@ -201,6 +201,9 @@ class Selection(UnaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]]):
 
         self.distinct.gc()
 
+    def profile(self, config: str) -> Dict:
+        return {"lifted_lifted_project": self.lifted_lifted_project.profile(config),
+                "distinct": self.distinct.profile(config)}
 
 class CartesianProduct(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]], Stream[ZSet[tuple[T, R]]]]):
     """

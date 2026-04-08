@@ -211,7 +211,9 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         click_topologyNode = (
             source_click_topologyNode
-            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
+            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]},
+                 profile_config_dict={
+                     "gc": {"memory": {"after": True, "delta": True}, "streams": "size"}, "include": ["LiftedStreamIntroduction", "Selection", "LiftedStreamElimination"]})
         )
         #
         customer_topologyNode = (
@@ -311,6 +313,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
                 profile_config_dict=None
             )
         )
+        root_topologyNode = click_topologyNode
         #
         cluster = Cluster("local")
         cluster.consume_batch_size(1000)
@@ -341,9 +344,9 @@ class TestTopologyNodeDatagen(unittest.TestCase):
             order_zset = message_dict_list_to_ZSet(order_message_dict_list)
             #
             source_click_topologyNode.output_handle_function().get().send(click_zset)
-            source_customer_topologyNode.output_handle_function().get().send(customer_zset)
-            source_product_topologyNode.output_handle_function().get().send(product_zset)
-            source_order_topologyNode.output_handle_function().get().send(order_zset)
+            # source_customer_topologyNode.output_handle_function().get().send(customer_zset)
+            # source_product_topologyNode.output_handle_function().get().send(product_zset)
+            # source_order_topologyNode.output_handle_function().get().send(order_zset)
             #
             root_topologyNode.step()
             root_topologyNode.gc()

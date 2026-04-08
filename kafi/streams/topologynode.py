@@ -99,18 +99,18 @@ class TopologyNode:
             return output_node.output_handle()
         #
         def step_function():
-            self.pydbsp_step(liftedStream)
+            topologyNode.pydbsp_step(liftedStream)
             #
-            self.pydbsp_step(selection)
+            topologyNode.pydbsp_step(selection)
             #
-            self.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(output_node)
         #
         def gc_function():
-            self.pydbsp_gc(liftedStream)
+            topologyNode.pydbsp_gc(liftedStream)
             #
-            self.pydbsp_gc(selection)
+            topologyNode.pydbsp_gc(selection)
             #
-            self.pydbsp_gc(output_node)
+            topologyNode.pydbsp_gc(output_node)
         #
         topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
@@ -601,7 +601,7 @@ class TopologyNode:
         #
         return name_str_topologyNode_dict[name_str]
 
-    # profile_config_dict: {"step"/"gc": {"time": boolean, "memory": {"before": bool, "after": bool, "delta": bool}, "streams": str ["dict", "len", "size"]}, "unit": str ("KB", "MB", "GB", "TB"), "divisor": int, "include": pydbsp_operator_class_name_str_list}
+    # profile_config_dict: {"step"/"gc": {"time": boolean, "memory": {"before": bool, "after": bool, "delta": bool}, "streams": list(str) ["dict", "len", "size"]}, "unit": str ("KB", "MB", "GB", "TB"), "divisor": int, "include": pydbsp_operator_class_name_str_list}
     
     def pydbsp_step(self, pydbsp_operator_object):
         if self._profile_config_dict is not None:
