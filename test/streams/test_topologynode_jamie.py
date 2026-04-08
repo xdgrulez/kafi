@@ -65,10 +65,17 @@ def setup():
         credits_topologyNode
         .join(
             debits_topologyNode,
-            on_function=lambda l, r: l["account"] == r["account"],
+            left_on_function=lambda l: l["account"],
+            right_on_function=lambda r: r["account"],
             projection_function=lambda l, r: {"account": l["account"],
                                               "balance": l["credits"] - r["debits"]},
-                      profile_config_dict=profile_config_dict)
+            profile_config_dict=profile_config_dict)
+        # .join_no_index(
+        #     debits_topologyNode,
+        #     on_function=lambda l, r: l["account"] == r["account"],
+        #     projection_function=lambda l, r: {"account": l["account"],
+        #                                       "balance": l["credits"] - r["debits"]},
+        #               profile_config_dict=profile_config_dict)
     )
     #
 # create view total as select sum(balance) from balance;

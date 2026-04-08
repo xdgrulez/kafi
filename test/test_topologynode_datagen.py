@@ -211,24 +211,24 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         click_topologyNode = (
             source_click_topologyNode
-            .map1(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
+            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
                 #  profile_config_dict={
                 #      "gc": {"memory": {"after": True, "delta": True}, "streams": ["size", "len"]}, "include": ["LiftedStreamIntroduction", "Selection", "LiftedStreamElimination"]})
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
-            .map1(lambda x: {"id": x["id"], "first_name": x["first_name"]})
+            .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
         )
         #
         product_topologyNode = (
             source_product_topologyNode
-            .map1(lambda x: {"id": x["id"], "brand": x["brand"]})
+            .map(lambda x: {"id": x["id"], "brand": x["brand"]})
         )
         #
         order_topologyNode = (
             source_order_topologyNode
-            .map1(lambda x: {"order_id": x["order_id"], "product_id": x["product_id"], "customer_id": x["customer_id"]})
+            .map(lambda x: {"order_id": x["order_id"], "product_id": x["product_id"], "customer_id": x["customer_id"]})
         )
         #
         root_topologyNode = (
@@ -356,7 +356,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
             print(f"{len(click_message_dict_list)}/{len(customer_message_dict_list)}/{len_latest_zset} --- {click_int + 1}/{clicks_int}; {customer_int + 1}/{customers_int}; {product_int + 1}/{products_int}; {order_int + 1}/{orders_int}")
             n += len_latest_zset
             #
-            if click_int == clicks_int - 1 and customer_int == customers_int - 1 and product_int == products_int - 1 and order_int == orders_int - 1:
+            if click_int >= clicks_int - 1 and customer_int >= customers_int - 1 and product_int >= products_int - 1 and order_int >= orders_int - 1:
                 break
         #
         end_time_int = time.time()

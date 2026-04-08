@@ -84,43 +84,12 @@ class TopologyNode:
 
     #
 
-    def map1(self, map_function, profile_config_dict=None):
-        def map_function1(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return json.dumps(map_function(value_dict))
-        #
-        liftedStream = LiftedStreamIntroduction(self._output_handle_function())
-        #
-        selection = Selection(liftedStream.output_handle(), map_function1)
-        #
-        output_node = LiftedStreamElimination(selection.output_handle())
-        #
-        def output_handle_function():
-            return output_node.output_handle()
-        #
-        def step_function():
-            topologyNode.pydbsp_step(liftedStream)
-            #
-            topologyNode.pydbsp_step(selection)
-            #
-            topologyNode.pydbsp_step(output_node)
-        #
-        def gc_function():
-            topologyNode.pydbsp_gc(liftedStream)
-            #
-            topologyNode.pydbsp_gc(selection)
-            #
-            topologyNode.pydbsp_gc(output_node)
-        #
-        topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
-        return topologyNode
-
     def map(self, map_function, profile_config_dict=None):
-        def map_function1(value_json_str):
+        def _map_function(value_json_str):
             value_dict = json.loads(value_json_str)
             return json.dumps(map_function(value_dict))
         #
-        liftedProject = LiftedProject(self._output_handle_function(), map_function1)
+        liftedProject = LiftedProject(self._output_handle_function(), _map_function)
         #
         def output_handle_function():
             return liftedProject.output_handle()
@@ -134,43 +103,37 @@ class TopologyNode:
         topologyNode = TopologyNode("map_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
 
-    # def filter(self, filter_function, profile_config_dict=None):
-    #     def filter_function1(value_json_str):
-    #         value_dict = json.loads(value_json_str)
-    #         return filter_function(value_dict)
-    #     #
-    #     liftedStream = LiftedStreamIntroduction(self._output_handle_function())
-    #     #
-    #     filtering = Filtering(liftedStream.output_handle(), filter_function1)
-    #     #
-    #     output_node = LiftedStreamElimination(filtering.output_handle())
-    #     #
-    #     def output_handle_function():
-    #         return output_node.output_handle()
-    #     #
-    #     def step_function():
-    #         topologyNode.pydbsp_step(liftedStream)
-    #         #
-    #         topologyNode.pydbsp_step(filtering)
-    #         #
-    #         topologyNode.pydbsp_step(output_node)
-    #     #
-    #     def gc_function():
-    #         topologyNode.pydbsp_gc(liftedStream)
-    #         #
-    #         topologyNode.pydbsp_gc(filtering)
-    #         #
-    #         topologyNode.pydbsp_gc(output_node)
-    #     #
-    #     topologyNode = TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
-    #     return topologyNode
+    def map_distinct(self, map_function, profile_config_dict=None):
+        def _map_function(value_json_str):
+            value_dict = json.loads(value_json_str)
+            return json.dumps(map_function(value_dict))
+        #
+        liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        selection = Selection(liftedStream.output_handle(), _map_function)
+        output_node = LiftedStreamElimination(selection.output_handle())
+        #
+        def output_handle_function():
+            return output_node.output_handle()
+        #
+        def step_function():
+            topologyNode.pydbsp_step(liftedStream)
+            topologyNode.pydbsp_step(selection)
+            topologyNode.pydbsp_step(output_node)
+        #
+        def gc_function():
+            topologyNode.pydbsp_gc(liftedStream)
+            topologyNode.pydbsp_gc(selection)
+            topologyNode.pydbsp_gc(output_node)
+        #
+        topologyNode = TopologyNode("map_distinct_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
+        return topologyNode
 
     def filter(self, filter_function, profile_config_dict=None):
-        def filter_function1(value_json_str):
+        def _filter_function(value_json_str):
             value_dict = json.loads(value_json_str)
             return filter_function(value_dict)
         #
-        liftedSelect = LiftedSelect(self._output_handle_function(), filter_function1)
+        liftedSelect = LiftedSelect(self._output_handle_function(), _filter_function)
         #
         def output_handle_function():
             return liftedSelect.output_handle()
@@ -184,14 +147,38 @@ class TopologyNode:
         topologyNode = TopologyNode("filter_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
 
+    def filter_distinct(self, filter_function, profile_config_dict=None):
+        def _filter_function(value_json_str):
+            value_dict = json.loads(value_json_str)
+            return filter_function(value_dict)
+        #
+        liftedStream = LiftedStreamIntroduction(self._output_handle_function())
+        filtering = Filtering(liftedStream.output_handle(), _filter_function)
+        liftedStreamElimination = LiftedStreamElimination(filtering.output_handle())
+        #
+        def output_handle_function():
+            return liftedStreamElimination.output_handle()
+        #
+        def step_function():
+            topologyNode.pydbsp_step(liftedStream)
+            topologyNode.pydbsp_step(filtering)
+            topologyNode.pydbsp_step(liftedStreamElimination)
+        #
+        def gc_function():
+            topologyNode.pydbsp_gc(liftedStream)
+            topologyNode.pydbsp_gc(filtering)
+            topologyNode.pydbsp_gc(liftedStreamElimination)
+        #
+        topologyNode = TopologyNode("filter_distinct_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
+        return topologyNode
+
     def limit(self, limit_int, profile_config_dict=None):
-        def filter_function(_):
+        def _filter_function(_):
             self._counter_int += 1
             return self._counter_int <= limit_int
         #
-        topologyNode = self.filter(filter_function, profile_config_dict=profile_config_dict)
+        topologyNode = self.filter(_filter_function, profile_config_dict=profile_config_dict)
         topologyNode._name_str = "limit_op"
-        #
         return topologyNode
 
 #     def left_join():
@@ -211,13 +198,13 @@ class TopologyNode:
 #     )
 # );
 
-    def join(self, other, on_function, projection_function, profile_config_dict=None):
-        def on_function1(left_value_json_str, right_value_json_str):
+    def join_no_index(self, other, on_function, projection_function, profile_config_dict=None):
+        def _on_function(left_value_json_str, right_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             right_value_dict = json.loads(right_value_json_str)
             return on_function(left_value_dict, right_value_dict)
         #
-        def projection_function1(left_value_json_str, right_value_json_str):
+        def _projection_function(left_value_json_str, right_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             right_value_dict = json.loads(right_value_json_str)
             return json.dumps(projection_function(left_value_dict, right_value_dict))
@@ -225,12 +212,12 @@ class TopologyNode:
         left_liftedStream = LiftedStreamIntroduction(self._output_handle_function())
         right_liftedStream = LiftedStreamIntroduction(other._output_handle_function())
         #
-        join = Join(left_liftedStream.output_handle(), right_liftedStream.output_handle(), on_function1, projection_function1)
+        join = Join(left_liftedStream.output_handle(), right_liftedStream.output_handle(), _on_function, _projection_function)
         #
-        output_node = LiftedStreamElimination(join.output_handle())
+        liftedStreamElimination = LiftedStreamElimination(join.output_handle())
         #
         def output_handle_function():
-            return output_node.output_handle()
+            return liftedStreamElimination.output_handle()
         #
         def step_function():
             topologyNode.pydbsp_step(left_liftedStream)
@@ -238,7 +225,7 @@ class TopologyNode:
             #
             topologyNode.pydbsp_step(join)
             #
-            topologyNode.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(liftedStreamElimination)
         #
         def gc_function():
             topologyNode.pydbsp_gc(left_liftedStream)
@@ -246,31 +233,32 @@ class TopologyNode:
             #
             topologyNode.pydbsp_gc(join)
             #
-            topologyNode.pydbsp_gc(output_node)
+            topologyNode.pydbsp_gc(liftedStreamElimination)
         #
-        topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
+        topologyNode = TopologyNode("join_no_index_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
 
-    def join1(self, other, left_on_function, right_on_function, projection_function, profile_config_dict=None):
-        def left_on_function1(left_value_json_str):
+    def join(self, other, left_on_function, right_on_function, projection_function, profile_config_dict=None):
+        def _left_on_function(left_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             return json.dumps(left_on_function(left_value_dict))
         #
-        def right_on_function1(right_value_json_str):
+        def _right_on_function(right_value_json_str):
             right_value_dict = json.loads(right_value_json_str)
             return json.dumps(right_on_function(right_value_dict))
         #
-        def projection_function1(key, left_value_json_str, right_value_json_str):
+        def _projection_function(left_value_json_str, right_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             right_value_dict = json.loads(right_value_json_str)
-            return json.dumps(projection_function(key, left_value_dict, right_value_dict))
+            return json.dumps(projection_function(left_value_dict, right_value_dict))
         #
-        left_liftedIndex = LiftedIndex(self._output_handle_function(), left_on_function1)
-        right_liftedIndex = LiftedIndex(other._output_handle_function(), right_on_function1)
+        left_liftedIndex = LiftedIndex(self._output_handle_function(), _left_on_function)
+        right_liftedIndex = LiftedIndex(other._output_handle_function(), _right_on_function)
+        #
         incrementalize2 = Incrementalize2(
             left_liftedIndex.output_handle(),
             right_liftedIndex.output_handle(),
-            lambda l, r: join_with_index(l, r, projection_function1),
+            lambda l, r: join_with_index(l, r, lambda _, l1, r1: _projection_function(l1, r1)),
             self._group)
         #
         def output_handle_function():
@@ -288,38 +276,38 @@ class TopologyNode:
             #
             topologyNode.pydbsp_gc(incrementalize2)
         #
-        topologyNode = TopologyNode("join1_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
+        topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
 
     def join2(self, other, left_on_function, right_on_function, projection_function, profile_config_dict=None):
-        def left_on_function1(left_value_json_str):
+        def _left_on_function(left_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             return json.dumps(left_on_function(left_value_dict))
         #
-        def right_on_function1(right_value_json_str):
+        def _right_on_function(right_value_json_str):
             right_value_dict = json.loads(right_value_json_str)
             return json.dumps(right_on_function(right_value_dict))
         #
-        def projection_function1(key, left_value_json_str, right_value_json_str):
+        def _projection_function(left_value_json_str, right_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             right_value_dict = json.loads(right_value_json_str)
-            return json.dumps(projection_function(key, left_value_dict, right_value_dict))
+            return json.dumps(projection_function(left_value_dict, right_value_dict))
         #
         left_liftedStreamIntroduction = LiftedStreamIntroduction(self._output_handle_function())
         right_liftedStreamIntroduction = LiftedStreamIntroduction(other._output_handle_function())
         #
-        left_liftedLiftedIndex = LiftedLiftedIndex(left_liftedStreamIntroduction.output_handle(), left_on_function1)
-        right_liftedLiftedIndex = LiftedLiftedIndex(right_liftedStreamIntroduction.output_handle(), right_on_function1)
+        left_liftedLiftedIndex = LiftedLiftedIndex(left_liftedStreamIntroduction.output_handle(), _left_on_function)
+        right_liftedLiftedIndex = LiftedLiftedIndex(right_liftedStreamIntroduction.output_handle(), _right_on_function)
         #
         deltaLiftedDeltaLiftedSortMergeJoin = DeltaLiftedDeltaLiftedSortMergeJoin(
             left_liftedLiftedIndex.output_handle(),
             right_liftedLiftedIndex.output_handle(),
-            projection_function1)
+            _projection_function)
         #
-        output_node = LiftedStreamElimination(deltaLiftedDeltaLiftedSortMergeJoin.output_handle())
+        liftedStreamElimination = LiftedStreamElimination(deltaLiftedDeltaLiftedSortMergeJoin.output_handle())
         #
         def output_handle_function():
-            return output_node.output_handle()
+            return liftedStreamElimination.output_handle()
         #
         def step_function():
             topologyNode.pydbsp_step(left_liftedStreamIntroduction)
@@ -330,7 +318,7 @@ class TopologyNode:
             #
             topologyNode.pydbsp_step(deltaLiftedDeltaLiftedSortMergeJoin)
             #
-            topologyNode.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(liftedStreamElimination)
         #
         def gc_function():
             topologyNode.pydbsp_gc(left_liftedStreamIntroduction)
@@ -341,7 +329,7 @@ class TopologyNode:
             #
             topologyNode.pydbsp_gc(deltaLiftedDeltaLiftedSortMergeJoin)
             #
-            topologyNode.pydbsp_gc(output_node)
+            topologyNode.pydbsp_gc(liftedStreamElimination)
         #
         topologyNode = TopologyNode("join2_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
@@ -352,10 +340,10 @@ class TopologyNode:
         #
         union = Union(left_liftedStream.output_handle(), right_liftedStream.output_handle())
         #
-        output_node = LiftedStreamElimination(union.output_handle())
+        liftedStreamElimination = LiftedStreamElimination(union.output_handle())
         #
         def output_handle_function():
-            return output_node.output_handle()
+            return liftedStreamElimination.output_handle()
         #
         def step_function():
             topologyNode.pydbsp_step(left_liftedStream)
@@ -363,10 +351,15 @@ class TopologyNode:
             #
             topologyNode.pydbsp_step(union)
             #
-            topologyNode.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(liftedStreamElimination)
         #
         def gc_function():
-            pass
+            topologyNode.pydbsp_gc(left_liftedStream)
+            topologyNode.pydbsp_gc(right_liftedStream)
+            #
+            topologyNode.pydbsp_gc(union)
+            #
+            topologyNode.pydbsp_gc(liftedStreamElimination)
         #
         topologyNode = TopologyNode("union_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
@@ -377,10 +370,10 @@ class TopologyNode:
         #
         intersection = Intersection(left_liftedStream.output_handle(), right_liftedStream.output_handle())
         #
-        output_node = LiftedStreamElimination(intersection.output_handle())
+        liftedStreamElimination = LiftedStreamElimination(intersection.output_handle())
         #
         def output_handle_function():
-            return output_node.output_handle()
+            return liftedStreamElimination.output_handle()
         #
         def step_function():
             topologyNode.pydbsp_step(left_liftedStream)
@@ -388,10 +381,15 @@ class TopologyNode:
             #
             topologyNode.pydbsp_step(intersection)
             #
-            topologyNode.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(liftedStreamElimination)
         #
         def gc_function():
-            pass
+            topologyNode.pydbsp_gc(left_liftedStream)
+            topologyNode.pydbsp_gc(right_liftedStream)
+            #
+            topologyNode.pydbsp_gc(intersection)
+            #
+            topologyNode.pydbsp_gc(liftedStreamElimination)
         #
         topologyNode = TopologyNode("intersect_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
@@ -402,10 +400,10 @@ class TopologyNode:
         #
         difference = Difference(left_liftedStream.output_handle(), right_liftedStream.output_handle())
         #
-        output_node = LiftedStreamElimination(difference.output_handle())
+        liftedStreamElimination = LiftedStreamElimination(difference.output_handle())
         #
         def output_handle_function():
-            return output_node.output_handle()
+            return liftedStreamElimination.output_handle()
         #
         def step_function():
             topologyNode.pydbsp_step(left_liftedStream)
@@ -413,10 +411,15 @@ class TopologyNode:
             #
             topologyNode.pydbsp_step(difference)
             #
-            topologyNode.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(liftedStreamElimination)
         #
         def gc_function():
-            pass
+            topologyNode.pydbsp_gc(left_liftedStream)
+            topologyNode.pydbsp_gc(right_liftedStream)
+            #
+            topologyNode.pydbsp_gc(difference)
+            #
+            topologyNode.pydbsp_gc(liftedStreamElimination)
         #
         topologyNode = TopologyNode("difference_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
@@ -427,10 +430,10 @@ class TopologyNode:
         #
         cartesianProduct = CartesianProduct(left_liftedStream.output_handle(), right_liftedStream.output_handle())
         #
-        output_node = LiftedStreamElimination(cartesianProduct.output_handle())
+        liftedStreamElimination = LiftedStreamElimination(cartesianProduct.output_handle())
         #
         def output_handle_function():
-            return output_node.output_handle()
+            return liftedStreamElimination.output_handle()
         #
         def step_function():
             topologyNode.pydbsp_step(left_liftedStream)
@@ -438,10 +441,15 @@ class TopologyNode:
             #
             topologyNode.pydbsp_step(cartesianProduct)
             #
-            topologyNode.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(liftedStreamElimination)
         #
         def gc_function():
-            pass
+            topologyNode.pydbsp_gc(left_liftedStream)
+            topologyNode.pydbsp_gc(right_liftedStream)
+            #
+            topologyNode.pydbsp_gc(cartesianProduct)
+            #
+            topologyNode.pydbsp_gc(liftedStreamElimination)
         #
         topologyNode = TopologyNode("product_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
@@ -451,44 +459,38 @@ class TopologyNode:
         agg_select_function_agg_function_agg_as_function_tuple_list = agg_tuple_list
         agg_function = group_by_agg_fun([(agg_select_function, agg_function, agg_as_function, as_function) for agg_select_function, agg_function, agg_as_function in agg_select_function_agg_function_agg_as_function_tuple_list])
         #
-        group_by_agg__topologyNode = self.group_by_agg_(by_function, agg_function, profile_config_dict=profile_config_dict)
+        _group_by_agg_topologyNode = self._group_by_agg(by_function, agg_function, profile_config_dict=profile_config_dict)
         #
-        return group_by_agg__topologyNode
+        return _group_by_agg_topologyNode
 
-    def group_by_agg_(self, by_function, agg_function, profile_config_dict=None):
-        def by_function1(value_json_str):
+    def _group_by_agg(self, by_function, agg_function, profile_config_dict=None):
+        def _by_function(value_json_str):
             value_dict = json.loads(value_json_str)
             return by_function(value_dict)
         #
-        def agg_function1(group_any_zset_tuple_zset):
+        def _agg_function(group_any_zset_tuple_zset):
             return agg_function(group_any_zset_tuple_zset)
         #
         stream_handle = self._output_handle_function()
         lifted_stream_introduction = LiftedStreamIntroduction(stream_handle)
-        group_by_then_agg = GroupByThenAgg(lifted_stream_introduction.output_handle(), by_function1, agg_function1)
+        group_by_then_agg = GroupByThenAgg(lifted_stream_introduction.output_handle(), _by_function, _agg_function)
         lifted_stream_elimination = LiftedStreamElimination(group_by_then_agg.output_handle())
-        output_node = Differentiate(lifted_stream_elimination.output_handle())
+        differentiate = Differentiate(lifted_stream_elimination.output_handle())
         #
         def output_handle_function():
-            return output_node.output_handle()
+            return differentiate.output_handle()
         #
         def step_function():
             topologyNode.pydbsp_step(lifted_stream_introduction)
-            #
             topologyNode.pydbsp_step(group_by_then_agg)
-            #
             topologyNode.pydbsp_step(lifted_stream_elimination)
-            #
-            topologyNode.pydbsp_step(output_node)
+            topologyNode.pydbsp_step(differentiate)
         #
         def gc_function():
             topologyNode.pydbsp_gc(lifted_stream_introduction)
-            #
             topologyNode.pydbsp_gc(group_by_then_agg)
-            #
             topologyNode.pydbsp_gc(lifted_stream_elimination)
-            #
-            topologyNode.pydbsp_gc(output_node)
+            topologyNode.pydbsp_gc(differentiate)
         #
         topologyNode = TopologyNode("group_by_agg_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode 
@@ -497,27 +499,27 @@ class TopologyNode:
         agg_select_function_agg_function_agg_as_function_tuple_list = agg_tuple_list
         agg_function = group_by_agg_fun([(agg_select_function, agg_function, agg_as_function, None) for agg_select_function, agg_function, agg_as_function in agg_select_function_agg_function_agg_as_function_tuple_list])
         #
-        group_by_agg__topologyNode = self.group_by_agg_(lambda _: None, agg_function, profile_config_dict=profile_config_dict)
-        group_by_agg__topologyNode._name_str = "agg_op"
+        _group_by_agg_topologyNode = self._group_by_agg(lambda _: None, agg_function, profile_config_dict=profile_config_dict)
+        _group_by_agg_topologyNode._name_str = "agg_op"
         #
-        return group_by_agg__topologyNode
+        return _group_by_agg_topologyNode
 
     def peek(self, peek_function, profile_config_dict=None):
-        def peek_function1(value_json_str):
+        def _peek_function(value_json_str):
             value_dict = json.loads(value_json_str)
             peek_function(value_dict)
             return value_json_str
         #
-        liftedProject = LiftedProject(self._output_handle_function(), peek_function1)
+        liftedProject = LiftedProject(self._output_handle_function(), _peek_function)
         #
         def output_handle_function():
             return liftedProject.output_handle()
         #
         def step_function():
-            liftedProject.step()
+            topologyNode.pydbsp_step(liftedProject)
         #
         def gc_function():
-            pass
+            topologyNode.pydbsp_gc(liftedProject)
         #
         topologyNode = TopologyNode("peek_op", output_handle_function, step_function, gc_function, [self], profile_config_dict)
         return topologyNode
@@ -581,35 +583,9 @@ class TopologyNode:
             topologyNode.profile_after("gc")
             #
             topologyNode.print_profile()
-
-    # def gc(self):
-    #     self.profile_before("gc")
-    #     #
-    #     self._gc_function()
-    #     #
-    #     self.profile_after("gc")
-    #     #
-    #     for topologyNode in self._daughter_topologyNode_list:
-    #         topologyNode.gc()
     
     def latest(self):
         return self._output_handle_function().get().latest()
-
-    # def latest_until_fixpoint(self):
-    #     latest_summed_zSet = ZSet({})
-    #     latest_zSet = ZSet({})
-    #     zSetAddition = ZSetAddition()
-    #     while True:
-    #         self.step()
-    #         latest_zSet1 = self.latest()
-    #         if latest_zSet1 != latest_zSet:
-    #             if latest_zSet1.is_identity():
-    #                 break
-    #             latest_summed_zSet = zSetAddition.add(latest_summed_zSet, latest_zSet1)
-    #             latest_zSet = latest_zSet1
-    #         else:
-    #             break
-    #     return latest_summed_zSet
 
     #
 
@@ -713,7 +689,6 @@ class TopologyNode:
     def print_profile(self):
         if self._profile_config_dict is not None:
             print(json.dumps(self._profile_dict, indent=2))
-            # print(self._profile_dict)
 
     #
 
@@ -847,10 +822,6 @@ def source(name_str, profile_config_dict=None):
 def json_default(obj):
     if isinstance(obj, datetime.datetime):
         return obj.isoformat()
-    # if isinstance(obj, Decimal):
-    #     return float(obj)
-    # if isinstance(obj, UUID):
-    #     return str(obj)
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
@@ -858,7 +829,6 @@ def message_dict_list_to_ZSet(message_dict_list):
     value_json_str_list = []
     for message_dict in message_dict_list:
         value_dict = message_dict["value"]
-        # value_dict["_key"] = message_dict["key"]
         value_json_str = json.dumps(value_dict, default=json_default)
         value_json_str_list.append(value_json_str)
     #
