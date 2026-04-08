@@ -389,7 +389,7 @@ class Lift2(BinaryOperator[T, R, S]):
         self.output_stream_handle.get().gc()
 
     def profile(self, config: str) -> Dict:
-        return {1: self.output_stream_handle.get().profile(config), 2: self.input_a().profile(config), 3: self.input_b().profile(config)}
+        return self.output_stream_handle.get().profile(config)
 
 class LiftedGroupAdd(Lift2[T, T, T]):
     def __init__(self, stream_a: StreamHandle[T], stream_b: Optional[StreamHandle[T]]):
