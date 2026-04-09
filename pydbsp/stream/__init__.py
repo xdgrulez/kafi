@@ -131,7 +131,7 @@ class Stream[T]:
         #         for value in values:
         #             value.gc()
 
-    def profile(self, config: str) -> Dict:
+    def profile(self, config: list[str]) -> Dict:
         profile = {}
         if "dict" in config:
             profile["dict"] = self.inner
@@ -334,7 +334,7 @@ class Lift1(UnaryOperator[T, R]):
     def gc(self) -> None:
         self.output_stream_handle.get().gc()
 
-    def profile(self, config: str) -> Dict:
+    def profile(self, config: list[str]) -> Dict:
         return self.output_stream_handle.get().profile(config)
 
 
@@ -388,7 +388,7 @@ class Lift2(BinaryOperator[T, R, S]):
     def gc(self) -> None:
         self.output_stream_handle.get().gc()
 
-    def profile(self, config: str) -> Dict:
+    def profile(self, config: list[str]) -> Dict:
         return self.output_stream_handle.get().profile(config)
 
 class LiftedGroupAdd(Lift2[T, T, T]):

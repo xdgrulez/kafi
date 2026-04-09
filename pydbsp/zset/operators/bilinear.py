@@ -207,7 +207,7 @@ class DeltaLiftedDeltaLiftedJoin(BinaryOperator[Stream[ZSet[T]], Stream[ZSet[R]]
         self.join_4.gc()
         self.output_stream.gc()
 
-    def profile(self, config: str) -> Dict:
+    def profile(self, config: list[str]) -> Dict:
         return {"integrated_stream_a": self.integrated_stream_a.profile(config),
                 "delayed_integrated_stream_a": self.delayed_integrated_stream_a.profile(config),
                 "lift_integrated_stream_a": self.lift_integrated_stream_a.profile(config),

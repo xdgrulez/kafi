@@ -42,7 +42,7 @@ class Delay(UnaryOperator[T, T]):
     def gc(self) -> None:
         self.output_stream_handle.get().gc()
 
-    def profile(self, config: str) -> Dict:
+    def profile(self, config: list[str]) -> Dict:
         return self.output_stream_handle.get().profile(config)
 
 
@@ -79,7 +79,7 @@ class Differentiate(UnaryOperator[T, T]):
         self.delayed_negated_stream.gc()
         self.differentiation_stream.gc()
 
-    def profile(self, config: str) -> Dict:
+    def profile(self, config: list[str]) -> Dict:
         return {"delayed_stream": self.delayed_stream.profile(config),
                 "delayed_negated_stream": self.delayed_negated_stream.profile(config),
                 "differentiation_stream": self.differentiation_stream.profile(config)}
@@ -114,7 +114,7 @@ class Integrate(UnaryOperator[T, T]):
         self.delayed_stream.gc()
         self.integration_stream.gc()
 
-    def profile(self, config: str) -> Dict:
+    def profile(self, config: list[str]) -> Dict:
         return {"delayed_stream": self.delayed_stream.profile(config),
                 "integration_stream": self.integration_stream.profile(config)}
 

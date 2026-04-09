@@ -20,8 +20,7 @@ from kafi.streams.topologynode import get, update, sum, agg_tuple, message_dict_
 #
 
 def setup():
-    # profile_config_dict = {"gc": {"memory": {"after": True, "delta": True}}, "include": ["Join", "LiftedStreamIntroduction", "LiftedStreamElimination"], "streams": "dict"}
-    profile_config_dict = {"gc": {"memory": {"after": True, "delta": True}, "streams": "size"}, "include": []}
+    profile_config_dict = {"gc": {"memory": {"after": True, "delta": True}, "streams": ["size"]}, "include": []}
     #
     transactions_source_topologyNode = source("transactions")
     #
@@ -63,13 +62,14 @@ def setup():
 # create view balance as select credits.account as account, credits - debits as balance from credits inner join debits on credits.account = debits.account;
     balance_topologyNode = (
         credits_topologyNode
-        .join(
+        .join2(
             debits_topologyNode,
             left_on_function=lambda l: l["account"],
             right_on_function=lambda r: r["account"],
             projection_function=lambda l, r: {"account": l["account"],
                                               "balance": l["credits"] - r["debits"]},
-            profile_config_dict=profile_config_dict)
+    profile_config_dict = {"gc": {"memory": {"after": True, "delta": True}, "streams": ["size", "len"]}, "include": ["Incrementalize2"]})
+            # profile_config_dict=profile_config_dict)
         # .join_no_index(
         #     debits_topologyNode,
         #     on_function=lambda l, r: l["account"] == r["account"],

@@ -82,10 +82,19 @@ class Incrementalize2(BinaryOperator[T, R, S]):
     def gc(self) -> None:
         self.integrated_stream_a.gc()
         self.delayed_integrated_stream_a.gc()
-
         self.integrated_stream_b.gc()
         self.delayed_integrated_stream_b.gc()
-
         self.f2_a_b.gc()
         self.f2_a_delayed_integrated_b.gc()
         self.f2_delayed_integrated_a_b.gc()
+        self.output().gc()
+
+    def profile(self, config: list[str]):
+        return {"integrated_stream_a": self.integrated_stream_a.profile(config),
+                "delayed_integrated_stream_a": self.delayed_integrated_stream_a.profile(config),
+                "integrated_stream_b": self.integrated_stream_b.profile(config),
+                "delayed_integrated_stream_b": self.delayed_integrated_stream_b.profile(config),
+                "f2_a_b": self.f2_a_b.profile(config),
+                "f2_a_delayed_integrated_b": self.f2_a_delayed_integrated_b.profile(config),
+                "f2_delayed_integrated_a_b": self.f2_delayed_integrated_a_b.profile(config),
+                "output": self.output().profile(config)}

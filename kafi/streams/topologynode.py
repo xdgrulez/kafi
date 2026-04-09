@@ -302,7 +302,7 @@ class TopologyNode:
         deltaLiftedDeltaLiftedSortMergeJoin = DeltaLiftedDeltaLiftedSortMergeJoin(
             left_liftedLiftedIndex.output_handle(),
             right_liftedLiftedIndex.output_handle(),
-            _projection_function)
+            lambda _, l, r: _projection_function(l, r))
         #
         liftedStreamElimination = LiftedStreamElimination(deltaLiftedDeltaLiftedSortMergeJoin.output_handle())
         #

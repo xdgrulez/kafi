@@ -63,7 +63,7 @@ class DeltaLiftedDeltaLiftedDistinct(UnaryOperator[Stream[ZSet[T]], Stream[ZSet[
         self.lift_lift_H.gc()
         self.diff_lift_lift_H.gc()
 
-    def profile(self, config: str) -> Dict:
+    def profile(self, config: list[str]) -> Dict:
         return {"integrated_diff_stream_a": self.integrated_diff_stream_a.profile(config),
                 "lift_integrated_diff_stream_a": self.lift_integrated_diff_stream_a.profile(config),
                 "lift_delay_lift_integrated_diff_stream_a": self.lift_delay_lift_integrated_diff_stream_a.profile(config),

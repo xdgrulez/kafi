@@ -187,3 +187,22 @@ class DeltaLiftedDeltaLiftedSortMergeJoin[I, T, R, S](
         self.join_2.gc()
         self.join_3.gc()
         self.join_4.gc()
+        self.output().gc()
+
+    def profile(self, config: list[str]):
+        return {"integrated_stream_a": self.integrated_stream_a.profile(config),
+                "delayed_integrated_stream_a": self.delayed_integrated_stream_a.profile(config),
+                "lift_integrated_stream_a": self.lift_integrated_stream_a.profile(config),
+                "integrated_lift_integrated_stream_a": self.integrated_lift_integrated_stream_a.profile(config),
+                "integrated_stream_b": self.integrated_stream_b.profile(config),
+                "delayed_integrated_stream_b": self.delayed_integrated_stream_b.profile(config),
+                "lift_integrated_stream_b": self.lift_integrated_stream_b.profile(config),
+                "integrated_lift_integrated_stream_b": self.integrated_lift_integrated_stream_b.profile(config),
+                "lift_delayed_integrated_lift_integrated_stream_b": self.lift_delayed_integrated_lift_integrated_stream_b.profile(config),
+                "lift_delayed_lift_integrated_stream_b": self.lift_delayed_lift_integrated_stream_b.profile(config),
+                "join_1": self.join_1.profile(config),
+                "join_2": self.join_2.profile(config),
+                "join_3": self.join_3.profile(config),
+                "join_4": self.join_4.profile(config),
+                "output": self.output().profile(config)}
+
