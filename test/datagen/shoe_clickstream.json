@@ -4,6 +4,7 @@
         "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
         "kafka.topic": "shoe_clickstream",
         "quickstart": "shoe_clickstream",
-        "max.interval": 0
+        "max.interval": 0,
+        "value.converter": "org.apache.kafka.connect.json.JsonConverter"
     }
 }
