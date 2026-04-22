@@ -23,7 +23,7 @@ class Deserializer(SchemaRegistry):
         #
         super().__init__(schema_registry_config_dict)
 
-    def deserialize(self, payload_bytes, type_str, topic_str, key_bool):
+    def deserialize(self, payload_bytes, type_str, topic_str, headers_dict, key_bool):
         if type_str.lower() == "bytes":
             deserialized_payload = self.bytes_to_bytes(payload_bytes)
         elif type_str.lower() in ["str", "string"]:
@@ -31,11 +31,11 @@ class Deserializer(SchemaRegistry):
         elif type_str.lower() == "json":
             deserialized_payload = self.bytes_to_dict(payload_bytes)
         elif type_str.lower() == "avro":
-            deserialized_payload = self.bytes_avro_to_dict(payload_bytes, topic_str, key_bool)
+            deserialized_payload = self.bytes_avro_to_dict(payload_bytes, topic_str, headers_dict, key_bool)
         elif type_str.lower() in ["jsonschema", "json_sr"]:
-            deserialized_payload = self.bytes_jsonschema_to_dict(payload_bytes, topic_str, key_bool)
+            deserialized_payload = self.bytes_jsonschema_to_dict(payload_bytes, topic_str, headers_dict, key_bool)
         elif type_str.lower() in ["protobuf", "pb"]:
-            deserialized_payload = self.bytes_protobuf_to_dict(payload_bytes, topic_str, key_bool)
+            deserialized_payload = self.bytes_protobuf_to_dict(payload_bytes, topic_str, headers_dict, key_bool)
         else:
             raise Exception("Only \"str\", \"bytes\", \"json\", \"protobuf\" (\"pb\"), \"avro\" and \"jsonschema\" (\"json_sr\") supported.")
         #
@@ -56,7 +56,7 @@ class Deserializer(SchemaRegistry):
         #
         return json.loads(bytes)
 
-    def bytes_avro_to_dict(self, bytes, topic_str, key_bool):
+    def bytes_avro_to_dict(self, bytes, topic_str, headers_dict, key_bool):
         if bytes is None:
             return None
         #
@@ -69,12 +69,19 @@ class Deserializer(SchemaRegistry):
         dict = avroDeserializer(bytes, serializationContext)
         return dict
 
-    def bytes_jsonschema_to_dict(self, bytes, topic_str, key_bool):
+    def bytes_jsonschema_to_dict(self, bytes, topic_str, headers_dict, key_bool):
         if bytes is None:
             return None
+        schema_id_key_str = "__key_schema_id" if key_bool else "__value_schema_id"
+        if schema_id_key_str in headers_dict:
+            # Get the Schema ID from headers_dict if available.
+            schema_guid_bytes = headers_dict[schema_id_key_str]
+            schema_dict = self.get_schema_by_guid(schema_guid_bytes)
+        else:
+            # Else get the Schema ID from the payload.
+            schema_id_int = int.from_bytes(bytes[1:5], "big")
+            schema_dict = self.get_schema(schema_id_int)
         #
-        schema_id_int = int.from_bytes(bytes[1:5], "big")
-        schema_dict = self.get_schema(schema_id_int)
         schema_str = schema_dict["schema_str"]
         #
         jsonDeserializer = JSONDeserializer(schema_str, self.deser_from_dict, None, self.deser_conf, self.deser_rule_conf, self.deser_rule_registry, self.deser_json_decode)
@@ -82,7 +89,7 @@ class Deserializer(SchemaRegistry):
         dict = jsonDeserializer(bytes, serializationContext)
         return dict
 
-    def bytes_protobuf_to_dict(self, bytes, topic_str, key_bool):
+    def bytes_protobuf_to_dict(self, bytes, topic_str, headers_dict, key_bool):
         if bytes is None:
             return None
         #

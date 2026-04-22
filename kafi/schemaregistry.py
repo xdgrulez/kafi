@@ -212,6 +212,15 @@ class SchemaRegistry:
 
     #
 
+    def get_schema_by_guid(self, guid, fmt=None):
+        schema = self.schemaRegistryClient.get_schema_by_guid(guid, fmt)
+        #
+        schema_dict = schema_to_schema_dict(schema)
+        #
+        return schema_dict
+
+    #
+
     def test_compatibility(self, subject_name, schema, version="latest"):
         subject_name_str = subject_name
         schema_dict = schema

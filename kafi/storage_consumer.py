@@ -71,12 +71,12 @@ class StorageConsumer(Dechunker):
         acc = initial_acc
         break_bool = False
         #
-        def deserialize(payload_bytes, type_str, topic_str, key_bool):
+        def deserialize(payload_bytes, type_str, topic_str, headers_dict, key_bool):
             # Do not deserialize if this is a RestProxyConsumer object (deserialization has already taken place on the REST Proxy). 
             if self.__class__.__name__ == "RestProxyConsumer":
                 return payload_bytes
             else:
-                return self.deserialize(payload_bytes, type_str, topic_str, key_bool)
+                return self.deserialize(payload_bytes, type_str, topic_str, headers_dict, key_bool)
         #
         while True:
             message_dict_list1 = self.consume_impl(n=consume_batch_size_int, **kwargs)
@@ -103,9 +103,10 @@ class StorageConsumer(Dechunker):
                     if offset_int > end_offsets_dict[partition_int]:
                         continue
                 #
-                message_dict1 = {"value": deserialize(message_dict["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, key_bool=False),
-                                 "key": deserialize(message_dict["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=True),
-                                 "headers": message_dict["headers"],
+                headers_str_bytes_tuple_list = message_dict["headers"]
+                message_dict1 = {"value": deserialize(message_dict["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, headers_dict=dict(headers_str_bytes_tuple_list), key_bool=False),
+                                 "key": deserialize(message_dict["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, headers_dict=dict(headers_str_bytes_tuple_list), key_bool=True),
+                                 "headers": headers_str_bytes_tuple_list,
                                  "timestamp": message_dict["timestamp"],
                                  "partition": message_dict["partition"],
                                  "offset": message_dict["offset"],
