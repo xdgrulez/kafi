@@ -834,3 +834,23 @@ def message_dict_list_to_ZSet(message_dict_list):
     #
     zSet = ZSet({k: 1 for k in value_json_str_list})
     return zSet
+
+
+def zSet_to_message_dict_list_tuple(zSet):
+    updated_message_dict_list = []
+    deleted_message_dict_list = []
+    for value_json_str, weight_int in zSet.items():
+        if weight_int > 0:
+            for _ in range(weight_int):
+                value_dict = json.loads(value_json_str)
+                message_dict = {"value": value_dict}
+                updated_message_dict_list.append(message_dict)
+        elif weight_int < 0:
+            for _ in range(-weight_int):
+                value_dict = json.loads(value_json_str)
+                message_dict = {"value": value_dict}
+                deleted_message_dict_list.append(message_dict)
+        else:
+            raise Exception(f"ZSet elements with weight 0 are not supported: {value_json_str}, {weight_int}")
+    #
+    return updated_message_dict_list, deleted_message_dict_list
