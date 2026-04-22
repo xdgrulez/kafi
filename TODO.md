@@ -1,6 +1,11 @@
 # other TODOs
 
-enable.partition.eof=true
+* Support für neue Schema-GUIDs etc.
+
+* Lesen mit Offsets klappt nur mit neuer Consumer Group - vielleicht muss man die bestehende abräumen oder so
+
+* enable.partition.eof=true
+
 damit bekommt man laut claude error-messages auf jeder partition, die das ende der partition ansagen:
 from confluent_kafka import Consumer, KafkaError
 
