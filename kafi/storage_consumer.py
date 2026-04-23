@@ -104,8 +104,8 @@ class StorageConsumer(Dechunker):
                         continue
                 #
                 headers_str_bytes_tuple_list = message_dict["headers"]
-                message_dict1 = {"value": deserialize(message_dict["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, headers_dict=dict(headers_str_bytes_tuple_list), key_bool=False),
-                                 "key": deserialize(message_dict["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, headers_dict=dict(headers_str_bytes_tuple_list), key_bool=True),
+                message_dict1 = {"value": deserialize(message_dict["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, headers_dict=None if not headers_str_bytes_tuple_list else dict(headers_str_bytes_tuple_list), key_bool=False),
+                                 "key": deserialize(message_dict["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, headers_dict=None if not headers_str_bytes_tuple_list else dict(headers_str_bytes_tuple_list), key_bool=True),
                                  "headers": headers_str_bytes_tuple_list,
                                  "timestamp": message_dict["timestamp"],
                                  "partition": message_dict["partition"],

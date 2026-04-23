@@ -12,7 +12,7 @@ from kafi.kafi import *
 #
 
 # c = Cluster("local")
-c = Local("local")
+c = Cluster("local")
 t1 = "employees"
 t2 = "salaries"
 t3 = "sink"
@@ -64,7 +64,8 @@ def get_root_topologyNode():
         .filter(lambda value_dict: value_dict["name"] != "mark")
         .join(
             salaries_source_topologyNode,
-            on_function=on_function,
+            left_on_function=lambda x: x["id"],
+            right_on_function=lambda x: x["id"],
             projection_function=proj_function
         )
         .peek(print)

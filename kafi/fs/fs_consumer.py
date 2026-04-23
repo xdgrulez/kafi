@@ -53,10 +53,10 @@ class FSConsumer(StorageConsumer):
             if any(start_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in partition_int_list):
                 # Fetch the consumer group offsets.
                 group_dict = self.storage_obj.admin.get_group_dict(self.group_str)["offsets"]
-                if group_dict == {}:
-                    group_offsets_dict = {partition_int: OFFSET_INVALID for partition_int in partition_int_list}
-                else:
+                if topic_str in group_dict:
                     group_offsets_dict = group_dict[topic_str]
+                else:
+                    group_offsets_dict = {partition_int: OFFSET_INVALID for partition_int in partition_int_list}
                 # If any partition to be consumed does not yet have a committed offset, make use of auto.offset.reset.
                 if any(group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in partition_int_list):
                     # If auto.offset.reset == "latest", get the watermarks to be able to obtain the latest offsets for each partition (do it once here for all partitions to save Kafka API calls).

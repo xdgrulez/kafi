@@ -55,6 +55,8 @@ class Chunker(Serializer):
                                          "timestamp": message_dict["timestamp"],
                                          "headers": chunk_headers_str_bytes_tuple_list}
                         message_dict_list1.append(message_dict1)
+                else:
+                    message_dict_list1 = message_dict_list
         else:
             message_dict_list1 = message_dict_list
         #

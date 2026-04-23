@@ -95,7 +95,7 @@ class TestTopologyNodeJamieBase(TestTopologyNodeBase):
 
     #
 
-    def start(self, source_topologyNode, root_topologyNode, steps_int, batch_size_int):
+    def process(self, source_topologyNode, root_topologyNode, steps_int, batch_size_int):
         coll_updated_output_dict_list = []
         coll_deleted_output_dict_list = []
         for i in range(steps_int):

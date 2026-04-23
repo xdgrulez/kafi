@@ -41,13 +41,13 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
             last_snapshot_hash_str_list[0] = root_topologyNode_hash_str
             #
             print("Saving snapshot...")
-            producer = snapshot_storage.producer(snapshot_topic, type="bytes", chunk_size_bytes=100)
+            producer = snapshot_storage.producer(snapshot_topic, type="bytes", chunk_size_bytes=1000)
             producer.produce(root_topologyNode_bytes, key=root_topologyNode.id())
             producer.close()
 
     #
     def load_snapshot():
-        message_dict_list = snapshot_storage.compact(snapshot_topic, type="bytes", **kwargs)
+        message_dict_list = snapshot_storage.compact(snapshot_topic, type="bytes", dechunk=True)
         if len(message_dict_list) > 0:
             root_topologyNode_bytes = message_dict_list[0]["value"]
             #
