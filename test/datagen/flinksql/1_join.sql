@@ -1,30 +1,29 @@
 CREATE TABLE click_table (
-    product_id STRING,
+    payload ROW < product_id STRING,
     user_id STRING,
     view_time INT,
     page_url STRING,
     ip STRING,
-    ts TIMESTAMP(3)
+    ts TIMESTAMP(3) >
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_clickstream',
     'properties.bootstrap.servers' = 'localhost:9092',
     'scan.startup.mode' = 'earliest-offset',
-    'format' = 'avro-confluent',
-    'avro-confluent.url' = 'http://localhost:8081'
+    'format' = 'json',
+    'json.ignore-parse-errors' = 'true'
 );
 
 CREATE VIEW click_view AS
 SELECT
-    user_id,
-    ip
+    payload.user_id as user_id,
+    payload.ip as ip
 from
     click_table;
 
 --
-
 CREATE TABLE customer_table (
-    id STRING,
+    payload ROW < id STRING,
     first_name STRING,
     last_name STRING,
     email STRING,
@@ -33,25 +32,24 @@ CREATE TABLE customer_table (
     state STRING,
     zip_code STRING,
     country STRING,
-    country_code STRING
+    country_code STRING >
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_customers',
     'scan.startup.mode' = 'earliest-offset',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'avro-confluent',
-    'avro-confluent.url' = 'http://localhost:8081'
+    'format' = 'json',
+    'json.ignore-parse-errors' = 'true'
 );
 
 CREATE VIEW customer_view AS
 SELECT
-    id,
-    first_name
+    payload.id as id,
+    payload.first_name as first_name
 FROM
     customer_table;
 
 --
-
 CREATE VIEW join_1_view AS
 SELECT
     *
@@ -60,7 +58,6 @@ FROM
     JOIN customer_view ON click_view.user_id = customer_view.id;
 
 --upsert-kafka sink
-
 CREATE TABLE upsert_kafka_sink (
     user_id STRING,
     first_name STRING,
@@ -75,15 +72,16 @@ CREATE TABLE upsert_kafka_sink (
     'value.avro-confluent.url' = 'http://localhost:8081'
 );
 
-INSERT INTO upsert_kafka_sink
-SELECT 
+INSERT INTO
+    upsert_kafka_sink
+SELECT
     user_id,
     first_name,
     ip
-FROM join_1_view;
+FROM
+    join_1_view;
 
 --kafka-sink
-
 -- CREATE TABLE kafka_sink (
 --     user_id STRING,
 --     first_name STRING,
@@ -95,7 +93,6 @@ FROM join_1_view;
 --     'format' = 'avro-confluent',
 --     'avro-confluent.url' = 'http://localhost:8081'
 -- );
-
 -- INSERT INTO kafka_sink
 -- SELECT 
 --     user_id,

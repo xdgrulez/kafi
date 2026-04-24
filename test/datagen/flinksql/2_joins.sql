@@ -1,31 +1,31 @@
 CREATE TABLE click_table (
-    product_id STRING,
+    payload ROW < product_id STRING,
     user_id STRING,
     view_time INT,
     page_url STRING,
     ip STRING,
-    ts TIMESTAMP(3)
+    ts TIMESTAMP(3) >
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_clickstream',
     'properties.bootstrap.servers' = 'localhost:9092',
     'scan.startup.mode' = 'earliest-offset',
-    'format' = 'avro-confluent',
-    'avro-confluent.url' = 'http://localhost:8081'
+    'format' = 'json',
+    'json.ignore-parse-errors' = 'true'
 );
 
 CREATE VIEW click_view AS
 SELECT
-    user_id,
-    ip,
-    product_id
+    payload.user_id as user_id,
+    payload.ip as ip,
+    payload.product_id as product_id
 from
     click_table;
 
 --
 
 CREATE TABLE customer_table (
-    id STRING,
+    payload row < id STRING,
     first_name STRING,
     last_name STRING,
     email STRING,
@@ -34,44 +34,44 @@ CREATE TABLE customer_table (
     state STRING,
     zip_code STRING,
     country STRING,
-    country_code STRING
+    country_code STRING >
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_customers',
     'scan.startup.mode' = 'earliest-offset',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'avro-confluent',
-    'avro-confluent.url' = 'http://localhost:8081'
+    'format' = 'json',
+    'json.ignore-parse-errors' = 'true'
 );
 
 CREATE VIEW customer_view AS
 SELECT
-    id,
-    first_name
+    payload.id as id,
+    payload.first_name as first_name
 FROM
     customer_table;
 
 --
 
 CREATE TABLE product_table (
-    id STRING,
+    payload row < id STRING,
     brand STRING,
     name STRING,
     sale_price INT,
-    rating DOUBLE
+    rating DOUBLE >
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoes',
     'scan.startup.mode' = 'earliest-offset',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'avro-confluent',
-    'avro-confluent.url' = 'http://localhost:8081'
+    'format' = 'json',
+    'json.ignore-parse-errors' = 'true'
 );
 
 CREATE VIEW product_view AS
 SELECT
-    id,
-    brand
+    payload.id as id,
+    payload.brand as brand
 FROM
     product_table;
 

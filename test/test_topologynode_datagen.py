@@ -1,5 +1,3 @@
-import datetime
-import json
 import os
 import sys
 import unittest
@@ -13,7 +11,7 @@ if os.path.basename(os.getcwd()) == "test":
 else:
     sys.path.insert(1, ".")
 
-from kafi.streams.topologynode import get, update, sum, agg_tuple, message_dict_list_to_ZSet, source
+from kafi.streams.topologynode import message_dict_list_to_ZSet, source
 from kafi.kafi import *
 
 #
@@ -41,20 +39,20 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         click_topologyNode = (
             source_click_topologyNode
-            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"]})
+            .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"]})
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
-            .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
+            .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
         )
         #
         root_topologyNode = (
             click_topologyNode
-            .join2(customer_topologyNode,
+            .join(customer_topologyNode,
                   left_on_function=lambda l: l["user_id"],
                   right_on_function=lambda r: r["id"],
-                  projection_function=lambda k, l, r: {"user_id": l["user_id"],
+                  projection_function=lambda l, r: {"user_id": l["user_id"],
                                                     "ip": l["ip"],
                                                     "first_name": r["first_name"]},
                   profile_config_dict = None)
@@ -69,8 +67,9 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         cluster = Cluster("local")
         cluster.consume_batch_size(1000)
-        click_consumer = cluster.consumer(click_topic_str, value_type="avro")
-        customer_consumer = cluster.consumer(customer_topic_str, value_type="avro")
+        click_consumer = cluster.consumer(click_topic_str, value_type="json")
+        cluster.consume_batch_size(1000)
+        customer_consumer = cluster.consumer(customer_topic_str, value_type="json")
         clicks_int = cluster.l(click_topic_str)[click_topic_str]
         customers_int = cluster.l(customer_topic_str)[customer_topic_str]
         n = 0
@@ -118,29 +117,31 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         clickstream_topologyNode = (
             source_click_topologyNode
-            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
+            .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"], "product_id": x["payload"]["product_id"]})
         )
         #
         customers_topologyNode = (
             source_customer_topologyNode
-            .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
+            .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
         )
         #
         product_topologyNode = (
             source_product_topologyNode
-            .map(lambda x: {"id": x["id"], "brand": x["brand"]})
+            .map(lambda x: {"id": x["payload"]["id"], "brand": x["payload"]["brand"]})
         )
         #
         root_topologyNode = (
             clickstream_topologyNode
             .join(customers_topologyNode,
-                  on_function=lambda l, r: l["user_id"] == r["id"],
+                  left_on_function=lambda l: l["user_id"],
+                  right_on_function=lambda r: r["id"],
                   projection_function=lambda l, r: {"user_id": l["user_id"],
                                                     "ip": l["ip"],
                                                     "product_id": l["product_id"],
                                                     "first_name": r["first_name"]})
                   .join(product_topologyNode,
-                        on_function=lambda l, r: l["product_id"] == r["id"],
+                        left_on_function=lambda l: l["product_id"],
+                        right_on_function=lambda r: r["id"],
                         projection_function=lambda l, r: {"user_id": l["user_id"],
                                                           "ip": l["ip"],
                                                           "product_id": l["product_id"],
@@ -152,9 +153,11 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         cluster = Cluster("local")
         cluster.consume_batch_size(1000)
-        click_consumer = cluster.consumer(click_topic_str, value_type="avro")
-        customer_consumer = cluster.consumer(customer_topic_str, value_type="avro")
-        product_consumer = cluster.consumer(product_topic_str, value_type="avro")
+        click_consumer = cluster.consumer(click_topic_str, value_type="json")
+        cluster.consume_batch_size(1000)
+        customer_consumer = cluster.consumer(customer_topic_str, value_type="json")
+        cluster.consume_batch_size(1000)
+        product_consumer = cluster.consumer(product_topic_str, value_type="json")
         clicks_int = cluster.l(click_topic_str)[click_topic_str]
         customers_int = cluster.l(customer_topic_str)[customer_topic_str]
         products_int = cluster.l(product_topic_str)[product_topic_str]
@@ -181,7 +184,7 @@ class TestTopologyNodeDatagen(unittest.TestCase):
             root_topologyNode.gc()
             #
             latest_zset = root_topologyNode.latest()
-            print(latest_zset)
+            # print(latest_zset)
             #
             len_latest_zset = len(latest_zset.inner.keys())
             print(f"{len(click_message_dict_list)}/{len(customer_message_dict_list)}/{len_latest_zset} --- {click_int + 1}/{clicks_int}; {customer_int + 1}/{customers_int}; {product_int + 1}/{products_int}")
@@ -211,24 +214,24 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         click_topologyNode = (
             source_click_topologyNode
-            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
+            .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"], "product_id": x["payload"]["product_id"]})
                 #  profile_config_dict={
                 #      "gc": {"memory": {"after": True, "delta": True}, "streams": ["size", "len"]}, "include": ["LiftedStreamIntroduction", "Selection", "LiftedStreamElimination"]})
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
-            .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
+            .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
         )
         #
         product_topologyNode = (
             source_product_topologyNode
-            .map(lambda x: {"id": x["id"], "brand": x["brand"]})
+            .map(lambda x: {"id": x["payload"]["id"], "brand": x["payload"]["brand"]})
         )
         #
         order_topologyNode = (
             source_order_topologyNode
-            .map(lambda x: {"order_id": x["order_id"], "product_id": x["product_id"], "customer_id": x["customer_id"]})
+            .map(lambda x: {"order_id": x["payload"]["order_id"], "product_id": x["payload"]["product_id"], "customer_id": x["payload"]["customer_id"]})
         )
         #
         root_topologyNode = (
@@ -242,11 +245,11 @@ class TestTopologyNodeDatagen(unittest.TestCase):
             #         "product_id": l["product_id"],
             #         "order_id": r["order_id"]
             #     },
-            click_topologyNode.join1(
+            click_topologyNode.join(
                 order_topologyNode,
                 left_on_function=lambda l: {"product_id": l["product_id"], "user_id": l["user_id"]},
                 right_on_function=lambda r: {"product_id": r["product_id"], "user_id": r["customer_id"]},
-                projection_function=lambda k, l, r: {
+                projection_function=lambda l, r: {
                     "user_id": l["user_id"],
                     "ip": l["ip"],
                     "product_id": l["product_id"],
@@ -258,11 +261,11 @@ class TestTopologyNodeDatagen(unittest.TestCase):
                 # }
                 profile_config_dict=None
             )
-            .join1(
+            .join(
                 customer_topologyNode,
                 left_on_function=lambda l: l["user_id"],
                 right_on_function=lambda r: r["id"],
-                projection_function=lambda k, l, r: {
+                projection_function=lambda l, r: {
                     "user_id": l["user_id"],
                     "ip": l["ip"],
                     "product_id": l["product_id"],
@@ -285,11 +288,11 @@ class TestTopologyNodeDatagen(unittest.TestCase):
                 # }
                 profile_config_dict=None
             )
-            .join1(
+            .join(
                 product_topologyNode,
                 left_on_function=lambda l: l["product_id"],
                 right_on_function=lambda r: r["id"],
-                projection_function=lambda k, l, r: {
+                projection_function=lambda l, r: {
                     "user_id": l["user_id"],
                     "ip": l["ip"],
                     "product_id": l["product_id"],
@@ -315,10 +318,13 @@ class TestTopologyNodeDatagen(unittest.TestCase):
         #
         cluster = Cluster("local")
         cluster.consume_batch_size(1000)
-        click_consumer = cluster.consumer(click_topic_str, value_type="avro")
-        customer_consumer = cluster.consumer(customer_topic_str, value_type="avro")
-        product_consumer = cluster.consumer(product_topic_str, value_type="avro")
-        order_consumer = cluster.consumer(order_topic_str, value_type="avro")
+        click_consumer = cluster.consumer(click_topic_str, value_type="json")
+        cluster.consume_batch_size(250)
+        customer_consumer = cluster.consumer(customer_topic_str, value_type="json")
+        cluster.consume_batch_size(125)
+        product_consumer = cluster.consumer(product_topic_str, value_type="json")
+        cluster.consume_batch_size(500)
+        order_consumer = cluster.consumer(order_topic_str, value_type="json")
         clicks_int = cluster.l(click_topic_str)[click_topic_str]
         customers_int = cluster.l(customer_topic_str)[customer_topic_str]
         products_int = cluster.l(product_topic_str)[product_topic_str]
