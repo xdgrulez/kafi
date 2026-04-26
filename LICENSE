@@ -1,139 +1,118 @@
-Human Source License (HSL) 0.1
+Human Source License (HSL) 0.2
 Developed by Dr. Ralph M. Debusmann, 2026
-https://github.com/xdgrulez/human-source-license/blob/v0.1/LICENSE
+https://github.com/xdgrulez/human-source-license/blob/v0.2/LICENSE
 
 For use with [Project Name]:
 Copyright (c) [Year] [Copyright Holder]
 
-1. Definitions
+1. In plain language
 
-  "Managed Service": Providing the functionality of this 
-  software to external third parties as a hosted or managed 
-  service, whether or not the use of this software is 
-  disclosed to end users. Internal use within an organization 
-  is permitted.
+  This Software is free for individuals, researchers, and for any organization's internal operations.
 
-  "AI Training": Using this software, its source code, 
-  documentation, outputs, logs, or synthetic derivatives 
-  to train, fine-tune, or distill machine learning or 
-  AI models.
+  A commercial license is only required if:
 
-  "European Entity": An entity directly entering into this 
-  license that is headquartered in the EEA or Switzerland, 
-  provided its ultimate parent company is also located 
-  within these territories. This determination is based 
-  solely on the entity directly using this software, not 
-  any parent, subsidiary, or affiliated entity.
+  (a) Revenue Trigger: Your organization’s Group Annual Revenue exceeds USD 100 million (inflation-adjusted from 2026) AND you use this Software for any external Software or services, OR
+  (b) AI Trigger: You use this Software to train, run, or support AI models and services (including AI Agents and data generation) for any Software or services provided to external third parties, regardless of your revenue.
 
-  "AI Agent": An automated system generating or submitting 
-  code without direct, line-by-line human review and 
-  manual submission.
+  Exception:
+  
+  * Migros Exception: Migros-Genossenschafts-Bund and its Affiliates are exempt from all commercial license requirements regardless of revenue, AI usage, or any other trigger.
 
-  "Annual Revenue": The total global revenue of the entity 
-  and its ultimate parent company combined, in the most 
-  recently completed fiscal year.
+  Clarifications:
+  
+  * Cloud Usage: It doesn’t matter where you run the Software. Hosting it on third-party infrastructure (like AWS or Azure) is always permitted for your own internal operations.
 
-2. Grant of Rights
+  * Consulting & Services: Using this Software as a tool to provide professional services or custom development for clients is free. However, if your client is a Commercial Software Entity and this Software becomes part of a product or service they offer to others, that client must obtain their own commercial license.
 
-  You are granted a worldwide, royalty-free license to use, 
-  copy, modify, and distribute this software and derivatives 
-  for any purpose, subject to the limitations below.
+  If you are unsure whether you need a license, you almost certainly do not.
 
-3. Limitations
+2. Definitions
 
-  (a) Managed Service: You may not provide a Managed Service 
-      based on this software without a commercial license 
-      from the copyright holder.
+  "Affiliate": Any entity that directly or indirectly controls, is controlled by, or is under common control with the licensee. "Control" means ownership of more than 50% of the voting interests or the power to direct the management and policies of an entity.
 
-  (b) AI Training: You may not use this software for AI 
-      Training without a commercial license from the 
-      copyright holder. Reproduction of three or more 
-      consecutive lines of this software's source code, 
-      documentation, or outputs by an AI system shall 
-      constitute prima facie evidence of unauthorized AI 
-      Training use, subject to rebuttal by the accused party.
+  "Group Annual Revenue": The total global revenue of the entity using this Software together with all of its Affiliates during the most recently completed fiscal year.
 
-4. Trademark
+  "Revenue Threshold": USD 100,000,000 as of January 1, 2026, adjusted annually starting January 1, 2027, in accordance with the US Consumer Price Index for All Urban Consumers (CPI-U) published by the US Bureau of Labor Statistics.
 
-  No rights are granted to the name "[Project Name]" or 
-  associated logos or trademarks.
+  "Commercial Software Entity": Any organization (excluding Migros-Genossenschafts-Bund and its Affiliates) that meets two criteria:
+  (a) Its Group Annual Revenue is at or above the Revenue Threshold; AND
+  (b) It provides Software or Software-based services to external parties as part of its business.
 
-5. Contributions
+  "Commercial Use": Any use of this Software where the Software, its source code, or any derived models are intended for, or contribute to, a product or service offered to external third parties. The mere delivery of static outputs (such as reports, generated data, or code snippets) as part of Professional Services does not constitute Commercial Use, provided the Software itself is not integrated into a client's Software.
 
-  Contributors retain their copyright but grant the copyright 
-  holder a perpetual, irrevocable, and sublicensable license 
-  to use, modify, and distribute all contributions under any 
-  terms.
+  "Threshold Crossing": The point at which an entity's Group Annual Revenue first equals or exceeds the Revenue Threshold. Upon a Threshold Crossing, the entity enters a 90-day grace period during which it may continue to use this Software without a commercial license while obtaining one. Use of this Software for Commercial Use after expiry of the grace period without a valid commercial license constitutes a breach of Section 4.
 
-  Contributions must be submitted by a human being acting 
-  in their own capacity. Contributions submitted by or on 
-  behalf of AI Agents are not accepted and will be rejected.
+  "Change of Control": Any transaction resulting in a change of the ultimate beneficial owner or controlling entity of a licensee, including merger, acquisition, or asset purchase.
 
-6. Patent Grant
+  "European Entity": An entity directly entering into this license that is headquartered in the EEA or Switzerland, provided its ultimate parent company is also located within these territories.
 
-  Each contributor grants you a license under their essential 
-  patent claims to use and distribute this software. Any 
-  party that initiates patent litigation against this 
-  software automatically and immediately terminates their 
-  rights under this license.
+  "AI Agent": An automated system generating or submitting code without direct, line-by-line human review and manual submission.
 
-7. Enforcement, Audit & Damages
+  "AI & Model Usage": Using this Software—including its source code, documentation, or outputs—to train, fine-tune, operate, or support AI models, AI agents, or autonomous systems (including data generation and RAG) intended for or contributing to a service offered to external parties.
 
-  Any breach of Section 3 automatically and immediately 
-  terminates this license unless cured within the following 
-  period after written notice from the copyright holder:
+3. Grant of Rights
 
-  (a) 90 days for entities with Annual Revenue below 
-      EUR 1 million;
+  Subject to Section 4, you are granted a worldwide, royalty-free license to use, copy, modify, and distribute this Software and derivatives for any purpose.
 
-  (b) 30 days for entities with Annual Revenue between 
-      EUR 1 million and EUR 100 million;
+4. Limitation
 
-  (c) Termination is immediate and permanent for entities 
-      with Annual Revenue exceeding EUR 100 million.
+  No person or entity may engage in Commercial Use of this Software without a valid commercial license if:
 
-  Upon written notice specifying the alleged breach, the 
-  copyright holder may demand an independent audit no more 
-  than once per calendar year. The audit shall commence 
-  within 10 business days of notice. If a violation is 
-  found, the audited party bears all audit and legal costs.
+  (a) they are a Commercial Software Entity; OR
+  (b) the Commercial Use involves AI & Model Usage, regardless of the entity's revenue.
 
-  Damages — all entities:
+  This restriction applies to the entity's entire group, regardless of which member of the group performs the Commercial Use. No person or entity subject to this restriction may avoid this restriction by:
 
-    Damages shall equal the greater of:
+  (i) causing a subsidiary, affiliate, or newly formed entity to perform Commercial Use on its behalf;
+  (ii) acquiring a licensee in order to inherit that licensee's license without obtaining a new commercial license covering the enlarged group;
+  (iii) interposing any intermediary to obscure the ultimate beneficial use.
 
-    (a) three times a reasonable commercial royalty 
-        reflecting the value of a license that would 
-        have been agreed upon between the parties at 
-        the time of the violation, or
+  Any commercial license granted under this License terminates automatically and immediately upon a Change of Control that results in the licensee becoming part of a group that does not hold a valid commercial license covering the enlarged group. The new controlling entity must obtain a commercial license immediately; failure to do so constitutes a breach of this Section retroactively from the date of the Change of Control.
 
-    (b) the revenue attributable to the infringing use, 
-        which in the absence of clear evidence to the 
-        contrary shall be presumed to constitute no less 
-        than 10% of the violating entity's Annual Revenue 
-        during the period of violation.
+  Notwithstanding the above, Migros-Genossenschafts-Bund and its Affiliates shall not be considered a Commercial Software Entity under this License and are exempt from the restrictions set forth in this Section 4.
 
-    In case of AI Training violations, the period of 
-    violation shall encompass the entire commercial 
-    lifetime of the AI model or system trained on this 
-    software.
+5. Trademark
 
-8. Disclaimer
+  No rights are granted to the name "[Project Name]" or associated logos or trademarks.
 
-  THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
-  ANY KIND. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY 
-  CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF 
-  THIS SOFTWARE.
+6. Contributions
 
-9. Governing Law
+  Contributors retain their copyright but grant the copyright holder a perpetual, irrevocable, and sublicensable license to use, modify, and distribute all contributions under any terms.
 
-  Zone A — European Entities: This license is governed by 
-  the laws of Germany, without regard to conflict of law 
-  principles. Any disputes shall be subject to the exclusive 
-  jurisdiction of the courts of Berlin, Germany.
+  Contributions must be submitted by a human being acting in their own capacity. Contributions submitted by or on behalf of AI Agents are not accepted and will be rejected.
 
-  Zone B — Non-European Entities: This license is governed 
-  by the laws of the State of Delaware, USA, without regard 
-  to conflict of law principles. Any disputes shall be 
-  subject to the exclusive jurisdiction of the courts of 
-  Delaware, USA.
+7. Patent Grant
+
+  Each contributor grants you a license under their essential patent claims to use and distribute this Software. Any party that initiates patent litigation against this Software automatically and immediately terminates their rights under this License.
+
+8. Enforcement, Audit & Damages
+
+  The enforcement mechanisms, audit rights, and damages provisions in this Section apply to any breach of Section 4. They do not apply to use that is not Commercial Use as defined in Section 2.
+
+  Any breach of Section 4 automatically and immediately terminates this License unless cured within the following period after written notice from the copyright holder:
+
+  (a) 90 days for entities with Group Annual Revenue below USD 1 million;
+  (b) 30 days for entities with Group Annual Revenue between USD 1 million and USD 100 million;
+  (c) Termination is immediate and permanent for entities with Group Annual Revenue exceeding USD 100 million, provided the 90-day grace period for a Threshold Crossing (as defined in Section 2) has already expired.
+  
+  Upon written notice specifying the alleged breach, the copyright holder may demand an independent audit no more than once per calendar year. The audit shall commence within 10 business days of notice. If a violation is found, the audited party bears all audit and legal costs.
+
+  Damages:
+  In the event of a breach of Section 4, the Commercial Software Entity shall be liable for damages calculated as follows:
+
+  (i) For European Entities: Damages shall be equal to the greater of (a) three times a reasonable commercial royalty, or (b) a reasonable percentage of the revenue of the specific business unit or product line using the Software, not to exceed the limits of applicable law for liquidated damages.
+  (ii) For all other Entities (Non-European): Damages shall be equal to the greater of (a) three times a reasonable commercial royalty, or (b) 10% of the entity’s Group Annual Revenue during the period of violation.
+
+  For any calculation under this Section, there shall be a rebuttable presumption that the revenue attributable to the infringing use is no less than the aforementioned amounts, and the burden of proof to demonstrate a lower amount lies exclusively with the accused party.
+
+  If any part of this calculation is determined by a court to be unenforceable as an excessive penalty, the damages shall be automatically reduced to the maximum amount permissible under applicable law.
+  
+9. Disclaimer
+
+  THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF THIS SOFTWARE.
+
+10. Governing Law
+
+  Zone A — European Entities: This License is governed by the laws of Germany, without regard to conflict of law principles. Any disputes shall be subject to the exclusive jurisdiction of the courts of Berlin, Germany.
+
+  Zone B — Non-European Entities: This License is governed by the laws of the State of Delaware, USA, without regard to conflict of law principles. Any disputes shall be subject to the exclusive jurisdiction of the courts of Delaware, USA.

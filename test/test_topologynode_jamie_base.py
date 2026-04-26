@@ -77,7 +77,7 @@ class TestTopologyNodeJamieBase(TestTopologyNodeBase):
 
     #
 
-    def step(self, source_topologyNode, root_topologyNode, batch_size_int):
+    def generate(self, batch_size_int):
         message_dict_list = []
         for id_int in range(0, batch_size_int):
             message_dict = {"key": str(id_int),
@@ -86,6 +86,11 @@ class TestTopologyNodeJamieBase(TestTopologyNodeBase):
                                     "amount": 1}}
             message_dict_list.append(message_dict)
         #
+        return message_dict_list
+
+    #
+
+    def step(self, source_topologyNode, root_topologyNode, message_dict_list):
         zSet = message_dict_list_to_ZSet(message_dict_list)
         source_topologyNode.output_handle_function().get().send(zSet)
         #
@@ -99,7 +104,9 @@ class TestTopologyNodeJamieBase(TestTopologyNodeBase):
         coll_updated_output_dict_list = []
         coll_deleted_output_dict_list = []
         for i in range(steps_int):
-            self.step(source_topologyNode, root_topologyNode, batch_size_int)
+            message_dict_list = self.generate(batch_size_int)
+            #
+            self.step(source_topologyNode, root_topologyNode, message_dict_list)
             #
             latest_zSet = root_topologyNode.latest()
             updated_output_dict_list, deleted_output_dict_list = zSet_to_message_dict_list_tuple(latest_zSet)
