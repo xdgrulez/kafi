@@ -27,3 +27,6 @@ class TestStreamsJamie(TestStreamsBase, TestJamieBase):
         target_topic_str = "total"
         #
         self.go(root_topologyNode, source_storage_topic_str_steps_int_batch_size_int_tuple_list, target_storage, target_topic_str)
+        #
+        self.assertEqual(len(self.updated_message_dict_list), 1)
+        self.assertEqual(self.updated_message_dict_list[0]["value"], {"sum": 0})

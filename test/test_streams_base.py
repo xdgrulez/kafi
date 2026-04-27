@@ -54,7 +54,7 @@ class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
     def read(self, storage, topic_str):
         message_dict_list = storage.cat(topic_str)
         #
-        self.updated_message_dict_list = [message_dict["value"] for message_dict in message_dict_list]
+        self.updated_message_dict_list = message_dict_list
 
     #
 
