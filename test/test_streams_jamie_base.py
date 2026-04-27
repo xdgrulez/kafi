@@ -1,24 +1,20 @@
-import random
+import asyncio, random, threading
 
 import cloudpickle as pickle
 
 from kafi.streams.topologynode import (
-    get,
-    update,
-    sum,
-    agg_tuple,
-    source,
     message_dict_list_to_ZSet,
     zSet_to_message_dict_list_tuple
 )
+from kafi.streams.streams import streams 
 
-from test_topologynode_base import TestTopologyNodeBase
+from test_topologynode_jamie_base import TestTopologyNodeJamieBase
 from test_streams_base import TestStreamsBase
 
 #
 
-class TestStreamsJamieBase(TestStreamsBase, TestTopologyNodeBase):
-    def step(self, source_topologyNode, root_topologyNode, batch_size_int):
+class TestStreamsJamieBase(TestStreamsBase, TestTopologyNodeJamieBase):
+    async def generate(self, batch_size_int):
         message_dict_list = []
         for id_int in range(0, batch_size_int):
             message_dict = {"key": str(id_int),
@@ -27,12 +23,23 @@ class TestStreamsJamieBase(TestStreamsBase, TestTopologyNodeBase):
                                     "amount": 1}}
             message_dict_list.append(message_dict)
         #
-        zSet = message_dict_list_to_ZSet(message_dict_list)
-        source_topologyNode.output_handle_function().get().send(zSet)
+        return message_dict_list
+
+    #
+
+    async def process(self, source_topologyNode, root_topologyNode, message_dict_list):
+        def run(stop_thread=None):
+            asyncio.run(streams([(c, t1), (c, t2)], root_topologyNode, c, t3, c, t4, stop_thread))
         #
-        root_topologyNode.step()
+        stop_thread = threading.Event()
+        thread = threading.Thread(target=run, args=[stop_thread])
+        thread.daemon = True
+        thread.start()
         #
-        root_topologyNode.gc()
+        await asyncio.sleep(8)
+        #
+        stop_thread.set()
+        thread.join()
 
     #
 
@@ -40,7 +47,9 @@ class TestStreamsJamieBase(TestStreamsBase, TestTopologyNodeBase):
         coll_updated_output_dict_list = []
         coll_deleted_output_dict_list = []
         for i in range(steps_int):
-            self.step(source_topologyNode, root_topologyNode, batch_size_int)
+            message_dict_list = self.generate(batch_size_int)
+            #
+            self.step(source_topologyNode, root_topologyNode, message_dict_list)
             #
             latest_zSet = root_topologyNode.latest()
             updated_output_dict_list, deleted_output_dict_list = zSet_to_message_dict_list_tuple(latest_zSet)
