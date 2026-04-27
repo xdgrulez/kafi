@@ -1,12 +1,28 @@
-from asyncio import TaskGroup, Queue, sleep
+import asyncio
 import json
 import cloudpickle
 import hashlib
+import threading
 
 from kafi.streams.topologynode import message_dict_list_to_ZSet
 from kafi.helpers import get_millis
 
 #
+
+def run_streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, **kwargs):
+        def _run(stop_thread):
+            asyncio.run(streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage, sink_topic_str, snapshot_storage=snapshot_storage, snapshot_topic=snapshot_topic, stop_thread=stop_thread, **kwargs))
+        #
+        def _stop():
+            stop_thread.set()
+            thread.join()
+        #
+        stop_thread = threading.Event()
+        thread = threading.Thread(target=_run, args=[stop_thread])
+        thread.daemon = True
+        thread.start()
+        #
+        return _stop
 
 async def streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
     producer = sink_storage.producer(sink_topic_str, **kwargs)
@@ -66,7 +82,7 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
     for storage, topic_str in storage_topic_str_tuple_list:
         source_topologyNode = root_topologyNode.get_node_by_name(topic_str)
         #
-        queue = Queue()
+        queue = asyncio.Queue()
         storage_source_topologyNode_queue_tuple_list.append((storage, source_topologyNode, queue))
     #
     storage_id_topic_str_tuple_partitions_int_dict = {}
@@ -89,7 +105,7 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
                 message_dict_list = consumer.consume(**kwargs)
                 if message_dict_list != []:
                     await queue.put(message_dict_list)
-                await sleep(consume_sleep_float)
+                await asyncio.sleep(consume_sleep_float)
         except KeyboardInterrupt:
             pass
         finally:
@@ -138,13 +154,13 @@ async def streams_function(storage_topic_str_tuple_list, root_topologyNode, fore
                     print(f"Committed {offsets_dict} for topic {storage_id_topic_str_tuple[1]}")
                     consumer.commit(offsets_dict)
                 #
-                await sleep(process_sleep_float)
+                await asyncio.sleep(process_sleep_float)
         except KeyboardInterrupt:
             pass
         finally:
             finally_function()
     #
-    async with TaskGroup() as taskGroup:
+    async with asyncio.TaskGroup() as taskGroup:
         # Create one task for each source of the topology.
         for storage, source_topologyNode, queue in storage_source_topologyNode_queue_tuple_list:
             storage_id = storage.get_id()

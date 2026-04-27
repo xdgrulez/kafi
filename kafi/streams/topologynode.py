@@ -547,12 +547,11 @@ class TopologyNode:
     #
 
     def step(self):
-        def traverse(topologyNode, stack_topologyNode_list):
-            stack_topologyNode_list.append(topologyNode)
-            for daughter_topologyNode in topologyNode.daughters():
-                traverse(daughter_topologyNode, stack_topologyNode_list)
-            return stack_topologyNode_list
+        self._step()
         #
+        self._gc()
+
+    def _step(self):
         stack_topologyNode_list = traverse(self, [])
         #
         while stack_topologyNode_list:
@@ -564,13 +563,7 @@ class TopologyNode:
             #
             topologyNode.profile_after("step")
     
-    def gc(self):
-        def traverse(topologyNode, stack_topologyNode_list):
-            stack_topologyNode_list.append(topologyNode)
-            for daughter_topologyNode in topologyNode.daughters():
-                traverse(daughter_topologyNode, stack_topologyNode_list)
-            return stack_topologyNode_list
-        #
+    def _gc(self):
         stack_topologyNode_list = traverse(self, [])
         #
         while stack_topologyNode_list:
@@ -854,3 +847,11 @@ def zSet_to_message_dict_list_tuple(zSet):
             raise Exception(f"ZSet elements with weight 0 are not supported: {value_json_str}, {weight_int}")
     #
     return updated_message_dict_list, deleted_message_dict_list
+
+#
+
+def traverse(topologyNode, stack_topologyNode_list):
+    stack_topologyNode_list.append(topologyNode)
+    for daughter_topologyNode in topologyNode.daughters():
+        traverse(daughter_topologyNode, stack_topologyNode_list)
+    return stack_topologyNode_list
