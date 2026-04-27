@@ -21,12 +21,9 @@ class TestStreamsJamie(TestStreamsBase, TestJamieBase):
         source_storage = Cluster("local")
         #
         source_topic_str = "transactions"
-        source_storage_topic_str_tuple_list = [(source_storage, source_topic_str)]
+        source_storage_topic_str_steps_int_batch_size_int_tuple_list = [(source_storage, source_topic_str, 100, 100)]
         #
         target_storage = source_storage
         target_topic_str = "total"
         #
-        steps_int = 100
-        batch_size_int = 100
-        #
-        self.go(root_topologyNode, source_storage_topic_str_tuple_list, target_storage, target_topic_str, steps_int, batch_size_int)
+        self.go(root_topologyNode, source_storage_topic_str_steps_int_batch_size_int_tuple_list, target_storage, target_topic_str)

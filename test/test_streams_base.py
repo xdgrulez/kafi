@@ -35,9 +35,9 @@ class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
 
     #
 
-    def produce(self, storage_topic_str_tuple_list, steps_int, batch_size_int):
-        for _ in range(steps_int):
-            for storage, topic_str in storage_topic_str_tuple_list:
+    def produce(self, storage_topic_str_steps_int_batch_size_int_tuple_list):
+        for storage, topic_str, steps_int, batch_size_int in storage_topic_str_steps_int_batch_size_int_tuple_list:
+            for _ in range(steps_int):
                 message_dict_list = self.generate(topic_str, batch_size_int)
                 #
                 producer = storage.producer(topic_str)
@@ -72,21 +72,23 @@ class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
 
     #
     
-    def go(self, root_topologyNode, source_storage_topic_str_tuple_list, target_storage, target_topic_str, steps_int, batch_size_int):
+    def go(self, root_topologyNode, source_storage_topic_str_steps_int_batch_size_int_tuple_list, target_storage, target_topic_str):
         group_str = f"test_group_{get_millis()}"
         #
-        for storage, topic_str in source_storage_topic_str_tuple_list:
+        for storage, topic_str, _, _ in source_storage_topic_str_steps_int_batch_size_int_tuple_list:
             storage.recreate(topic_str)
         target_storage.recreate(target_topic_str)
         #
-        thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_tuple_list, steps_int, batch_size_int))
+        thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_steps_int_batch_size_int_tuple_list, ))
+        #
+        source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _, _ in source_storage_topic_str_steps_int_batch_size_int_tuple_list]
         thread2 = threading.Thread(target=self.process, args=(source_storage_topic_str_tuple_list, target_storage, target_topic_str, root_topologyNode, group_str))
         #
         thread1.start()
         thread2.start()
         #
         while True:
-            if all(self.stop(storage, topic_str, group_str, steps_int, batch_size_int) for storage, topic_str in source_storage_topic_str_tuple_list):
+            if all(self.stop(storage, topic_str, group_str, steps_int, batch_size_int) for storage, topic_str, steps_int, batch_size_int in source_storage_topic_str_steps_int_batch_size_int_tuple_list):
                 break
             #
             time.sleep(0.1)
