@@ -10,7 +10,7 @@ else:
 from test.test_streams_base import TestStreamsBase
 from test.test_jamie_base import TestJamieBase
 
-from kafi.kafi import *
+from kafi.kafi import Cluster
 
 #
 
@@ -18,22 +18,15 @@ class TestStreamsJamie(TestStreamsBase, TestJamieBase):
     def test_jamie(self):
         root_topologyNode = self.get_topology()
         #
-        storage = Cluster("local")
-        storage.recreate("transactions")
-        storage.recreate("total")
+        source_storage = Cluster("local")
         #
-        thread1 = threading.Thread(target=self.produce, args=([(storage, "transactions")], 100, 100))
-        thread2 = threading.Thread(target=self.process, args=([(storage, "transactions")], storage, "total", root_topologyNode))
+        source_topic_str = "transactions"
+        source_storage_topic_str_tuple_list = [(source_storage, source_topic_str)]
         #
-        thread1.start()
-        thread2.start()
+        target_storage = source_storage
+        target_topic_str = "total"
         #
-        time.sleep(10)
+        steps_int = 100
+        batch_size_int = 100
         #
-        self.stop_function()
-        #
-        thread1.join()
-        thread2.join()
-        #
-        message_dict_list = self.read(storage, "total")
-        print(message_dict_list)
+        self.go(root_topologyNode, source_storage_topic_str_tuple_list, target_storage, target_topic_str, steps_int, batch_size_int)

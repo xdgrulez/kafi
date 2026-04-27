@@ -38,8 +38,8 @@ async def streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage,
     await streams_function(storage_topic_str_tuple_list, root_topologyNode, sink_function, finally_function, snapshot_storage, snapshot_topic, stop_thread, **kwargs)
 
 async def streams_function(storage_topic_str_tuple_list, root_topologyNode, foreach_function, finally_function, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
-    consume_sleep_float = kwargs["consume_sleep"] if "consume_sleep" in kwargs else 0.2
-    process_sleep_float = kwargs["process_sleep"] if "process_sleep" in kwargs else 0.2
+    consume_sleep_float = kwargs["consume_sleep"] if "consume_sleep" in kwargs else 0.1
+    process_sleep_float = kwargs["process_sleep"] if "process_sleep" in kwargs else 0.1
     snapshot_interval_float = kwargs["snapshot_interval"] if "snapshot_interval" in kwargs else 1.0
     #
     initial_time_int = get_millis()

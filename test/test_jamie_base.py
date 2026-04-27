@@ -71,7 +71,7 @@ class TestJamieBase():
 
     #
 
-    def generate(self, batch_size_int):
+    def generate(self, _, batch_size_int):
         message_dict_list = []
         for id_int in range(0, batch_size_int):
             message_dict = {"key": str(id_int),
