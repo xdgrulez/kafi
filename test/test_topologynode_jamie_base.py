@@ -17,7 +17,7 @@ from test_topologynode_base import TestTopologyNodeBase
 #
 
 class TestTopologyNodeJamieBase(TestTopologyNodeBase):
-    def get_topologyNode_tuple(self):
+    def get_topology(self):
         transaction_str = "transactions"
         #
         transaction_source_topologyNode = source(transaction_str)
@@ -73,7 +73,7 @@ class TestTopologyNodeJamieBase(TestTopologyNodeBase):
             profile_config_dict=None
         )
         #
-        return transaction_source_topologyNode, root_topologyNode
+        return root_topologyNode
 
     #
 
