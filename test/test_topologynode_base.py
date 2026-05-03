@@ -18,24 +18,33 @@ class TestTopologyNodeBase(unittest.TestCase):
         print("---")
         print()
         #
-        print("Updates:")
-        for message_dict in self.updated_message_dict_list:
-            print(json.dumps(message_dict, indent=2))
+        print(f"Inputs: {self.source_str_messages_int_dict}")
         #
         print()
         print("---")
         print()
         #
-        print("Deletes:")
-        for message_dict in self.deleted_message_dict_list:
-            print(json.dumps(message_dict, indent=2))
+        updates_int = len(self.updated_message_dict_list)
+        updated_message_json_str_list = [json.dumps(message_dict) for message_dict in self.updated_message_dict_list]
+        updates_int2 = len(set(updated_message_json_str_list))
+        print(f"Updates: {updates_int}, {updates_int2}")
+        if updates_int > 0:
+            print("First update:")
+            print(json.dumps(self.updated_message_dict_list[0], indent=2))
         #
         print()
         print("---")
         print()
         #
-        print(f"Number of updates: {len(self.updated_message_dict_list)}")
-        print(f"Number of deletes: {len(self.deleted_message_dict_list)}")
+        deletes_int = len(self.deleted_message_dict_list)
+        print(f"Deletes: {deletes_int}")
+        if deletes_int > 0:
+            print("First delete:")
+            print(json.dumps(self.updated_message_dict_list[0], indent=2))
+        #
+        print()
+        print("---")
+        print()
 
     #
 
@@ -45,25 +54,29 @@ class TestTopologyNodeBase(unittest.TestCase):
     
     #
 
-    def process(self, source_str_steps_int_batch_size_int_tuple_list, root_topologyNode):
+    def process(self, source_str_batch_size_int_tuple_list, steps_int, root_topologyNode):
+        source_str_messages_int_dict = {source_str: 0 for source_str, _ in source_str_batch_size_int_tuple_list}
         coll_updated_output_dict_list = []
         coll_deleted_output_dict_list = []
-        for source_str, steps_int, batch_size_int in source_str_steps_int_batch_size_int_tuple_list:
-            source_topologyNode = root_topologyNode.get_node_by_name(source_str)
-            for i in range(steps_int):
+        for step_int in range(steps_int):
+            for source_str, batch_size_int in source_str_batch_size_int_tuple_list:
                 message_dict_list = self.generate(source_str, batch_size_int)
                 #
+                source_topologyNode = root_topologyNode.get_node_by_name(source_str)
                 self.produce(source_topologyNode, message_dict_list)
-                #
-                root_topologyNode.step()
-                #
-                latest_zSet = root_topologyNode.latest()
-                updated_output_dict_list, deleted_output_dict_list = zSet_to_message_dict_list_tuple(latest_zSet)
-                coll_updated_output_dict_list += updated_output_dict_list
-                coll_deleted_output_dict_list += deleted_output_dict_list
-                #
-                print()
-                print(f"{i} - Latest: {root_topologyNode.latest()}")
-                print(len(pickle.dumps(root_topologyNode)) / 1024)
+                source_str_messages_int_dict[source_str] += len(message_dict_list)
+            #
+            root_topologyNode.step()
+            #
+            latest_zSet = root_topologyNode.latest()
+            updated_output_dict_list, deleted_output_dict_list = zSet_to_message_dict_list_tuple(latest_zSet)
+            coll_updated_output_dict_list = updated_output_dict_list
+            # coll_updated_output_dict_list += updated_output_dict_list
+            coll_deleted_output_dict_list += deleted_output_dict_list
+            #
+            print()
+            print(f"{step_int}/{steps_int}")
+            # print(f"{step_int} - Latest: {root_topologyNode.latest()}")
+            print(len(pickle.dumps(root_topologyNode)) / 1024)
         #
-        return coll_updated_output_dict_list, coll_deleted_output_dict_list
+        return source_str_messages_int_dict, coll_updated_output_dict_list, coll_deleted_output_dict_list
