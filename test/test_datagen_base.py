@@ -17,12 +17,12 @@ class TestDatagenBase():
         #
         click_topologyNode = (
             source_click_topologyNode
-            .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"]})
+            .map_distinct(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"]})
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
-            .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
+            .map_distinct(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
         )
         #
         root_topologyNode = (

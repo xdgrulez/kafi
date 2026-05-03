@@ -9,6 +9,7 @@ from pydbsp.indexed_zset.operators.linear import LiftedIndex, LiftedLiftedIndex
 from pydbsp.indexed_zset.operators.bilinear import DeltaLiftedDeltaLiftedSortMergeJoin
 from pydbsp.indexed_zset.functions.bilinear import join_with_index
 from pydbsp.stream.operators.bilinear import Incrementalize2
+from pydbsp.zset.operators.unary import DeltaLiftedDeltaLiftedDistinct
 
 from kafi.streams.pydbsp_sql import CartesianProduct, Difference, Filtering, Intersection, Join, Selection, Union, GroupByThenAgg
 
@@ -279,7 +280,7 @@ class TopologyNode:
         topologyNode = TopologyNode("join_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
 
-    def join2(self, other, left_on_function, right_on_function, projection_function, profile_config_dict=None):
+    def join_distinct(self, other, left_on_function, right_on_function, projection_function, profile_config_dict=None):
         def _left_on_function(left_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             return json.dumps(left_on_function(left_value_dict))
@@ -304,7 +305,9 @@ class TopologyNode:
             right_liftedLiftedIndex.output_handle(),
             lambda _, l, r: _projection_function(l, r))
         #
-        liftedStreamElimination = LiftedStreamElimination(deltaLiftedDeltaLiftedSortMergeJoin.output_handle())
+        deltaLiftedDeltaLiftedDistinct = DeltaLiftedDeltaLiftedDistinct(deltaLiftedDeltaLiftedSortMergeJoin.output_handle())
+        #
+        liftedStreamElimination = LiftedStreamElimination(deltaLiftedDeltaLiftedDistinct.output_handle())
         #
         def output_handle_function():
             return liftedStreamElimination.output_handle()
@@ -315,6 +318,8 @@ class TopologyNode:
             #
             topologyNode.pydbsp_step(left_liftedLiftedIndex)
             topologyNode.pydbsp_step(right_liftedLiftedIndex)
+            #
+            topologyNode.pydbsp_step(deltaLiftedDeltaLiftedDistinct)
             #
             topologyNode.pydbsp_step(deltaLiftedDeltaLiftedSortMergeJoin)
             #
@@ -327,11 +332,13 @@ class TopologyNode:
             topologyNode.pydbsp_gc(left_liftedLiftedIndex)
             topologyNode.pydbsp_gc(right_liftedLiftedIndex)
             #
+            topologyNode.pydbsp_gc(deltaLiftedDeltaLiftedDistinct)
+            #
             topologyNode.pydbsp_gc(deltaLiftedDeltaLiftedSortMergeJoin)
             #
             topologyNode.pydbsp_gc(liftedStreamElimination)
         #
-        topologyNode = TopologyNode("join2_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
+        topologyNode = TopologyNode("join_distinct_op", output_handle_function, step_function, gc_function, [self, other], profile_config_dict)
         return topologyNode
 
     def union(self, other, profile_config_dict=None):

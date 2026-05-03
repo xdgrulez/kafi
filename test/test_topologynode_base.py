@@ -26,8 +26,9 @@ class TestTopologyNodeBase(unittest.TestCase):
         #
         updates_int = len(self.updated_message_dict_list)
         updated_message_json_str_list = [json.dumps(message_dict) for message_dict in self.updated_message_dict_list]
-        updates_int2 = len(set(updated_message_json_str_list))
-        print(f"Updates: {updates_int}, {updates_int2}")
+        unique_updates_int = len(set(updated_message_json_str_list))
+        print(f"Updates: {updates_int}")
+        print(f"Unique updates: {unique_updates_int}")
         if updates_int > 0:
             print("First update:")
             print(json.dumps(self.updated_message_dict_list[0], indent=2))
@@ -70,8 +71,7 @@ class TestTopologyNodeBase(unittest.TestCase):
             #
             latest_zSet = root_topologyNode.latest()
             updated_output_dict_list, deleted_output_dict_list = zSet_to_message_dict_list_tuple(latest_zSet)
-            coll_updated_output_dict_list = updated_output_dict_list
-            # coll_updated_output_dict_list += updated_output_dict_list
+            coll_updated_output_dict_list += updated_output_dict_list
             coll_deleted_output_dict_list += deleted_output_dict_list
             #
             print()
