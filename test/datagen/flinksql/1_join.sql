@@ -15,13 +15,14 @@ CREATE TABLE click_table (
 );
 
 CREATE VIEW click_view AS
-SELECT
+SELECT DISTINCT
     payload.user_id as user_id,
     payload.ip as ip
-from
+FROM
     click_table;
 
 --
+
 CREATE TABLE customer_table (
     payload ROW < id STRING,
     first_name STRING,
@@ -43,7 +44,7 @@ CREATE TABLE customer_table (
 );
 
 CREATE VIEW customer_view AS
-SELECT
+SELECT DISTINCT
     payload.id as id,
     payload.first_name as first_name
 FROM

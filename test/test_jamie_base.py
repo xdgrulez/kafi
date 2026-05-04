@@ -45,7 +45,7 @@ class TestJamieBase():
             profile_config_dict=None
         )
         #
-        balance_topologyNode = credits_topologyNode.join2(
+        balance_topologyNode = credits_topologyNode.join(
             debits_topologyNode,
             left_on_function=lambda l: l["account"],
             right_on_function=lambda r: r["account"],
