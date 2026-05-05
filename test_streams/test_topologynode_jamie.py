@@ -1,5 +1,5 @@
-from test.test_topologynode_base import TestTopologyNodeBase
-from test.test_jamie_base import TestJamieBase
+from test_streams.test_topologynode_base import TestTopologyNodeBase
+from test_streams.test_jamie_base import TestJamieBase
 
 #
 

@@ -7,8 +7,8 @@ if os.path.basename(os.getcwd()) == "test":
 else:
     sys.path.insert(1, ".")
 
-from test.test_streams_base import TestStreamsBase
-from test.test_jamie_base import TestJamieBase
+from test_streams.test_streams_base import TestStreamsBase
+from test_streams.test_jamie_base import TestJamieBase
 
 from kafi.kafi import Cluster
 

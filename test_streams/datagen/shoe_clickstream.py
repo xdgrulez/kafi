@@ -1,8 +1,8 @@
 import random
 
-from test.datagen.constants.product_ids import product_id_str_list
-from test.datagen.constants.customer_ids import customer_id_str_list
-from test.datagen.constants.ips import ip_str_list
+from test_streams.datagen.constants.product_ids import product_id_str_list
+from test_streams.datagen.constants.customer_ids import customer_id_str_list
+from test_streams.datagen.constants.ips import ip_str_list
 
 class ShoeClickstreamGenerator:
     def __init__(self):

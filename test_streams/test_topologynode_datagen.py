@@ -1,5 +1,5 @@
-from test.test_topologynode_base import TestTopologyNodeBase
-from test.test_datagen_base import TestDatagenBase
+from test_streams.test_topologynode_base import TestTopologyNodeBase
+from test_streams.test_datagen_base import TestDatagenBase
 
 #
 
