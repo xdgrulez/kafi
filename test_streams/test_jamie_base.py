@@ -11,10 +11,8 @@ from kafi.streams.topologynode import (
 #
 
 class TestJamieBase():
-    def get_topology(self):
-        transaction_str = "transactions"
-        #
-        transaction_source_topologyNode = source(transaction_str)
+    def get_topology(self, transaction_source_str):
+        transaction_source_topologyNode = source(transaction_source_str)
         #
         transaction_topologyNode = transaction_source_topologyNode.map(
             lambda x: {
