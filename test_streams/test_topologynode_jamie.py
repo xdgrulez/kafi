@@ -7,9 +7,9 @@ class TestTopologyNodeJamie(TestTopologyNodeBase, TestJamieBase):
     def test_jamie(self):
         transaction_source_str = "transactions"
         #
-        root_topologyNode = self.get_topology(transaction_source_str)
+        root_topologyNode, program2D, view = self.get_topology(transaction_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(transaction_source_str, 100)], 100, root_topologyNode)
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(transaction_source_str, 100)], 100, root_topologyNode, program2D, view)
         #
         # self.assertEqual(len(self.updated_message_dict_list), 1)
         # self.assertEqual(self.updated_message_dict_list[0]["value"], {"sum": 0})

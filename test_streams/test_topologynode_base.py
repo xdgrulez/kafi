@@ -54,9 +54,9 @@ class TestTopologyNodeBase(unittest.TestCase):
     
     #
 
-    def process(self, source_str_batch_size_int_tuple_list, steps_int, root_topologyNode):
-        program2D = root_topologyNode.get_program()
-        view = root_topologyNode.get_view()
+    def process(self, source_str_batch_size_int_tuple_list, steps_int, root_topologyNode, program2D, view):
+        # program2D = root_topologyNode.get_program()
+        # view = root_topologyNode.get_view()
         #
         source_str_messages_int_dict = {source_str: 0 for source_str, _ in source_str_batch_size_int_tuple_list}
         coll_updated_output_dict_list = []

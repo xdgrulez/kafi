@@ -4,7 +4,8 @@ from pydbsp import (
     DeltaLiftedDeltaLiftedSortMergeJoin,
     Program2D,
     LiftedLiftedProject,
-    LiftedLiftedGroupBySum
+    LiftedLiftedGroupBySum,
+    DeltaLiftedDistinct
 )
 
 import datetime
@@ -90,6 +91,36 @@ class TopologyNode:
         topologyNode = TopologyNode("group_by_sum_op", output_stream2D_function, [self])
         return topologyNode
 
+    #
+
+    def sum(self, select_function, output_function):
+        def _select_function(value_json_str):
+            value_dict = json.loads(value_json_str)
+            return select_function(value_dict)
+        #
+        def _output_function(key, sum):
+            value_dict = output_function(key, sum)
+            value_json_str = json.dumps(value_dict)
+            return value_json_str
+        #
+        output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D_function(), key=lambda _: 0, value=_select_function, output=_output_function)
+        #
+        def output_stream2D_function():
+            return output_stream2D
+        #
+        topologyNode = TopologyNode("sum_op", output_stream2D_function, [self])
+        return topologyNode
+
+    #
+
+    def distinct(self):
+        output_stream2D = DeltaLiftedDistinct(self._output_stream2D_function())
+        #
+        def output_stream2D_function():
+            return output_stream2D
+        #
+        topologyNode = TopologyNode("distinct_op", output_stream2D_function, [self])
+        return topologyNode
     #
 
     def name(self):

@@ -46,10 +46,15 @@ class TestJamieBase():
             }
         )
         #
-        root_topologyNode = balance_topologyNode
-        root_topologyNode.set_program(program2D)
+        root_topologyNode = balance_topologyNode.sum(
+            get("balance"),
+            lambda _, y: {"sum": y}
+        )
         #
-        return root_topologyNode
+        # root_topologyNode.set_program(program2D)
+        view = program2D.view("root", root_topologyNode._output_stream2D_function())
+        #
+        return root_topologyNode, program2D, view
 
     #
 
