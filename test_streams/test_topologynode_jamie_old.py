@@ -11,5 +11,5 @@ class TestTopologyNodeJamie(TestTopologyNodeBase, TestJamieBase):
         #
         self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(transaction_source_str, 100)], 100, root_topologyNode)
         #
-        # self.assertEqual(len(self.updated_message_dict_list), 1)
-        # self.assertEqual(self.updated_message_dict_list[0]["value"], {"sum": 0})
+        self.assertEqual(len(self.updated_message_dict_list), 1)
+        self.assertEqual(self.updated_message_dict_list[0]["value"], {"sum": 0})

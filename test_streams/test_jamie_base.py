@@ -1,69 +1,56 @@
 import random
 
 from kafi.streams.topologynode import (
-    get,
-    update,
-    sum,
-    agg_tuple,
     source,
+    program
 )
 
 #
 
 class TestJamieBase():
     def get_topology(self, transaction_source_str):
-        transaction_source_topologyNode = source(transaction_source_str)
+        program2D = program()
+        #
+        transaction_source_topologyNode = source(program2D, transaction_source_str)
         #
         transaction_topologyNode = transaction_source_topologyNode.map(
             lambda x: {
                 "from_account": x["from_account"],
                 "to_account": x["to_account"],
                 "amount": x["amount"]
-            },
-            profile_config_dict=None
+            }
         )
         #
-        credits_topologyNode = transaction_topologyNode.group_by_agg(
-            by_function_list=[get("to_account")],
-            as_function=update("account"),
-            agg_tuple_list=[
-                agg_tuple(
-                    select_function=get("amount"),
-                    agg_function=sum,
-                    as_function=update("credits")
-                )
-            ],
-            profile_config_dict=None
-        )
+        # credits_topologyNode = transaction_topologyNode.group_by_agg(
+        #     by_function_list=[get("to_account")],
+        #     as_function=update("account"),
+        #     agg_tuple_list=[
+        #         agg_tuple(
+        #             select_function=get("amount"),
+        #             agg_function=sum,
+        #             as_function=update("credits")
+        #         )
+        #     ]
+        # )
+        # #
+        # debits_topologyNode = transaction_topologyNode.group_by_agg(
+        #     [get("from_account")],
+        #     update("account"),
+        #     [agg_tuple(get("amount"), sum, update("debits"))]
+        # )
+        # #
+        # balance_topologyNode = credits_topologyNode.join(
+        #     debits_topologyNode,
+        #     left_on_function=lambda l: l["account"],
+        #     right_on_function=lambda r: r["account"],
+        #     projection_function=lambda l, r: {
+        #         "account": l["account"],
+        #         "balance": l["credits"] - r["debits"]
+        #     }
+        # )
         #
-        debits_topologyNode = transaction_topologyNode.group_by_agg(
-            [get("from_account")],
-            update("account"),
-            [agg_tuple(get("amount"), sum, update("debits"))],
-            profile_config_dict=None
-        )
-        #
-        balance_topologyNode = credits_topologyNode.join(
-            debits_topologyNode,
-            left_on_function=lambda l: l["account"],
-            right_on_function=lambda r: r["account"],
-            projection_function=lambda l, r: {
-                "account": l["account"],
-                "balance": l["credits"] - r["debits"]
-            },
-            profile_config_dict=None
-        )
-        #
-        root_topologyNode = balance_topologyNode.agg(
-            agg_tuple_list=[
-                agg_tuple(
-                    select_function=get("balance"),
-                    agg_function=sum,
-                    as_function=update("sum")
-                )
-            ],
-            profile_config_dict=None
-        )
+        root_topologyNode = transaction_topologyNode
+        root_topologyNode.set_program(program2D)
         #
         return root_topologyNode
 

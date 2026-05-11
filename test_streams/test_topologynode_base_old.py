@@ -3,7 +3,8 @@ import json, unittest
 import cloudpickle as pickle
 
 from kafi.streams.topologynode import (
-    message_dict_list_to_value_json_str_list
+    message_dict_list_to_ZSet,
+    zSet_to_message_dict_list_tuple
 )
 
 #
@@ -48,16 +49,13 @@ class TestTopologyNodeBase(unittest.TestCase):
 
     #
 
-    def produce(self, program2D, source_topologyNode, message_dict_list):
-        value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
-        program2D.insert(source_topologyNode.output_stream2D_function(), value_json_str_list)
+    def produce(self, source_topologyNode, message_dict_list):
+        zSet = message_dict_list_to_ZSet(message_dict_list)
+        source_topologyNode.output_handle_function().get().send(zSet)
     
     #
 
     def process(self, source_str_batch_size_int_tuple_list, steps_int, root_topologyNode):
-        program2D = root_topologyNode.get_program()
-        view = root_topologyNode.get_view()
-        #
         source_str_messages_int_dict = {source_str: 0 for source_str, _ in source_str_batch_size_int_tuple_list}
         coll_updated_output_dict_list = []
         coll_deleted_output_dict_list = []
@@ -66,16 +64,15 @@ class TestTopologyNodeBase(unittest.TestCase):
                 message_dict_list = self.generate(source_str, batch_size_int)
                 #
                 source_topologyNode = root_topologyNode.get_node_by_name(source_str)
-                self.produce(program2D, source_topologyNode, message_dict_list)
+                self.produce(source_topologyNode, message_dict_list)
                 source_str_messages_int_dict[source_str] += len(message_dict_list)
             #
-            program2D.step()
+            root_topologyNode.step()
             #
-            print(view.delta().inner)
-            # latest_zSet = root_topologyNode.latest()
-            # updated_output_dict_list, deleted_output_dict_list = zSet_to_message_dict_list_tuple(latest_zSet)
-            # coll_updated_output_dict_list += updated_output_dict_list
-            # coll_deleted_output_dict_list += deleted_output_dict_list
+            latest_zSet = root_topologyNode.latest()
+            updated_output_dict_list, deleted_output_dict_list = zSet_to_message_dict_list_tuple(latest_zSet)
+            coll_updated_output_dict_list += updated_output_dict_list
+            coll_deleted_output_dict_list += deleted_output_dict_list
             #
             print()
             print(f"{step_int}/{steps_int}")
