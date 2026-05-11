@@ -80,6 +80,7 @@ class TestTopologyNodeBase(unittest.TestCase):
             print()
             print(f"{step_int}/{steps_int}")
             # print(f"{step_int} - Latest: {root_topologyNode.latest()}")
-            print(len(pickle.dumps(root_topologyNode)) / 1024)
+            print(len(root_topologyNode.get_node_by_name("transactions").output_stream2D_function()._input._values))
+            print(len(pickle.dumps(root_topologyNode.get_node_by_name("transactions"))) / 1024)
         #
         return source_str_messages_int_dict, coll_updated_output_dict_list, coll_deleted_output_dict_list
