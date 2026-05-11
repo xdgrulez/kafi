@@ -68,22 +68,27 @@ class TopologyNode:
         topologyNode = TopologyNode("join_op", output_stream2D_function, [self, other])
         return topologyNode
 
-    def group_by_sum(self, by_function, value_function):
+    def group_by_sum(self, by_function, select_function, output_function):
         def _by_function(value_json_str):
             value_dict = json.loads(value_json_str)
             return by_function(value_dict)
         #
-        def _value_function(value_json_str):
+        def _select_function(value_json_str):
             value_dict = json.loads(value_json_str)
-            return value_function(value_dict)
+            return select_function(value_dict)
         #
-        output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D_function(), _by_function, _value_function, lambda _, y: y)
+        def _output_function(key, sum):
+            value_dict = output_function(key, sum)
+            value_json_str = json.dumps(value_dict)
+            return value_json_str
+        #
+        output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D_function(), key=_by_function, value=_select_function, output=_output_function)
         #
         def output_stream2D_function():
             return output_stream2D
         #
         topologyNode = TopologyNode("group_by_sum_op", output_stream2D_function, [self])
-        return topologyNode 
+        return topologyNode
 
     #
 

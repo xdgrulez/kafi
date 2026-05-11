@@ -10,6 +10,7 @@ CREATE TABLE click_table (
     'topic' = 'shoe_clickstream',
     'properties.bootstrap.servers' = 'localhost:9092',
     'scan.startup.mode' = 'earliest-offset',
+    'properties.group.id' = 'flink_1_join',
     'format' = 'json',
     'json.ignore-parse-errors' = 'true'
 );

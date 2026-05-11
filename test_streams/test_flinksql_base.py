@@ -1,11 +1,19 @@
-import asyncio, json, random, threading, time, unittest
-
-from kafi.helpers import get_millis
-from kafi.streams.streams import run_streams
+import json, subprocess, threading, time, unittest
 
 #
 
-class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
+flinksql_path_str = "/home/ralph/apps/flink-2.2.0"
+flinksql_start_cluster_str = f"{flinksql_path_str}/bin/start-cluster.sh"
+flinksql_stop_cluster_str = f"{flinksql_path_str}/bin/stop-cluster.sh"
+
+def get_flinksql_client_str(flinksql_sql_path_str):
+    flinksql_sql_path_str = f"{flinksql_path_str}/bin/sql-client.sh -f {flinksql_sql_path_str}"
+    #
+    return flinksql_sql_path_str
+
+#
+
+class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         print("Test:", self._testMethodName)
 
@@ -58,16 +66,26 @@ class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
 
     #
 
-    def process(self, source_storage_topic_str_tuple_list, target_storage, target_topic_str, root_topologyNode, group_str):
-        self.stop_function = run_streams(source_storage_topic_str_tuple_list, root_topologyNode, target_storage, target_topic_str, group=group_str)
+    def process(self, flinksql_sql_path_str):
+        start_cluster_completedProcess = subprocess.run([flinksql_start_cluster_str], capture_output=True, text=True)
+        print(start_cluster_completedProcess.stdout)
+        #
+        flinksql_sql_client_str = get_flinksql_client_str(flinksql_sql_path_str)
+        sql_client_completedProcess = subprocess.run([flinksql_sql_client_str], capture_output=True, text=True)
+        print(sql_client_completedProcess.stdout)
+
+    #
+
+    def stop_function(self):
+        stop_cluster_completedProcess = subprocess.run([flinksql_stop_cluster_str], capture_output=True, text=True)
+        print(stop_cluster_completedProcess.stdout)
 
     #
 
     def read(self, storage, topic_str):
-        message_dict_list = storage.cat(topic_str)
+        message_dict_list = storage.l(topic_str)[topic_str]
         #
         self.updated_message_dict_list = message_dict_list
-
 
     #
 
@@ -85,10 +103,12 @@ class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
 
     #
     
-    def go(self, root_topologyNode, source_storage_topic_str_batch_size_int_tuple_list, steps_int, target_storage, target_topic_str):
-        group_str = f"test_group_{get_millis()}"
-        #
+    def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int):
         source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list]
+        #
+        group_str = "flink_1_join"
+        for source_storage, topic_str in source_storage_topic_str_tuple_list:
+            source_storage.grm(group_str)
         #
         self.source_str_messages_int_dict = {source_str: 0 for _, source_str in source_storage_topic_str_tuple_list}
         #
@@ -98,7 +118,7 @@ class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
         #
         thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int))
         #
-        thread2 = threading.Thread(target=self.process, args=(source_storage_topic_str_tuple_list, target_storage, target_topic_str, root_topologyNode, group_str))
+        thread2 = threading.Thread(target=self.process, args=(flinksql_sql_path_str))
         #
         thread1.start()
         thread2.start()

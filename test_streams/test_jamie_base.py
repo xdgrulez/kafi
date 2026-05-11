@@ -1,8 +1,9 @@
 import random
 
 from kafi.streams.topologynode import (
-    source,
-    program
+    get,
+    program,
+    source
 )
 
 #
@@ -21,35 +22,31 @@ class TestJamieBase():
             }
         )
         #
-        # credits_topologyNode = transaction_topologyNode.group_by_agg(
-        #     by_function_list=[get("to_account")],
-        #     as_function=update("account"),
-        #     agg_tuple_list=[
-        #         agg_tuple(
-        #             select_function=get("amount"),
-        #             agg_function=sum,
-        #             as_function=update("credits")
-        #         )
-        #     ]
-        # )
-        # #
-        # debits_topologyNode = transaction_topologyNode.group_by_agg(
-        #     [get("from_account")],
-        #     update("account"),
-        #     [agg_tuple(get("amount"), sum, update("debits"))]
-        # )
-        # #
-        # balance_topologyNode = credits_topologyNode.join(
-        #     debits_topologyNode,
-        #     left_on_function=lambda l: l["account"],
-        #     right_on_function=lambda r: r["account"],
-        #     projection_function=lambda l, r: {
-        #         "account": l["account"],
-        #         "balance": l["credits"] - r["debits"]
-        #     }
-        # )
+        credits_topologyNode = transaction_topologyNode.group_by_sum(
+            get("to_account"),
+            get("amount"),
+            lambda x, y: {"account": x,
+                          "credits": y}
+        )
         #
-        root_topologyNode = transaction_topologyNode
+        debits_topologyNode = transaction_topologyNode.group_by_sum(
+            get("from_account"),
+            get("amount"),
+            lambda x, y: {"account": x,
+                          "debits": y}
+        )
+        #
+        balance_topologyNode = credits_topologyNode.join(
+            debits_topologyNode,
+            left_on_function=lambda l: l["account"],
+            right_on_function=lambda r: r["account"],
+            projection_function=lambda l, r: {
+                "account": l["account"],
+                "balance": l["credits"] - r["debits"]
+            }
+        )
+        #
+        root_topologyNode = balance_topologyNode
         root_topologyNode.set_program(program2D)
         #
         return root_topologyNode
