@@ -19,14 +19,11 @@ import cloudpickle as pickle
 #
 
 class TopologyNode:
-    def __init__(self, name_str, output_stream2D_function, daughter_topologyNode_list=[]):
+    def __init__(self, name_str, daughter_topologyNode_list, output_stream2D):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
-        self._output_stream2D_function = output_stream2D_function
         self._daughter_topologyNode_list = daughter_topologyNode_list
-        #
-        self._program2D = None
-        self._view = None
+        self._output_stream2D = output_stream2D
 
     #
 
@@ -35,12 +32,9 @@ class TopologyNode:
             value_dict = json.loads(value_json_str)
             return json.dumps(map_function(value_dict))
         #
-        output_stream2D = LiftedLiftedProject(self._output_stream2D_function(), _map_function)
+        output_stream2D = LiftedLiftedProject(self._output_stream2D, _map_function)
         #
-        def output_stream2D_function():
-            return output_stream2D
-        #
-        topologyNode = TopologyNode("map_op", output_stream2D_function, [self])
+        topologyNode = TopologyNode("map_op", [self], output_stream2D)
         return topologyNode
 
     def join(self, other, left_on_function, right_on_function, projection_function):
@@ -57,16 +51,13 @@ class TopologyNode:
             right_value_dict = json.loads(right_value_json_str)
             return json.dumps(projection_function(left_value_dict, right_value_dict))
         #
-        output_stream2D = DeltaLiftedDeltaLiftedSortMergeJoin(self._output_stream2D_function(),
-                                                              other._output_stream2D_function(),
+        output_stream2D = DeltaLiftedDeltaLiftedSortMergeJoin(self._output_stream2D,
+                                                              other._output_stream2D,
                                                               left_key=_left_on_function,
                                                               right_key=_right_on_function,
                                                               projection=_projection_function)
         #
-        def output_stream2D_function():
-            return output_stream2D
-        #
-        topologyNode = TopologyNode("join_op", output_stream2D_function, [self, other])
+        topologyNode = TopologyNode("join_op", [self, other], output_stream2D)
         return topologyNode
 
     def group_by_sum(self, by_function, select_function, output_function):
@@ -83,12 +74,9 @@ class TopologyNode:
             value_json_str = json.dumps(value_dict)
             return value_json_str
         #
-        output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D_function(), key=_by_function, value=_select_function, output=_output_function)
+        output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D, key=_by_function, value=_select_function, output=_output_function)
         #
-        def output_stream2D_function():
-            return output_stream2D
-        #
-        topologyNode = TopologyNode("group_by_sum_op", output_stream2D_function, [self])
+        topologyNode = TopologyNode("group_by_sum_op", [self], output_stream2D)
         return topologyNode
 
     #
@@ -103,23 +91,17 @@ class TopologyNode:
             value_json_str = json.dumps(value_dict)
             return value_json_str
         #
-        output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D_function(), key=lambda _: 0, value=_select_function, output=_output_function)
+        output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D, key=lambda _: 0, value=_select_function, output=_output_function)
         #
-        def output_stream2D_function():
-            return output_stream2D
-        #
-        topologyNode = TopologyNode("sum_op", output_stream2D_function, [self])
+        topologyNode = TopologyNode("sum_op", [self], output_stream2D)
         return topologyNode
 
     #
 
     def distinct(self):
-        output_stream2D = DeltaLiftedDistinct(self._output_stream2D_function())
+        output_stream2D = DeltaLiftedDistinct(self._output_stream2D)
         #
-        def output_stream2D_function():
-            return output_stream2D
-        #
-        topologyNode = TopologyNode("distinct_op", output_stream2D_function, [self])
+        topologyNode = TopologyNode("distinct_op", [self], output_stream2D)
         return topologyNode
     #
 
@@ -129,26 +111,12 @@ class TopologyNode:
     def id(self):
         return self._id_str
 
-    def output_stream2D_function(self):
-        return self._output_stream2D_function()
-
     def daughters(self):
         return self._daughter_topologyNode_list
+
+    def output_stream2D(self):
+        return self._output_stream2D
     
-    #
-
-    def set_program(self, program2D):
-        self._program2D = program2D
-        #
-        self._view = program2D.view("root", self._output_stream2D_function())
-
-    def get_program(self):
-        return self._program2D
-    
-
-    def get_view(self):
-        return self._view
-
     #
 
     def get_node_by_id(self, id_str):
@@ -250,18 +218,24 @@ class Runner():
     def source(self, source_str):
         output_stream2D = self._program2D.source(source_str)
         #
-        topologyNode = TopologyNode(source_str, output_stream2D, [])
+        topologyNode = TopologyNode(source_str, [], output_stream2D)
         #
         return topologyNode
 
     def root(self, root_topologyNode):
         self._root_topologyNode = root_topologyNode
         #
-        self._view = self._program2D.view("root", root_topologyNode.output_stream2D)
+        self._view = self._program2D.view("root", root_topologyNode.output_stream2D())
 
     def step(self):
         self._program2D.step()
     
+    def insert(self, source_str, message_dict_list):
+        source_topologyNode = self._root_topologyNode.get_node_by_name(source_str)
+        value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
+        #
+        self._program2D.insert(source_topologyNode.output_stream2D(), value_json_str_list)
+
     def delta(self):
         return self._view.delta().inner
 

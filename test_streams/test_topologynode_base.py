@@ -48,13 +48,7 @@ class TestTopologyNodeBase(unittest.TestCase):
 
     #
 
-    def produce(self, program2D, source_topologyNode, message_dict_list):
-        value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
-        program2D.insert(source_topologyNode.output_stream2D_function(), value_json_str_list)
-    
-    #
-
-    def process(self, source_str_batch_size_int_tuple_list, steps_int, root_topologyNode, program2D, view):
+    def process(self, source_str_batch_size_int_tuple_list, steps_int, runner):
         # program2D = root_topologyNode.get_program()
         # view = root_topologyNode.get_view()
         #
@@ -65,13 +59,12 @@ class TestTopologyNodeBase(unittest.TestCase):
             for source_str, batch_size_int in source_str_batch_size_int_tuple_list:
                 message_dict_list = self.generate(source_str, batch_size_int)
                 #
-                source_topologyNode = root_topologyNode.get_node_by_name(source_str)
-                self.produce(program2D, source_topologyNode, message_dict_list)
+                runner.insert(source_str, message_dict_list)
                 source_str_messages_int_dict[source_str] += len(message_dict_list)
             #
-            program2D.step()
+            runner.step()
             #
-            print(view.delta().inner)
+            print(runner.delta())
             # latest_zSet = root_topologyNode.latest()
             # updated_output_dict_list, deleted_output_dict_list = zSet_to_message_dict_list_tuple(latest_zSet)
             # coll_updated_output_dict_list += updated_output_dict_list
@@ -80,7 +73,7 @@ class TestTopologyNodeBase(unittest.TestCase):
             print()
             print(f"{step_int}/{steps_int}")
             # print(f"{step_int} - Latest: {root_topologyNode.latest()}")
-            print(len(root_topologyNode.get_node_by_name("transactions").output_stream2D_function()._input._values))
-            print(len(pickle.dumps(root_topologyNode.get_node_by_name("transactions"))) / 1024)
+            print(len(pickle.dumps(runner._root_topologyNode)) / 1024)
+            print(len(pickle.dumps(runner)) / 1024)
         #
         return source_str_messages_int_dict, coll_updated_output_dict_list, coll_deleted_output_dict_list
