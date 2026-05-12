@@ -58,8 +58,8 @@ class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
 
     #
 
-    def process(self, source_storage_topic_str_tuple_list, target_storage, target_topic_str, runner, group_str):
-        self.stop_function = run_streams(source_storage_topic_str_tuple_list, runner, target_storage, target_topic_str, group=group_str)
+    def process(self, source_storage_topic_str_tuple_list, target_storage, target_topic_str, root_topologyNode, group_str):
+        self.stop_function = run_streams(source_storage_topic_str_tuple_list, root_topologyNode, target_storage, target_topic_str, group=group_str)
 
     #
 
@@ -85,7 +85,7 @@ class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
 
     #
     
-    def go(self, runner, source_storage_topic_str_batch_size_int_tuple_list, steps_int, target_storage, target_topic_str):
+    def go(self, root_topologyNode, source_storage_topic_str_batch_size_int_tuple_list, steps_int, target_storage, target_topic_str):
         group_str = f"test_group_{get_millis()}"
         #
         source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list]
@@ -98,7 +98,7 @@ class TestStreamsBase(unittest.IsolatedAsyncioTestCase):
         #
         thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int))
         #
-        thread2 = threading.Thread(target=self.process, args=(source_storage_topic_str_tuple_list, target_storage, target_topic_str, runner, group_str))
+        thread2 = threading.Thread(target=self.process, args=(source_storage_topic_str_tuple_list, target_storage, target_topic_str, root_topologyNode, group_str))
         #
         thread1.start()
         thread2.start()

@@ -18,7 +18,7 @@ class TestStreamsJamie(TestStreamsBase, TestJamieBase):
     def test_jamie(self):
         transaction_source_str = "transactions"
         #
-        runner = self.get_runner(transaction_source_str)
+        root_topologyNode = self.get_topology(transaction_source_str)
         #
         source_storage = Cluster("local")
         #
@@ -28,7 +28,7 @@ class TestStreamsJamie(TestStreamsBase, TestJamieBase):
         target_storage = source_storage
         target_topic_str = "total"
         #
-        self.go(runner, source_storage_topic_str_batch_size_int_tuple_list, 100, target_storage, target_topic_str)
+        self.go(root_topologyNode, source_storage_topic_str_batch_size_int_tuple_list, 100, target_storage, target_topic_str)
         #
         self.assertEqual(len(self.updated_message_dict_list), 1)
         self.assertEqual(self.updated_message_dict_list[0]["value"], {"sum": 0})

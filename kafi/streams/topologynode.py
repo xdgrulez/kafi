@@ -273,9 +273,9 @@ class Runner():
     def delta(self):
         zSet = self._view.delta()
         #
-        message_dict_list = zSet_to_message_dict_list_tuple(zSet)
+        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet)
         #
-        return message_dict_list
+        return updated_message_dict_list, deleted_message_dict_list
 
 
 def json_default(obj):

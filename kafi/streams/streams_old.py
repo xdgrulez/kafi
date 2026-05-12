@@ -4,17 +4,14 @@ import cloudpickle
 import hashlib
 import threading
 
+from kafi.streams.topologynode import message_dict_list_to_ZSet
 from kafi.helpers import get_millis
-
-from kafi.streams.topologynode import (
-    Runner
-)
 
 #
 
-def run_streams(storage_topic_str_tuple_list, runner, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, **kwargs):
+def run_streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, **kwargs):
         def _run(stop_thread):
-            asyncio.run(streams(storage_topic_str_tuple_list, runner, sink_storage, sink_topic_str, snapshot_storage=snapshot_storage, snapshot_topic=snapshot_topic, stop_thread=stop_thread, **kwargs))
+            asyncio.run(streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage, sink_topic_str, snapshot_storage=snapshot_storage, snapshot_topic=snapshot_topic, stop_thread=stop_thread, **kwargs))
         #
         def _stop():
             stop_thread.set()
@@ -27,18 +24,20 @@ def run_streams(storage_topic_str_tuple_list, runner, sink_storage, sink_topic_s
         #
         return _stop
 
-async def streams(storage_topic_str_tuple_list, runner, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
+async def streams(storage_topic_str_tuple_list, root_topologyNode, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
     producer = sink_storage.producer(sink_topic_str, **kwargs)
     #
-    def sink_function(message_dict_list):
-        producer.produce_list(message_dict_list, **kwargs)
+    def sink_function(value_dict_list):
+        message_dict_list1 = [{"value": value_dict,
+                               "key": value_dict["_key"] if "_key" in value_dict else None} for value_dict in value_dict_list]
+        producer.produce_list(message_dict_list1, **kwargs)
     #
     def finally_function():
         producer.close()
     #
-    await streams_function(storage_topic_str_tuple_list, runner, sink_function, finally_function, snapshot_storage, snapshot_topic, stop_thread, **kwargs)
+    await streams_function(storage_topic_str_tuple_list, root_topologyNode, sink_function, finally_function, snapshot_storage, snapshot_topic, stop_thread, **kwargs)
 
-async def streams_function(storage_topic_str_tuple_list, runner, foreach_function, finally_function, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
+async def streams_function(storage_topic_str_tuple_list, root_topologyNode, foreach_function, finally_function, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
     consume_sleep_float = kwargs["consume_sleep"] if "consume_sleep" in kwargs else 0.1
     process_sleep_float = kwargs["process_sleep"] if "process_sleep" in kwargs else 0.1
     snapshot_interval_float = kwargs["snapshot_interval"] if "snapshot_interval" in kwargs else 1.0
@@ -51,7 +50,7 @@ async def streams_function(storage_topic_str_tuple_list, runner, foreach_functio
     last_snapshot_hash_str_list = [None]
     #
     def save_snapshot():
-        root_topologyNode_bytes = cloudpickle.dumps(runner._root_topologyNode)
+        root_topologyNode_bytes = cloudpickle.dumps(root_topologyNode)
         root_topologyNode_hash_str = hashlib.md5(root_topologyNode_bytes).hexdigest()
         #
         if root_topologyNode_hash_str != last_snapshot_hash_str_list[0]:
@@ -72,20 +71,16 @@ async def streams_function(storage_topic_str_tuple_list, runner, foreach_functio
             last_snapshot_hash_str_list[0] = root_topologyNode_hash_str
             #
             print("Loading snaphot...")
-            root_topologyNode = cloudpickle.loads(root_topologyNode_bytes)
+            return cloudpickle.loads(root_topologyNode_bytes)
         else:
-            root_topologyNode
-        #
-        runner = Runner(root_topologyNode)
-        #
-        return runner
+            return root_topologyNode
     #
     if snapshot_storage is not None:
         root_topologyNode = load_snapshot()
     #
     storage_source_topologyNode_queue_tuple_list = []
     for storage, topic_str in storage_topic_str_tuple_list:
-        source_topologyNode = runner._root_topologyNode.get_node_by_name(topic_str)
+        source_topologyNode = root_topologyNode.get_node_by_name(topic_str)
         #
         queue = asyncio.Queue()
         storage_source_topologyNode_queue_tuple_list.append((storage, source_topologyNode, queue))
@@ -125,7 +120,7 @@ async def streams_function(storage_topic_str_tuple_list, runner, foreach_functio
                     if not queue.empty():
                         message_dict_list = await queue.get()
                         #
-                        topic_str = source_topologyNode.get_name()
+                        topic_str = source_topologyNode.name()
                         storage_id_topic_str_tuple = (storage.get_id(), topic_str)
                         partitions_int = storage_id_topic_str_tuple_partitions_int_dict[storage_id_topic_str_tuple]
                         storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple] = {}
@@ -135,14 +130,18 @@ async def streams_function(storage_topic_str_tuple_list, runner, foreach_functio
                             if offset_int is not None:
                                 storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int + 1
                         #
-                        runner.insert(source_topologyNode.get_name(), message_dict_list)
+                        zSet = message_dict_list_to_ZSet(message_dict_list)
                         #
+                        stream = source_topologyNode.output_handle_function().get()
+                        stream.send(zSet)
                         sent_bool = True
                 #
                 if sent_bool:
-                    runner.step()
+                    root_topologyNode.step()
+                    zSet = root_topologyNode.latest()
+                    # zSet = root_topologyNode.latest_until_fixpoint()
                     #
-                    message_dict_list, _ = runner.delta()
+                    message_dict_list = [json.loads(message_json_str) for message_json_str, i in zSet.items() if i == 1]
                     #
                     foreach_function(message_dict_list)
                 #
@@ -165,7 +164,7 @@ async def streams_function(storage_topic_str_tuple_list, runner, foreach_functio
         # Create one task for each source of the topology.
         for storage, source_topologyNode, queue in storage_source_topologyNode_queue_tuple_list:
             storage_id = storage.get_id()
-            topic_str = source_topologyNode.get_name()
+            topic_str = source_topologyNode.name()
             consumer = storage_id_topic_str_tuple_consumer_dict[(storage_id, topic_str)]
             taskGroup.create_task(consumer_task(consumer, queue))
         #
