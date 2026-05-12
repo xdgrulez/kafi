@@ -24,6 +24,8 @@ class TopologyNode:
         self._id_str = str(uuid.uuid4())
         self._daughter_topologyNode_list = daughter_topologyNode_list
         self._output_stream2D = output_stream2D
+        #
+        self._tick = 0
 
     #
 
@@ -145,6 +147,19 @@ class TopologyNode:
         #
         return name_str_topologyNode_dict[name_str]
 
+    def get_source_nodes(self):
+        def collect_node_dict(topologyNode, name_str_topologyNode_dict):
+            if not topologyNode.daughters():
+                name_str_topologyNode_dict[topologyNode.name()] = topologyNode
+            else:
+                for daughter_topologyNode in topologyNode.daughters():
+                    collect_node_dict(daughter_topologyNode, name_str_topologyNode_dict)
+        #
+        name_str_topologyNode_dict = {}
+        collect_node_dict(self, name_str_topologyNode_dict)
+        #
+        return name_str_topologyNode_dict
+
     #        
 
     def topology(self, include_ids=False):
@@ -212,8 +227,17 @@ def update(*key_str_tuple):
 #
 
 class Runner():
-    def __init__(self):
+    def __init__(self, root_topologyNode=None):
         self._program2D = Program2D()
+        #
+        if root_topologyNode:
+            source_str_topologyNode_dict = root_topologyNode.get_source_nodes()
+            source_list = [topologyNode.output_stream2D() for topologyNode in source_str_topologyNode_dict.values()]
+            self._program2D._sources = source_list
+            #
+            self.root(root_topologyNode)
+            #
+            self._program2D._tick = root_topologyNode._tick
 
     def source(self, source_str):
         output_stream2D = self._program2D.source(source_str)
@@ -221,7 +245,7 @@ class Runner():
         topologyNode = TopologyNode(source_str, [], output_stream2D)
         #
         return topologyNode
-
+    
     def root(self, root_topologyNode):
         self._root_topologyNode = root_topologyNode
         #
@@ -229,6 +253,8 @@ class Runner():
 
     def step(self):
         self._program2D.step()
+        #
+        self._root_topologyNode._tick = self._program2D._tick
     
     def insert(self, source_str, message_dict_list):
         source_topologyNode = self._root_topologyNode.get_node_by_name(source_str)
@@ -237,24 +263,17 @@ class Runner():
         self._program2D.insert(source_topologyNode.output_stream2D(), value_json_str_list)
 
     def delta(self):
-        return self._view.delta().inner
+        zSet = self._view.delta()
+        #
+        message_dict_list = zSet_to_message_dict_list_tuple(zSet)
+        #
+        return message_dict_list
 
 
 def json_default(obj):
     if isinstance(obj, datetime.datetime):
         return obj.isoformat()
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
-
-
-def message_dict_list_to_ZSet(message_dict_list):
-    value_json_str_list = []
-    for message_dict in message_dict_list:
-        value_dict = message_dict["value"]
-        value_json_str = json.dumps(value_dict, default=json_default)
-        value_json_str_list.append(value_json_str)
-    #
-    zSet = ZSet({k: 1 for k in value_json_str_list})
-    return zSet
 
 
 def message_dict_list_to_value_json_str_list(message_dict_list):

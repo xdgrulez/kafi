@@ -2,10 +2,6 @@ import json, unittest
 
 import cloudpickle as pickle
 
-from kafi.streams.topologynode import (
-    message_dict_list_to_value_json_str_list
-)
-
 #
 
 class TestTopologyNodeBase(unittest.TestCase):
@@ -64,15 +60,14 @@ class TestTopologyNodeBase(unittest.TestCase):
             #
             runner.step()
             #
-            print(runner.delta())
-            # latest_zSet = root_topologyNode.latest()
-            # updated_output_dict_list, deleted_output_dict_list = zSet_to_message_dict_list_tuple(latest_zSet)
-            # coll_updated_output_dict_list += updated_output_dict_list
-            # coll_deleted_output_dict_list += deleted_output_dict_list
+            updated_output_dict_list, deleted_output_dict_list = runner.delta()
+            coll_updated_output_dict_list += updated_output_dict_list
+            coll_deleted_output_dict_list += deleted_output_dict_list
             #
             print()
             print(f"{step_int}/{steps_int}")
             # print(f"{step_int} - Latest: {root_topologyNode.latest()}")
+            print(len(runner._root_topologyNode.get_node_by_name("transactions")._output_stream2D._input._values))
             print(len(pickle.dumps(runner._root_topologyNode)) / 1024)
             print(len(pickle.dumps(runner)) / 1024)
         #
