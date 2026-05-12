@@ -243,20 +243,27 @@ def update(*key_str_tuple):
 
 #
 
-def program():
-    program2D = Program2D(gc=True)
-    #
-    return program2D
+class Runner():
+    def __init__(self):
+        self._program2D = Program2D()
 
+    def source(self, source_str):
+        output_stream2D = self._program2D.source(source_str)
+        #
+        topologyNode = TopologyNode(source_str, output_stream2D, [])
+        #
+        return topologyNode
 
-def source(program2D, name_str):
-    output_stream2D = program2D.source(name_str)
-    #
-    def output_stream2D_function():
-        return output_stream2D
-    #
-    topologyNode = TopologyNode(name_str, output_stream2D_function, [])
-    return topologyNode
+    def root(self, root_topologyNode):
+        self._root_topologyNode = root_topologyNode
+        #
+        self._view = self._program2D.view("root", root_topologyNode.output_stream2D)
+
+    def step(self):
+        self._program2D.step()
+    
+    def delta(self):
+        return self._view.delta().inner
 
 
 def json_default(obj):

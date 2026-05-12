@@ -2,17 +2,16 @@ import random
 
 from kafi.streams.topologynode import (
     get,
-    program,
-    source
+    Runner
 )
 
 #
 
 class TestJamieBase():
-    def get_topology(self, transaction_source_str):
-        program2D = program()
+    def get_runner(self, transaction_source_str):
+        runner = Runner()
         #
-        transaction_source_topologyNode = source(program2D, transaction_source_str)
+        transaction_source_topologyNode = runner.source(transaction_source_str)
         #
         transaction_topologyNode = transaction_source_topologyNode.map(
             lambda x: {
@@ -51,10 +50,9 @@ class TestJamieBase():
             lambda _, y: {"sum": y}
         )
         #
-        # root_topologyNode.set_program(program2D)
-        view = program2D.view("root", root_topologyNode._output_stream2D_function())
+        runner.root(root_topologyNode)
         #
-        return root_topologyNode, program2D, view
+        return runner
 
     #
 
