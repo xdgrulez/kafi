@@ -107,26 +107,26 @@ class TopologyNode:
         return topologyNode
     #
 
-    def name(self):
+    def get_name(self):
         return self._name_str
 
-    def id(self):
+    def get_id(self):
         return self._id_str
 
-    def daughters(self):
+    def get_daughters(self):
         return self._daughter_topologyNode_list
 
-    def output_stream2D(self):
+    def get_output_stream2D(self):
         return self._output_stream2D
     
     #
 
     def get_node_by_id(self, id_str):
         def collect_node_dict(topologyNode, id_str_topologyNode_dict):
-            if id_str == topologyNode.id():
+            if id_str == topologyNode.get_id():
                 id_str_topologyNode_dict[id_str] = topologyNode
             else:
-                for daughter_topologyNode in topologyNode.daughters():
+                for daughter_topologyNode in topologyNode.get_daughters():
                     collect_node_dict(daughter_topologyNode, id_str_topologyNode_dict)
         #
         id_str_topologyNode_dict = {}
@@ -136,10 +136,10 @@ class TopologyNode:
 
     def get_node_by_name(self, name_str):
         def collect_node_dict(topologyNode, name_str_topologyNode_dict):
-            if name_str == topologyNode.name():
+            if name_str == topologyNode.get_name():
                 name_str_topologyNode_dict[name_str] = topologyNode
             else:
-                for daughter_topologyNode in topologyNode.daughters():
+                for daughter_topologyNode in topologyNode.get_daughters():
                     collect_node_dict(daughter_topologyNode, name_str_topologyNode_dict)
         #
         name_str_topologyNode_dict = {}
@@ -149,10 +149,10 @@ class TopologyNode:
 
     def get_source_nodes(self):
         def collect_node_dict(topologyNode, name_str_topologyNode_dict):
-            if not topologyNode.daughters():
-                name_str_topologyNode_dict[topologyNode.name()] = topologyNode
+            if not topologyNode.get_daughters():
+                name_str_topologyNode_dict[topologyNode.get_name()] = topologyNode
             else:
-                for daughter_topologyNode in topologyNode.daughters():
+                for daughter_topologyNode in topologyNode.get_daughters():
                     collect_node_dict(daughter_topologyNode, name_str_topologyNode_dict)
         #
         name_str_topologyNode_dict = {}
@@ -186,15 +186,15 @@ class TopologyNode:
     def mermaid(self, include_ids=False):
         def collect_nodes_and_edges(topologyNode, name_str_set, edge_str_list):
             if include_ids:
-                name_str_set.add(f"{topologyNode.name()}_{topologyNode.id()}")
+                name_str_set.add(f"{topologyNode.get_name()}_{topologyNode.get_id()}")
             else:
-                name_str_set.add(topologyNode.name())
+                name_str_set.add(topologyNode.get_name())
             #
-            for daughter_topologyNode in topologyNode.daughters():
+            for daughter_topologyNode in topologyNode.get_daughters():
                 if include_ids:
-                    edge_str_list.append(f"{daughter_topologyNode.name()}_{daughter_topologyNode.id()} --> {topologyNode.name()}_{topologyNode.id()}")
+                    edge_str_list.append(f"{daughter_topologyNode.get_name()}_{daughter_topologyNode.get_id()} --> {topologyNode.get_name()}_{topologyNode.get_id()}")
                 else:
-                    edge_str_list.append(f"{daughter_topologyNode.name()} --> {topologyNode.name()}")
+                    edge_str_list.append(f"{daughter_topologyNode.get_name()} --> {topologyNode.get_name()}")
                 #
                 collect_nodes_and_edges(daughter_topologyNode, name_str_set, edge_str_list)
         #
@@ -232,7 +232,7 @@ class Runner():
         #
         if root_topologyNode:
             source_str_topologyNode_dict = root_topologyNode.get_source_nodes()
-            source_list = [topologyNode.output_stream2D() for topologyNode in source_str_topologyNode_dict.values()]
+            source_list = [topologyNode.get_output_stream2D() for topologyNode in source_str_topologyNode_dict.values()]
             self._program2D._sources = source_list
             #
             self.root(root_topologyNode)
@@ -249,7 +249,7 @@ class Runner():
     def root(self, root_topologyNode):
         self._root_topologyNode = root_topologyNode
         #
-        self._view = self._program2D.view("root", root_topologyNode.output_stream2D())
+        self._view = self._program2D.view("root", root_topologyNode.get_output_stream2D())
 
     def step(self):
         self._program2D.step()
@@ -260,7 +260,7 @@ class Runner():
         source_topologyNode = self._root_topologyNode.get_node_by_name(source_str)
         value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
         #
-        self._program2D.insert(source_topologyNode.output_stream2D(), value_json_str_list)
+        self._program2D.insert(source_topologyNode.get_output_stream2D(), value_json_str_list)
 
     def delta(self):
         zSet = self._view.delta()
@@ -309,6 +309,6 @@ def zSet_to_message_dict_list_tuple(zSet):
 
 def traverse(topologyNode, stack_topologyNode_list):
     stack_topologyNode_list.append(topologyNode)
-    for daughter_topologyNode in topologyNode.daughters():
+    for daughter_topologyNode in topologyNode.get_daughters():
         traverse(daughter_topologyNode, stack_topologyNode_list)
     return stack_topologyNode_list
