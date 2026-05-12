@@ -261,7 +261,7 @@ class Runner():
             key_int_tuple_list = list(input._values.keys())
             for key_int_tuple in key_int_tuple_list:
                 key_int = key_int_tuple[0]
-                if key_int > 1 and key_int < self._program2D._tick - 2:
+                if self._program2D._tick >= 2 and key_int < self._program2D._tick - 2:
                     del input._values[key_int_tuple]
     
     def insert(self, source_str, message_dict_list):

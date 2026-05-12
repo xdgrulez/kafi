@@ -1,5 +1,5 @@
 from kafi.streams.topologynode import (
-    source
+    Runner
 )
 
 from datagen.shoe_clickstream import ShoeClickstreamGenerator
@@ -10,18 +10,22 @@ from datagen.shoe_orders import ShoeOrderGenerator
 #
 
 class TestDatagenBase():
-    def get_topology_1_join(self, click_source_str, customer_source_str):
-        source_click_topologyNode = source(click_source_str)
-        source_customer_topologyNode = source(customer_source_str)
+    def get_runner_1_join(self, click_source_str, customer_source_str):
+        runner = Runner()
+        #
+        source_click_topologyNode = runner.source(click_source_str)
+        source_customer_topologyNode = runner.source(customer_source_str)
         #
         click_topologyNode = (
             source_click_topologyNode
-            .map_distinct(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"]})
+            .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"]})
+            .distinct()
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
-            .map_distinct(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
+            .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
+            .distinct()
         )
         #
         root_topologyNode = (
@@ -29,32 +33,39 @@ class TestDatagenBase():
             .join(customer_topologyNode,
                   left_on_function=lambda l: l["user_id"],
                   right_on_function=lambda r: r["id"],
-                  projection_function=lambda l, r: {"user_id": l["user_id"],
-                                                    "ip": l["ip"],
-                                                    "first_name": r["first_name"]},
-                  profile_config_dict = None)
+                  projection_function=lambda l, r: {
+                      "user_id": l["user_id"],
+                      "ip": l["ip"],
+                      "first_name": r["first_name"]})
         )
         #
-        return root_topologyNode
+        runner.root(root_topologyNode)
+        #
+        return runner
 
-    def get_topology_2_joins(self, click_source_str, customer_source_str, product_source_str):
-        source_click_topologyNode = source(click_source_str)
-        source_customer_topologyNode = source(customer_source_str)
-        source_product_topologyNode = source(product_source_str)
+    def get_runner_2_joins(self, click_source_str, customer_source_str, product_source_str):
+        runner = Runner()
+        #
+        source_click_topologyNode = runner.source(click_source_str)
+        source_customer_topologyNode = runner.source(customer_source_str)
+        source_product_topologyNode = runner.source(product_source_str)
         #
         click_topologyNode = (
             source_click_topologyNode
-            .map_distinct(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"], "product_id": x["payload"]["product_id"]})
+            .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"], "product_id": x["payload"]["product_id"]})
+            .distinct()
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
-            .map_distinct(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
+            .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
+            .distinct()
         )
         #
         product_topologyNode = (
             source_product_topologyNode
-            .map_distinct(lambda x: {"id": x["payload"]["id"], "brand": x["payload"]["brand"]})
+            .map(lambda x: {"id": x["payload"]["id"], "brand": x["payload"]["brand"]})
+            .distinct()
         )
         #
         root_topologyNode = (
@@ -62,47 +73,55 @@ class TestDatagenBase():
             .join(customer_topologyNode,
                   left_on_function=lambda l: l["user_id"],
                   right_on_function=lambda r: r["id"],
-                  projection_function=lambda l, r: {"user_id": l["user_id"],
-                                                    "ip": l["ip"],
-                                                    "product_id": l["product_id"],
-                                                    "first_name": r["first_name"]})
-                  .join(product_topologyNode,
-                        left_on_function=lambda l: l["product_id"],
-                        right_on_function=lambda r: r["id"],
-                        projection_function=lambda l, r: {"user_id": l["user_id"],
-                                                          "ip": l["ip"],
-                                                          "product_id": l["product_id"],
-                                                          "first_name": l["first_name"],
-                                                          "brand": r["brand"]},
-                        profile_config_dict = None)
+                  projection_function=lambda l, r: {
+                      "user_id": l["user_id"],
+                      "ip": l["ip"],
+                      "product_id": l["product_id"],
+                      "first_name": r["first_name"]})
+                      .join(product_topologyNode,
+                            left_on_function=lambda l: l["product_id"],
+                            right_on_function=lambda r: r["id"],
+                            projection_function=lambda l, r: {"user_id": l["user_id"],
+                                                              "ip": l["ip"],
+                                                              "product_id": l["product_id"],
+                                                              "first_name": l["first_name"],
+                                                              "brand": r["brand"]})
         )
         #
-        return root_topologyNode
+        runner.root(root_topologyNode)
+        #
+        return runner
 
-    def get_topology_3_joins(self, click_source_str, customer_source_str, product_source_str, order_source_str):
-        source_click_topologyNode = source(click_source_str)
-        source_customer_topologyNode = source(customer_source_str)
-        source_product_topologyNode = source(product_source_str)
-        source_order_topologyNode = source(order_source_str)
+    def get_runner_3_joins(self, click_source_str, customer_source_str, product_source_str, order_source_str):
+        runner = Runner()
+        #
+        source_click_topologyNode = runner.source(click_source_str)
+        source_customer_topologyNode = runner.source(customer_source_str)
+        source_product_topologyNode = runner.source(product_source_str)
+        source_order_topologyNode = runner.source(order_source_str)
         #
         click_topologyNode = (
             source_click_topologyNode
-            .map_distinct(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"], "product_id": x["payload"]["product_id"]})
+            .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"], "product_id": x["payload"]["product_id"]})
+            .distinct()
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
-            .map_distinct(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
+            .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
+            .distinct()
         )
         #
         product_topologyNode = (
             source_product_topologyNode
-            .map_distinct(lambda x: {"id": x["payload"]["id"], "brand": x["payload"]["brand"]})
+            .map(lambda x: {"id": x["payload"]["id"], "brand": x["payload"]["brand"]})
+            .distinct()
         )
         #
         order_topologyNode = (
             source_order_topologyNode
-            .map_distinct(lambda x: {"order_id": x["payload"]["order_id"], "product_id": x["payload"]["product_id"], "customer_id": x["payload"]["customer_id"]})
+            .map(lambda x: {"order_id": x["payload"]["order_id"], "product_id": x["payload"]["product_id"], "customer_id": x["payload"]["customer_id"]})
+            .distinct()
         )
         #
         root_topologyNode = (
@@ -114,40 +133,33 @@ class TestDatagenBase():
                     "user_id": l["user_id"],
                     "ip": l["ip"],
                     "product_id": l["product_id"],
-                    "order_id": r["order_id"]
-                },
-                profile_config_dict=None
-            )
-            .join(
-                customer_topologyNode,
-                left_on_function=lambda l: l["user_id"],
-                right_on_function=lambda r: r["id"],
-                projection_function=lambda l, r: {
-                    "user_id": l["user_id"],
-                    "ip": l["ip"],
-                    "product_id": l["product_id"],
-                    "order_id": l["order_id"],
-                    "first_name": r["first_name"]
-                },
-                profile_config_dict=None
-            )
-            .join(
-                product_topologyNode,
-                left_on_function=lambda l: l["product_id"],
-                right_on_function=lambda r: r["id"],
-                projection_function=lambda l, r: {
-                    "user_id": l["user_id"],
-                    "ip": l["ip"],
-                    "product_id": l["product_id"],
-                    "first_name": l["first_name"],
-                    "brand": r["brand"],
-                    "order_id": l["order_id"]
-                },
-                 profile_config_dict=None
-            )
+                    "order_id": r["order_id"]})
+                    .join(
+                        customer_topologyNode,
+                        left_on_function=lambda l: l["user_id"],
+                        right_on_function=lambda r: r["id"],
+                        projection_function=lambda l, r: {
+                            "user_id": l["user_id"],
+                            "ip": l["ip"],
+                            "product_id": l["product_id"],
+                            "order_id": l["order_id"],
+                            "first_name": r["first_name"]})
+                            .join(
+                                product_topologyNode,
+                                left_on_function=lambda l: l["product_id"],
+                                right_on_function=lambda r: r["id"],
+                                projection_function=lambda l, r: {
+                                    "user_id": l["user_id"],
+                                    "ip": l["ip"],
+                                    "product_id": l["product_id"],
+                                    "first_name": l["first_name"],
+                                    "brand": r["brand"],
+                                    "order_id": l["order_id"]})
         )
         #
-        return root_topologyNode
+        runner.root(root_topologyNode)
+        #
+        return runner
 
     #
 
