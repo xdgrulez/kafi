@@ -2,10 +2,10 @@ from kafi.helpers import get_value, set_value
 
 from pydbsp import (
     DeltaLiftedDeltaLiftedSortMergeJoin,
-    Program2D,
     LiftedLiftedProject,
     LiftedLiftedGroupBySum,
-    DeltaLiftedDistinct
+    DeltaLiftedDistinct,
+    Program2D
 )
 
 import datetime
@@ -227,17 +227,8 @@ def update(*key_str_tuple):
 #
 
 class Runner():
-    def __init__(self, root_topologyNode=None):
-        self._program2D = Program2D()
-        #
-        if root_topologyNode:
-            source_str_topologyNode_dict = root_topologyNode.get_source_nodes()
-            source_list = [topologyNode.get_output_stream2D() for topologyNode in source_str_topologyNode_dict.values()]
-            self._program2D._sources = source_list
-            #
-            self.root(root_topologyNode)
-            #
-            self._program2D._tick = root_topologyNode._tick
+    def __init__(self, gc=True, parallelism=1, parallel_layer_min_width=4):
+        self._program2D = Program2D(gc=gc, parallelism=parallelism, parallel_layer_min_width=parallel_layer_min_width)
 
     def source(self, source_str):
         output_stream2D = self._program2D.source(source_str)
@@ -252,17 +243,11 @@ class Runner():
         self._view = self._program2D.view("root", root_topologyNode.get_output_stream2D())
 
     def step(self):
-        self._program2D.step()
+        zSet = self._program2D.step()[self._view]
         #
-        self._root_topologyNode._tick = self._program2D._tick
+        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet)
         #
-        for _, topologyNode in self._root_topologyNode.get_source_nodes().items():
-            input = topologyNode.get_output_stream2D()._input
-            key_int_tuple_list = list(input._values.keys())
-            for key_int_tuple in key_int_tuple_list:
-                key_int = key_int_tuple[0]
-                if self._program2D._tick >= 2 and key_int < self._program2D._tick - 2:
-                    del input._values[key_int_tuple]
+        return updated_message_dict_list, deleted_message_dict_list
     
     def insert(self, source_str, message_dict_list):
         source_topologyNode = self._root_topologyNode.get_node_by_name(source_str)
@@ -270,13 +255,16 @@ class Runner():
         #
         self._program2D.insert(source_topologyNode.get_output_stream2D(), value_json_str_list)
 
-    def delta(self):
-        zSet = self._view.delta()
-        #
-        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet)
-        #
-        return updated_message_dict_list, deleted_message_dict_list
+    def get_program2D(self):
+        return self._program2D
 
+    def get_root(self):
+        return self._root_topologyNode
+    
+    def get_view(self):
+        return self._view
+
+#
 
 def json_default(obj):
     if isinstance(obj, datetime.datetime):

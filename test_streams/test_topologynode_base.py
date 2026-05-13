@@ -58,9 +58,7 @@ class TestTopologyNodeBase(unittest.TestCase):
                 runner.insert(source_str, message_dict_list)
                 source_str_messages_int_dict[source_str] += len(message_dict_list)
             #
-            runner.step()
-            #
-            updated_output_dict_list, deleted_output_dict_list = runner.delta()
+            updated_output_dict_list, deleted_output_dict_list = runner.step()
             coll_updated_output_dict_list += updated_output_dict_list
             coll_deleted_output_dict_list += deleted_output_dict_list
             #
@@ -68,7 +66,7 @@ class TestTopologyNodeBase(unittest.TestCase):
             print(f"{step_int}/{steps_int}")
             # print(f"{step_int} - Latest: {root_topologyNode.latest()}")
             # print(runner._root_topologyNode.get_node_by_name("transactions")._output_stream2D._input._values.keys())
-            print(len(pickle.dumps(runner._root_topologyNode)) / 1024)
+            # print(len(pickle.dumps(runner._root_topologyNode)) / 1024)
             print(len(pickle.dumps(runner)) / 1024)
         #
         return source_str_messages_int_dict, coll_updated_output_dict_list, coll_deleted_output_dict_list

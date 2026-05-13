@@ -51,37 +51,33 @@ async def streams_function(storage_topic_str_tuple_list, runner, foreach_functio
     last_snapshot_hash_str_list = [None]
     #
     def save_snapshot():
-        root_topologyNode_bytes = cloudpickle.dumps(runner._root_topologyNode)
-        root_topologyNode_hash_str = hashlib.md5(root_topologyNode_bytes).hexdigest()
+        runner_bytes = cloudpickle.dumps(runner)
+        runner_hash_str = hashlib.md5(runner_bytes).hexdigest()
         #
-        if root_topologyNode_hash_str != last_snapshot_hash_str_list[0]:
-            last_snapshot_hash_str_list[0] = root_topologyNode_hash_str
+        if runner_hash_str != last_snapshot_hash_str_list[0]:
+            last_snapshot_hash_str_list[0] = runner_hash_str
             #
             print("Saving snapshot...")
             producer = snapshot_storage.producer(snapshot_topic, type="bytes", chunk_size_bytes=1000)
-            producer.produce(root_topologyNode_bytes, key=root_topologyNode.id())
+            producer.produce(runner_bytes, key=runner._root_topologyNode.id())
             producer.close()
 
     #
     def load_snapshot():
         message_dict_list = snapshot_storage.compact(snapshot_topic, type="bytes", dechunk=True)
         if len(message_dict_list) > 0:
-            root_topologyNode_bytes = message_dict_list[0]["value"]
+            runner_bytes = message_dict_list[0]["value"]
             #
-            root_topologyNode_hash_str = hashlib.md5(root_topologyNode_bytes).hexdigest()
-            last_snapshot_hash_str_list[0] = root_topologyNode_hash_str
+            runner_hash_str = hashlib.md5(runner_bytes).hexdigest()
+            last_snapshot_hash_str_list[0] = runner_hash_str
             #
             print("Loading snaphot...")
-            root_topologyNode = cloudpickle.loads(root_topologyNode_bytes)
-        else:
-            root_topologyNode
-        #
-        runner = Runner(root_topologyNode)
+            runner = cloudpickle.loads(runner_bytes)
         #
         return runner
     #
     if snapshot_storage is not None:
-        root_topologyNode = load_snapshot()
+        runner = load_snapshot()
     #
     storage_source_topologyNode_queue_tuple_list = []
     for storage, topic_str in storage_topic_str_tuple_list:
@@ -140,9 +136,7 @@ async def streams_function(storage_topic_str_tuple_list, runner, foreach_functio
                         sent_bool = True
                 #
                 if sent_bool:
-                    runner.step()
-                    #
-                    message_dict_list, _ = runner.delta()
+                    message_dict_list, _ = runner.step()
                     #
                     foreach_function(message_dict_list)
                 #
