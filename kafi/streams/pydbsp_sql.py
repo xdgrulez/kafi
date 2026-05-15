@@ -1,14 +1,14 @@
 from typing import Callable, Optional, Dict
 
-from pydbsp1.indexed_zset import Indexer, I
+from old_pydbsp.indexed_zset import Indexer, I
 
-from pydbsp1.stream import step_until_fixpoint_and_return, BinaryOperator, Lift1, LiftedGroupAdd, Stream, StreamHandle, UnaryOperator
-from pydbsp1.stream.operators.linear import Integrate, LiftedIntegrate, LiftedGroupNegate
+from old_pydbsp.stream import step_until_fixpoint_and_return, BinaryOperator, Lift1, LiftedGroupAdd, Stream, StreamHandle, UnaryOperator
+from old_pydbsp.stream.operators.linear import Integrate, LiftedIntegrate, LiftedGroupNegate
 
-from pydbsp1.zset import ZSet, ZSetAddition
-from pydbsp1.zset.operators.bilinear import DeltaLiftedDeltaLiftedJoin, JoinCmp, PostJoinProjection, R, S, T
-from pydbsp1.zset.operators.linear import Cmp, LiftedLiftedProject, LiftedLiftedSelect, Projection as project
-from pydbsp1.zset.operators.unary import DeltaLiftedDeltaLiftedDistinct
+from old_pydbsp.zset import ZSet, ZSetAddition
+from old_pydbsp.zset.operators.bilinear import DeltaLiftedDeltaLiftedJoin, JoinCmp, PostJoinProjection, R, S, T
+from old_pydbsp.zset.operators.linear import Cmp, LiftedLiftedProject, LiftedLiftedSelect, Projection as project
+from old_pydbsp.zset.operators.unary import DeltaLiftedDeltaLiftedDistinct
 
 import time
 
