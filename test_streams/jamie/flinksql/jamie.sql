@@ -8,7 +8,7 @@ ts TIMESTAMP(3)
     'connector' = 'kafka',
     'topic' = 'transactions',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'properties.group.id' = 'transactions_flink',
+    'properties.group.id' = 'flink_transactions',
     'scan.startup.mode' = 'earliest-offset',
     'format' = 'json',
     'json.fail-on-missing-field' = 'true',

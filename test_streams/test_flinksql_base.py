@@ -5,11 +5,7 @@ import json, subprocess, threading, time, unittest
 flinksql_path_str = "/home/ralph/apps/flink-2.2.0"
 flinksql_start_cluster_str = f"{flinksql_path_str}/bin/start-cluster.sh"
 flinksql_stop_cluster_str = f"{flinksql_path_str}/bin/stop-cluster.sh"
-
-def get_flinksql_client_str(flinksql_sql_path_str):
-    flinksql_sql_path_str = f"{flinksql_path_str}/bin/sql-client.sh -f {flinksql_sql_path_str}"
-    #
-    return flinksql_sql_path_str
+flinksql_sql_client_path_str = f"{flinksql_path_str}/bin/sql-client.sh"
 
 #
 
@@ -70,8 +66,7 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
         start_cluster_completedProcess = subprocess.run([flinksql_start_cluster_str], capture_output=True, text=True)
         print(start_cluster_completedProcess.stdout)
         #
-        flinksql_sql_client_str = get_flinksql_client_str(flinksql_sql_path_str)
-        sql_client_completedProcess = subprocess.run([flinksql_sql_client_str], capture_output=True, text=True)
+        sql_client_completedProcess = subprocess.run([flinksql_sql_client_path_str, "-f", flinksql_sql_path_str], capture_output=True, text=True)
         print(sql_client_completedProcess.stdout)
 
     #
@@ -102,13 +97,12 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
         return offset_int >= steps_int * batch_size_int
 
     #
-    
-    def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int):
+
+    def go(self, flinksql_sql_path_str, flinksql_group_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int):
         source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list]
         #
-        group_str = "flink_1_join"
         for source_storage, topic_str in source_storage_topic_str_tuple_list:
-            source_storage.grm(group_str)
+            source_storage.grm(flinksql_group_str)
         #
         self.source_str_messages_int_dict = {source_str: 0 for _, source_str in source_storage_topic_str_tuple_list}
         #
@@ -118,13 +112,13 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
         #
         thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int))
         #
-        thread2 = threading.Thread(target=self.process, args=(flinksql_sql_path_str))
+        thread2 = threading.Thread(target=self.process, args=(flinksql_sql_path_str, ))
         #
         thread1.start()
         thread2.start()
         #
         while True:
-            if all(self.stop(storage, topic_str, batch_size_int, group_str, steps_int) for storage, topic_str, batch_size_int in source_storage_topic_str_batch_size_int_tuple_list):
+            if all(self.stop(storage, topic_str, batch_size_int, flinksql_group_str, steps_int) for storage, topic_str, batch_size_int in source_storage_topic_str_batch_size_int_tuple_list):
                 break
             #
             time.sleep(0.1)
