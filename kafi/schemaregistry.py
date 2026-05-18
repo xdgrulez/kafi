@@ -241,7 +241,8 @@ def registeredSchema_to_registeredSchema_dict(registeredSchema):
     registeredSchema_dict = {"schema_id": registeredSchema.schema_id,
                              "schema": schema_to_schema_dict(registeredSchema.schema),
                              "subject": registeredSchema.subject,
-                             "version": registeredSchema.version}
+                             "version": registeredSchema.version,
+                             "guid": registeredSchema.guid}
     #
     return registeredSchema_dict
 

@@ -3,6 +3,7 @@ import importlib
 import json
 import sys
 import tempfile
+import uuid
 
 from confluent_kafka.schema_registry.avro import AvroDeserializer
 from confluent_kafka.schema_registry.json_schema import JSONDeserializer
@@ -76,7 +77,12 @@ class Deserializer(SchemaRegistry):
         if schema_id_key_str in headers_dict:
             # Get the Schema ID from headers_dict if available.
             schema_guid_bytes = headers_dict[schema_id_key_str]
-            schema_dict = self.get_schema_by_guid(schema_guid_bytes)
+            # Skip the version byte (\x01).
+            schema_guid_bytes1 = schema_guid_bytes[1:]
+            # Convert to UUID.
+            schema_guid_str = str(uuid.UUID(bytes=schema_guid_bytes1))
+            # Get the schema at last.
+            schema_dict = self.get_schema_by_guid(schema_guid_str)
         else:
             # Else get the Schema ID from the payload.
             schema_id_int = int.from_bytes(bytes[1:5], "big")
