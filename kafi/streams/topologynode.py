@@ -242,10 +242,12 @@ class Runner():
         #
         self._view = self._program2D.view("root", root_topologyNode.get_output_stream2D())
 
-    def step(self):
+    def step(self, bag=False):
+        bag_boolean = bag
+        #
         zSet = self._program2D.step()[self._view]
         #
-        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet)
+        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet, bag_boolean)
         #
         return updated_message_dict_list, deleted_message_dict_list
     
@@ -282,20 +284,32 @@ def message_dict_list_to_value_json_str_list(message_dict_list):
     return value_json_str_list
 
 
-def zSet_to_message_dict_list_tuple(zSet):
+def zSet_to_message_dict_list_tuple(zSet, bag_boolean=False):
+    def value_json_str_to_message_dict(value_json_str):
+        value_dict = json.loads(value_json_str)
+        message_dict = {"value": value_dict}
+        #
+        return message_dict
+    #
     updated_message_dict_list = []
     deleted_message_dict_list = []
     for value_json_str, weight_int in zSet.items():
         if weight_int > 0:
-            for _ in range(weight_int):
-                value_dict = json.loads(value_json_str)
-                message_dict = {"value": value_dict}
+            if bag_boolean:
+                for _ in range(weight_int):
+                    message_dict = value_json_str_to_message_dict(value_json_str)
+                    updated_message_dict_list.append(message_dict)
+            else:
+                message_dict = value_json_str_to_message_dict(value_json_str)
                 updated_message_dict_list.append(message_dict)
         elif weight_int < 0:
-            for _ in range(-weight_int):
-                value_dict = json.loads(value_json_str)
-                message_dict = {"value": value_dict}
-                deleted_message_dict_list.append(message_dict)
+            if bag_boolean:
+                for _ in range(-weight_int):
+                    message_dict = value_json_str_to_message_dict(value_json_str)
+                    deleted_message_dict_list.append(message_dict)
+            else:
+                message_dict = value_json_str_to_message_dict(value_json_str)
+                updated_message_dict_list.append(message_dict)
         else:
             raise Exception(f"ZSet elements with weight 0 are not supported: {value_json_str}, {weight_int}")
     #

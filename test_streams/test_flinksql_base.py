@@ -97,9 +97,6 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
                 raise Exception(f"Could not find source vertice for {source_topic_str}.")
             read_records_int = source_vertice_dict_list[0]["metrics"]["read-records"]
             #
-            print("Hallo")
-            print(read_records_int)
-            #
             return read_records_int == batch_size_int * steps_int
         except Exception as e:
             print(e)

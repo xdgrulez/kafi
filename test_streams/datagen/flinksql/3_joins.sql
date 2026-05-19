@@ -1,4 +1,4 @@
-CREATE TABLE click_table (
+CREATE TABLE shoe_clickstream (
     payload ROW < product_id STRING,
     user_id STRING,
     view_time INT,
@@ -20,11 +20,11 @@ SELECT
     payload.ip as ip,
     payload.product_id as product_id
 from
-    click_table;
+    shoe_clickstream;
 
 --
 
-CREATE TABLE customer_table (
+CREATE TABLE shoe_customers (
     payload ROW < id STRING,
     first_name STRING,
     last_name STRING,
@@ -49,11 +49,11 @@ SELECT
     payload.id as id,
     payload.first_name as first_name
 FROM
-    customer_table;
+    shoe_customers;
 
 --
 
-CREATE TABLE product_table (
+CREATE TABLE shoes (
     payload ROW < id STRING,
     brand STRING,
     name STRING,
@@ -73,11 +73,11 @@ SELECT
     payload.id as id,
     payload.brand as brand
 FROM
-    product_table;
+    shoes;
 
 --
 
-CREATE TABLE order_table (
+CREATE TABLE shoe_orders (
     payload ROW < order_id INT,
     product_id STRING,
     customer_id STRING,
@@ -97,7 +97,7 @@ SELECT
     payload.product_id as product_id,
     payload.customer_id as customer_id
 FROM
-    order_table;
+    shoe_orders;
 
 --
 
@@ -134,11 +134,10 @@ CREATE TABLE upsert_kafka_sink (
     PRIMARY KEY (user_id) NOT ENFORCED
 ) WITH (
     'connector' = 'upsert-kafka',
-    'topic' = '3_joins_upsert_kafka_sink',
+    'topic' = 'flink_3_joins',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'key.format' = 'raw',
-    'value.format' = 'avro-confluent',
-    'value.avro-confluent.url' = 'http://localhost:8081'
+    'key.format' = 'json',
+    'value.format' = 'json'
 );
 
 INSERT INTO upsert_kafka_sink

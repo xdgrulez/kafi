@@ -19,13 +19,11 @@ class TestDatagenBase():
         click_topologyNode = (
             source_click_topologyNode
             .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"]})
-            .distinct()
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
             .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
-            .distinct()
         )
         #
         root_topologyNode = (
@@ -53,19 +51,16 @@ class TestDatagenBase():
         click_topologyNode = (
             source_click_topologyNode
             .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"], "product_id": x["payload"]["product_id"]})
-            .distinct()
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
             .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
-            .distinct()
         )
         #
         product_topologyNode = (
             source_product_topologyNode
             .map(lambda x: {"id": x["payload"]["id"], "brand": x["payload"]["brand"]})
-            .distinct()
         )
         #
         root_topologyNode = (
@@ -103,25 +98,21 @@ class TestDatagenBase():
         click_topologyNode = (
             source_click_topologyNode
             .map(lambda x: {"user_id": x["payload"]["user_id"], "ip": x["payload"]["ip"], "product_id": x["payload"]["product_id"]})
-            .distinct()
         )
         #
         customer_topologyNode = (
             source_customer_topologyNode
             .map(lambda x: {"id": x["payload"]["id"], "first_name": x["payload"]["first_name"]})
-            .distinct()
         )
         #
         product_topologyNode = (
             source_product_topologyNode
             .map(lambda x: {"id": x["payload"]["id"], "brand": x["payload"]["brand"]})
-            .distinct()
         )
         #
         order_topologyNode = (
             source_order_topologyNode
             .map(lambda x: {"order_id": x["payload"]["order_id"], "product_id": x["payload"]["product_id"], "customer_id": x["payload"]["customer_id"]})
-            .distinct()
         )
         #
         root_topologyNode = (
