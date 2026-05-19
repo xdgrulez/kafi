@@ -1,11 +1,16 @@
 import json, subprocess, threading, time, unittest
 
+from kafi.helpers import get
+
 #
 
-flinksql_path_str = "/home/ralph/apps/flink-2.2.0"
+# home_path_str = "/home/ralph"
+home_path_str = "/Users/m0724822"
+flinksql_path_str = f"{home_path_str}/apps/flink-2.2.0"
 flinksql_start_cluster_str = f"{flinksql_path_str}/bin/start-cluster.sh"
 flinksql_stop_cluster_str = f"{flinksql_path_str}/bin/stop-cluster.sh"
 flinksql_sql_client_path_str = f"{flinksql_path_str}/bin/sql-client.sh"
+flinksql_url_str = "http://localhost:9081"
 
 #
 
@@ -24,28 +29,14 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
         print("---")
         print()
         #
-        updates_int = len(self.updated_message_dict_list)
-        updated_message_json_str_list = [json.dumps(message_dict) for message_dict in self.updated_message_dict_list]
-        unique_updates_int = len(set(updated_message_json_str_list))
-        print(f"Updates: {updates_int}")
-        print(f"Unique updates: {unique_updates_int}")
-        if updates_int > 0:
+        print(f"Updates: {self.updates_int}")
+        if self.updates_int > 0:
             print("First update:")
             print(json.dumps(self.updated_message_dict_list[0], indent=2))
         #
         print()
         print("---")
         print()
-        #
-        # deletes_int = len(self.deleted_message_dict_list)
-        # print(f"Deletes: {deletes_int}")
-        # if deletes_int > 0:
-        #     print("First delete:")
-        #     print(json.dumps(self.updated_message_dict_list[0], indent=2))
-        # #
-        # print()
-        # print("---")
-        # print()
 
     #
 
@@ -78,31 +69,46 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
     #
 
     def read(self, storage, topic_str):
-        message_dict_list = storage.l(topic_str)[topic_str]
+        updates_int = storage.l(topic_str)[topic_str]
         #
+        self.updates_int = updates_int
+        #
+        message_dict_list = storage.cat(topic_str, n=1)
         self.updated_message_dict_list = message_dict_list
 
     #
 
-    def stop(self, source_storage, source_topic_str, batch_size_int, group_str, steps_int):
-        group_str_topic_str_offsets_dict_dict_dict = source_storage.group_offsets(group_str)
-        if group_str not in group_str_topic_str_offsets_dict_dict_dict:
+    def stop(self, source_topic_str, batch_size_int, steps_int):
+        try:
+            jobs_response_dict = get(f"{flinksql_url_str}/jobs")
+            job_dict_list = jobs_response_dict["jobs"]
+            if len(job_dict_list) == 0:
+                raise Exception("No job running.")
+            elif len(job_dict_list) > 1:
+                raise Exception("More than one jobs running.")
+            #
+            job_dict = job_dict_list[0]
+            job_id_str = job_dict["id"]
+            #
+            job_response_dict = get(f"{flinksql_url_str}/jobs/{job_id_str}")
+            vertice_dict_list = job_response_dict["vertices"]
+            source_vertice_dict_list = [vertice_dict for vertice_dict in vertice_dict_list if vertice_dict["name"].startswith(f"Source: {source_topic_str}")]
+            if not len(source_vertice_dict_list) == 1:
+                raise Exception(f"Could not find source vertice for {source_topic_str}.")
+            read_records_int = source_vertice_dict_list[0]["metrics"]["read-records"]
+            #
+            print("Hallo")
+            print(read_records_int)
+            #
+            return read_records_int == batch_size_int * steps_int
+        except Exception as e:
+            print(e)
             return False
-        topic_str_offsets_dict_dict = group_str_topic_str_offsets_dict_dict_dict[group_str]
-        if source_topic_str not in topic_str_offsets_dict_dict:
-            return False
-        #
-        offsets_dict = topic_str_offsets_dict_dict[source_topic_str]
-        offset_int = offsets_dict[0]
-        return offset_int >= steps_int * batch_size_int
-
+    
     #
 
-    def go(self, flinksql_sql_path_str, flinksql_group_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int):
+    def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int):
         source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list]
-        #
-        for source_storage, topic_str in source_storage_topic_str_tuple_list:
-            source_storage.grm(flinksql_group_str)
         #
         self.source_str_messages_int_dict = {source_str: 0 for _, source_str in source_storage_topic_str_tuple_list}
         #
@@ -118,10 +124,10 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
         thread2.start()
         #
         while True:
-            if all(self.stop(storage, topic_str, batch_size_int, flinksql_group_str, steps_int) for storage, topic_str, batch_size_int in source_storage_topic_str_batch_size_int_tuple_list):
+            if all(self.stop(topic_str, batch_size_int, steps_int) for _, topic_str, batch_size_int in source_storage_topic_str_batch_size_int_tuple_list):
                 break
             #
-            time.sleep(0.1)
+            time.sleep(1)
         #
         self.stop_function()
         #

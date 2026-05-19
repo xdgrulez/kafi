@@ -55,7 +55,7 @@ def create_session(retries_int):
     return session
 
 
-def get(url_str, headers_dict, payload_dict=None, auth_str_tuple=None, retries_int=0, debug_bool=False):
+def get(url_str, headers_dict=None, payload_dict=None, auth_str_tuple=None, retries_int=0, debug_bool=False):
     session = create_session(retries_int)
     #
     if payload_dict is None:
