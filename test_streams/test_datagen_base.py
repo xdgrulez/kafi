@@ -161,22 +161,18 @@ class TestDatagenBase():
         #
         purchase_topologyNode = (
             source_purchase_topologyNode
-            .map(lambda x: {"user_id": x["payload"]["user_id"], "product_id": x["payload"]["product_id"], "action": x["payload"]["action"]})
-            .filter(lambda x: x["action"] == "add")
-            .map(lambda x: {"user_id": x["user_id"], "product_id": x["product_id"]})
+            .map(lambda x: {"user_id": x["payload"]["user_id"], "product_id": x["payload"]["product_id"], "price": x["payload"]["price"], "action": x["payload"]["action"]})
         )
         #
         root_topologyNode = (
             purchase_topologyNode
-            .join(
-                purchase_topologyNode,
-                predicate_function=lambda l, r: l["user_id"] == r["user_id"] and l["product_id"] < r["product_id"],
-                projection_function=lambda l, r: {
-                    "co_purchase_id_l": l["product_id"],
-                    "co_purchase_id_r": r["product_id"]
-                })
-                # .sum(select_function=lambda _: 1,
-                #      output_function=lambda _, y: {"sum": y})
+            .group_by_sum(by_function=lambda x: x["user_id"],
+                          select_function=lambda x: x["price"] if x["action"] == "add" else -x["price"],
+                          output_function=lambda x, y:
+                          {
+                              "user_id": x,
+                              "sum": y
+                          })
         )
         #
         runner.root(root_topologyNode)
@@ -185,21 +181,24 @@ class TestDatagenBase():
 
     #
 
+    def init_generate(self, source_str):
+        if source_str == "shoe_clickstream":
+            self.generator_dict[source_str] = ShoeClickstreamGenerator()
+        elif source_str == "shoe_customers":
+            self.generator_dict[source_str] = ShoeCustomerGenerator()
+        elif source_str == "shoes":
+            self.generator_dict[source_str] = ShoeProductGenerator()
+        elif source_str == "shoe_orders":
+            self.generator_dict[source_str] = ShoeOrderGenerator()
+        elif source_str == "purchases":
+            self.generator_dict[source_str] = CoPurchaseGenerator()
+        else:
+            raise Exception(f"Only shoe_clickstream, shoe_customers, shoes, shoe_orders, purchases supported: {source_str}")
+
     def generate(self, source_str, batch_size_int):
         message_dict_list = []
         #
-        if source_str == "shoe_clickstream":
-            generator = ShoeClickstreamGenerator()
-        elif source_str == "shoe_customers":
-            generator = ShoeCustomerGenerator()
-        elif source_str == "shoes":
-            generator = ShoeProductGenerator()
-        elif source_str == "shoe_orders":
-            generator = ShoeOrderGenerator()
-        elif source_str == "purchases":
-            generator = CoPurchaseGenerator()
-        else:
-            raise Exception(f"Only shoe_clickstream, shoe_customers, shoes, shoe_orders, purchases supported: {source_str}")
+        generator = self.generator_dict[source_str]
         #
         for _ in range(batch_size_int):
             record_dict = generator.generate_record()

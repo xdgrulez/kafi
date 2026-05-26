@@ -33,8 +33,7 @@ class TestTopologyNodeDatagen(TestTopologyNodeBase, TestDatagenBase):
 
     def test_co_purchase(self):
         purchase_source_str = "purchases"
-        product_source_str = "shoes"
         #
-        runner = self.get_runner_co_purchase(purchase_source_str, product_source_str)
+        runner = self.get_runner_co_purchase(purchase_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(purchase_source_str, 10), (product_source_str, 10)], 10, runner)
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(purchase_source_str, 1)], 4, runner)
