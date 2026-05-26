@@ -46,8 +46,8 @@ class TestJamieBase():
         )
         #
         root_topologyNode = balance_topologyNode.sum(
-            get("balance"),
-            lambda _, y: {"sum": y}
+            select_function=get("balance"),
+            output_function=lambda _, y: {"sum": y}
         )
         #
         runner.root(root_topologyNode)

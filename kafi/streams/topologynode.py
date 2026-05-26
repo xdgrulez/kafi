@@ -2,7 +2,9 @@ from kafi.helpers import get_value, set_value
 
 from pydbsp import (
     DeltaLiftedDeltaLiftedSortMergeJoin,
+    DeltaLiftedDeltaLiftedJoin,
     LiftedLiftedProject,
+    LiftedLiftedSelect,
     LiftedLiftedGroupBySum,
     DeltaLiftedDistinct,
     Program2D
@@ -39,7 +41,36 @@ class TopologyNode:
         topologyNode = TopologyNode("map_op", [self], output_stream2D)
         return topologyNode
 
-    def join(self, other, left_on_function, right_on_function, projection_function):
+    def filter(self, filter_function):
+        def _filter_function(value_json_str):
+            value_dict = json.loads(value_json_str)
+            return filter_function(value_dict)
+        #
+        output_stream2D = LiftedLiftedSelect(self._output_stream2D, _filter_function)
+        #
+        topologyNode = TopologyNode("filter_op", [self], output_stream2D)
+        return topologyNode
+
+    def join(self, other, predicate_function, projection_function):
+        def _predicate(left_value_json_str, right_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            right_value_dict = json.loads(right_value_json_str)
+            return json.dumps(predicate_function(left_value_dict, right_value_dict))
+        #
+        def _projection_function(left_value_json_str, right_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            right_value_dict = json.loads(right_value_json_str)
+            return json.dumps(projection_function(left_value_dict, right_value_dict))
+        #
+        output_stream2D = DeltaLiftedDeltaLiftedJoin(self._output_stream2D,
+                                                     other._output_stream2D,
+                                                     predicate=_predicate,
+                                                     projection=_projection_function)
+        #
+        topologyNode = TopologyNode("join_op", [self, other], output_stream2D)
+        return topologyNode
+
+    def join_equi(self, other, left_on_function, right_on_function, projection_function):
         def _left_on_function(left_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             return json.dumps(left_on_function(left_value_dict))
@@ -59,7 +90,7 @@ class TopologyNode:
                                                               right_key=_right_on_function,
                                                               projection=_projection_function)
         #
-        topologyNode = TopologyNode("join_op", [self, other], output_stream2D)
+        topologyNode = TopologyNode("join_equi_op", [self, other], output_stream2D)
         return topologyNode
 
     def group_by_sum(self, by_function, select_function, output_function):

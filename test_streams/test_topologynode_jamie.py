@@ -1,10 +1,6 @@
 from test_streams.test_topologynode_base import TestTopologyNodeBase
 from test_streams.test_jamie_base import TestJamieBase
 
-from kafi.streams.topologynode import (
-    Runner
-)
-
 #
 
 class TestTopologyNodeJamie(TestTopologyNodeBase, TestJamieBase):

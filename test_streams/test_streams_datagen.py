@@ -15,7 +15,7 @@ from kafi.kafi import Cluster
 #
 
 class TestStreamsDatagen(TestStreamsBase, TestDatagenBase):
-    def test_datagen_1_join(self):
+    def test_1_join(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         #
@@ -33,7 +33,7 @@ class TestStreamsDatagen(TestStreamsBase, TestDatagenBase):
         #
         self.go(runner, source_storage_topic_str_batch_size_int_tuple_list, 50, target_storage, target_topic_str)
 
-    def test_datagen_2_joins(self):
+    def test_2_joins(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         product_source_str = "shoes"
@@ -53,7 +53,7 @@ class TestStreamsDatagen(TestStreamsBase, TestDatagenBase):
         #
         self.go(runner, source_storage_topic_str_batch_size_int_tuple_list, 50, target_storage, target_topic_str)
 
-    def test_datagen_3_joins(self):
+    def test_3_joins(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         product_source_str = "shoes"

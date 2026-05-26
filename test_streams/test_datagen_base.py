@@ -6,6 +6,8 @@ from datagen.shoe_clickstream import ShoeClickstreamGenerator
 from datagen.shoe_customers import ShoeCustomerGenerator
 from datagen.shoes import ShoeProductGenerator 
 from datagen.shoe_orders import ShoeOrderGenerator
+#
+from datagen.co_purchase import CoPurchaseGenerator
 
 #
 
@@ -152,6 +154,35 @@ class TestDatagenBase():
         #
         return runner
 
+    def get_runner_co_purchase(self, purchase_source_str):
+        runner = Runner()
+        #
+        source_purchase_topologyNode = runner.source(purchase_source_str)
+        #
+        purchase_topologyNode = (
+            source_purchase_topologyNode
+            .map(lambda x: {"user_id": x["payload"]["user_id"], "product_id": x["payload"]["product_id"], "action": x["payload"]["action"]})
+            .filter(lambda x: x["action"] == "add")
+            .map(lambda x: {"user_id": x["user_id"], "product_id": x["product_id"]})
+        )
+        #
+        root_topologyNode = (
+            purchase_topologyNode
+            .join(
+                purchase_topologyNode,
+                predicate_function=lambda l, r: l["user_id"] == r["user_id"] and l["product_id"] < r["product_id"],
+                projection_function=lambda l, r: {
+                    "co_purchase_id_l": l["product_id"],
+                    "co_purchase_id_r": r["product_id"]
+                })
+                # .sum(select_function=lambda _: 1,
+                #      output_function=lambda _, y: {"sum": y})
+        )
+        #
+        runner.root(root_topologyNode)
+        #
+        return runner
+
     #
 
     def generate(self, source_str, batch_size_int):
@@ -165,8 +196,10 @@ class TestDatagenBase():
             generator = ShoeProductGenerator()
         elif source_str == "shoe_orders":
             generator = ShoeOrderGenerator()
+        elif source_str == "purchases":
+            generator = CoPurchaseGenerator()
         else:
-            raise Exception(f"Only shoe_clickstream, shoe_customers, shoes, shoe_orders supported: {source_str}")
+            raise Exception(f"Only shoe_clickstream, shoe_customers, shoes, shoe_orders, purchases supported: {source_str}")
         #
         for _ in range(batch_size_int):
             record_dict = generator.generate_record()

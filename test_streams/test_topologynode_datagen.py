@@ -4,7 +4,7 @@ from test_streams.test_datagen_base import TestDatagenBase
 #
 
 class TestTopologyNodeDatagen(TestTopologyNodeBase, TestDatagenBase):
-    def test_datagen_1_join(self):
+    def test_1_join(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         #
@@ -12,7 +12,7 @@ class TestTopologyNodeDatagen(TestTopologyNodeBase, TestDatagenBase):
         #
         self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100)], 100, runner)
 
-    def test_datagen_2_joins(self):
+    def test_2_joins(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         product_source_str = "shoes"
@@ -21,7 +21,7 @@ class TestTopologyNodeDatagen(TestTopologyNodeBase, TestDatagenBase):
         #
         self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100)], 100, runner)
 
-    def test_datagen_3_joins(self):
+    def test_3_joins(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         product_source_str = "shoes"
@@ -30,3 +30,11 @@ class TestTopologyNodeDatagen(TestTopologyNodeBase, TestDatagenBase):
         runner = self.get_runner_3_joins(click_source_str, customer_source_str, product_source_str, order_source_str)
         #
         self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100), (order_source_str, 100)], 100, runner)
+
+    def test_co_purchase(self):
+        purchase_source_str = "purchases"
+        product_source_str = "shoes"
+        #
+        runner = self.get_runner_co_purchase(purchase_source_str, product_source_str)
+        #
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(purchase_source_str, 10), (product_source_str, 10)], 10, runner)
