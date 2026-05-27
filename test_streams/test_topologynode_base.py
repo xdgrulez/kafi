@@ -7,6 +7,11 @@ import cloudpickle as pickle
 class TestTopologyNodeBase(unittest.TestCase):
     def setUp(self):
         print("Test:", self._testMethodName)
+        #
+        self.source_str_messages_int_dict = {}
+        self.updated_message_dict_list = {}
+        self.deleted_message_dict_list = {}
+        self.generator_dict = {}
 
     def tearDown(self):
         print()
@@ -51,6 +56,8 @@ class TestTopologyNodeBase(unittest.TestCase):
         source_str_messages_int_dict = {source_str: 0 for source_str, _ in source_str_batch_size_int_tuple_list}
         coll_updated_output_dict_list = []
         coll_deleted_output_dict_list = []
+        for source_str, _ in source_str_batch_size_int_tuple_list:
+            self.init_generate(source_str)
         for step_int in range(steps_int):
             for source_str, batch_size_int in source_str_batch_size_int_tuple_list:
                 message_dict_list = self.generate(source_str, batch_size_int)

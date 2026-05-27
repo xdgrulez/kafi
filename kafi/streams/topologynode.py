@@ -55,7 +55,7 @@ class TopologyNode:
         def _predicate(left_value_json_str, right_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
             right_value_dict = json.loads(right_value_json_str)
-            return json.dumps(predicate_function(left_value_dict, right_value_dict))
+            return predicate_function(left_value_dict, right_value_dict)
         #
         def _projection_function(left_value_json_str, right_value_json_str):
             left_value_dict = json.loads(left_value_json_str)
@@ -278,7 +278,10 @@ class Runner():
         #
         zSet = self._program2D.step()[self._view]
         #
+        print(zSet)
         updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet, bag_boolean)
+        print(updated_message_dict_list)
+        print(deleted_message_dict_list)
         #
         return updated_message_dict_list, deleted_message_dict_list
     
@@ -340,9 +343,7 @@ def zSet_to_message_dict_list_tuple(zSet, bag_boolean=False):
                     deleted_message_dict_list.append(message_dict)
             else:
                 message_dict = value_json_str_to_message_dict(value_json_str)
-                updated_message_dict_list.append(message_dict)
-        else:
-            raise Exception(f"ZSet elements with weight 0 are not supported: {value_json_str}, {weight_int}")
+                deleted_message_dict_list.append(message_dict)
     #
     return updated_message_dict_list, deleted_message_dict_list
 
