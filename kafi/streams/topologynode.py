@@ -1,14 +1,20 @@
 from kafi.helpers import get_value, set_value
 
-from pydbsp import (
-    DeltaLiftedDeltaLiftedSortMergeJoin,
+from pydbsp.circuit import Circuit
+from pydbsp.compute import ComputeCtx
+from pydbsp.core import Antichain, dbsp_time
+from pydbsp.evaluate import Evaluator
+from pydbsp.operator import Input, Lift1, LiftStreamIntroduction
+from pydbsp.progress import Time
+from pydbsp.relational_operators import (
+    DeltaLiftedDeltaLiftedDistinct,
     DeltaLiftedDeltaLiftedJoin,
-    LiftedLiftedProject,
-    LiftedLiftedSelect,
-    LiftedLiftedGroupBySum,
-    DeltaLiftedDistinct,
-    Program2D
+    LiftProject,
+    LiftSelect,
 )
+from pydbsp.operator import Integrate
+from pydbsp.storage import DictStorage
+from pydbsp.zset import ZSet, ZSetAddition
 
 import datetime
 import json
@@ -21,13 +27,23 @@ import cloudpickle as pickle
 #
 
 class TopologyNode:
-    def __init__(self, name_str, daughter_topologyNode_list, output_stream2D):
+    def __init__(self, name_str, daughter_tn_list, setup_function):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
-        self._daughter_topologyNode_list = daughter_topologyNode_list
-        self._output_stream2D = output_stream2D
+        self._daughter_tn_list = daughter_tn_list
+        self._setup_function = setup_function
         #
-        self._tick = 0
+        self._evaluator = None
+        self._output = None
+
+    def setup(self):
+        evaluator = Evaluator(
+            circuit=Circuit(),
+            storage=DictStorage(),
+            ctx=ComputeCtx(lattice=dbsp_time(2)),
+            group=ZSetAddition())
+        #
+        self._foreach_bu(lambda tn: tn._setup_function(evaluator))
 
     #
 
@@ -36,106 +52,118 @@ class TopologyNode:
             value_dict = json.loads(value_json_str)
             return json.dumps(map_function(value_dict))
         #
-        output_stream2D = LiftedLiftedProject(self._output_stream2D, _map_function)
+        def _setup_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g_in = ZSetAddition[tuple[int, str]]()
+            g_out = ZSetAddition[int]()
+            i_in = self._output
+            i_2d = LiftStreamIntroduction[ZSet[tuple[int, str]]](group=g_in).connect(evaluator.circuit, (i_in,))
+            proj = LiftProject[tuple[int, str], int](f=_map_function).connect(evaluator.circuit, (i_2d,))
+            selection = DeltaLiftedDeltaLiftedDistinct[int](inner_group=g_out).connect(evaluator.circuit, (proj,))
+            #
+            tn._output = selection
         #
-        topologyNode = TopologyNode("map_op", [self], output_stream2D)
-        return topologyNode
+        tn = TopologyNode("map_op", [self], _setup_function)
+        #
+        return tn
 
-    def filter(self, filter_function):
-        def _filter_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return filter_function(value_dict)
-        #
-        output_stream2D = LiftedLiftedSelect(self._output_stream2D, _filter_function)
-        #
-        topologyNode = TopologyNode("filter_op", [self], output_stream2D)
-        return topologyNode
+    # def filter(self, filter_function):
+    #     def _filter_function(value_json_str):
+    #         value_dict = json.loads(value_json_str)
+    #         return filter_function(value_dict)
+    #     #
+    #     output_stream2D = LiftedLiftedSelect(self._output_stream2D, _filter_function)
+    #     #
+    #     topologyNode = TopologyNode("filter_op", [self], output_stream2D)
+    #     return topologyNode
 
-    def join(self, other, predicate_function, projection_function):
-        def _predicate(left_value_json_str, right_value_json_str):
-            left_value_dict = json.loads(left_value_json_str)
-            right_value_dict = json.loads(right_value_json_str)
-            return predicate_function(left_value_dict, right_value_dict)
-        #
-        def _projection_function(left_value_json_str, right_value_json_str):
-            left_value_dict = json.loads(left_value_json_str)
-            right_value_dict = json.loads(right_value_json_str)
-            return json.dumps(projection_function(left_value_dict, right_value_dict))
-        #
-        output_stream2D = DeltaLiftedDeltaLiftedJoin(self._output_stream2D,
-                                                     other._output_stream2D,
-                                                     predicate=_predicate,
-                                                     projection=_projection_function)
-        #
-        topologyNode = TopologyNode("join_op", [self, other], output_stream2D)
-        return topologyNode
+    # def join(self, other, predicate_function, projection_function):
+    #     def _predicate(left_value_json_str, right_value_json_str):
+    #         left_value_dict = json.loads(left_value_json_str)
+    #         right_value_dict = json.loads(right_value_json_str)
+    #         return predicate_function(left_value_dict, right_value_dict)
+    #     #
+    #     def _projection_function(left_value_json_str, right_value_json_str):
+    #         left_value_dict = json.loads(left_value_json_str)
+    #         right_value_dict = json.loads(right_value_json_str)
+    #         return json.dumps(projection_function(left_value_dict, right_value_dict))
+    #     #
+    #     output_stream2D = DeltaLiftedDeltaLiftedJoin(self._output_stream2D,
+    #                                                  other._output_stream2D,
+    #                                                  predicate=_predicate,
+    #                                                  projection=_projection_function)
+    #     #
+    #     topologyNode = TopologyNode("join_op", [self, other], output_stream2D)
+    #     return topologyNode
 
-    def join_equi(self, other, left_on_function, right_on_function, projection_function):
-        def _left_on_function(left_value_json_str):
-            left_value_dict = json.loads(left_value_json_str)
-            return json.dumps(left_on_function(left_value_dict))
-        #
-        def _right_on_function(right_value_json_str):
-            right_value_dict = json.loads(right_value_json_str)
-            return json.dumps(right_on_function(right_value_dict))
-        #
-        def _projection_function(left_value_json_str, right_value_json_str):
-            left_value_dict = json.loads(left_value_json_str)
-            right_value_dict = json.loads(right_value_json_str)
-            return json.dumps(projection_function(left_value_dict, right_value_dict))
-        #
-        output_stream2D = DeltaLiftedDeltaLiftedSortMergeJoin(self._output_stream2D,
-                                                              other._output_stream2D,
-                                                              left_key=_left_on_function,
-                                                              right_key=_right_on_function,
-                                                              projection=_projection_function)
-        #
-        topologyNode = TopologyNode("join_equi_op", [self, other], output_stream2D)
-        return topologyNode
+    # def join_equi(self, other, left_on_function, right_on_function, projection_function):
+    #     def _left_on_function(left_value_json_str):
+    #         left_value_dict = json.loads(left_value_json_str)
+    #         return json.dumps(left_on_function(left_value_dict))
+    #     #
+    #     def _right_on_function(right_value_json_str):
+    #         right_value_dict = json.loads(right_value_json_str)
+    #         return json.dumps(right_on_function(right_value_dict))
+    #     #
+    #     def _projection_function(left_value_json_str, right_value_json_str):
+    #         left_value_dict = json.loads(left_value_json_str)
+    #         right_value_dict = json.loads(right_value_json_str)
+    #         return json.dumps(projection_function(left_value_dict, right_value_dict))
+    #     #
+    #     output_stream2D = DeltaLiftedDeltaLiftedSortMergeJoin(self._output_stream2D,
+    #                                                           other._output_stream2D,
+    #                                                           left_key=_left_on_function,
+    #                                                           right_key=_right_on_function,
+    #                                                           projection=_projection_function)
+    #     #
+    #     topologyNode = TopologyNode("join_equi_op", [self, other], output_stream2D)
+    #     return topologyNode
 
-    def group_by_sum(self, by_function, select_function, output_function):
-        def _by_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return by_function(value_dict)
-        #
-        def _select_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return select_function(value_dict)
-        #
-        def _output_function(key, sum):
-            value_dict = output_function(key, sum)
-            value_json_str = json.dumps(value_dict)
-            return value_json_str
-        #
-        output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D, key=_by_function, value=_select_function, output=_output_function)
-        #
-        topologyNode = TopologyNode("group_by_sum_op", [self], output_stream2D)
-        return topologyNode
-
-    #
-
-    def sum(self, select_function, output_function):
-        def _select_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return select_function(value_dict)
-        #
-        def _output_function(key, sum):
-            value_dict = output_function(key, sum)
-            value_json_str = json.dumps(value_dict)
-            return value_json_str
-        #
-        output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D, key=lambda _: 0, value=_select_function, output=_output_function)
-        #
-        topologyNode = TopologyNode("sum_op", [self], output_stream2D)
-        return topologyNode
+    # def group_by_sum(self, by_function, select_function, output_function):
+    #     def _by_function(value_json_str):
+    #         value_dict = json.loads(value_json_str)
+    #         return by_function(value_dict)
+    #     #
+    #     def _select_function(value_json_str):
+    #         value_dict = json.loads(value_json_str)
+    #         return select_function(value_dict)
+    #     #
+    #     def _output_function(key, sum):
+    #         value_dict = output_function(key, sum)
+    #         value_json_str = json.dumps(value_dict)
+    #         return value_json_str
+    #     #
+    #     output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D, key=_by_function, value=_select_function, output=_output_function)
+    #     #
+    #     topologyNode = TopologyNode("group_by_sum_op", [self], output_stream2D)
+    #     return topologyNode
 
     #
 
-    def distinct(self):
-        output_stream2D = DeltaLiftedDistinct(self._output_stream2D)
-        #
-        topologyNode = TopologyNode("distinct_op", [self], output_stream2D)
-        return topologyNode
+    # def sum(self, select_function, output_function):
+    #     def _select_function(value_json_str):
+    #         value_dict = json.loads(value_json_str)
+    #         return select_function(value_dict)
+    #     #
+    #     def _output_function(key, sum):
+    #         value_dict = output_function(key, sum)
+    #         value_json_str = json.dumps(value_dict)
+    #         return value_json_str
+    #     #
+    #     output_stream2D = LiftedLiftedGroupBySum(self._output_stream2D, key=lambda _: 0, value=_select_function, output=_output_function)
+    #     #
+    #     topologyNode = TopologyNode("sum_op", [self], output_stream2D)
+    #     return topologyNode
+
+    #
+
+    # def distinct(self):
+    #     output_stream2D = DeltaLiftedDistinct(self._output_stream2D)
+    #     #
+    #     topologyNode = TopologyNode("distinct_op", [self], output_stream2D)
+    #     return topologyNode
+
     #
 
     def get_name(self):
@@ -145,58 +173,108 @@ class TopologyNode:
         return self._id_str
 
     def get_daughters(self):
-        return self._daughter_topologyNode_list
+        return self._daughter_tn_list
 
-    def get_output_stream2D(self):
-        return self._output_stream2D
+    def get_output(self):
+        return self._output
     
+    def get_evaluator(self):
+        return self._evaluator
+
     #
 
-    def get_node_by_id(self, id_str):
-        def collect_node_dict(topologyNode, id_str_topologyNode_dict):
-            if id_str == topologyNode.get_id():
-                id_str_topologyNode_dict[id_str] = topologyNode
-            else:
-                for daughter_topologyNode in topologyNode.get_daughters():
-                    collect_node_dict(daughter_topologyNode, id_str_topologyNode_dict)
+    def _collect_td(self):
+        tn_list = []
         #
-        id_str_topologyNode_dict = {}
-        collect_node_dict(self, id_str_topologyNode_dict)
+        def __collect_td(tn):
+            tn_list.append(tn)
+            #
+            for daughter_tn in tn.get_daughters():
+                __collect_td(daughter_tn)
         #
-        return id_str_topologyNode_dict[id_str]
+        __collect_td(self)
+        #
+        return tn_list
+    
+    def _collect_bu(self):
+        tn_list = self._collect_td()
+        tn_list.reverse()
+        #
+        return tn_list
 
+    def _foreach_bu(self, foreach_function):
+        tn_list = self._collect_bu()
+        #
+        for tn in tn_list:
+            foreach_function(tn)
+
+    #
+
+    def latest(self, gc=True):
+        gc_boolean = gc
+        #
+        zSet = self._evaluator.latest(self._output)
+        #
+        if gc_boolean:
+            self._evaluator.compact()
+        #
+        return zSet
+
+    def push(self, source_str, message_dict_list):
+        source_str_tn_dict = self.get_source_nodes()
+        source_topologyNode = source_str_tn_dict[source_str]
+        input = source_topologyNode.get_output()
+        value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
+        #
+        for value_json_str in value_json_str_list:
+            zSet = ZSet({value_json_str: 1})
+            self._evaluator.push(input, zSet)
+
+    def step(self, gc=True):
+        zSet = self.latest(gc)
+        #
+        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet)
+        #
+        return updated_message_dict_list, deleted_message_dict_list
+
+    #
+
+    def _filter_bu(self, filter_function):
+        tn_list = self._collect_bu()
+        #
+        filtered_tn_list = [tn for tn in tn_list if filter_function(tn)]
+        #
+        return filtered_tn_list
+
+    def get_node_by_id(self, id_str):
+        tn_list = self._filter_bu(lambda tn: tn.get_id() == id_str)
+        #
+        if len(tn_list) == 0:
+            return None
+        else:
+            return tn_list[0]
+    
     def get_node_by_name(self, name_str):
-        def collect_node_dict(topologyNode, name_str_topologyNode_dict):
-            if name_str == topologyNode.get_name():
-                name_str_topologyNode_dict[name_str] = topologyNode
-            else:
-                for daughter_topologyNode in topologyNode.get_daughters():
-                    collect_node_dict(daughter_topologyNode, name_str_topologyNode_dict)
+        tn_list = self._filter_bu(lambda tn: tn.get_name() == name_str)
         #
-        name_str_topologyNode_dict = {}
-        collect_node_dict(self, name_str_topologyNode_dict)
-        #
-        return name_str_topologyNode_dict[name_str]
+        if len(tn_list) == 0:
+            return None
+        else:
+            return tn_list[0]
 
     def get_source_nodes(self):
-        def collect_node_dict(topologyNode, name_str_topologyNode_dict):
-            if not topologyNode.get_daughters():
-                name_str_topologyNode_dict[topologyNode.get_name()] = topologyNode
-            else:
-                for daughter_topologyNode in topologyNode.get_daughters():
-                    collect_node_dict(daughter_topologyNode, name_str_topologyNode_dict)
+        tn_set = self._filter_bu(lambda tn: len(tn.get_daughters()) == 0)
         #
-        name_str_topologyNode_dict = {}
-        collect_node_dict(self, name_str_topologyNode_dict)
+        name_str_tn_dict = {tn.get_name(): tn for tn in tn_set}
         #
-        return name_str_topologyNode_dict
+        return name_str_tn_dict
 
-    #        
+    #
 
     def topology(self, include_ids=False):
         include_ids_bool = include_ids
         #
-        daughters_int = len(self._daughter_topologyNode_list)
+        daughters_int = len(self._daughter_tn_list)
         match daughters_int:
             case 0:
                 if include_ids_bool:
@@ -205,29 +283,29 @@ class TopologyNode:
                     return self._name_str
             case 1:
                 if include_ids_bool:
-                    return f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)})"
+                    return f"{self._name_str}_{self._id_str}({self._daughter_tn_list[0].topology(include_ids_bool)})"
                 else:
-                    return f"{self._name_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)})"
+                    return f"{self._name_str}({self._daughter_tn_list[0].topology(include_ids_bool)})"
             case 2:
                 if include_ids_bool:
-                    return  f"{self._name_str}_{self._id_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)}, {self._daughter_topologyNode_list[1].topology(include_ids_bool)})"
+                    return  f"{self._name_str}_{self._id_str}({self._daughter_tn_list[0].topology(include_ids_bool)}, {self._daughter_tn_list[1].topology(include_ids_bool)})"
                 else:
-                    return  f"{self._name_str}({self._daughter_topologyNode_list[0].topology(include_ids_bool)}, {self._daughter_topologyNode_list[1].topology(include_ids_bool)})"
+                    return  f"{self._name_str}({self._daughter_tn_list[0].topology(include_ids_bool)}, {self._daughter_tn_list[1].topology(include_ids_bool)})"
 
     def mermaid(self, include_ids=False):
-        def collect_nodes_and_edges(topologyNode, name_str_set, edge_str_list):
+        def collect_nodes_and_edges(tn, name_str_set, edge_str_list):
             if include_ids:
-                name_str_set.add(f"{topologyNode.get_name()}_{topologyNode.get_id()}")
+                name_str_set.add(f"{tn.get_name()}_{tn.get_id()}")
             else:
-                name_str_set.add(topologyNode.get_name())
+                name_str_set.add(tn.get_name())
             #
-            for daughter_topologyNode in topologyNode.get_daughters():
+            for daughter_tn in tn.get_daughters():
                 if include_ids:
-                    edge_str_list.append(f"{daughter_topologyNode.get_name()}_{daughter_topologyNode.get_id()} --> {topologyNode.get_name()}_{topologyNode.get_id()}")
+                    edge_str_list.append(f"{daughter_tn.get_name()}_{daughter_tn.get_id()} --> {tn.get_name()}_{tn.get_id()}")
                 else:
-                    edge_str_list.append(f"{daughter_topologyNode.get_name()} --> {topologyNode.get_name()}")
+                    edge_str_list.append(f"{daughter_tn.get_name()} --> {tn.get_name()}")
                 #
-                collect_nodes_and_edges(daughter_topologyNode, name_str_set, edge_str_list)
+                collect_nodes_and_edges(daughter_tn, name_str_set, edge_str_list)
         #
         node_str_set = set()
         edge_str_list = []
@@ -257,48 +335,55 @@ def update(*key_str_tuple):
 
 #
 
-class Runner():
-    def __init__(self, gc=True, parallelism=1, parallel_layer_min_width=4):
-        self._program2D = Program2D(gc=gc, parallelism=parallelism, parallel_layer_min_width=parallel_layer_min_width)
+# class Runner():
+#     def __init__(self):
+#         self._evaluator = Evaluator(
+#             circuit=Circuit(),
+#             storage=DictStorage(),
+#             ctx=ComputeCtx(lattice=dbsp_time(2)),
+#             group=ZSetAddition())
 
-    def source(self, source_str):
-        output_stream2D = self._program2D.source(source_str)
-        #
-        topologyNode = TopologyNode(source_str, [], output_stream2D)
-        #
-        return topologyNode
+#     def source(self, source_str):
+#         def _setup(evaluator)
+#         input = Input(frontier=Antichain(dbsp_time(1))).connect(self._evaluator.circuit, ())
+#         #
+#         topologyNode = TopologyNode(source_str, [], self._evaluator, input)
+#         #
+#         return topologyNode
     
-    def root(self, root_topologyNode):
-        self._root_topologyNode = root_topologyNode
-        #
-        self._view = self._program2D.view("root", root_topologyNode.get_output_stream2D())
+#     def root(self, root_topologyNode):
+#         self._root_topologyNode = root_topologyNode
 
-    def step(self, bag=False):
-        bag_boolean = bag
-        #
-        zSet = self._program2D.step()[self._view]
-        #
-        print(zSet)
-        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet, bag_boolean)
-        print(updated_message_dict_list)
-        print(deleted_message_dict_list)
-        #
-        return updated_message_dict_list, deleted_message_dict_list
+#     def step(self, gc=True, bag=False):
+#         gc_boolean = gc
+#         bag_boolean = bag
+#         #
+#         nodeId = self._root_topologyNode.nodeId()
+#         zSet = self._evaluator.latest(nodeId)
+#         if gc_boolean:
+#             self._evaluator.compact()
+#         #
+#         print(zSet)
+#         updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet, bag_boolean)
+#         print(updated_message_dict_list)
+#         print(deleted_message_dict_list)
+#         #
+#         return updated_message_dict_list, deleted_message_dict_list
     
-    def insert(self, source_str, message_dict_list):
-        source_topologyNode = self._root_topologyNode.get_node_by_name(source_str)
-        value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
-        #
-        self._program2D.insert(source_topologyNode.get_output_stream2D(), value_json_str_list)
+#     def insert(self, source_str, message_dict_list):
+#         source_topologyNode = self._root_topologyNode.get_node_by_name(source_str)
+#         input = source_topologyNode.input()
+#         value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
+#         #
+#         for value_json_str in value_json_str_list:
+#             zSet = ZSet({value_json_str: 1})
+#             self._evaluator.push(input, zSet)
 
-    def get_program2D(self):
-        return self._program2D
+#     def get_evaluator(self):
+#         return self._evaluator
 
-    def get_root(self):
-        return self._root_topologyNode
-    
-    def get_view(self):
-        return self._view
+#     def get_root(self):
+#         return self._root_topologyNode
 
 #
 
@@ -349,8 +434,20 @@ def zSet_to_message_dict_list_tuple(zSet, bag_boolean=False):
 
 #
 
-def traverse(topologyNode, stack_topologyNode_list):
-    stack_topologyNode_list.append(topologyNode)
-    for daughter_topologyNode in topologyNode.get_daughters():
-        traverse(daughter_topologyNode, stack_topologyNode_list)
-    return stack_topologyNode_list
+# def traverse(topologyNode, stack_topologyNode_list):
+#     stack_topologyNode_list.append(topologyNode)
+#     for daughter_topologyNode in topologyNode.get_daughters():
+#         traverse(daughter_topologyNode, stack_topologyNode_list)
+#     return stack_topologyNode_list
+
+def source(source_str):
+    def _setup_function(evaluator):
+        tn._evaluator = evaluator
+        #
+        input = Input(frontier=Antichain(dbsp_time(1))).connect(evaluator.circuit, ())
+        #
+        tn._output = input
+    #
+    tn = TopologyNode(source_str, [], _setup_function)
+    #
+    return tn

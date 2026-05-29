@@ -7,10 +7,10 @@ class TestTopologyNodeJamie(TestTopologyNodeBase, TestJamieBase):
     def test_jamie(self):
         transaction_source_str = "transactions"
         #
-        runner = self.get_runner(transaction_source_str)
+        root_tn = self.get_root_tn(transaction_source_str)
         # root_topologyNode = runner._root_topologyNode
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(transaction_source_str, 100)], 100, runner)
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(transaction_source_str, 100)], 100, root_tn)
         #
         self.assertEqual(len(self.updated_message_dict_list), 1)
         self.assertEqual(self.updated_message_dict_list[0]["value"], {"sum": 0})
