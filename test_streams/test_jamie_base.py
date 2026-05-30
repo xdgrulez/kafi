@@ -43,7 +43,7 @@ class TestJamieBase():
         #
         root_tn = balance_tn.sum(
             lambda x: x["balance"],
-            lambda _, y: {"sum": y}
+            lambda _, y: {"sum": y},
         )
         #
         root_tn.setup()

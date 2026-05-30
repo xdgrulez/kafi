@@ -121,7 +121,7 @@ class TopologyNode:
         #
         return tn
 
-    def group_by_agg(self, by_function, select_function, output_function, agg_function, zset_group_function):
+    def group_by_agg(self, by_function, select_function, output_function, agg_function):
         def _by_function(value_json_str):
             value_dict = json.loads(value_json_str)
             return by_function(value_dict)
@@ -143,7 +143,7 @@ class TopologyNode:
             i_in = self._output
             #
             cum = Integrate(group=g).connect(evaluator.circuit, (i_in,))
-            agg = Lift1(f=zset_group_function(_by_function, _select_function, agg_function, _output_function)).connect(evaluator.circuit, (cum,))
+            agg = Lift1(f=zset_group_agg_function(_by_function, _select_function, agg_function, _output_function)).connect(evaluator.circuit, (cum,))
             agg_diffs = Differentiate(group=g).connect(evaluator.circuit, (agg,))
             #
             tn._output = agg_diffs
@@ -155,13 +155,13 @@ class TopologyNode:
     #
 
     def group_by_sum(self, by_function, select_function, output_function, sum_function=lambda x, y: x + y):
-        tn = self.group_by_agg(by_function, select_function, output_function, sum_function, zset_group_sum)
+        tn = self.group_by_agg(by_function, select_function, output_function, sum_function)
         tn._name = "group_by_sum_op"
         #
         return tn
 
     def group_by_max(self, by_function, select_function, output_function, max_function=lambda x, y: max(x, y)):
-        tn = self.group_by_agg(by_function, select_function, output_function, max_function, zset_group_max)
+        tn = self.group_by_agg(by_function, select_function, output_function, max_function)
         tn._name = "group_by_max_op"
         #
         return tn
@@ -394,59 +394,22 @@ def source(source_str):
     return tn
 
 
-def zset_group_sum(_by_function, _select_function, _sum_function, _output_function):
-    def _zset_group_sum(zSet):
-        by_any_sum_any = {}
+def zset_group_agg_function(_by_function, _select_function, _agg_function, _output_function):
+    def _zset_group_agg_function(zSet):
+        by_any_agg_any = {}
         #
-        for value_json_str, weight_int in zSet.inner.items():
+        for value_json_str, _ in zSet.inner.items():
             by_any = _by_function(value_json_str)
             select_any = _select_function(value_json_str)
             #
-            sum_any = by_any_sum_any.get(by_any, 0)
-            by_any_sum_any[by_any] = _sum_function(sum_any, select_any) * weight_int
-        #
-        zSet = ZSet({_output_function(by_any, sum_any): 1 for by_any, sum_any in by_any_sum_any.items()})
-        #
-        return zSet
-    #
-    return _zset_group_sum
-
-
-def zset_group_max(_by_function, _select_function, _max_function, _output_function):
-    def _zset_group_max(zSet):
-        by_any_max_any = {}
-        #
-        for value_json_str, weight_int in zSet.inner.items():
-            if weight_int <= 0:
-                continue
-            #
-            by_any = _by_function(value_json_str)
-            select_any = _select_function(value_json_str)
-            #
-            max_any = by_any_max_any.get(by_any)
-            if max_any is None:
-                by_any_max_any[by_any] = select_any
+            agg_any = by_any_agg_any.get(by_any)
+            if agg_any is None:
+                by_any_agg_any[by_any] = select_any
             else:
-                by_any_max_any[by_any] = _max_function(max_any, select_any)
+                by_any_agg_any[by_any] = _agg_function(agg_any, select_any)
         #
-        zSet = ZSet({_output_function(by_any, sum_any): 1 for by_any, sum_any in by_any_max_any.items()})
+        zSet = ZSet({_output_function(by_any, sum_any): 1 for by_any, sum_any in by_any_agg_any.items()})
         #
         return zSet
     #
-    return _zset_group_max
-
-# def zset_group_sum(z):
-#     totals: dict = {}
-#     for (k, v), w in z.inner.items():
-#         totals[k] = totals.get(k, 0) + v * w
-#     return ZSet({(k, v): 1 for k, v in totals.items()})
-
-# def zset_group_max(z):
-#     positive_by_key: dict = {}
-#     for (k, v), w in z.inner.items():
-#         # if w <= 0:
-#         #     continue
-#         cur = positive_by_key.get(k)
-#         if cur is None or v > cur:
-#             positive_by_key[k] = v
-#     return ZSet({(k, v): 1 for k, v in positive_by_key.items()})
+    return _zset_group_agg_function
