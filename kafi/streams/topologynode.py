@@ -121,7 +121,7 @@ class TopologyNode:
         #
         return tn
 
-    def group_by_sum(self, by_function, select_function, output_function):
+    def group_by_sum(self, by_function, select_function, output_function, sum_function=lambda x, y: x + y):
         def _by_function(value_json_str):
             value_dict = json.loads(value_json_str)
             return by_function(value_dict)
@@ -130,8 +130,8 @@ class TopologyNode:
             value_dict = json.loads(value_json_str)
             return select_function(value_dict)
         #
-        def _output_function(key, sum):
-            value_dict = output_function(key, sum)
+        def _output_function(key, sum_any):
+            value_dict = output_function(key, sum_any)
             value_json_str = json.dumps(value_dict)
             return value_json_str
         #
@@ -143,7 +143,7 @@ class TopologyNode:
             i_in = self._output
             #
             cum = Integrate(group=g).connect(evaluator.circuit, (i_in,))
-            agg = Lift1(f=zset_group_sum(_by_function, _select_function, _output_function)).connect(evaluator.circuit, (cum,))
+            agg = Lift1(f=zset_group_sum(_by_function, _select_function, sum_function, _output_function)).connect(evaluator.circuit, (cum,))
             agg_diffs = Differentiate(group=g).connect(evaluator.circuit, (agg,))
             #
             tn._output = agg_diffs
@@ -154,31 +154,15 @@ class TopologyNode:
 
     #
 
-    def sum(self, select_function, output_function):
-        def _select_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return select_function(value_dict)
+    def sum(self, select_function, output_function, sum_function=lambda x, y: x + y):
+        tn = self.group_by_sum(lambda _: 0, select_function, output_function, sum_function)
+        tn._name = "sum_op"
         #
-        def _output_function(key, sum):
-            value_dict = output_function(key, sum)
-            value_json_str = json.dumps(value_dict)
-            return value_json_str
-        #
-        def _setup_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            g_in = ZSetAddition[tuple[str, int]]()
-            g_out = ZSetAddition[tuple[str, int]]()
-            #
-            i_in = self._output
-            #
-            cum = Integrate[ZSet[tuple[str, int]]](group=g_in).connect(evaluator.circuit, (i_in,))
-            agg = Lift1[ZSet[tuple[str, int]], ZSet[tuple[str, int]]](f=zset_group_sum(lambda _: 0, _select_function, _output_function)).connect(evaluator.circuit, (cum,))
-            agg_diffs = Differentiate[ZSet[tuple[str, int]]](group=g_out).connect(evaluator.circuit, (agg,))
-            #
-            tn._output = agg_diffs
-        #
-        tn = TopologyNode("sum_op", {self}, _setup_function)
+        return tn
+
+    def count(self, output_function, sum_function=lambda x, y: x + y):
+        tn = self.group_by_sum(lambda _: 0, lambda _: 1, output_function, sum_function)
+        tn._name = "count_op"
         #
         return tn
 
@@ -392,7 +376,7 @@ def source(source_str):
     return tn
 
 
-def zset_group_sum(_by_function, _select_function, _output_function):
+def zset_group_sum(_by_function, _select_function, _sum_function, _output_function):
     def _zset_group_sum(zSet):
         by_any_sum_any = {}
         #
@@ -400,10 +384,22 @@ def zset_group_sum(_by_function, _select_function, _output_function):
             by_any = _by_function(value_json_str)
             select_any = _select_function(value_json_str)
             #
-            by_any_sum_any[by_any] = by_any_sum_any.get(by_any, 0) + select_any * weight_int
+            sum_any = by_any_sum_any.get(by_any, 0)
+            by_any_sum_any[by_any] = _sum_function(sum_any, select_any) * weight_int
         #
         zSet = ZSet({_output_function(by_any, sum_any): 1 for by_any, sum_any in by_any_sum_any.items()})
         #
         return zSet
     #
     return _zset_group_sum
+
+
+# def zset_group_max(z):
+#     positive_by_key: dict = {}
+#     for (k, v), w in z.inner.items():
+#         # if w <= 0:
+#         #     continue
+#         cur = positive_by_key.get(k)
+#         if cur is None or v > cur:
+#             positive_by_key[k] = v
+#     return ZSet({(k, v): 1 for k, v in positive_by_key.items()})

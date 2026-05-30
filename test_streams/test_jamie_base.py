@@ -34,16 +34,16 @@ class TestJamieBase():
         #
         balance_tn = credits_tn.join(
             debits_tn,
-            predicate_function=lambda l, r: l["account"] == r["account"],
-            projection_function=lambda l, r: {
+            lambda l, r: l["account"] == r["account"],
+            lambda l, r: {
                 "account": l["account"],
                 "balance": l["credits"] - r["debits"]
             }
         )
         #
         root_tn = balance_tn.sum(
-            select_function=lambda x: x["balance"],
-            output_function=lambda _, y: {"sum": y}
+            lambda x: x["balance"],
+            lambda _, y: {"sum": y}
         )
         #
         root_tn.setup()
