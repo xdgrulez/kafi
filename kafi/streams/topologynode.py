@@ -121,7 +121,7 @@ class TopologyNode:
         #
         return tn
 
-    def group_by_sum(self, by_function, select_function, output_function, sum_function=lambda x, y: x + y):
+    def group_by_agg(self, by_function, select_function, output_function, agg_function, zset_group_function):
         def _by_function(value_json_str):
             value_dict = json.loads(value_json_str)
             return by_function(value_dict)
@@ -143,16 +143,28 @@ class TopologyNode:
             i_in = self._output
             #
             cum = Integrate(group=g).connect(evaluator.circuit, (i_in,))
-            agg = Lift1(f=zset_group_sum(_by_function, _select_function, sum_function, _output_function)).connect(evaluator.circuit, (cum,))
+            agg = Lift1(f=zset_group_function(_by_function, _select_function, agg_function, _output_function)).connect(evaluator.circuit, (cum,))
             agg_diffs = Differentiate(group=g).connect(evaluator.circuit, (agg,))
             #
             tn._output = agg_diffs
         #
-        tn = TopologyNode("group_by_sum_op", {self}, _setup_function)
+        tn = TopologyNode("group_by_agg_op", {self}, _setup_function)
         #
         return tn
 
     #
+
+    def group_by_sum(self, by_function, select_function, output_function, sum_function=lambda x, y: x + y):
+        tn = self.group_by_agg(by_function, select_function, output_function, sum_function, zset_group_sum)
+        tn._name = "group_by_sum_op"
+        #
+        return tn
+
+    def group_by_max(self, by_function, select_function, output_function, max_function=lambda x, y: max(x, y)):
+        tn = self.group_by_agg(by_function, select_function, output_function, max_function, zset_group_max)
+        tn._name = "group_by_max_op"
+        #
+        return tn
 
     def sum(self, select_function, output_function, sum_function=lambda x, y: x + y):
         tn = self.group_by_sum(lambda _: 0, select_function, output_function, sum_function)
@@ -160,8 +172,14 @@ class TopologyNode:
         #
         return tn
 
-    def count(self, output_function, sum_function=lambda x, y: x + y):
-        tn = self.group_by_sum(lambda _: 0, lambda _: 1, output_function, sum_function)
+    def max(self, select_function, output_function, max_function=lambda x, y: max(x, y)):
+        tn = self.group_by_max(lambda _: 0, select_function, output_function, max_function)
+        tn._name = "max_op"
+        #
+        return tn
+
+    def count(self, output_function):
+        tn = self.group_by_sum(lambda _: 0, lambda _: 1, output_function)
         tn._name = "count_op"
         #
         return tn
@@ -393,6 +411,35 @@ def zset_group_sum(_by_function, _select_function, _sum_function, _output_functi
     #
     return _zset_group_sum
 
+
+def zset_group_max(_by_function, _select_function, _max_function, _output_function):
+    def _zset_group_max(zSet):
+        by_any_max_any = {}
+        #
+        for value_json_str, weight_int in zSet.inner.items():
+            if weight_int <= 0:
+                continue
+            #
+            by_any = _by_function(value_json_str)
+            select_any = _select_function(value_json_str)
+            #
+            max_any = by_any_max_any.get(by_any)
+            if max_any is None:
+                by_any_max_any[by_any] = select_any
+            else:
+                by_any_max_any[by_any] = _max_function(max_any, select_any)
+        #
+        zSet = ZSet({_output_function(by_any, sum_any): 1 for by_any, sum_any in by_any_max_any.items()})
+        #
+        return zSet
+    #
+    return _zset_group_max
+
+# def zset_group_sum(z):
+#     totals: dict = {}
+#     for (k, v), w in z.inner.items():
+#         totals[k] = totals.get(k, 0) + v * w
+#     return ZSet({(k, v): 1 for k, v in totals.items()})
 
 # def zset_group_max(z):
 #     positive_by_key: dict = {}
