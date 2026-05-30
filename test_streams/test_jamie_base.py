@@ -46,7 +46,6 @@ class TestJamieBase():
             output_function=lambda _, y: {"sum": y}
         )
         #
-        root_tn = balance_tn
         root_tn.setup()
         #
         return root_tn

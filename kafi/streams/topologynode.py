@@ -1,5 +1,3 @@
-from kafi.helpers import get_value, set_value
-
 from pydbsp.circuit import Circuit
 from pydbsp.compute import ComputeCtx
 from pydbsp.core import Antichain, dbsp_time
@@ -15,7 +13,6 @@ from pydbsp.operator import Differentiate, Integrate
 from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
 
-from collections import deque
 import datetime
 import json
 # import ujson as json
@@ -24,10 +21,11 @@ import uuid
 #
 
 class TopologyNode:
-    def __init__(self, name_str, daughter_tn_list, setup_function):
+    def __init__(self, name_str, daughter_tn_set, setup_function):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
-        self._daughter_tn_list = daughter_tn_list
+        #
+        self._daughter_tn_set = daughter_tn_set
         self._setup_function = setup_function
         #
         self._evaluator = None
@@ -62,7 +60,7 @@ class TopologyNode:
             #
             tn._output = selection
         #
-        tn = TopologyNode("map_op", [self], _setup_function)
+        tn = TopologyNode("map_op", {self}, _setup_function)
         #
         return tn
 
@@ -84,7 +82,7 @@ class TopologyNode:
             #
             tn._output = filtering
         #
-        tn = TopologyNode("filter_op", [self], _setup_function)
+        tn = TopologyNode("filter_op", {self}, _setup_function)
         #
         return tn
 
@@ -119,7 +117,7 @@ class TopologyNode:
             #
             tn._output = join_
         #
-        tn = TopologyNode("join_op", [self, other], _setup_function)
+        tn = TopologyNode("join_op", {self, other}, _setup_function)
         #
         return tn
 
@@ -150,7 +148,7 @@ class TopologyNode:
             #
             tn._output = agg_diffs
         #
-        tn = TopologyNode("group_by_sum_op", [self], _setup_function)
+        tn = TopologyNode("group_by_sum_op", {self}, _setup_function)
         #
         return tn
 
@@ -180,7 +178,7 @@ class TopologyNode:
             #
             tn._output = agg_diffs
         #
-        tn = TopologyNode("sum_op", [self], _setup_function)
+        tn = TopologyNode("sum_op", {self}, _setup_function)
         #
         return tn
 
@@ -193,52 +191,13 @@ class TopologyNode:
         return self._id_str
 
     def get_daughters(self):
-        return self._daughter_tn_list
+        return self._daughter_tn_set
 
     def get_output(self):
         return self._output
     
     def get_evaluator(self):
         return self._evaluator
-
-    #
-
-
-    def _get_topology(self):
-        levels = [[]]
-        # Initialize the queue with the root node and a level marker (None).
-        double_ended_queue = deque([self, None])
-        #
-        while double_ended_queue:
-            tn = double_ended_queue.popleft()
-            #
-            if tn is None:
-                # Marker found => this level of the tree is finished.
-                if double_ended_queue:
-                    levels.append([])
-                    # Add marker for the next level.
-                    double_ended_queue.append(None)
-            else:
-                # Node found => add into current level.
-                levels[-1].append(tn)
-                # Append daughters to the end of the queue.
-                for daughter in tn.get_daughters():
-                    double_ended_queue.append(daughter)
-        #                    
-        return levels
-
-    def _collect_bu(self):
-        levels = self._get_topology()
-        tn_list = sum(levels, [])        
-        tn_list.reverse()
-        #
-        return tn_list
-
-    def _foreach_bu(self, foreach_function):
-        tn_list = self._collect_bu()
-        #
-        for tn in tn_list:
-            foreach_function(tn)
 
     #
 
@@ -255,12 +214,13 @@ class TopologyNode:
     def push(self, source_str, message_dict_list):
         source_str_tn_dict = self.get_source_nodes()
         source_topologyNode = source_str_tn_dict[source_str]
-        input = source_topologyNode.get_output()
-        value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
         #
-        for value_json_str in value_json_str_list:
-            zSet = ZSet({value_json_str: 1})
-            self._evaluator.push(input, zSet)
+        input = source_topologyNode.get_output()
+        #
+        value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
+        zSet = ZSet({value_json_str: 1 for value_json_str in value_json_str_list})
+        #
+        self._evaluator.push(input, zSet)
 
     def step(self, gc=True):
         zSet = self.latest(gc)
@@ -271,31 +231,52 @@ class TopologyNode:
 
     #
 
-    def _filter_bu(self, filter_function):
-        tn_list = self._collect_bu()
+    def _foreach_bu(self, foreach_function):
+        visited_tn_set = set()
         #
-        filtered_tn_list = [tn for tn in tn_list if filter_function(tn)]
+        def __foreach_bu(tn):
+            if tn not in visited_tn_set:
+                visited_tn_set.add(tn)
+                #
+                for daughter_tn in tn.get_daughters():
+                    __foreach_bu(daughter_tn)
+                #
+                foreach_function(tn)
         #
-        return filtered_tn_list
+        __foreach_bu(self)
+
+    def _filter_td(self, filter_function):
+        tn_set = set()
+        #
+        def __filter_td(tn):
+            if filter_function(tn):
+                tn_set.add(tn)
+            #
+            for daughter_tn in tn.get_daughters():
+                __filter_td(daughter_tn)
+        #
+        __filter_td(self)
+        #
+        return tn_set
 
     def get_node_by_id(self, id_str):
-        tn_list = self._filter_bu(lambda tn: tn.get_id() == id_str)
+        tn_set = self._filter_td(lambda tn: tn.get_id() == id_str)
         #
-        if len(tn_list) == 0:
+        if len(tn_set) == 0:
             return None
         else:
-            return tn_list[0]
+            return list(tn_set)[0]
     
     def get_node_by_name(self, name_str):
-        tn_list = self._filter_bu(lambda tn: tn.get_name() == name_str)
+        tn_set = self._filter_td(lambda tn: tn.get_name() == name_str)
         #
-        if len(tn_list) == 0:
+        if len(tn_set) == 0:
             return None
         else:
-            return tn_list[0]
+            return list(tn_set)[0]
 
     def get_source_nodes(self):
-        tn_set = self._filter_bu(lambda tn: len(tn.get_daughters()) == 0)
+        tn_set = self._filter_td(lambda tn: len(tn.get_daughters()) == 0)
         #
         name_str_tn_dict = {tn.get_name(): tn for tn in tn_set}
         #
@@ -306,7 +287,7 @@ class TopologyNode:
     def topology(self, include_ids=False):
         include_ids_bool = include_ids
         #
-        daughters_int = len(self._daughter_tn_list)
+        daughters_int = len(self._daughter_tn_set)
         match daughters_int:
             case 0:
                 if include_ids_bool:
@@ -315,14 +296,14 @@ class TopologyNode:
                     return self._name_str
             case 1:
                 if include_ids_bool:
-                    return f"{self._name_str}_{self._id_str}({self._daughter_tn_list[0].topology(include_ids_bool)})"
+                    return f"{self._name_str}_{self._id_str}({self._daughter_tn_set[0].topology(include_ids_bool)})"
                 else:
-                    return f"{self._name_str}({self._daughter_tn_list[0].topology(include_ids_bool)})"
+                    return f"{self._name_str}({self._daughter_tn_set[0].topology(include_ids_bool)})"
             case 2:
                 if include_ids_bool:
-                    return  f"{self._name_str}_{self._id_str}({self._daughter_tn_list[0].topology(include_ids_bool)}, {self._daughter_tn_list[1].topology(include_ids_bool)})"
+                    return  f"{self._name_str}_{self._id_str}({self._daughter_tn_set[0].topology(include_ids_bool)}, {self._daughter_tn_set[1].topology(include_ids_bool)})"
                 else:
-                    return  f"{self._name_str}({self._daughter_tn_list[0].topology(include_ids_bool)}, {self._daughter_tn_list[1].topology(include_ids_bool)})"
+                    return  f"{self._name_str}({self._daughter_tn_set[0].topology(include_ids_bool)}, {self._daughter_tn_set[1].topology(include_ids_bool)})"
 
     def mermaid(self, include_ids=False):
         def collect_nodes_and_edges(tn, name_str_set, edge_str_list):
@@ -348,22 +329,6 @@ class TopologyNode:
         mermaid_str.extend(f"    {edge_str}" for edge_str in edge_str_list)
         #
         return "\n".join(mermaid_str)
-
-#
-
-def get(*key_str_tuple):
-    def get1(value_dict):
-        return get_value(value_dict, list(key_str_tuple))
-    #
-    return get1
-
-
-def update(*key_str_tuple):
-    def update1(value_dict, any):
-        set_value(value_dict, list(key_str_tuple), any)
-        return value_dict
-    #
-    return update1
 
 #
 
@@ -442,22 +407,3 @@ def zset_group_sum(_by_function, _select_function, _output_function):
         return zSet
     #
     return _zset_group_sum
-
-def _get_topology(tn):
-    graph = {}
-        
-    # Falls der Knoten noch nicht im Graph ist, füge ihn hinzu
-    if tn not in graph:
-        graph[tn] = []
-        
-    # Gehe durch alle Töchter
-    for daughter in tn.get_daughters():
-        # Trage die Gegenrichtung ein: Tochter zeigt auf diesen Eltern-Knoten
-        if daughter not in graph:
-            graph[daughter] = []
-        graph[daughter].append(tn)
-        
-        # Rekursiver Aufruf für die Tochter
-        _get_topology(daughter, graph)
-        
-    return graph
