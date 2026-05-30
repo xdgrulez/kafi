@@ -1,5 +1,3 @@
-import random
-
 from kafi.streams.topologynode import (
     source
 )
@@ -20,36 +18,35 @@ class TestJamieBase():
             }
         )
         #
-        # credits_topologyNode = transaction_topologyNode.group_by_sum(
-        #     get("to_account"),
-        #     get("amount"),
-        #     lambda x, y: {"account": x,
-        #                   "credits": y}
-        # )
-        # #
-        # debits_topologyNode = transaction_topologyNode.group_by_sum(
-        #     get("from_account"),
-        #     get("amount"),
-        #     lambda x, y: {"account": x,
-        #                   "debits": y}
-        # )
-        # #
-        # balance_topologyNode = credits_topologyNode.join(
-        #     debits_topologyNode,
-        #     left_on_function=lambda l: l["account"],
-        #     right_on_function=lambda r: r["account"],
-        #     projection_function=lambda l, r: {
-        #         "account": l["account"],
-        #         "balance": l["credits"] - r["debits"]
-        #     }
-        # )
-        # #
-        # root_topologyNode = balance_topologyNode.sum(
-        #     select_function=get("balance"),
-        #     output_function=lambda _, y: {"sum": y}
-        # )
-        root_tn = transaction_tn
+        credits_tn = transaction_tn.group_by_sum(
+            lambda x: x["to_account"],
+            lambda x: x["amount"],
+            lambda x, y: {"account": x,
+                          "credits": y}
+        )
         #
+        debits_tn = transaction_tn.group_by_sum(
+            lambda x: x["from_account"],
+            lambda x: x["amount"],
+            lambda x, y: {"account": x,
+                          "debits": y}
+        )
+        #
+        balance_tn = credits_tn.join(
+            debits_tn,
+            predicate_function=lambda l, r: l["account"] == r["account"],
+            projection_function=lambda l, r: {
+                "account": l["account"],
+                "balance": l["credits"] - r["debits"]
+            }
+        )
+        #
+        root_tn = balance_tn.sum(
+            select_function=lambda x: x["balance"],
+            output_function=lambda _, y: {"sum": y}
+        )
+        #
+        root_tn = balance_tn
         root_tn.setup()
         #
         return root_tn
@@ -73,4 +70,4 @@ class TestJamieBase():
                             "value": record_dict}
             message_dict_list.append(message_dict)
         #
-        return message_dict_list 
+        return message_dict_list
