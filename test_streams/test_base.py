@@ -32,7 +32,7 @@ class TestBase():
                 customer_tn,
                 lambda l: l["user_id"],
                 lambda r: r["id"],
-                projection_function=lambda l, r: {
+                lambda l, r: {
                     "user_id": l["user_id"],
                     "ip": l["ip"],
                     "first_name": r["first_name"]})
