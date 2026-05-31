@@ -44,7 +44,7 @@ from pydbsp.operator import (
     Operator,
 )
 from pydbsp.progress import NodeId, Time
-from pydbsp.relational_operators import LiftH, LiftJoin
+from pydbsp.relational_operators_orig import LiftH, LiftJoin
 from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
 

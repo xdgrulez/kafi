@@ -41,7 +41,7 @@ from pydbsp.indexed_relational_operators import (
 from pydbsp.indexed_zset import IndexedZSetAddition
 from pydbsp.operator import Lift2, LiftDelay, LiftStreamIntroduction, Operator
 from pydbsp.progress import NodeId, Time
-from pydbsp.relational_operators import (
+from pydbsp.relational_operators_orig import (
     DeltaLiftedDeltaLiftedDistinct,
     LiftSelect,
 )

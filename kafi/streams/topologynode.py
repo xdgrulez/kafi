@@ -8,6 +8,7 @@ from pydbsp.relational_operators import (
     DeltaLiftedDeltaLiftedJoin,
     LiftProject,
     LiftSelect,
+    LiftFlatMap
 )
 from pydbsp.operator import Differentiate, Integrate
 from pydbsp.storage import DictStorage
@@ -61,6 +62,33 @@ class TopologyNode:
             tn._output = selection
         #
         tn = TopologyNode("map_op", {self}, _setup_function)
+        #
+        return tn
+
+    def flatmap(self, flatmap_function):
+        def _flatmap_function(value_json_str):
+            value_dict = json.loads(value_json_str)
+            value_dict_list = flatmap_function(value_dict)
+            inner_dict = {}
+            for value_dict1 in value_dict_list:
+                value_json_str = json.dumps(value_dict1)
+                inner_dict[value_json_str] = inner_dict.get(value_json_str, 0) + 1
+            return ZSet(inner_dict)
+        #
+        def _setup_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            i_in = self._output
+            #
+            i_2d = LiftStreamIntroduction(group=g).connect(evaluator.circuit, (i_in,))
+            proj = LiftFlatMap(f=_flatmap_function).connect(evaluator.circuit, (i_2d,))
+            # selection = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (proj,))
+            #
+            tn._output = proj
+        #
+        tn = TopologyNode("flatmap_op", {self}, _setup_function)
         #
         return tn
 
@@ -172,6 +200,12 @@ class TopologyNode:
         #
         return tn
 
+    def group_by_count(self, by_function, output_function):
+        tn = self.group_by_sum(by_function, lambda _: 1, output_function)
+        tn._name = "group_by_count_op"
+        #
+        return tn
+
     #
 
     def agg(self, select_function, output_function, agg_function):
@@ -200,7 +234,7 @@ class TopologyNode:
 
     def count(self, output_function):
         tn = self.group_by_sum(lambda _: 0, lambda _: 1, output_function)
-        tn._name = "count_op"
+        tn._name = "group_by_count_op"
         #
         return tn
 
@@ -227,6 +261,7 @@ class TopologyNode:
         gc_boolean = gc
         #
         zSet = self._evaluator.latest(self._output)
+        print(zSet)
         #
         if gc_boolean:
             self._evaluator.compact()
@@ -244,10 +279,10 @@ class TopologyNode:
         #
         self._evaluator.push(input, zSet)
 
-    def step(self, gc=True):
+    def step(self, gc=True, bag=False):
         zSet = self.latest(gc)
         #
-        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet)
+        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet, bag)
         #
         return updated_message_dict_list, deleted_message_dict_list
 

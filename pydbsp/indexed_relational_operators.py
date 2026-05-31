@@ -48,7 +48,7 @@ from pydbsp.operator import (
     Operator,
 )
 from pydbsp.progress import NodeId, Time
-from pydbsp.relational_operators import (
+from pydbsp.relational_operators_orig import (
     DeltaLiftedDeltaLiftedDistinct,
     LiftLiftProject,
     LiftLiftSelect,

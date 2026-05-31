@@ -19,7 +19,6 @@ synonyms of the ``Lift*`` versions for 2-D stream-of-streams usage:
 
 * :class:`LiftSelect`  / :class:`LiftLiftSelect`   . ``↑σ_p`` / ``↑↑σ_p``.
 * :class:`LiftProject` / :class:`LiftLiftProject`  . ``↑π_f`` / ``↑↑π_f``.
-* :class:`LiftFlatMap` / :class:`LiftLiftFlatMap`  . ``↑flatmap_f`` / ``↑↑flatmap_f``.
 * :class:`LiftJoin`    / :class:`LiftLiftJoin`     . ``↑J`` / ``↑↑J``.
 * :class:`LiftH`       / :class:`LiftLiftH`        . ``↑H`` / ``↑↑H``
   (the value-level "distinct" primitive, lifted pointwise).
@@ -42,7 +41,7 @@ from dataclasses import dataclass
 from pydbsp.zset import ZSet, ZSetAddition
 from pydbsp.zset.functions.bilinear import join
 from pydbsp.zset.functions.binary import H
-from pydbsp.zset.functions.linear import flatmap, project, select
+from pydbsp.zset.functions.linear_orig import project, select
 
 from pydbsp.circuit import Circuit
 from pydbsp.operator import (
@@ -99,41 +98,6 @@ class LiftProject[A, B](Operator):
         (s,) = inputs
         f = self.f
         return Lift1[ZSet[A], ZSet[B]](f=lambda z: project(z, f)).connect(circuit, (s,))
-
-
-@dataclass(frozen=True)
-class LiftFlatMap[A, B](Operator):
-    """``↑flatmap_f``. Pointwise lift of a set-valued function to a
-    Z-set stream.  Each input element ``a`` with weight ``w`` is
-    expanded into the Z-set ``f(a)``; the weights in that output Z-set
-    are multiplied by ``w`` before being merged into the result.
-
-    Because the operation is **linear** in the Z-set group structure
-    (scalar-multiplication distributes over the merge), a single
-    :class:`Lift1` suffices — no Integrate/Differentiate wiring is
-    needed.
-
-    This is strictly more expressive than :class:`LiftProject`:
-    ``LiftProject(f)`` is equivalent to
-    ``LiftFlatMap(lambda a: ZSet({f(a): 1}))``.
-
-    ``inputs = (diff_stream,)``."""
-
-    f: Callable[[A], ZSet[B]]
-
-    def connect(
-        self,
-        circuit: Circuit[Time],
-        inputs: tuple[NodeId, ...],
-    ) -> NodeId:
-        (s,) = inputs
-        f = self.f
-        return Lift1[ZSet[A], ZSet[B]](f=lambda z: flatmap(z, f)).connect(circuit, (s,))
-
-
-@dataclass(frozen=True)
-class LiftLiftFlatMap[A, B](LiftFlatMap[A, B]):
-    """``↑↑flatmap_f``. Pointwise lift to a 2-D stream-of-streams."""
 
 
 @dataclass(frozen=True)
