@@ -297,6 +297,11 @@ class TopologyNode:
                 for daughter_tn in tn.get_daughters():
                     __foreach_bu(daughter_tn)
                 #
+                # print("---")
+                # print(tn.get_name())
+                # for d in tn.get_daughters():
+                #     print(d.get_name())
+                # print("---")
                 foreach_function(tn)
         #
         __foreach_bu(self)
