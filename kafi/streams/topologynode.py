@@ -27,11 +27,14 @@ import uuid
 #
 
 class TopologyNode:
-    def __init__(self, name_str, daughter_tn_set, build_function):
+    def __init__(self, name_str, daughter_tn_set, build_function, serialize_function=json.dumps, deserialize_function=json.loads):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
         self._daughter_tn_set = daughter_tn_set
         self._build_function = build_function
+        #
+        self._serialize_function = serialize_function
+        self._deserialize_function = deserialize_function
         #
         self._evaluator = None
         self._output = None
@@ -48,9 +51,9 @@ class TopologyNode:
     #
 
     def map(self, map_function):
-        def _map_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return json.dumps(map_function(value_dict))
+        def _map_function(serialized_value_any):
+            value_any = self._deserialize_function(serialized_value_any)
+            return self._serialize_function(map_function(value_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -70,13 +73,13 @@ class TopologyNode:
         return tn
 
     def flatmap(self, flatmap_function):
-        def _flatmap_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            value_dict_list = flatmap_function(value_dict)
+        def _flatmap_function(serialized_value_any):
+            value_any = self._deserialize_function(serialized_value_any)
+            value_any_list = flatmap_function(value_any)
             inner_dict = {}
-            for value_dict1 in value_dict_list:
-                value_json_str = json.dumps(value_dict1)
-                inner_dict[value_json_str] = inner_dict.get(value_json_str, 0) + 1
+            for value_any1 in value_any_list:
+                serialized_value_any1 = self._serialize_function(value_any1)
+                inner_dict[serialized_value_any1] = inner_dict.get(serialized_value_any1, 0) + 1
             return ZSet(inner_dict)
         #
         def _build_function(evaluator):
@@ -97,9 +100,9 @@ class TopologyNode:
         return tn
 
     def filter(self, filter_function):
-        def _filter_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return filter_function(value_dict)
+        def _filter_function(serialized_value_any):
+            value_any = self._deserialize_function(serialized_value_any)
+            return filter_function(value_any)
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -119,15 +122,15 @@ class TopologyNode:
         return tn
 
     def join(self, other, predicate_function, projection_function):
-        def _predicate_function(left_value_json_str, right_value_json_str):
-            left_value_dict = json.loads(left_value_json_str)
-            right_value_dict = json.loads(right_value_json_str)
-            return predicate_function(left_value_dict, right_value_dict)
+        def _predicate_function(left_serialized_value_any, right_serialized_value_any):
+            left_value_any = self._deserialize_function(left_serialized_value_any)
+            right_value_any = self._deserialize_function(right_serialized_value_any)
+            return predicate_function(left_value_any, right_value_any)
         #
-        def _projection_function(left_value_json_str, right_value_json_str):
-            left_value_dict = json.loads(left_value_json_str)
-            right_value_dict = json.loads(right_value_json_str)
-            return json.dumps(projection_function(left_value_dict, right_value_dict))
+        def _projection_function(left_serialized_value_any, right_serialized_value_any):
+            left_value_any = self._deserialize_function(left_serialized_value_any)
+            right_value_any = self._deserialize_function(right_serialized_value_any)
+            return self._serialize_function(projection_function(left_value_any, right_value_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -154,18 +157,18 @@ class TopologyNode:
         return tn
 
     def join_equi(self, other, left_select_function, right_select_function, projection_function):
-        def _left_select_function(left_value_json_str):
-            left_value_dict = json.loads(left_value_json_str)
-            return json.dumps(left_select_function(left_value_dict))
+        def _left_select_function(left_serialized_value_any):
+            left_value_any = self._deserialize_function(left_serialized_value_any)
+            return self._serialize_function(left_select_function(left_value_any))
         #
-        def _right_select_function(right_value_json_str):
-            right_value_dict = json.loads(right_value_json_str)
-            return json.dumps(right_select_function(right_value_dict))
+        def _right_select_function(right_serialized_value_any):
+            right_value_any = self._deserialize_function(right_serialized_value_any)
+            return self._serialize_function(right_select_function(right_value_any))
         #
-        def _projection_function(_, left_value_json_str, right_value_json_str):
-            left_value_dict = json.loads(left_value_json_str)
-            right_value_dict = json.loads(right_value_json_str)
-            return json.dumps(projection_function(left_value_dict, right_value_dict))
+        def _projection_function(_, left_serialized_value_any, right_serialized_value_any):
+            left_value_any = self._deserialize_function(left_serialized_value_any)
+            right_value_any = self._deserialize_function(right_serialized_value_any)
+            return self._serialize_function(projection_function(left_value_any, right_value_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -193,18 +196,17 @@ class TopologyNode:
         return tn
 
     def group_by_agg(self, by_function, select_function, output_function, agg_function, agg_initial_any):
-        def _by_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return by_function(value_dict)
+        def _by_function(serialized_value_any):
+            value_any = json.loads(serialized_value_any)
+            return by_function(value_any)
         #
-        def _select_function(value_json_str):
-            value_dict = json.loads(value_json_str)
-            return select_function(value_dict)
+        def _select_function(serialized_value_any):
+            value_any = json.loads(serialized_value_any)
+            return select_function(value_any)
         #
         def _output_function(key, sum_any):
-            value_dict = output_function(key, sum_any)
-            value_json_str = json.dumps(value_dict)
-            return value_json_str
+            value_any = output_function(key, sum_any)
+            return self._serialize_function(value_any)
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -516,4 +518,3 @@ def zset_group_agg_function(_by_function, _select_function, _agg_function, agg_i
 
 def liftStreamIntroduction(g, evaluator, i_in):
     return i_in if evaluator.frontiers()[i_in].lattice.nestedness == 2 else LiftStreamIntroduction(group=g).connect(evaluator.circuit, (i_in,))
-    
