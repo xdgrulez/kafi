@@ -4,6 +4,8 @@ from kafi.streams.topologynode import (
 
 from wc.plaintext import PlainTextGenerator
 
+from pydbsp.zset import ZSet
+
 #
 
 class TestWCBase():

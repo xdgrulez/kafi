@@ -1,6 +1,7 @@
 import random
 
-plain_text_str_list = ["hello kafi streams hello", "all streams lead to kafka", "join berlin buzzwords"]
+# plain_text_str_list = ["hello kafi streams hello", "all streams lead to kafka", "join berlin buzzwords"]
+plain_text_str_list = ["hello bla hello", "hello blups hello"]
 
 class PlainTextGenerator:
     def generate_record(self):

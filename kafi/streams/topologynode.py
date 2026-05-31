@@ -149,7 +149,7 @@ class TopologyNode:
         #
         return tn
 
-    def group_by_agg(self, by_function, select_function, output_function, agg_function):
+    def group_by_agg(self, by_function, select_function, output_function, agg_function, agg_initial_any):
         def _by_function(value_json_str):
             value_dict = json.loads(value_json_str)
             return by_function(value_dict)
@@ -171,7 +171,7 @@ class TopologyNode:
             i_in = self._output
             #
             cum = Integrate(group=g).connect(evaluator.circuit, (i_in,))
-            agg = Lift1(f=zset_group_agg_function(_by_function, _select_function, agg_function, _output_function)).connect(evaluator.circuit, (cum,))
+            agg = Lift1(f=zset_group_agg_function(_by_function, _select_function, agg_function, agg_initial_any, _output_function)).connect(evaluator.circuit, (cum,))
             agg_diffs = Differentiate(group=g).connect(evaluator.circuit, (agg,))
             #
             tn._output = agg_diffs
@@ -183,19 +183,19 @@ class TopologyNode:
     #
 
     def group_by_sum(self, by_function, select_function, output_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, z: x + y * z)
+        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, z: x + y * z, 0)
         tn._name = "group_by_sum_op"
         #
         return tn
 
     def group_by_max(self, by_function, select_function, output_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: max(x, y))
+        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: max(x, y), None)
         tn._name = "group_by_max_op"
         #
         return tn
 
     def group_by_min(self, by_function, select_function, output_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: min(x, y))
+        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: min(x, y), None)
         tn._name = "group_by_min_op"
         #
         return tn
@@ -233,8 +233,8 @@ class TopologyNode:
         return tn
 
     def count(self, output_function):
-        tn = self.group_by_sum(lambda _: 0, lambda _: 1, output_function)
-        tn._name = "group_by_count_op"
+        tn = self.group_by_count(lambda _: 0, output_function)
+        tn._name = "count_op"
         #
         return tn
 
@@ -449,7 +449,7 @@ def source(source_str):
     return tn
 
 
-def zset_group_agg_function(_by_function, _select_function, _agg_function, _output_function):
+def zset_group_agg_function(_by_function, _select_function, _agg_function, agg_initial_any,_output_function):
     def _zset_group_agg_function(zSet):
         by_any_agg_any = {}
         #
@@ -457,11 +457,8 @@ def zset_group_agg_function(_by_function, _select_function, _agg_function, _outp
             by_any = _by_function(value_json_str)
             select_any = _select_function(value_json_str)
             #
-            agg_any = by_any_agg_any.get(by_any)
-            if agg_any is None:
-                by_any_agg_any[by_any] = select_any
-            else:
-                by_any_agg_any[by_any] = _agg_function(agg_any, select_any, weight_int)
+            agg_any = by_any_agg_any.get(by_any, agg_initial_any)
+            by_any_agg_any[by_any] = select_any if agg_any is None else _agg_function(agg_any, select_any, weight_int)
         #
         zSet = ZSet({_output_function(by_any, sum_any): 1 for by_any, sum_any in by_any_agg_any.items()})
         #
