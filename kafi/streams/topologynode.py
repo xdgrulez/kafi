@@ -22,24 +22,23 @@ import uuid
 #
 
 class TopologyNode:
-    def __init__(self, name_str, daughter_tn_set, setup_function):
+    def __init__(self, name_str, daughter_tn_set, build_function):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
-        #
         self._daughter_tn_set = daughter_tn_set
-        self._setup_function = setup_function
+        self._build_function = build_function
         #
         self._evaluator = None
         self._output = None
 
-    def setup(self):
+    def build(self):
         evaluator = Evaluator(
             circuit=Circuit(),
             storage=DictStorage(),
             ctx=ComputeCtx(lattice=dbsp_time(2)),
             group=ZSetAddition())
         #
-        self._foreach_bu(lambda tn: tn._setup_function(evaluator))
+        self._foreach_bu(lambda tn: tn._build_function(evaluator))
 
     #
 
@@ -48,7 +47,7 @@ class TopologyNode:
             value_dict = json.loads(value_json_str)
             return json.dumps(map_function(value_dict))
         #
-        def _setup_function(evaluator):
+        def _build_function(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
@@ -61,7 +60,7 @@ class TopologyNode:
             #
             tn._output = selection
         #
-        tn = TopologyNode("map_op", {self}, _setup_function)
+        tn = TopologyNode("map_op", {self}, _build_function)
         #
         return tn
 
@@ -75,7 +74,7 @@ class TopologyNode:
                 inner_dict[value_json_str] = inner_dict.get(value_json_str, 0) + 1
             return ZSet(inner_dict)
         #
-        def _setup_function(evaluator):
+        def _build_function(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
@@ -88,7 +87,7 @@ class TopologyNode:
             #
             tn._output = proj
         #
-        tn = TopologyNode("flatmap_op", {self}, _setup_function)
+        tn = TopologyNode("flatmap_op", {self}, _build_function)
         #
         return tn
 
@@ -97,7 +96,7 @@ class TopologyNode:
             value_dict = json.loads(value_json_str)
             return filter_function(value_dict)
         #
-        def _setup_function(evaluator):
+        def _build_function(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
@@ -110,7 +109,7 @@ class TopologyNode:
             #
             tn._output = filtering
         #
-        tn = TopologyNode("filter_op", {self}, _setup_function)
+        tn = TopologyNode("filter_op", {self}, _build_function)
         #
         return tn
 
@@ -125,7 +124,7 @@ class TopologyNode:
             right_value_dict = json.loads(right_value_json_str)
             return json.dumps(projection_function(left_value_dict, right_value_dict))
         #
-        def _setup_function(evaluator):
+        def _build_function(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
@@ -145,7 +144,7 @@ class TopologyNode:
             #
             tn._output = join_
         #
-        tn = TopologyNode("join_op", {self, other}, _setup_function)
+        tn = TopologyNode("join_op", {self, other}, _build_function)
         #
         return tn
 
@@ -163,7 +162,7 @@ class TopologyNode:
             value_json_str = json.dumps(value_dict)
             return value_json_str
         #
-        def _setup_function(evaluator):
+        def _build_function(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
@@ -176,7 +175,7 @@ class TopologyNode:
             #
             tn._output = agg_diffs
         #
-        tn = TopologyNode("group_by_agg_op", {self}, _setup_function)
+        tn = TopologyNode("group_by_agg_op", {self}, _build_function)
         #
         return tn
 
@@ -437,14 +436,14 @@ def zSet_to_message_dict_list_tuple(zSet, bag_boolean=False):
 #
 
 def source(source_str):
-    def _setup_function(evaluator):
+    def _build_function(evaluator):
         tn._evaluator = evaluator
         #
         input = Input(frontier=Antichain(dbsp_time(1))).connect(evaluator.circuit, ())
         #
         tn._output = input
     #
-    tn = TopologyNode(source_str, [], _setup_function)
+    tn = TopologyNode(source_str, [], _build_function)
     #
     return tn
 

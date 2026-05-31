@@ -1,9 +1,38 @@
 from test_streams.test_topologynode_base import TestTopologyNodeBase
-from test_streams.test_topologynode_streams_base import TestTopologyNodeStreamsBase
+from test_streams.test_base import TestBase
 
 #
 
-class TestTopologyNode(TestTopologyNodeBase, TestTopologyNodeStreamsBase):
+class TestTopologyNode(TestTopologyNodeBase, TestBase):
+    def test_datagen_1_join(self):
+        click_source_str = "shoe_clickstream"
+        customer_source_str = "shoe_customers"
+        #
+        runner = self.get_datagen_1_join_root_tn(click_source_str, customer_source_str)
+        #
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100)], 100, runner)
+
+    def test_datagen_2_joins(self):
+        click_source_str = "shoe_clickstream"
+        customer_source_str = "shoe_customers"
+        product_source_str = "shoes"
+        #
+        runner = self.get_datagen_2_joins_root_tn(click_source_str, customer_source_str, product_source_str)
+        #
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100)], 100, runner)
+
+    def test_datagen_3_joins(self):
+        click_source_str = "shoe_clickstream"
+        customer_source_str = "shoe_customers"
+        product_source_str = "shoes"
+        order_source_str = "shoe_orders"
+        #
+        runner = self.get_datagen_3_joins_root_tn(click_source_str, customer_source_str, product_source_str, order_source_str)
+        #
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100), (order_source_str, 100)], 100, runner)
+
+    #
+
     def test_jamie(self):
         transaction_source_str = "transactions"
         #

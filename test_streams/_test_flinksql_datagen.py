@@ -1,11 +1,11 @@
-from test_streams.test_flinksql_base import TestFlinkSqlBase, home_path_str
-from test_streams.test_datagen_base import TestDatagenBase
+from test_streams._test_flinksql_base import TestFlinkSqlBase, home_path_str
+from test_streams.test_base import TestBase
 
 from kafi.kafi import Cluster
 
 #
 
-class TestFlinkSqlDatagen(TestFlinkSqlBase, TestDatagenBase):
+class TestFlinkSqlDatagen(TestFlinkSqlBase, TestBase):
     def test_datagen_1_join(self):
         click_topic_str = "shoe_clickstream"
         customer_topic_str = "shoe_customers"

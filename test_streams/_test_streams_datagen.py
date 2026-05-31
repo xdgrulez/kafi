@@ -7,19 +7,19 @@ if os.path.basename(os.getcwd()) == "test":
 else:
     sys.path.insert(1, ".")
 
-from old_test_streams.test_streams_base import TestStreamsBase
-from old_test_streams.test_datagen_base import TestDatagenBase
+from test_streams._test_streams_base import TestStreamsBase
+from test_streams.test_base import TestBase
 
 from kafi.kafi import Cluster
 
 #
 
-class TestStreamsDatagen(TestStreamsBase, TestDatagenBase):
-    def test_datagen_1_join(self):
+class TestStreamsDatagen(TestStreamsBase, TestBase):
+    def test_1_join(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         #
-        root_topologyNode = self.get_topology_1_join(click_source_str, customer_source_str)
+        runner = self.get_runner_1_join(click_source_str, customer_source_str)
         #
         source_storage = Cluster("local")
         #
@@ -31,14 +31,14 @@ class TestStreamsDatagen(TestStreamsBase, TestDatagenBase):
         target_storage = source_storage
         target_topic_str = "1_join"
         #
-        self.go(root_topologyNode, source_storage_topic_str_batch_size_int_tuple_list, 50, target_storage, target_topic_str)
+        self.go(runner, source_storage_topic_str_batch_size_int_tuple_list, 50, target_storage, target_topic_str)
 
-    def test_datagen_2_joins(self):
+    def test_2_joins(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         product_source_str = "shoes"
         #
-        root_topologyNode = self.get_topology_2_joins(click_source_str, customer_source_str, product_source_str)
+        runner = self.get_runner_2_joins(click_source_str, customer_source_str, product_source_str)
         #
         source_storage = Cluster("local")
         #
@@ -51,15 +51,15 @@ class TestStreamsDatagen(TestStreamsBase, TestDatagenBase):
         target_storage = source_storage
         target_topic_str = "2_joins"
         #
-        self.go(root_topologyNode, source_storage_topic_str_batch_size_int_tuple_list, 50, target_storage, target_topic_str)
+        self.go(runner, source_storage_topic_str_batch_size_int_tuple_list, 50, target_storage, target_topic_str)
 
-    def test_datagen_3_joins(self):
+    def test_3_joins(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         product_source_str = "shoes"
         order_source_str = "shoe_orders"
         #
-        root_topologyNode = self.get_topology_3_joins(click_source_str, customer_source_str, product_source_str, order_source_str)
+        runner = self.get_runner_3_joins(click_source_str, customer_source_str, product_source_str, order_source_str)
         #
         source_storage = Cluster("local")
         #
@@ -73,4 +73,4 @@ class TestStreamsDatagen(TestStreamsBase, TestDatagenBase):
         target_storage = source_storage
         target_topic_str = "3_joins"
         #
-        self.go(root_topologyNode, source_storage_topic_str_batch_size_int_tuple_list, 50, target_storage, target_topic_str)
+        self.go(runner, source_storage_topic_str_batch_size_int_tuple_list, 50, target_storage, target_topic_str)
