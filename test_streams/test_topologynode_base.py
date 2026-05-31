@@ -62,7 +62,7 @@ class TestTopologyNodeBase(unittest.TestCase):
                 root_tn.push(source_str, message_dict_list)
                 source_str_messages_int_dict[source_str] += len(message_dict_list)
             #
-            updated_output_dict_list, deleted_output_dict_list = root_tn.step(gc=False, bag=True)
+            updated_output_dict_list, deleted_output_dict_list = root_tn.step(bag=True)
             coll_updated_output_dict_list += updated_output_dict_list
             coll_deleted_output_dict_list += deleted_output_dict_list
             #

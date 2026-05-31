@@ -54,7 +54,7 @@ class TopologyNode:
             #
             i_in = self._output
             #
-            i_2d = LiftStreamIntroduction(group=g).connect(evaluator.circuit, (i_in,))
+            i_2d = liftStreamIntroduction(g, evaluator, i_in)
             proj = LiftProject(f=_map_function).connect(evaluator.circuit, (i_2d,))
             selection = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (proj,))
             #
@@ -81,7 +81,7 @@ class TopologyNode:
             #
             i_in = self._output
             #
-            i_2d = LiftStreamIntroduction(group=g).connect(evaluator.circuit, (i_in,))
+            i_2d = liftStreamIntroduction(g, evaluator, i_in)
             proj = LiftFlatMap(f=_flatmap_function).connect(evaluator.circuit, (i_2d,))
             # selection = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (proj,))
             #
@@ -103,7 +103,7 @@ class TopologyNode:
             #
             i_in = self._output
             #
-            i_2d = LiftStreamIntroduction(group=g).connect(evaluator.circuit, (i_in,))
+            i_2d = liftStreamIntroduction(g, evaluator, i_in)
             sel = LiftSelect(pred=_filter_function).connect(evaluator.circuit, (i_2d,))
             filtering = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (sel,))
             #
@@ -132,8 +132,8 @@ class TopologyNode:
             a_in = self._output
             b_in = other._output
             #
-            a_2d = LiftStreamIntroduction(group=g).connect(evaluator.circuit, (a_in,))
-            b_2d = LiftStreamIntroduction(group=g).connect(evaluator.circuit, (b_in,))
+            a_2d = liftStreamIntroduction(g, evaluator, a_in)
+            b_2d = liftStreamIntroduction(g, evaluator, b_in)
             join_ = DeltaLiftedDeltaLiftedJoin(
                 pred=_predicate_function,
                 proj=_projection_function,
@@ -469,3 +469,7 @@ def zset_group_agg_function(_by_function, _select_function, _agg_function, agg_i
         return zSet
     #
     return _zset_group_agg_function
+
+def liftStreamIntroduction(g, evaluator, i_in):
+    return i_in if evaluator.frontiers()[i_in].lattice.nestedness == 2 else LiftStreamIntroduction(group=g).connect(evaluator.circuit, (i_in,))
+    
