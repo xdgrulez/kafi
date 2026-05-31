@@ -28,13 +28,24 @@ class TestBase():
         #
         root_tn = (
             click_tn
-            .join(customer_tn,
-                  lambda l, r: l["user_id"] == r["id"],
-                  projection_function=lambda l, r: {
-                      "user_id": l["user_id"],
-                      "ip": l["ip"],
-                      "first_name": r["first_name"]})
+            .join_equi(
+                customer_tn,
+                lambda l: l["user_id"],
+                lambda r: r["id"],
+                projection_function=lambda l, r: {
+                    "user_id": l["user_id"],
+                    "ip": l["ip"],
+                    "first_name": r["first_name"]})
         )
+        # root_tn = (
+        #     click_tn
+        #     .join(customer_tn,
+        #           lambda l, r: l["user_id"] == r["id"],
+        #           projection_function=lambda l, r: {
+        #               "user_id": l["user_id"],
+        #               "ip": l["ip"],
+        #               "first_name": r["first_name"]})
+        # )
         #
         root_tn.build()
         #
@@ -62,21 +73,42 @@ class TestBase():
         #
         root_tn = (
             click_tn
-            .join(customer_tn,
-                  lambda l, r: l["user_id"] == r["id"],
-                  lambda l, r: {
-                      "user_id": l["user_id"],
-                      "ip": l["ip"],
-                      "product_id": l["product_id"],
-                      "first_name": r["first_name"]})
-                      .join(product_tn,
-                            lambda l, r: l["product_id"] == r["id"],
-                            lambda l, r: {"user_id": l["user_id"],
-                                          "ip": l["ip"],
-                                          "product_id": l["product_id"],
-                                          "first_name": l["first_name"],
-                                          "brand": r["brand"]})
+            .join_equi(
+                customer_tn,
+                lambda l: l["user_id"],
+                lambda r: r["id"],
+                lambda l, r: {
+                    "user_id": l["user_id"],
+                    "ip": l["ip"],
+                    "product_id": l["product_id"],
+                    "first_name": r["first_name"]})
+            .join_equi(
+                product_tn,
+                lambda l: l["product_id"],
+                lambda r: r["id"],
+                lambda l, r: {"user_id": l["user_id"],
+                              "ip": l["ip"],
+                              "product_id": l["product_id"],
+                              "first_name": l["first_name"],
+                              "brand": r["brand"]})
         )
+        # root_tn = (
+        #     click_tn
+        #     .join(customer_tn,
+        #           lambda l, r: l["user_id"] == r["id"],
+        #           lambda l, r: {
+        #               "user_id": l["user_id"],
+        #               "ip": l["ip"],
+        #               "product_id": l["product_id"],
+        #               "first_name": r["first_name"]})
+        #               .join(product_tn,
+        #                     lambda l, r: l["product_id"] == r["id"],
+        #                     lambda l, r: {"user_id": l["user_id"],
+        #                                   "ip": l["ip"],
+        #                                   "product_id": l["product_id"],
+        #                                   "first_name": l["first_name"],
+        #                                   "brand": r["brand"]})
+        # )
         #
         root_tn.build()
         #
@@ -109,34 +141,67 @@ class TestBase():
         )
         #
         root_tn = (
-            click_tn.join(
+            click_tn
+            .join_equi(
                 order_tn,
-                lambda l, r: l["product_id"] == r["product_id"] and l["user_id"] == r["customer_id"],
+                lambda l: (l["product_id"], l["user_id"]),
+                lambda r: (r["product_id"], r["customer_id"]),
                 lambda l, r: {
                     "user_id": l["user_id"],
                     "ip": l["ip"],
                     "product_id": l["product_id"],
                     "order_id": r["order_id"]})
-                    .join(
-                        customer_tn,
-                        lambda l, r: l["user_id"] == r["id"],
-                        lambda l, r: {
-                            "user_id": l["user_id"],
-                            "ip": l["ip"],
-                            "product_id": l["product_id"],
-                            "order_id": l["order_id"],
-                            "first_name": r["first_name"]})
-                            .join(
-                                product_tn,
-                                lambda l, r: l["product_id"] == r["id"],
-                                lambda l, r: {
-                                    "user_id": l["user_id"],
-                                    "ip": l["ip"],
-                                    "product_id": l["product_id"],
-                                    "first_name": l["first_name"],
-                                    "brand": r["brand"],
-                                    "order_id": l["order_id"]})
+            .join_equi(
+                customer_tn,
+                lambda l: l["user_id"],
+                lambda r: r["id"],
+                lambda l, r: {
+                    "user_id": l["user_id"],
+                    "ip": l["ip"],
+                    "product_id": l["product_id"],
+                    "order_id": l["order_id"],
+                    "first_name": r["first_name"]})
+            .join_equi(
+                product_tn,
+                lambda l: l["product_id"],
+                lambda r: r["id"],
+                lambda l, r: {
+                    "user_id": l["user_id"],
+                    "ip": l["ip"],
+                    "product_id": l["product_id"],
+                    "first_name": l["first_name"],
+                    "brand": r["brand"],
+                    "order_id": l["order_id"]})
         )
+        # root_tn = (
+        #     click_tn.join(
+        #         order_tn,
+        #         lambda l, r: l["product_id"] == r["product_id"] and l["user_id"] == r["customer_id"],
+        #         lambda l, r: {
+        #             "user_id": l["user_id"],
+        #             "ip": l["ip"],
+        #             "product_id": l["product_id"],
+        #             "order_id": r["order_id"]})
+        #             .join(
+        #                 customer_tn,
+        #                 lambda l, r: l["user_id"] == r["id"],
+        #                 lambda l, r: {
+        #                     "user_id": l["user_id"],
+        #                     "ip": l["ip"],
+        #                     "product_id": l["product_id"],
+        #                     "order_id": l["order_id"],
+        #                     "first_name": r["first_name"]})
+        #                     .join(
+        #                         product_tn,
+        #                         lambda l, r: l["product_id"] == r["id"],
+        #                         lambda l, r: {
+        #                             "user_id": l["user_id"],
+        #                             "ip": l["ip"],
+        #                             "product_id": l["product_id"],
+        #                             "first_name": l["first_name"],
+        #                             "brand": r["brand"],
+        #                             "order_id": l["order_id"]})
+        # )
         #
         root_tn.build()
         #
@@ -169,14 +234,23 @@ class TestBase():
                           "debits": y}
         )
         #
-        balance_tn = credits_tn.join(
+        balance_tn = credits_tn.join_equi(
             debits_tn,
-            lambda l, r: l["account"] == r["account"],
+            lambda l: l["account"],
+            lambda r: r["account"],
             lambda l, r: {
                 "account": l["account"],
                 "balance": l["credits"] - r["debits"]
             }
         )
+        # balance_tn = credits_tn.join(
+        #     debits_tn,
+        #     lambda l, r: l["account"] == r["account"],
+        #     lambda l, r: {
+        #         "account": l["account"],
+        #         "balance": l["credits"] - r["debits"]
+        #     }
+        # )
         #
         root_tn = balance_tn.sum(
             lambda x: x["balance"],

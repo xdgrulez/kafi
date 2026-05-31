@@ -13,6 +13,11 @@ from pydbsp.relational_operators import (
 from pydbsp.operator import Differentiate, Integrate
 from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
+from pydbsp.indexed_relational_operators import (
+    IndexedDeltaLiftedDeltaLiftedJoin,
+    LiftIndex,
+)
+from pydbsp.indexed_zset import IndexedZSetAddition
 
 import datetime
 import json
@@ -145,6 +150,45 @@ class TopologyNode:
             tn._output = join_
         #
         tn = TopologyNode("join_op", {self, other}, _build_function)
+        #
+        return tn
+
+    def join_equi(self, other, left_select_function, right_select_function, projection_function):
+        def _left_select_function(left_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            return json.dumps(left_select_function(left_value_dict))
+        #
+        def _right_select_function(right_value_json_str):
+            right_value_dict = json.loads(right_value_json_str)
+            return json.dumps(right_select_function(right_value_dict))
+        #
+        def _projection_function(_, left_value_json_str, right_value_json_str):
+            left_value_dict = json.loads(left_value_json_str)
+            right_value_dict = json.loads(right_value_json_str)
+            return json.dumps(projection_function(left_value_dict, right_value_dict))
+        #
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            a_in = self._output
+            b_in = other._output
+            #
+            emp_2d = liftStreamIntroduction(g, evaluator, a_in)
+            sal_2d = liftStreamIntroduction(g, evaluator, b_in)
+            emp_idx = LiftIndex[tuple[int, str], int](indexer=_left_select_function).connect(evaluator.circuit, (emp_2d,))
+            sal_idx = LiftIndex[tuple[int, str], int](indexer=_right_select_function).connect(evaluator.circuit, (sal_2d,))
+            smj = IndexedDeltaLiftedDeltaLiftedJoin[int, tuple[int, str], tuple[int, str], tuple[int, str, str]](
+                proj=_projection_function,
+                group_a=IndexedZSetAddition[int, tuple[int, str]](g, _left_select_function),
+                group_b=IndexedZSetAddition[int, tuple[int, str]](g, _right_select_function),
+                out_group=g,
+            ).connect(evaluator.circuit, (emp_idx, sal_idx))
+            #
+            tn._output = smj
+        #
+        tn = TopologyNode("join_equi_op", {self, other}, _build_function)
         #
         return tn
 
