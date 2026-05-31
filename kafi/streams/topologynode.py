@@ -197,11 +197,11 @@ class TopologyNode:
 
     def group_by_agg(self, by_function, select_function, output_function, agg_function, agg_initial_any):
         def _by_function(serialized_value_any):
-            value_any = json.loads(serialized_value_any)
+            value_any = self._deserialize_function(serialized_value_any)
             return by_function(value_any)
         #
         def _select_function(serialized_value_any):
-            value_any = json.loads(serialized_value_any)
+            value_any = self._deserialize_function(serialized_value_any)
             return select_function(value_any)
         #
         def _output_function(key, sum_any):
