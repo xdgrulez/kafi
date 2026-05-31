@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='kafi',
-    version='1.0.0',
+    version='0.1.0',
     description='Kafka and Files',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -26,7 +26,9 @@ setup(
                       'lxml==6.1.1',
                       'openpyxl==3.1.5',
                       'pandas==2.3.3',
+                      'pydbsp==2.0.0'
                       ],
+    python_requires='>=3.12',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

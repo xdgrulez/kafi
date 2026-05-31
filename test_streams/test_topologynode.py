@@ -10,7 +10,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         #
         runner = self.get_datagen_1_join_root_tn(click_source_str, customer_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100)], 100, runner)
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100)], 50, runner)
 
     def test_datagen_2_joins(self):
         click_source_str = "shoe_clickstream"
@@ -19,7 +19,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         #
         runner = self.get_datagen_2_joins_root_tn(click_source_str, customer_source_str, product_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100)], 100, runner)
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100)], 50, runner)
 
     def test_datagen_3_joins(self):
         click_source_str = "shoe_clickstream"
@@ -29,7 +29,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         #
         runner = self.get_datagen_3_joins_root_tn(click_source_str, customer_source_str, product_source_str, order_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100), (order_source_str, 100)], 100, runner)
+        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100), (order_source_str, 100)], 50, runner)
 
     #
 
@@ -38,6 +38,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         #
         root_tn = self.get_jamie_root_tn(transaction_source_str)
         #
+        print(root_tn.mermaid(True))
         self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(transaction_source_str, 100)], 100, root_tn)
         #
         self.assertEqual(len(self.updated_message_dict_list), 1)

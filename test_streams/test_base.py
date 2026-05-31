@@ -19,11 +19,13 @@ class TestBase():
         click_tn = (
             click_source_tn
             .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"]})
+            .distinct()
         )
         #
         customer_tn = (
             customer_source_tn
             .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
+            .distinct()
         )
         #
         root_tn = (
