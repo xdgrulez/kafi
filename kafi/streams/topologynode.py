@@ -7,8 +7,7 @@ from pydbsp.relational_operators import (
     DeltaLiftedDeltaLiftedDistinct,
     DeltaLiftedDeltaLiftedJoin,
     LiftProject,
-    LiftSelect,
-    LiftFlatMap
+    LiftSelect
 )
 from pydbsp.operator import Differentiate, Integrate
 from pydbsp.storage import DictStorage
@@ -73,27 +72,26 @@ class TopologyNode:
         return tn
 
     def flatmap(self, flatmap_function):
-        def _flatmap_function(serialized_value_any):
-            value_any = self._deserialize_function(serialized_value_any)
-            value_any_list = flatmap_function(value_any)
-            inner_dict = {}
-            for value_any1 in value_any_list:
-                serialized_value_any1 = self._serialize_function(value_any1)
-                inner_dict[serialized_value_any1] = inner_dict.get(serialized_value_any1, 0) + 1
-            return ZSet(inner_dict)
+        def _expand(zSet):
+            out = {}
+            for value_json_str, weight in zSet.inner.items():
+                value_dict = json.loads(value_json_str)
+                for output_dict in flatmap_function(value_dict):
+                    key = json.dumps(output_dict)
+                    out[key] = out.get(key, 0) + weight
+            return ZSet({k: v for k, v in out.items() if v != 0})
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
-            #
             i_in = self._output
             #
-            i_2d = liftStreamIntroduction(g, evaluator, i_in)
-            proj = LiftFlatMap(f=_flatmap_function).connect(evaluator.circuit, (i_2d,))
-            # selection = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (proj,))
+            cum = Integrate(group=g).connect(evaluator.circuit, (i_in,))
+            expanded = Lift1(f=_expand).connect(evaluator.circuit, (cum,))
+            diffs = Differentiate(group=g).connect(evaluator.circuit, (expanded,))
             #
-            tn._output = proj
+            tn._output = diffs
         #
         tn = TopologyNode("flatmap_op", {self}, _build_function)
         #
