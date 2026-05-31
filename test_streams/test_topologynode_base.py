@@ -30,8 +30,8 @@ class TestTopologyNodeBase(unittest.TestCase):
         print(f"Updates: {updates_int}")
         print(f"Unique updates: {unique_updates_int}")
         if updates_int > 0:
-            print("First update:")
-            print(json.dumps(self.updated_message_dict_list[0], indent=2))
+            print("Last update:")
+            print(json.dumps(self.updated_message_dict_list[-1], indent=2))
         #
         print()
         print("---")
@@ -58,8 +58,6 @@ class TestTopologyNodeBase(unittest.TestCase):
         for step_int in range(steps_int):
             for source_str, batch_size_int in source_str_batch_size_int_tuple_list:
                 message_dict_list = self.generate(source_str, batch_size_int)
-                for x in message_dict_list:
-                    print(x)
                 #
                 root_tn.push(source_str, message_dict_list)
                 source_str_messages_int_dict[source_str] += len(message_dict_list)

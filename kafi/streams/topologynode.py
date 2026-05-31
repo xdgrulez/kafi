@@ -261,7 +261,7 @@ class TopologyNode:
         gc_boolean = gc
         #
         zSet = self._evaluator.latest(self._output)
-        print(zSet)
+        # print(zSet)
         #
         if gc_boolean:
             self._evaluator.compact()

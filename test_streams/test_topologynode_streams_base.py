@@ -3,11 +3,12 @@ from kafi.streams.topologynode import (
 )
 
 from jamie.transactions import TransactionGenerator
+from wc.plaintext import PlainTextGenerator
 
 #
 
-class TestJamieBase():
-    def get_root_tn(self, transaction_source_str):
+class TestTopologyNodeStreamsBase():
+    def get_jamie_root_tn(self, transaction_source_str):
         transaction_source_tn = source(transaction_source_str)
         #
         transaction_tn = transaction_source_tn.map(
@@ -49,14 +50,36 @@ class TestJamieBase():
         root_tn.setup()
         #
         return root_tn
+    
+    #
+
+    def get_wc_root_tn(self, plain_text_str):
+        _source_tn = source(plain_text_str)
+        #
+        split_tn = _source_tn.flatmap(
+              lambda x: [{"word": word_str} for word_str in x["text"].split()]
+        )
+        #
+        root_tn = split_tn.group_by_count(
+            lambda x: x["word"],
+            lambda x, y: {"word": x,
+                          "count": y}
+        )
+        #
+        root_tn.setup()
+        #
+        return root_tn
 
     #
 
     def init_generate(self, source_str):
-        if source_str == "transactions":
-            self.generator_dict[source_str] = TransactionGenerator()
-        else:
-            raise Exception(f"Only transactions supported: {source_str}")
+        match source_str:
+            case "transactions": 
+                self.generator_dict[source_str] = TransactionGenerator()
+            case "plain_text":
+                self.generator_dict[source_str] = PlainTextGenerator()
+            case _:
+                raise Exception(f"Not supported: {source_str}")
 
     def generate(self, source_str, batch_size_int):
         message_dict_list = []
