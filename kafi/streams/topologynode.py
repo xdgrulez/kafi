@@ -23,39 +23,39 @@ import msgpack
 
 #
 
+default_pack_function = msgpack.packb
+default_unpack_function = msgpack.unpackb
+
+#
+
 class TopologyNode:
-    def __init__(self, name_str, daughter_tn_set, build_function):
+    def __init__(self, name_str, daughter_tn_set, build_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
         self._daughter_tn_set = daughter_tn_set
         self._build_function = build_function
         #
-        self._serialize_function = None
-        self._deserialize_function = None
+        self._pack_function = pack_function
+        self._unpack_function = unpack_function
         #
         self._evaluator = None
         self._output_nodeId = None
 
-    def build(self, serialize_function=msgpack.packb, deserialize_function=msgpack.unpackb):
+    def build(self):
         evaluator = Evaluator(
             circuit=Circuit(),
             storage=DictStorage(),
             ctx=ComputeCtx(lattice=dbsp_time(2)),
             group=ZSetAddition())
         #
-        def _set_serialize_deserialize_functions(tn, serialize_function, deserialize_function):
-            tn._serialize_function = serialize_function
-            tn._deserialize_function = deserialize_function
-        self._foreach_bu(lambda tn: _set_serialize_deserialize_functions(tn, serialize_function, deserialize_function))
-        #
         self._foreach_bu(lambda tn: tn._build_function(evaluator))
 
     #
 
-    def map(self, map_function):
+    def map(self, map_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _map_function(serialized_value_any):
-            value_any = self._deserialize_function(serialized_value_any)
-            return self._serialize_function(map_function(value_any))
+            value_any = self._unpack_function(serialized_value_any)
+            return self._pack_function(map_function(value_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -69,16 +69,16 @@ class TopologyNode:
             #
             tn._output_nodeId = liftProject_nodeId
         #
-        tn = TopologyNode("map_op", {self}, _build_function)
+        tn = TopologyNode("map_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
-    def flatmap(self, flatmap_function):
+    def flatmap(self, flatmap_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _flatmap_function(zSet):
             out = {}
             for serialized_value_any, weight in zSet.inner.items():
-                for value_any in flatmap_function(self._deserialize_function(serialized_value_any)):
-                    key = self._serialize_function(value_any)
+                for value_any in flatmap_function(self._unpack_function(serialized_value_any)):
+                    key = self._pack_function(value_any)
                     out[key] = out.get(key, 0) + weight
             return ZSet({k: v for k, v in out.items() if v != 0})
         #
@@ -95,13 +95,13 @@ class TopologyNode:
             #
             tn._output_nodeId = differentiate_nodeId
         #
-        tn = TopologyNode("flatmap_op", {self}, _build_function)
+        tn = TopologyNode("flatmap_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
-    def filter(self, filter_function):
+    def filter(self, filter_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _filter_function(serialized_value_any):
-            value_any = self._deserialize_function(serialized_value_any)
+            value_any = self._unpack_function(serialized_value_any)
             return filter_function(value_any)
         #
         def _build_function(evaluator):
@@ -116,11 +116,11 @@ class TopologyNode:
             #
             tn._output_nodeId = liftSelect_nodeId
         #
-        tn = TopologyNode("filter_op", {self}, _build_function)
+        tn = TopologyNode("filter_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
-    def distinct(self):
+    def distinct(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -133,11 +133,11 @@ class TopologyNode:
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
-        tn = TopologyNode("distinct_op", {self}, _build_function)
+        tn = TopologyNode("distinct_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
-    def union(self, other_tn):
+    def union(self, other_tn, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -154,17 +154,17 @@ class TopologyNode:
             #
             tn._output_nodeId = integrate_nodeId
         #
-        tn = TopologyNode("union_op", {self, other_tn}, _build_function)
+        tn = TopologyNode("union_op", {self, other_tn}, _build_function, pack_function, unpack_function)
         #
         return tn
 
-    def intersect(self, other_tn):
-        tn = self.join(other_tn, lambda l, r: l == r, lambda l, _: l)
+    def intersect(self, other_tn, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.join(other_tn, lambda l, r: l == r, lambda l, _: l, pack_function, unpack_function)
         tn._name = "intersect_op"
         #
         return tn
 
-    def diff(self, other_tn):
+    def diff(self, other_tn, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -181,20 +181,20 @@ class TopologyNode:
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
-        tn = TopologyNode("diff_op", {self, other_tn}, _build_function)
+        tn = TopologyNode("diff_op", {self, other_tn}, _build_function, pack_function, unpack_function)
         #
         return tn
 
-    def join(self, other_tn, predicate_function, projection_function):
+    def join(self, other_tn, predicate_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _predicate_function(left_serialized_value_any, right_serialized_value_any):
-            left_value_any = self._deserialize_function(left_serialized_value_any)
-            right_value_any = self._deserialize_function(right_serialized_value_any)
+            left_value_any = self._unpack_function(left_serialized_value_any)
+            right_value_any = self._unpack_function(right_serialized_value_any)
             return predicate_function(left_value_any, right_value_any)
         #
         def _projection_function(left_serialized_value_any, right_serialized_value_any):
-            left_value_any = self._deserialize_function(left_serialized_value_any)
-            right_value_any = self._deserialize_function(right_serialized_value_any)
-            return self._serialize_function(projection_function(left_value_any, right_value_any))
+            left_value_any = self._unpack_function(left_serialized_value_any)
+            right_value_any = self._unpack_function(right_serialized_value_any)
+            return self._pack_function(projection_function(left_value_any, right_value_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -216,23 +216,23 @@ class TopologyNode:
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedJoin_nodeId
         #
-        tn = TopologyNode("join_op", {self, other_tn}, _build_function)
+        tn = TopologyNode("join_op", {self, other_tn}, _build_function, pack_function, unpack_function)
         #
         return tn
 
-    def join_equi(self, other_tn, left_select_function, right_select_function, projection_function):
+    def join_equi(self, other_tn, left_select_function, right_select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _left_select_function(left_serialized_value_any):
-            left_value_any = self._deserialize_function(left_serialized_value_any)
-            return self._serialize_function(left_select_function(left_value_any))
+            left_value_any = self._unpack_function(left_serialized_value_any)
+            return self._pack_function(left_select_function(left_value_any))
         #
         def _right_select_function(right_serialized_value_any):
-            right_value_any = self._deserialize_function(right_serialized_value_any)
-            return self._serialize_function(right_select_function(right_value_any))
+            right_value_any = self._unpack_function(right_serialized_value_any)
+            return self._pack_function(right_select_function(right_value_any))
         #
         def _projection_function(_, left_serialized_value_any, right_serialized_value_any):
-            left_value_any = self._deserialize_function(left_serialized_value_any)
-            right_value_any = self._deserialize_function(right_serialized_value_any)
-            return self._serialize_function(projection_function(left_value_any, right_value_any))
+            left_value_any = self._unpack_function(left_serialized_value_any)
+            right_value_any = self._unpack_function(right_serialized_value_any)
+            return self._pack_function(projection_function(left_value_any, right_value_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -255,22 +255,22 @@ class TopologyNode:
             #
             tn._output_nodeId = indexedDeltaLiftedDeltaLiftedJoin_nodeId
         #
-        tn = TopologyNode("join_equi_op", {self, other_tn}, _build_function)
+        tn = TopologyNode("join_equi_op", {self, other_tn}, _build_function, pack_function, unpack_function)
         #
         return tn
 
-    def group_by_agg(self, by_function, select_function, output_function, agg_function, agg_initial_any):
+    def group_by_agg(self, by_function, select_function, output_function, agg_function, agg_initial_any, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _by_function(serialized_value_any):
-            value_any = self._deserialize_function(serialized_value_any)
+            value_any = self._unpack_function(serialized_value_any)
             return by_function(value_any)
         #
         def _select_function(serialized_value_any):
-            value_any = self._deserialize_function(serialized_value_any)
+            value_any = self._unpack_function(serialized_value_any)
             return select_function(value_any)
         #
         def _output_function(key, sum_any):
             value_any = output_function(key, sum_any)
-            return self._serialize_function(value_any)
+            return self._pack_function(value_any)
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -285,64 +285,64 @@ class TopologyNode:
             #
             tn._output_nodeId = differentiate_nodeId
         #
-        tn = TopologyNode("group_by_agg_op", {self}, _build_function)
+        tn = TopologyNode("group_by_agg_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
     #
 
-    def group_by_sum(self, by_function, select_function, output_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, z: x + y * z, 0)
+    def group_by_sum(self, by_function, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, z: x + y * z, 0, pack_function, unpack_function)
         tn._name = "group_by_sum_op"
         #
         return tn
 
-    def group_by_max(self, by_function, select_function, output_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: max(x, y), None)
+    def group_by_max(self, by_function, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: max(x, y), None, pack_function, unpack_function)
         tn._name = "group_by_max_op"
         #
         return tn
 
-    def group_by_min(self, by_function, select_function, output_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: min(x, y), None)
+    def group_by_min(self, by_function, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: min(x, y), None, pack_function, unpack_function)
         tn._name = "group_by_min_op"
         #
         return tn
 
-    def group_by_count(self, by_function, output_function):
-        tn = self.group_by_sum(by_function, lambda _: 1, output_function)
+    def group_by_count(self, by_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_sum(by_function, lambda _: 1, output_function, pack_function, unpack_function)
         tn._name = "group_by_count_op"
         #
         return tn
 
     #
 
-    def agg(self, select_function, output_function, agg_function):
-        tn = self.group_by_agg(lambda _: 0, select_function, output_function, agg_function)
+    def agg(self, select_function, output_function, agg_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_agg(lambda _: 0, select_function, output_function, agg_function, pack_function, unpack_function)
         tn._name = "agg_op"
         #
         return tn
 
-    def sum(self, select_function, output_function):
-        tn = self.group_by_sum(lambda _: 0, select_function, output_function)
+    def sum(self, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_sum(lambda _: 0, select_function, output_function, pack_function, unpack_function)
         tn._name = "sum_op"
         #
         return tn
 
-    def max(self, select_function, output_function):
-        tn = self.group_by_max(lambda _: 0, select_function, output_function)
+    def max(self, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_max(lambda _: 0, select_function, output_function, pack_function, unpack_function)
         tn._name = "max_op"
         #
         return tn
 
-    def min(self, select_function, output_function):
-        tn = self.group_by_min(lambda _: 0, select_function, output_function)
+    def min(self, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_min(lambda _: 0, select_function, output_function, pack_function, unpack_function)
         tn._name = "min_op"
         #
         return tn
 
-    def count(self, output_function):
-        tn = self.group_by_count(lambda _: 0, output_function)
+    def count(self, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_count(lambda _: 0, output_function, pack_function, unpack_function)
         tn._name = "count_op"
         #
         return tn
@@ -365,7 +365,7 @@ class TopologyNode:
         #
         input_nodeId = source_topologyNode._output_nodeId
         #
-        zSet = ZSet({self._serialize_function(value_any): weight_int for value_any in value_any_list})
+        zSet = ZSet({self._pack_function(value_any): weight_int for value_any in value_any_list})
         #
         self._evaluator.push(input_nodeId, zSet)
 
@@ -381,13 +381,13 @@ class TopologyNode:
                 if not bag_boolean:
                     weight_int = 1
                 for _ in range(weight_int):
-                    value_any = self._deserialize_function(serialized_value_any)
+                    value_any = self._unpack_function(serialized_value_any)
                     updated_value_any_list.append(value_any)
             elif weight_int < 0:
                 if not bag_boolean:
                     weight_int = -1
                 for _ in range(-weight_int):
-                    value_any = self._deserialize_function(serialized_value_any)
+                    value_any = self._unpack_function(serialized_value_any)
                     deleted_value_any_list.append(value_any)
         #
         return updated_value_any_list, deleted_value_any_list
@@ -513,7 +513,7 @@ class TopologyNode:
         return _zset_group_agg_function
 
     @staticmethod
-    def source(source_str):
+    def source(source_str, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -521,7 +521,7 @@ class TopologyNode:
             #
             tn._output_nodeId = input
         #
-        tn = TopologyNode(source_str, [], _build_function)
+        tn = TopologyNode(source_str, [], _build_function, pack_function, unpack_function)
         #
         return tn
 

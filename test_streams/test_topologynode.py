@@ -29,7 +29,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         #
         root_tn = self.get_datagen_3_joins_root_tn(click_source_str, customer_source_str, product_source_str, order_source_str)
         #
-        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100), (order_source_str, 100)], 100, root_tn)
+        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100), (order_source_str, 100)], 50, root_tn)
 
     #
 
@@ -38,7 +38,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         #
         root_tn = self.get_jamie_root_tn(transaction_source_str)
         #
-        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(transaction_source_str, 100)], 100, root_tn)
+        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(transaction_source_str, 100)], 50, root_tn)
         #
         self.assertEqual(len(self.updated_value_any_list), 1)
         self.assertEqual(self.updated_value_any_list[0], {"sum": 0})
@@ -50,4 +50,4 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         #
         root_tn = self.get_wc_root_tn(plain_text_source_str)
         #
-        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(plain_text_source_str, 100)], 100, root_tn)
+        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(plain_text_source_str, 100)], 50, root_tn)

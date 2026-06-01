@@ -1,6 +1,4 @@
-from kafi.streams.topologynode import (
-    source
-)
+from kafi.streams.topologynode import source
 
 from datagen.shoe_clickstream import ShoeClickstreamGenerator
 from datagen.shoe_customers import ShoeCustomerGenerator

@@ -2,7 +2,7 @@ import unittest
 
 import cloudpickle as pickle
 
-import msgpack
+from kafi.streams.topologynode import default_pack_function, default_unpack_function
 
 #
 
@@ -26,27 +26,27 @@ class TestTopologyNodeBase(unittest.TestCase):
         print("---")
         print()
         #
-        updated_serialized_value_any_list = [msgpack.packb(value_any) for value_any in self.updated_value_any_list]
+        updated_serialized_value_any_list = [default_pack_function(value_any) for value_any in self.updated_value_any_list]
         updates_int = len(updated_serialized_value_any_list)
         unique_updates_int = len(set(updated_serialized_value_any_list))
         print(f"Updates: {updates_int}")
         print(f"Unique updates: {unique_updates_int}")
         if updates_int > 0:
             print("Last update:")
-            print(msgpack.unpackb(updated_serialized_value_any_list[-1]))
+            print(default_unpack_function(updated_serialized_value_any_list[-1]))
         #
         print()
         print("---")
         print()
         #
-        deleted_serialized_value_any_list = [msgpack.packb(value_any) for value_any in self.deleted_value_any_list]
+        deleted_serialized_value_any_list = [default_pack_function(value_any) for value_any in self.deleted_value_any_list]
         deletes_int = len(deleted_serialized_value_any_list)
         unique_deletes_int = len(set(deleted_serialized_value_any_list))
         print(f"Deletes: {deletes_int}")
         print(f"Unique deletes: {unique_deletes_int}")
         if deletes_int > 0:
             print("Last update:")
-            print(msgpack.unpackb(deleted_serialized_value_any_list[-1]))
+            print(default_unpack_function(deleted_serialized_value_any_list[-1]))
         #
         print()
         print("---")
