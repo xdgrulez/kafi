@@ -1,7 +1,6 @@
 import random
 
-# plain_text_str_list = ["hello kafi streams hello", "all streams lead to kafka", "join berlin buzzwords"]
-line_str_list = ["hello bla hello", "hello blups hello"]
+line_str_list = ["hello kafi streams hello", "all streams lead to kafi", "join berlin buzzwords"]
 
 class LineGenerator:
     def generate_record(self):
