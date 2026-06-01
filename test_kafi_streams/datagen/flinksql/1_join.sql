@@ -1,10 +1,10 @@
 CREATE TABLE shoe_clickstream (
-    payload ROW < product_id STRING,
+    product_id STRING,
     user_id STRING,
     view_time INT,
     page_url STRING,
     ip STRING,
-    ts TIMESTAMP(3) >
+    ts TIMESTAMP(3)
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_clickstream',
@@ -16,15 +16,15 @@ CREATE TABLE shoe_clickstream (
 
 CREATE VIEW click_view AS
 SELECT
-    payload.user_id as user_id,
-    payload.ip as ip
+    user_id as user_id,
+    ip as ip
 FROM
     shoe_clickstream;
 
 --
 
 CREATE TABLE shoe_customers (
-    payload ROW < id STRING,
+    id STRING,
     first_name STRING,
     last_name STRING,
     email STRING,
@@ -33,7 +33,7 @@ CREATE TABLE shoe_customers (
     state STRING,
     zip_code STRING,
     country STRING,
-    country_code STRING >
+    country_code STRING
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_customers',
@@ -45,8 +45,8 @@ CREATE TABLE shoe_customers (
 
 CREATE VIEW customer_view AS
 SELECT
-    payload.id as id,
-    payload.first_name as first_name
+    id as id,
+    first_name as first_name
 FROM
     shoe_customers;
 

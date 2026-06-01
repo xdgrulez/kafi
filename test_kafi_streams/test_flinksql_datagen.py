@@ -1,4 +1,4 @@
-from test_kafi_streams._test_flinksql_base import TestFlinkSqlBase, home_path_str
+from test_kafi_streams.test_flinksql_base import TestFlinkSqlBase, home_path_str
 from test_kafi_streams.test_base import TestBase
 
 from kafi.kafi import Cluster
@@ -10,7 +10,7 @@ class TestFlinkSqlDatagen(TestFlinkSqlBase, TestBase):
         click_topic_str = "shoe_clickstream"
         customer_topic_str = "shoe_customers"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_streams/datagen/flinksql/1_join.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/1_join.sql"
         #
         source_storage = Cluster("local")
         #
@@ -26,7 +26,7 @@ class TestFlinkSqlDatagen(TestFlinkSqlBase, TestBase):
         customer_topic_str = "shoe_customers"
         product_topic_str = "shoes"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_streams/datagen/flinksql/2_joins.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/2_joins.sql"
         #
         source_storage = Cluster("local")
         #
@@ -43,7 +43,7 @@ class TestFlinkSqlDatagen(TestFlinkSqlBase, TestBase):
         product_topic_str = "shoes"
         order_topic_str = "shoe_orders"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_streams/datagen/flinksql/3_joins.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/3_joins.sql"
         #
         source_storage = Cluster("local")
         #

@@ -1,4 +1,4 @@
-from test_kafi_streams._test_flinksql_base import TestFlinkSqlBase, home_path_str
+from test_kafi_streams.test_flinksql_base import TestFlinkSqlBase, home_path_str
 from test_kafi_streams.test_base import TestBase
 
 from kafi.kafi import Cluster
@@ -9,7 +9,7 @@ class TestFlinkSqlJamie(TestFlinkSqlBase, TestBase):
     def test_jamie(self):
         transaction_source_str = "transactions"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_streams/jamie/flinksql/jamie.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/jamie/flinksql/jamie.sql"
         #
         source_storage = Cluster("local")
         #

@@ -4,6 +4,11 @@ from kafi.helpers import get
 
 #
 
+default_pack_function = json.dumps
+default_unpack_function = json.loads
+
+#
+
 home_path_str = "/home/ralph"
 # home_path_str = "/Users/m0724822"
 flinksql_path_str = f"{home_path_str}/apps/flink-2.2.0"
@@ -15,28 +20,58 @@ flinksql_url_str = "http://localhost:9081"
 #
 
 class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
-    async def asyncSetUp(self):
+    def setUp(self):
         print("Test:", self._testMethodName)
+        #
+        self.source_str_values_int_dict = {}
+        self.updated_value_any_list = {}
+        self.deleted_value_any_list = {}
+        self.generator_dict = {}
 
-    async def asyncTearDown(self):
-        print()
-        print("---")
-        print()
-        #
-        print(f"Inputs: {self.source_str_messages_int_dict}")
+    def tearDown(self):
+        subprocess.run("pgrep -f flink | xargs kill -9", shell=True)
         #
         print()
         print("---")
         print()
         #
-        print(f"Updates: {self.updates_int}")
-        if self.updates_int > 0:
-            print("First update:")
-            print(json.dumps(self.updated_message_dict_list[0], indent=2))
+        print(f"Inputs: {self.source_str_values_int_dict}")
         #
         print()
         print("---")
         print()
+        #
+        self.print_changes(self.updated_value_any_list, "Updates")
+        #
+        # print()
+        # print("---")
+        # print()
+        # #
+        # self.print_changes(self.deleted_value_any_list, "Deletes")
+        #
+        print()
+        print("---")
+        print()
+
+    def print_changes(self, changed_value_any_list, changes_str):
+        changed_serialized_value_any_list = [default_pack_function(value_any) for value_any in changed_value_any_list]
+        changes_int = len(changed_serialized_value_any_list)
+        unique_changes_int = len(set(changed_serialized_value_any_list))
+        print(f"{changes_str}: {changes_int}")
+        print()
+        print(f"Unique: {unique_changes_int}")
+        print()
+        if changes_int > 6:
+            print("First three:")
+            for changed_serialized_value_any in changed_serialized_value_any_list[:3]: 
+                print(default_unpack_function(changed_serialized_value_any))
+            print()
+            print("Last three:")
+            for changed_serialized_value_any in changed_serialized_value_any_list[-3:]: 
+                print(default_unpack_function(changed_serialized_value_any))
+        elif changes_int > 0:
+            print("Last:")
+            print(default_unpack_function(changed_serialized_value_any_list[-1]))
 
     #
 
@@ -49,7 +84,7 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
                     producer.produce_list(message_dict_list)
                     producer.close()
                     #
-                    self.source_str_messages_int_dict[topic_str] += batch_size_int
+                    self.source_str_values_int_dict[topic_str] += batch_size_int
 
     #
 
@@ -74,7 +109,7 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
         self.updates_int = updates_int
         #
         message_dict_list = storage.cat(topic_str, n=1)
-        self.updated_message_dict_list = message_dict_list
+        self.updated_value_any_list = message_dict_list
 
     #
 
@@ -107,11 +142,14 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
     def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int):
         source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list]
         #
-        self.source_str_messages_int_dict = {source_str: 0 for _, source_str in source_storage_topic_str_tuple_list}
+        self.source_str_values_int_dict = {source_str: 0 for _, source_str in source_storage_topic_str_tuple_list}
         #
         for storage, topic_str in source_storage_topic_str_tuple_list:
             storage.recreate(topic_str)
         target_storage.recreate(target_topic_str)
+        #
+        for _, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list:
+            self.init_generate(topic_str)
         #
         thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int))
         #

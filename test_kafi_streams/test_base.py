@@ -318,7 +318,7 @@ class TestBase():
         for _ in range(batch_size_int):
             record_dict = generator.generate_record()
             value_any = {"key": None,
-                        "value": record_dict}
+                         "value": record_dict}
             value_any_list.append(value_any)
         #
         return value_any_list
