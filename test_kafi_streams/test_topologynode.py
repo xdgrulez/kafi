@@ -1,9 +1,11 @@
 from test_kafi_streams.test_topologynode_base import TestTopologyNodeBase
+from test_kafi_streams.test_topologies import TestTopologies
+from test_kafi_streams.test_generate import TestGenerate
 from test_kafi_streams.test_base import TestBase
 
 #
 
-class TestTopologyNode(TestTopologyNodeBase, TestBase):
+class TestTopologyNode(TestTopologyNodeBase, TestTopologies, TestGenerate, TestBase):
     def test_datagen_1_join(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"

@@ -1,20 +1,13 @@
-import os, sys
-
-#
-
-# if os.path.basename(os.getcwd()) == "test":
-#     sys.path.insert(1, "..")
-# else:
-#     sys.path.insert(1, ".")
-
 from test_kafi_streams.test_streams_base import TestStreamsBase
+from test_kafi_streams.test_topologies import TestTopologies
+from test_kafi_streams.test_generate import TestGenerate
 from test_kafi_streams.test_base import TestBase
 
 from kafi.kafi import Cluster
 
 #
 
-class TestStreams(TestStreamsBase, TestBase):
+class TestStreams(TestStreamsBase, TestTopologies, TestGenerate, TestBase):
     def test_datagen_1_join(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"

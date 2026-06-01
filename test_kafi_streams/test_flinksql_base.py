@@ -1,4 +1,6 @@
-import json, subprocess, threading, time, unittest
+import json, subprocess, threading, time
+
+from test_kafi_streams.test_kafka_base import TestKafkaBase
 
 from kafi.helpers import get
 
@@ -19,72 +21,11 @@ flinksql_url_str = "http://localhost:9081"
 
 #
 
-class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
-    def setUp(self):
-        print("Test:", self._testMethodName)
-        #
-        self.source_str_values_int_dict = {}
-        self.updated_value_any_list = {}
-        self.deleted_value_any_list = {}
-        self.generator_dict = {}
-
+class TestFlinkSqlBase(TestKafkaBase):
     def tearDown(self):
+        super().tearDown()
+        #
         subprocess.run("pgrep -f flink | xargs kill -9", shell=True)
-        #
-        print()
-        print("---")
-        print()
-        #
-        print(f"Inputs: {self.source_str_values_int_dict}")
-        #
-        print()
-        print("---")
-        print()
-        #
-        self.print_changes(self.updated_value_any_list, "Updates")
-        #
-        # print()
-        # print("---")
-        # print()
-        # #
-        # self.print_changes(self.deleted_value_any_list, "Deletes")
-        #
-        print()
-        print("---")
-        print()
-
-    def print_changes(self, changed_value_any_list, changes_str):
-        changed_serialized_value_any_list = [default_pack_function(value_any) for value_any in changed_value_any_list]
-        changes_int = len(changed_serialized_value_any_list)
-        unique_changes_int = len(set(changed_serialized_value_any_list))
-        print(f"{changes_str}: {changes_int}")
-        print()
-        print(f"Unique: {unique_changes_int}")
-        print()
-        if changes_int > 6:
-            print("First three:")
-            for changed_serialized_value_any in changed_serialized_value_any_list[:3]: 
-                print(default_unpack_function(changed_serialized_value_any))
-            print()
-            print("Last three:")
-            for changed_serialized_value_any in changed_serialized_value_any_list[-3:]: 
-                print(default_unpack_function(changed_serialized_value_any))
-        elif changes_int > 0:
-            print("Last:")
-            print(default_unpack_function(changed_serialized_value_any_list[-1]))
-
-    #
-
-    def produce(self, storage_topic_str_batch_size_int_tuple_list, steps_int):
-        for _ in range(steps_int):
-            for storage, topic_str, batch_size_int in storage_topic_str_batch_size_int_tuple_list:
-                    message_dict_list = self.generate(topic_str, batch_size_int)
-                    #
-                    producer = storage.producer(topic_str)
-                    producer.produce_list(message_dict_list)
-                    producer.close()
-                    #
-                    self.source_str_values_int_dict[topic_str] += batch_size_int
 
     #
 
@@ -100,16 +41,6 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
     def stop_function(self):
         stop_cluster_completedProcess = subprocess.run([flinksql_stop_cluster_str], capture_output=True, text=True)
         print(stop_cluster_completedProcess.stdout)
-
-    #
-
-    def read(self, storage, topic_str):
-        updates_int = storage.l(topic_str)[topic_str]
-        #
-        self.updates_int = updates_int
-        #
-        message_dict_list = storage.cat(topic_str, n=1)
-        self.updated_value_any_list = message_dict_list
 
     #
 
@@ -139,7 +70,7 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
     
     #
 
-    def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int):
+    def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int, key_type="str", value_type="json"):
         source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list]
         #
         self.source_str_values_int_dict = {source_str: 0 for _, source_str in source_storage_topic_str_tuple_list}
@@ -151,7 +82,7 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
         for _, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list:
             self.init_generate(topic_str)
         #
-        thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int))
+        thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int, key_type, value_type))
         #
         thread2 = threading.Thread(target=self.process, args=(flinksql_sql_path_str, ))
         #
@@ -169,4 +100,4 @@ class TestFlinkSqlBase(unittest.IsolatedAsyncioTestCase):
         thread1.join()
         thread2.join()
         #
-        self.read(target_storage, target_topic_str)
+        self.read(target_storage, target_topic_str, key_type, value_type)

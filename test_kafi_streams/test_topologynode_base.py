@@ -7,59 +7,6 @@ from kafi.streams.topologynode import default_pack_function, default_unpack_func
 #
 
 class TestTopologyNodeBase(unittest.TestCase):
-    def setUp(self):
-        print("Test:", self._testMethodName)
-        #
-        self.source_str_values_int_dict = {}
-        self.updated_value_any_list = {}
-        self.deleted_value_any_list = {}
-        self.generator_dict = {}
-
-    def tearDown(self):
-        print()
-        print("---")
-        print()
-        #
-        print(f"Inputs: {self.source_str_values_int_dict}")
-        #
-        print()
-        print("---")
-        print()
-        #
-        self.print_changes(self.updated_value_any_list, "Updates")
-        #
-        print()
-        print("---")
-        print()
-        #
-        self.print_changes(self.deleted_value_any_list, "Deletes")
-        #
-        print()
-        print("---")
-        print()
-
-    def print_changes(self, changed_value_any_list, changes_str):
-        changed_serialized_value_any_list = [default_pack_function(value_any) for value_any in changed_value_any_list]
-        changes_int = len(changed_serialized_value_any_list)
-        unique_changes_int = len(set(changed_serialized_value_any_list))
-        print(f"{changes_str}: {changes_int}")
-        print()
-        print(f"Unique: {unique_changes_int}")
-        print()
-        if changes_int > 6:
-            print("First three:")
-            for changed_serialized_value_any in changed_serialized_value_any_list[:3]: 
-                print(default_unpack_function(changed_serialized_value_any))
-            print()
-            print("Last three:")
-            for changed_serialized_value_any in changed_serialized_value_any_list[-3:]: 
-                print(default_unpack_function(changed_serialized_value_any))
-        elif changes_int > 0:
-            print("Last:")
-            print(default_unpack_function(changed_serialized_value_any_list[-1]))
-
-    #
-
     def process(self, source_str_batch_size_int_tuple_list, steps_int, root_tn):
         source_str_source_values_int_dict = {source_str: 0 for source_str, _ in source_str_batch_size_int_tuple_list}
         coll_updated_output_any_list = []

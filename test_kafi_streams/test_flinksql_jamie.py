@@ -1,11 +1,13 @@
 from test_kafi_streams.test_flinksql_base import TestFlinkSqlBase, home_path_str
+from test_kafi_streams.test_topologies import TestTopologies
+from test_kafi_streams.test_generate import TestGenerate
 from test_kafi_streams.test_base import TestBase
 
 from kafi.kafi import Cluster
 
 #
 
-class TestFlinkSqlJamie(TestFlinkSqlBase, TestBase):
+class TestFlinkSqlJamie(TestFlinkSqlBase, TestTopologies, TestGenerate, TestBase):
     def test_jamie(self):
         transaction_source_str = "transactions"
         #
