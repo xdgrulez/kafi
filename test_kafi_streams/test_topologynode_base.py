@@ -54,7 +54,7 @@ class TestTopologyNodeBase(unittest.TestCase):
             print("Last three:")
             for changed_serialized_value_any in changed_serialized_value_any_list[-3:]: 
                 print(default_unpack_function(changed_serialized_value_any))
-        elif changes_int > 1:
+        elif changes_int > 0:
             print("Last:")
             print(default_unpack_function(changed_serialized_value_any_list[-1]))
 

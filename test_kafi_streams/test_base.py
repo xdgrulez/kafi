@@ -5,7 +5,7 @@ from datagen.shoe_customers import ShoeCustomerGenerator
 from datagen.shoes import ShoeProductGenerator 
 from datagen.shoe_orders import ShoeOrderGenerator
 from jamie.transactions import TransactionGenerator
-from test_streams.wc.lines import LineGenerator
+from test_kafi_streams.wc.lines import LineGenerator
 
 #
 
@@ -32,10 +32,10 @@ class TestBase():
                 customer_tn,
                 lambda l: l["user_id"],
                 lambda r: r["id"],
-                lambda l, r: {
+                lambda l, r: {"value": {
                     "user_id": l["user_id"],
                     "ip": l["ip"],
-                    "first_name": r["first_name"]})
+                    "first_name": r["first_name"]}})
         )
         # root_tn = (
         #     click_tn
@@ -89,11 +89,11 @@ class TestBase():
                 product_tn,
                 lambda l: l["product_id"],
                 lambda r: r["id"],
-                lambda l, r: {"user_id": l["user_id"],
-                              "ip": l["ip"],
-                              "product_id": l["product_id"],
-                              "first_name": l["first_name"],
-                              "brand": r["brand"]})
+                lambda l, r: {"value": {"user_id": l["user_id"],
+                                        "ip": l["ip"],
+                                        "product_id": l["product_id"],
+                                        "first_name": l["first_name"],
+                                        "brand": r["brand"]}})
         )
         # root_tn = (
         #     click_tn
@@ -172,13 +172,13 @@ class TestBase():
                 product_tn,
                 lambda l: l["product_id"],
                 lambda r: r["id"],
-                lambda l, r: {
+                lambda l, r: {"value": {
                     "user_id": l["user_id"],
                     "ip": l["ip"],
                     "product_id": l["product_id"],
                     "first_name": l["first_name"],
                     "brand": r["brand"],
-                    "order_id": l["order_id"]})
+                    "order_id": l["order_id"]}})
         )
         # root_tn = (
         #     click_tn.join(
@@ -261,7 +261,8 @@ class TestBase():
         #
         root_tn = balance_tn.sum(
             lambda x: x["balance"],
-            lambda _, y: {"sum": y}
+            lambda _, y: {"value": 
+                          {"sum": y}}
         )
         #
         root_tn.build()
@@ -279,8 +280,9 @@ class TestBase():
         #
         root_tn = split_tn.group_by_count(
             lambda x: x["word"],
-            lambda x, y: {"word": x,
-                          "count": y}
+            lambda x, y: {"value": 
+                          {"word": x,
+                           "count": y}}
         )
         #
         root_tn.build()

@@ -1,5 +1,5 @@
-from test_streams.test_topologynode_base import TestTopologyNodeBase
-from test_streams.test_base import TestBase
+from test_kafi_streams.test_topologynode_base import TestTopologyNodeBase
+from test_kafi_streams.test_base import TestBase
 
 #
 
@@ -41,7 +41,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(transaction_source_str, 100)], 50, root_tn)
         #
         self.assertEqual(len(self.updated_value_any_list), 1)
-        self.assertEqual(self.updated_value_any_list[0], {"sum": 0})
+        self.assertEqual(self.updated_value_any_list[0], {"value": {"sum": 0}})
 
     #
 

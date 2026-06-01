@@ -1,6 +1,6 @@
 import random
 
-from test_streams.datagen.constants.products import product_dict_list
+from test_kafi_streams.datagen.constants.products import product_dict_list
 
 class ShoeProductGenerator:
     def generate_record(self):

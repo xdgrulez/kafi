@@ -431,7 +431,7 @@ class TopologyNode:
             return list(tn_set)[0]
     
     def get_node_by_name(self, name_str):
-        tn_set = self._filter_td(lambda tn: tn._id_str == name_str)
+        tn_set = self._filter_td(lambda tn: tn._name_str == name_str)
         #
         if len(tn_set) == 0:
             return None

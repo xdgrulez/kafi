@@ -1,5 +1,5 @@
-from test_streams._test_flinksql_base import TestFlinkSqlBase, home_path_str
-from test_streams.test_base import TestBase
+from test_kafi_streams._test_flinksql_base import TestFlinkSqlBase, home_path_str
+from test_kafi_streams.test_base import TestBase
 
 from kafi.kafi import Cluster
 
