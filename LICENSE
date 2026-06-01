@@ -1,118 +1,201 @@
-Human Source License (HSL) 0.2
-Developed by Dr. Ralph M. Debusmann, 2026
-https://github.com/xdgrulez/human-source-license/blob/v0.2/LICENSE
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
 
-For use with Kafi:
-Copyright (c) 2026 Ralph M. Debusmann
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
-1. In plain language
+   1. Definitions.
 
-  This Software is free for individuals, researchers, and for any organization's internal operations.
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
 
-  A commercial license is only required if:
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
 
-  (a) Revenue Trigger: Your organization’s Group Annual Revenue exceeds USD 100 million (inflation-adjusted from 2026) AND you use this Software for any external Software or services, OR
-  (b) AI Trigger: You use this Software to train, run, or support AI models and services (including AI Agents and data generation) for any Software or services provided to external third parties, regardless of your revenue.
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
 
-  Exception:
-  
-  * Migros Exception: Migros-Genossenschafts-Bund and its Affiliates are exempt from all commercial license requirements regardless of revenue, AI usage, or any other trigger.
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
 
-  Clarifications:
-  
-  * Cloud Usage: It doesn’t matter where you run the Software. Hosting it on third-party infrastructure (like AWS or Azure) is always permitted for your own internal operations.
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
 
-  * Consulting & Services: Using this Software as a tool to provide professional services or custom development for clients is free. However, if your client is a Commercial Software Entity and this Software becomes part of a product or service they offer to others, that client must obtain their own commercial license.
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
 
-  If you are unsure whether you need a license, you almost certainly do not.
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work
+      (an example is provided in the Appendix below).
 
-2. Definitions
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
 
-  "Affiliate": Any entity that directly or indirectly controls, is controlled by, or is under common control with the licensee. "Control" means ownership of more than 50% of the voting interests or the power to direct the management and policies of an entity.
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
 
-  "Group Annual Revenue": The total global revenue of the entity using this Software together with all of its Affiliates during the most recently completed fiscal year.
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
 
-  "Revenue Threshold": USD 100,000,000 as of January 1, 2026, adjusted annually starting January 1, 2027, in accordance with the US Consumer Price Index for All Urban Consumers (CPI-U) published by the US Bureau of Labor Statistics.
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
 
-  "Commercial Software Entity": Any organization (excluding Migros-Genossenschafts-Bund and its Affiliates) that meets two criteria:
-  (a) Its Group Annual Revenue is at or above the Revenue Threshold; AND
-  (b) It provides Software or Software-based services to external parties as part of its business.
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
 
-  "Commercial Use": Any use of this Software where the Software, its source code, or any derived models are intended for, or contribute to, a product or service offered to external third parties. The mere delivery of static outputs (such as reports, generated data, or code snippets) as part of Professional Services does not constitute Commercial Use, provided the Software itself is not integrated into a client's Software.
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
 
-  "Threshold Crossing": The point at which an entity's Group Annual Revenue first equals or exceeds the Revenue Threshold. Upon a Threshold Crossing, the entity enters a 90-day grace period during which it may continue to use this Software without a commercial license while obtaining one. Use of this Software for Commercial Use after expiry of the grace period without a valid commercial license constitutes a breach of Section 4.
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
 
-  "Change of Control": Any transaction resulting in a change of the ultimate beneficial owner or controlling entity of a licensee, including merger, acquisition, or asset purchase.
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
 
-  "European Entity": An entity directly entering into this license that is headquartered in the EEA or Switzerland, provided its ultimate parent company is also located within these territories.
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
 
-  "AI Agent": An automated system generating or submitting code without direct, line-by-line human review and manual submission.
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
 
-  "AI & Model Usage": Using this Software—including its source code, documentation, or outputs—to train, fine-tune, operate, or support AI models, AI agents, or autonomous systems (including data generation and RAG) intended for or contributing to a service offered to external parties.
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
 
-3. Grant of Rights
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
 
-  Subject to Section 4, you are granted a worldwide, royalty-free license to use, copy, modify, and distribute this Software and derivatives for any purpose.
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
 
-4. Limitation
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
 
-  No person or entity may engage in Commercial Use of this Software without a valid commercial license if:
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or consequential damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
 
-  (a) they are a Commercial Software Entity; OR
-  (b) the Commercial Use involves AI & Model Usage, regardless of the entity's revenue.
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
 
-  This restriction applies to the entity's entire group, regardless of which member of the group performs the Commercial Use. No person or entity subject to this restriction may avoid this restriction by:
+   END OF TERMS AND CONDITIONS
 
-  (i) causing a subsidiary, affiliate, or newly formed entity to perform Commercial Use on its behalf;
-  (ii) acquiring a licensee in order to inherit that licensee's license without obtaining a new commercial license covering the enlarged group;
-  (iii) interposing any intermediary to obscure the ultimate beneficial use.
+   APPENDIX: How to apply the Apache License to your work.
 
-  Any commercial license granted under this License terminates automatically and immediately upon a Change of Control that results in the licensee becoming part of a group that does not hold a valid commercial license covering the enlarged group. The new controlling entity must obtain a commercial license immediately; failure to do so constitutes a breach of this Section retroactively from the date of the Change of Control.
+      To apply the Apache License to your work, attach the following
+      boilerplate notice, with the fields enclosed by brackets "[]"
+      replaced with your own identifying information. (Don't include
+      the brackets!)  The text should be enclosed in the appropriate
+      comment syntax for the file format. We also recommend that a
+      file or class name and description of purpose be included on the
+      same "printed page" as the copyright notice for easier
+      identification within third-party archives.
 
-  Notwithstanding the above, Migros-Genossenschafts-Bund and its Affiliates shall not be considered a Commercial Software Entity under this License and are exempt from the restrictions set forth in this Section 4.
+   Copyright [yyyy] [name of copyright owner]
 
-5. Trademark
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-  No rights are granted to the name "[Project Name]" or associated logos or trademarks.
+       http://www.apache.org/licenses/LICENSE-2.0
 
-6. Contributions
-
-  Contributors retain their copyright but grant the copyright holder a perpetual, irrevocable, and sublicensable license to use, modify, and distribute all contributions under any terms.
-
-  Contributions must be submitted by a human being acting in their own capacity. Contributions submitted by or on behalf of AI Agents are not accepted and will be rejected.
-
-7. Patent Grant
-
-  Each contributor grants you a license under their essential patent claims to use and distribute this Software. Any party that initiates patent litigation against this Software automatically and immediately terminates their rights under this License.
-
-8. Enforcement, Audit & Damages
-
-  The enforcement mechanisms, audit rights, and damages provisions in this Section apply to any breach of Section 4. They do not apply to use that is not Commercial Use as defined in Section 2.
-
-  Any breach of Section 4 automatically and immediately terminates this License unless cured within the following period after written notice from the copyright holder:
-
-  (a) 90 days for entities with Group Annual Revenue below USD 1 million;
-  (b) 30 days for entities with Group Annual Revenue between USD 1 million and USD 100 million;
-  (c) Termination is immediate and permanent for entities with Group Annual Revenue exceeding USD 100 million, provided the 90-day grace period for a Threshold Crossing (as defined in Section 2) has already expired.
-  
-  Upon written notice specifying the alleged breach, the copyright holder may demand an independent audit no more than once per calendar year. The audit shall commence within 10 business days of notice. If a violation is found, the audited party bears all audit and legal costs.
-
-  Damages:
-  In the event of a breach of Section 4, the Commercial Software Entity shall be liable for damages calculated as follows:
-
-  (i) For European Entities: Damages shall be equal to the greater of (a) three times a reasonable commercial royalty, or (b) a reasonable percentage of the revenue of the specific business unit or product line using the Software, not to exceed the limits of applicable law for liquidated damages.
-  (ii) For all other Entities (Non-European): Damages shall be equal to the greater of (a) three times a reasonable commercial royalty, or (b) 10% of the entity’s Group Annual Revenue during the period of violation.
-
-  For any calculation under this Section, there shall be a rebuttable presumption that the revenue attributable to the infringing use is no less than the aforementioned amounts, and the burden of proof to demonstrate a lower amount lies exclusively with the accused party.
-
-  If any part of this calculation is determined by a court to be unenforceable as an excessive penalty, the damages shall be automatically reduced to the maximum amount permissible under applicable law.
-  
-9. Disclaimer
-
-  THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF THIS SOFTWARE.
-
-10. Governing Law
-
-  Zone A — European Entities: This License is governed by the laws of Germany, without regard to conflict of law principles. Any disputes shall be subject to the exclusive jurisdiction of the courts of Berlin, Germany.
-
-  Zone B — Non-European Entities: This License is governed by the laws of the State of Delaware, USA, without regard to conflict of law principles. Any disputes shall be subject to the exclusive jurisdiction of the courts of Delaware, USA.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
