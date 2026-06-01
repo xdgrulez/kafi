@@ -38,7 +38,6 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         #
         root_tn = self.get_jamie_root_tn(transaction_source_str)
         #
-        print(root_tn.mermaid(True))
         self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(transaction_source_str, 100)], 100, root_tn)
         #
         self.assertEqual(len(self.updated_message_dict_list), 1)
@@ -52,3 +51,22 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         root_tn = self.get_wc_root_tn(plain_text_source_str)
         #
         self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(plain_text_source_str, 100)], 100, root_tn)
+
+    def test_wc1(self):
+        plain_text_source_str = "plain_text"
+        #
+        root_tn = self.get_wc_root_tn(plain_text_source_str)
+        #
+        line_str_list = [
+            "hello kafka streams",
+            "all streams lead to kafka",
+            "join kafka summit",
+        ]
+        #
+        root_tn.push(plain_text_source_str, [{"value": {"text": line_str}} for line_str in line_str_list])
+        #
+        print(root_tn.latest())
+        #
+        root_tn.push(plain_text_source_str, [{"value": {"text": "all streams lead to kafka"}}], -1)
+        #
+        print(root_tn.latest())

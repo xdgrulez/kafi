@@ -70,12 +70,11 @@ class TopologyNode:
         return tn
 
     def flatmap(self, flatmap_function):
-        def _expand(zSet):
+        def _flatmap_function(zSet):
             out = {}
-            for value_json_str, weight in zSet.inner.items():
-                value_dict = json.loads(value_json_str)
-                for output_dict in flatmap_function(value_dict):
-                    key = json.dumps(output_dict)
+            for serialized_value_any, weight in zSet.inner.items():
+                for value_any in flatmap_function(self._deserialize_function(serialized_value_any)):
+                    key = self._serialize_function(value_any)
                     out[key] = out.get(key, 0) + weight
             return ZSet({k: v for k, v in out.items() if v != 0})
         #
@@ -87,7 +86,7 @@ class TopologyNode:
             input_nodeId = self._output_nodeId
             #
             integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            lift1_nodeId = Lift1(f=_expand).connect(evaluator.circuit, (integrate_nodeId,))
+            lift1_nodeId = Lift1(f=_flatmap_function).connect(evaluator.circuit, (integrate_nodeId,))
             differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (lift1_nodeId,))
             #
             tn._output_nodeId = differentiate_nodeId
@@ -346,23 +345,6 @@ class TopologyNode:
 
     #
 
-    def get_name(self):
-        return self._name_str
-
-    def get_id(self):
-        return self._id_str
-
-    def get_daughters(self):
-        return self._daughter_tn_set
-
-    def get_output(self):
-        return self._output_nodeId
-    
-    def get_evaluator(self):
-        return self._evaluator
-
-    #
-
     def latest(self, gc=True):
         gc_boolean = gc
         #
@@ -373,16 +355,16 @@ class TopologyNode:
         #
         return zSet
 
-    def push(self, source_str, message_dict_list):
+    def push(self, source_str, message_dict_list, weight_int=1):
         source_str_tn_dict = self.get_source_nodes()
         source_topologyNode = source_str_tn_dict[source_str]
         #
-        input = source_topologyNode.get_output()
+        input_nodeId = source_topologyNode._output_nodeId
         #
         value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
-        zSet = ZSet({value_json_str: 1 for value_json_str in value_json_str_list})
+        zSet = ZSet({value_json_str: weight_int for value_json_str in value_json_str_list})
         #
-        self._evaluator.push(input, zSet)
+        self._evaluator.push(input_nodeId, zSet)
 
     def step(self, gc=True, bag=False):
         zSet = self.latest(gc)
@@ -400,7 +382,7 @@ class TopologyNode:
             if tn not in visited_tn_set:
                 visited_tn_set.add(tn)
                 #
-                for daughter_tn in tn.get_daughters():
+                for daughter_tn in tn._daughter_tn_set:
                     __foreach_bu(daughter_tn)
                 #
                 foreach_function(tn)
@@ -414,7 +396,7 @@ class TopologyNode:
             if filter_function(tn):
                 tn_set.add(tn)
             #
-            for daughter_tn in tn.get_daughters():
+            for daughter_tn in tn._daughter_tn_set:
                 __filter_td(daughter_tn)
         #
         __filter_td(self)
@@ -422,7 +404,7 @@ class TopologyNode:
         return tn_set
 
     def get_node_by_id(self, id_str):
-        tn_set = self._filter_td(lambda tn: tn.get_id() == id_str)
+        tn_set = self._filter_td(lambda tn: tn._id_str == id_str)
         #
         if len(tn_set) == 0:
             return None
@@ -430,7 +412,7 @@ class TopologyNode:
             return list(tn_set)[0]
     
     def get_node_by_name(self, name_str):
-        tn_set = self._filter_td(lambda tn: tn.get_name() == name_str)
+        tn_set = self._filter_td(lambda tn: tn._id_str == name_str)
         #
         if len(tn_set) == 0:
             return None
@@ -438,9 +420,9 @@ class TopologyNode:
             return list(tn_set)[0]
 
     def get_source_nodes(self):
-        tn_set = self._filter_td(lambda tn: len(tn.get_daughters()) == 0)
+        tn_set = self._filter_td(lambda tn: len(tn._daughter_tn_set) == 0)
         #
-        name_str_tn_dict = {tn.get_name(): tn for tn in tn_set}
+        name_str_tn_dict = {tn._name_str: tn for tn in tn_set}
         #
         return name_str_tn_dict
 
@@ -468,24 +450,28 @@ class TopologyNode:
                     return  f"{self._name_str}({list(self._daughter_tn_set)[0].topology(include_ids_bool)}, {list(self._daughter_tn_set)[1].topology(include_ids_bool)})"
 
     def mermaid(self, include_ids=False):
-        def collect_nodes_and_edges(tn, name_set, edge_list):
-            name_set.add((tn.get_name(), tn.get_id()))
-            #
-            for daughter_tn in tn.get_daughters():
-                edge_list.append((daughter_tn.get_name(), daughter_tn.get_id(), tn.get_name(), tn.get_id()))
+        include_ids_bool = include_ids
+        #
+        mermaid_edge_str_set = set()
+        #
+        def collect_edges(tn):
+            for daughter_tn in tn._daughter_tn_set:
+                if include_ids_bool:
+                    mermaid_edge_str = f"{tn._id_str}[{tn._name_str}_{tn._id_str}] --> {daughter_tn._id_str}[{daughter_tn._name_str}_{tn._id_str}]\n"
+                else:
+                    mermaid_edge_str = f"{tn._id_str}[{tn._name_str}] --> {daughter_tn._id_str}[{daughter_tn._name_str}]\n"
                 #
-                collect_nodes_and_edges(daughter_tn, name_set, edge_list)
+                mermaid_edge_str_set.add(mermaid_edge_str)
+                #
+                collect_edges(daughter_tn)
         #
-        node_set = set()
-        edge_list = []
-        collect_nodes_and_edges(self, node_set, edge_list)
+        collect_edges(self)
         #
-        mermaid_str = ["graph TD"]
-        mermaid_str.extend(f"    {node[0] + '_' + node[1] if include_ids else node[0]}" for node in node_set)
-        mermaid_str.extend(f"    {edge[0] + '_"' + edge[1] + '" --> ' + edge[2] + '_"' + edge[3] + '"' if include_ids else edge[0] + ' --> ' + edge[2]}" for edge in edge_list)
+        mermaid_top_str = "```mermaid\ngraph TD\n"
+        mermaid_edges_str = "".join(mermaid_edge_str_set)
+        mermaid_bottom_str = "```"
         #
-        return "\n".join(mermaid_str)
-
+        return mermaid_top_str + mermaid_edges_str + mermaid_bottom_str
 #
 
 def json_default(obj):
