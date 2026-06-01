@@ -7,7 +7,7 @@ from datagen.shoe_customers import ShoeCustomerGenerator
 from datagen.shoes import ShoeProductGenerator 
 from datagen.shoe_orders import ShoeOrderGenerator
 from jamie.transactions import TransactionGenerator
-from wc.plaintext import PlainTextGenerator
+from test_streams.wc.lines import LineGenerator
 
 #
 
@@ -18,13 +18,13 @@ class TestBase():
         #
         click_tn = (
             click_source_tn
-            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"]})
+            .map(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"]})
             .distinct()
         )
         #
         customer_tn = (
             customer_source_tn
-            .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
+            .map(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
             .distinct()
         )
         #
@@ -60,17 +60,20 @@ class TestBase():
         #
         click_tn = (
             click_source_tn
-            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
+            .map(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"], "product_id": x["value"]["product_id"]})
+            .distinct()
         )
         #
         customer_tn = (
             customer_source_tn
-            .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
+            .map(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
+            .distinct()
         )
         #
         product_tn = (
             product_source_tn
-            .map(lambda x: {"id": x["id"], "brand": x["brand"]})
+            .map(lambda x: {"id": x["value"]["id"], "brand": x["value"]["brand"]})
+            .distinct()
         )
         #
         root_tn = (
@@ -124,22 +127,26 @@ class TestBase():
         #
         click_tn = (
             click_source_tn
-            .map(lambda x: {"user_id": x["user_id"], "ip": x["ip"], "product_id": x["product_id"]})
+            .map(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"], "product_id": x["value"]["product_id"]})
+            .distinct()
         )
         #
         customer_tn = (
             customer_source_tn
-            .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
+            .map(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
+            .distinct()
         )
         #
         product_tn = (
             product_source_tn
-            .map(lambda x: {"id": x["id"], "brand": x["brand"]})
+            .map(lambda x: {"id": x["value"]["id"], "brand": x["value"]["brand"]})
+            .distinct()
         )
         #
         order_tn = (
             order_source_tn
-            .map(lambda x: {"order_id": x["order_id"], "product_id": x["product_id"], "customer_id": x["customer_id"]})
+            .map(lambda x: {"order_id": x["value"]["order_id"], "product_id": x["value"]["product_id"], "customer_id": x["value"]["customer_id"]})
+            .distinct()
         )
         #
         root_tn = (
@@ -216,9 +223,9 @@ class TestBase():
         #
         transaction_tn = transaction_source_tn.map(
             lambda x: {
-                "from_account": x["from_account"],
-                "to_account": x["to_account"],
-                "amount": x["amount"]
+                "from_account": x["value"]["from_account"],
+                "to_account": x["value"]["to_account"],
+                "amount": x["value"]["amount"]
             }
         )
         #
@@ -265,11 +272,11 @@ class TestBase():
     
     #
 
-    def get_wc_root_tn(self, plain_text_str):
-        _source_tn = source(plain_text_str)
+    def get_wc_root_tn(self, lines_str):
+        _source_tn = source(lines_str)
         #
         split_tn = _source_tn.flatmap(
-              lambda x: [{"word": word_str} for word_str in x["text"].split()]
+              lambda x: [{"word": word_str} for word_str in x["value"].split()]
         )
         #
         root_tn = split_tn.group_by_count(
@@ -282,7 +289,7 @@ class TestBase():
         #
         return root_tn
 
-    ###
+    #
 
     def init_generate(self, source_str):
         match source_str:
@@ -298,20 +305,20 @@ class TestBase():
             case "transactions": 
                 self.generator_dict[source_str] = TransactionGenerator()
             #
-            case "plain_text":
-                self.generator_dict[source_str] = PlainTextGenerator()
+            case "lines":
+                self.generator_dict[source_str] = LineGenerator()
             case _:
                 raise Exception(f"Source not supported: {source_str}")
 
     def generate(self, source_str, batch_size_int):
-        message_dict_list = []
+        value_any_list = []
         #
         generator = self.generator_dict[source_str]
         #
         for _ in range(batch_size_int):
             record_dict = generator.generate_record()
-            message_dict = {"key": None,
-                            "value": record_dict}
-            message_dict_list.append(message_dict)
+            value_any = {"key": None,
+                        "value": record_dict}
+            value_any_list.append(value_any)
         #
-        return message_dict_list
+        return value_any_list

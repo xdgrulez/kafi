@@ -17,32 +17,36 @@ from pydbsp.relational_operators import (
 from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
 
-import datetime
-import json
-# import ujson as json
 import uuid
+
+import msgpack
 
 #
 
 class TopologyNode:
-    def __init__(self, name_str, daughter_tn_set, build_function, serialize_function=json.dumps, deserialize_function=json.loads):
+    def __init__(self, name_str, daughter_tn_set, build_function):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
         self._daughter_tn_set = daughter_tn_set
         self._build_function = build_function
         #
-        self._serialize_function = serialize_function
-        self._deserialize_function = deserialize_function
+        self._serialize_function = None
+        self._deserialize_function = None
         #
         self._evaluator = None
         self._output_nodeId = None
 
-    def build(self):
+    def build(self, serialize_function=msgpack.packb, deserialize_function=msgpack.unpackb):
         evaluator = Evaluator(
             circuit=Circuit(),
             storage=DictStorage(),
             ctx=ComputeCtx(lattice=dbsp_time(2)),
             group=ZSetAddition())
+        #
+        def _set_serialize_deserialize_functions(tn, serialize_function, deserialize_function):
+            tn._serialize_function = serialize_function
+            tn._deserialize_function = deserialize_function
+        self._foreach_bu(lambda tn: _set_serialize_deserialize_functions(tn, serialize_function, deserialize_function))
         #
         self._foreach_bu(lambda tn: tn._build_function(evaluator))
 
@@ -60,7 +64,7 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, input_nodeId)
+            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
             liftProject_nodeId = LiftProject(f=_map_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             #
             tn._output_nodeId = liftProject_nodeId
@@ -107,7 +111,7 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, input_nodeId)
+            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
             liftSelect_nodeId = LiftSelect(pred=_filter_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             #
             tn._output_nodeId = liftSelect_nodeId
@@ -124,7 +128,7 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, input_nodeId)
+            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
             deltaLiftedDeltaLiftedDistinct_nodeId = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
@@ -142,8 +146,8 @@ class TopologyNode:
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = other_tn._output_nodeId
             #
-            l_liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
             deltaLiftedDeltaLiftedDistinct_nodeId = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (lift2_add_nodeId,))
             integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (deltaLiftedDeltaLiftedDistinct_nodeId,))
@@ -169,8 +173,8 @@ class TopologyNode:
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = other_tn._output_nodeId
             #
-            l_liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             r_lift1_neg_nodeId = Lift1(f=g.neg).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
             lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_lift1_neg_nodeId))
             deltaLiftedDeltaLiftedDistinct_nodeId = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (lift2_add_nodeId,))
@@ -200,8 +204,8 @@ class TopologyNode:
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = other_tn._output_nodeId
             #
-            l_liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             deltaLiftedDeltaLiftedJoin_nodeId = DeltaLiftedDeltaLiftedJoin(
                 pred=_predicate_function,
                 proj=_projection_function,
@@ -238,8 +242,8 @@ class TopologyNode:
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = other_tn._output_nodeId
             #
-            l_liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             l_liftIndex_nodeId = LiftIndex(indexer=_left_select_function).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId,))
             r_liftIndex_nodeId = LiftIndex(indexer=_right_select_function).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
             indexedDeltaLiftedDeltaLiftedJoin_nodeId = IndexedDeltaLiftedDeltaLiftedJoin(
@@ -276,7 +280,7 @@ class TopologyNode:
             input_nodeId = self._output_nodeId
             #
             integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            lift1_agg_nodeId = Lift1(f=zset_group_agg_function(_by_function, _select_function, agg_function, agg_initial_any, _output_function)).connect(evaluator.circuit, (integrate_nodeId,))
+            lift1_agg_nodeId = Lift1(f=self.zset_group_agg_function(_by_function, _select_function, agg_function, agg_initial_any, _output_function)).connect(evaluator.circuit, (integrate_nodeId,))
             differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (lift1_agg_nodeId,))
             #
             tn._output_nodeId = differentiate_nodeId
@@ -355,23 +359,38 @@ class TopologyNode:
         #
         return zSet
 
-    def push(self, source_str, message_dict_list, weight_int=1):
+    def push(self, source_str, value_any_list, weight_int=1):
         source_str_tn_dict = self.get_source_nodes()
         source_topologyNode = source_str_tn_dict[source_str]
         #
         input_nodeId = source_topologyNode._output_nodeId
         #
-        value_json_str_list = message_dict_list_to_value_json_str_list(message_dict_list)
-        zSet = ZSet({value_json_str: weight_int for value_json_str in value_json_str_list})
+        zSet = ZSet({self._serialize_function(value_any): weight_int for value_any in value_any_list})
         #
         self._evaluator.push(input_nodeId, zSet)
 
     def step(self, gc=True, bag=False):
+        bag_boolean = bag
+        #
         zSet = self.latest(gc)
         #
-        updated_message_dict_list, deleted_message_dict_list = zSet_to_message_dict_list_tuple(zSet, bag)
+        updated_value_any_list = []
+        deleted_value_any_list = []
+        for serialized_value_any, weight_int in zSet.items():
+            if weight_int > 0:
+                if not bag_boolean:
+                    weight_int = 1
+                for _ in range(weight_int):
+                    value_any = self._deserialize_function(serialized_value_any)
+                    updated_value_any_list.append(value_any)
+            elif weight_int < 0:
+                if not bag_boolean:
+                    weight_int = -1
+                for _ in range(-weight_int):
+                    value_any = self._deserialize_function(serialized_value_any)
+                    deleted_value_any_list.append(value_any)
         #
-        return updated_message_dict_list, deleted_message_dict_list
+        return updated_value_any_list, deleted_value_any_list
 
     #
 
@@ -472,85 +491,44 @@ class TopologyNode:
         mermaid_bottom_str = "```"
         #
         return mermaid_top_str + mermaid_edges_str + mermaid_bottom_str
-#
 
-def json_default(obj):
-    if isinstance(obj, datetime.datetime):
-        return obj.isoformat()
-    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
-
-
-def message_dict_list_to_value_json_str_list(message_dict_list):
-    value_json_str_list = []
-    for message_dict in message_dict_list:
-        value_dict = message_dict["value"]
-        value_json_str = json.dumps(value_dict, default=json_default)
-        value_json_str_list.append(value_json_str)
     #
-    return value_json_str_list
 
-
-def zSet_to_message_dict_list_tuple(zSet, bag_boolean=False):
-    def value_json_str_to_message_dict(value_json_str):
-        value_dict = json.loads(value_json_str)
-        message_dict = {"value": value_dict}
-        #
-        return message_dict
-    #
-    updated_message_dict_list = []
-    deleted_message_dict_list = []
-    for value_json_str, weight_int in zSet.items():
-        if weight_int > 0:
-            if bag_boolean:
-                for _ in range(weight_int):
-                    message_dict = value_json_str_to_message_dict(value_json_str)
-                    updated_message_dict_list.append(message_dict)
-            else:
-                message_dict = value_json_str_to_message_dict(value_json_str)
-                updated_message_dict_list.append(message_dict)
-        elif weight_int < 0:
-            if bag_boolean:
-                for _ in range(-weight_int):
-                    message_dict = value_json_str_to_message_dict(value_json_str)
-                    deleted_message_dict_list.append(message_dict)
-            else:
-                message_dict = value_json_str_to_message_dict(value_json_str)
-                deleted_message_dict_list.append(message_dict)
-    #
-    return updated_message_dict_list, deleted_message_dict_list
-
-#
-
-def source(source_str):
-    def _build_function(evaluator):
-        tn._evaluator = evaluator
-        #
-        input = Input(frontier=Antichain(dbsp_time(1))).connect(evaluator.circuit, ())
-        #
-        tn._output_nodeId = input
-    #
-    tn = TopologyNode(source_str, [], _build_function)
-    #
-    return tn
-
-
-def zset_group_agg_function(_by_function, _select_function, _agg_function, agg_initial_any,_output_function):
-    def _zset_group_agg_function(zSet):
-        by_any_agg_any = {}
-        #
-        for value_json_str, weight_int in zSet.inner.items():
-            by_any = _by_function(value_json_str)
-            select_any = _select_function(value_json_str)
+    @staticmethod
+    def zset_group_agg_function(_by_function, _select_function, _agg_function, agg_initial_any,_output_function):
+        def _zset_group_agg_function(zSet):
+            by_any_agg_any = {}
             #
-            agg_any = by_any_agg_any.get(by_any, agg_initial_any)
-            by_any_agg_any[by_any] = select_any if agg_any is None else _agg_function(agg_any, select_any, weight_int)
+            for value_json_str, weight_int in zSet.inner.items():
+                by_any = _by_function(value_json_str)
+                select_any = _select_function(value_json_str)
+                #
+                agg_any = by_any_agg_any.get(by_any, agg_initial_any)
+                by_any_agg_any[by_any] = select_any if agg_any is None else _agg_function(agg_any, select_any, weight_int)
+            #
+            zSet = ZSet({_output_function(by_any, sum_any): 1 for by_any, sum_any in by_any_agg_any.items()})
+            #
+            return zSet
         #
-        zSet = ZSet({_output_function(by_any, sum_any): 1 for by_any, sum_any in by_any_agg_any.items()})
+        return _zset_group_agg_function
+
+    @staticmethod
+    def source(source_str):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            input = Input(frontier=Antichain(dbsp_time(1))).connect(evaluator.circuit, ())
+            #
+            tn._output_nodeId = input
         #
-        return zSet
-    #
-    return _zset_group_agg_function
+        tn = TopologyNode(source_str, [], _build_function)
+        #
+        return tn
 
+    @staticmethod
+    def liftStreamIntroduction(g, evaluator, i_in):
+        return i_in if evaluator.frontiers()[i_in].lattice.nestedness == 2 else LiftStreamIntroduction(group=g).connect(evaluator.circuit, (i_in,))
 
-def liftStreamIntroduction(g, evaluator, i_in):
-    return i_in if evaluator.frontiers()[i_in].lattice.nestedness == 2 else LiftStreamIntroduction(group=g).connect(evaluator.circuit, (i_in,))
+#
+
+source = TopologyNode.source

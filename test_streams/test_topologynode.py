@@ -8,18 +8,18 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         #
-        runner = self.get_datagen_1_join_root_tn(click_source_str, customer_source_str)
+        root_tn = self.get_datagen_1_join_root_tn(click_source_str, customer_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100)], 50, runner)
+        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(click_source_str, 100), (customer_source_str, 100)], 50, root_tn)
 
     def test_datagen_2_joins(self):
         click_source_str = "shoe_clickstream"
         customer_source_str = "shoe_customers"
         product_source_str = "shoes"
         #
-        runner = self.get_datagen_2_joins_root_tn(click_source_str, customer_source_str, product_source_str)
+        root_tn = self.get_datagen_2_joins_root_tn(click_source_str, customer_source_str, product_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100)], 50, runner)
+        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100)], 50, root_tn)
 
     def test_datagen_3_joins(self):
         click_source_str = "shoe_clickstream"
@@ -27,9 +27,9 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         product_source_str = "shoes"
         order_source_str = "shoe_orders"
         #
-        runner = self.get_datagen_3_joins_root_tn(click_source_str, customer_source_str, product_source_str, order_source_str)
+        root_tn = self.get_datagen_3_joins_root_tn(click_source_str, customer_source_str, product_source_str, order_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100), (order_source_str, 100)], 50, runner)
+        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(click_source_str, 100), (customer_source_str, 100), (product_source_str, 100), (order_source_str, 100)], 100, root_tn)
 
     #
 
@@ -38,35 +38,16 @@ class TestTopologyNode(TestTopologyNodeBase, TestBase):
         #
         root_tn = self.get_jamie_root_tn(transaction_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(transaction_source_str, 100)], 100, root_tn)
+        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(transaction_source_str, 100)], 100, root_tn)
         #
-        self.assertEqual(len(self.updated_message_dict_list), 1)
-        self.assertEqual(self.updated_message_dict_list[0]["value"], {"sum": 0})
+        self.assertEqual(len(self.updated_value_any_list), 1)
+        self.assertEqual(self.updated_value_any_list[0], {"sum": 0})
 
     #
 
     def test_wc(self):
-        plain_text_source_str = "plain_text"
+        plain_text_source_str = "lines"
         #
         root_tn = self.get_wc_root_tn(plain_text_source_str)
         #
-        self.source_str_messages_int_dict, self.updated_message_dict_list, self.deleted_message_dict_list = self.process([(plain_text_source_str, 100)], 100, root_tn)
-
-    def test_wc1(self):
-        plain_text_source_str = "plain_text"
-        #
-        root_tn = self.get_wc_root_tn(plain_text_source_str)
-        #
-        line_str_list = [
-            "hello kafka streams",
-            "all streams lead to kafka",
-            "join kafka summit",
-        ]
-        #
-        root_tn.push(plain_text_source_str, [{"value": {"text": line_str}} for line_str in line_str_list])
-        #
-        print(root_tn.latest())
-        #
-        root_tn.push(plain_text_source_str, [{"value": {"text": "all streams lead to kafka"}}], -1)
-        #
-        print(root_tn.latest())
+        self.source_str_values_int_dict, self.updated_value_any_list, self.deleted_value_any_list = self.process([(plain_text_source_str, 100)], 100, root_tn)

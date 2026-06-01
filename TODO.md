@@ -1,5 +1,10 @@
 # other TODOs
 
+# def json_default(obj):
+#     if isinstance(obj, datetime.datetime):
+#         return obj.isoformat()
+#     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
 * Support für neue Schema-GUIDs etc.
 
 * Lesen mit Offsets klappt nur mit neuer Consumer Group - vielleicht muss man die bestehende abräumen oder so
