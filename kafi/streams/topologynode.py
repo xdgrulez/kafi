@@ -73,14 +73,38 @@ class TopologyNode:
         #
         return tn
 
+    def peek(self, peek_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def _peek_function(serialized_value_any):
+            value_any = self._unpack_function(serialized_value_any)
+            #
+            peek_function(value_any)
+            #
+            return serialized_value_any
+        #
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
+            liftProject_nodeId = LiftProject(f=_peek_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
+            #
+            tn._output_nodeId = liftProject_nodeId
+        #
+        tn = TopologyNode("peek_op", {self}, _build_function, pack_function, unpack_function)
+        #
+        return tn
+
     def flatmap(self, flatmap_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _flatmap_function(zSet):
-            out = {}
-            for serialized_value_any, weight in zSet.inner.items():
+            out_inner_dict = {}
+            for serialized_value_any, weight_int in zSet.inner.items():
                 for value_any in flatmap_function(self._unpack_function(serialized_value_any)):
-                    key = self._pack_function(value_any)
-                    out[key] = out.get(key, 0) + weight
-            return ZSet({k: v for k, v in out.items() if v != 0})
+                    serialized_key_any = self._pack_function(value_any)
+                    out_inner_dict[serialized_key_any] = out_inner_dict.get(serialized_key_any, 0) + weight_int
+            return ZSet({serialized_key_any: weight_int for serialized_key_any, weight_int in out_inner_dict.items() if weight_int != 0})
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator

@@ -6,7 +6,10 @@ def get_wc_root_tn(lines_str):
     _source_tn = source(lines_str)
     #
     split_tn = _source_tn.flatmap(
-            lambda x: [{"word": word_str} for word_str in x["value"].split()]
+        lambda x: [{"word": word_str,
+                   "partition": x["partition"],
+                   "offset": x["offset"],
+                   "position": i} for i, word_str in enumerate(x["value"].split())]
     )
     #
     root_tn = split_tn.group_by_count(

@@ -1,3 +1,5 @@
+import random
+
 from datagen.shoe_clickstream import ShoeClickstreamGenerator
 from datagen.shoe_customers import ShoeCustomerGenerator
 from datagen.shoes import ShoeProductGenerator 
@@ -11,31 +13,39 @@ class TestGenerate:
     def init_generate(self, source_str):
         match source_str:
             case "shoe_clickstream":
-                self.generator_dict[source_str] = ShoeClickstreamGenerator()
+                self.source_str_generator_dict[source_str] = ShoeClickstreamGenerator()
             case "shoe_customers":
-                self.generator_dict[source_str] = ShoeCustomerGenerator()
+                self.source_str_generator_dict[source_str] = ShoeCustomerGenerator()
             case "shoes":
-                self.generator_dict[source_str] = ShoeProductGenerator()
+                self.source_str_generator_dict[source_str] = ShoeProductGenerator()
             case "shoe_orders":
-                self.generator_dict[source_str] = ShoeOrderGenerator()
+                self.source_str_generator_dict[source_str] = ShoeOrderGenerator()
             #
             case "transactions": 
-                self.generator_dict[source_str] = TransactionGenerator()
+                self.source_str_generator_dict[source_str] = TransactionGenerator()
             #
             case "lines":
-                self.generator_dict[source_str] = LineGenerator()
+                self.source_str_generator_dict[source_str] = LineGenerator()
             case _:
                 raise Exception(f"Source not supported: {source_str}")
 
     def generate(self, source_str, batch_size_int):
         value_any_list = []
         #
-        generator = self.generator_dict[source_str]
+        generator = self.source_str_generator_dict[source_str]
         #
+        partitions_int = 10
+        partition_int_counter_int_dict = {partition_int: 0 for partition_int in range(partitions_int)}
         for _ in range(batch_size_int):
             record_dict = generator.generate_record()
+            partition_int = random.randrange(partitions_int)
             value_any = {"key": None,
-                         "value": record_dict}
+                         "value": record_dict,
+                         "partition": partition_int,
+                         "offset": partition_int_counter_int_dict[partition_int]}
+            partition_int_counter_int_dict[partition_int] += 1
             value_any_list.append(value_any)
+        #
+        self.source_str_input_value_any_list_dict[source_str] += value_any_list
         #
         return value_any_list

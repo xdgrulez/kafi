@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import json, unittest
 
 #
@@ -11,17 +13,18 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         print("Test:", self._testMethodName)
         #
-        self.source_str_values_int_dict = {}
-        self.updated_value_any_list = {}
-        self.deleted_value_any_list = {}
-        self.generator_dict = {}
+        self.source_str_generator_dict = {}
+        self.source_str_input_value_any_list_dict = defaultdict(list)
+        self.updated_value_any_list = []
+        self.deleted_value_any_list = []
 
     def tearDown(self):
         print()
         print("---")
         print()
         #
-        print(f"Inputs: {self.source_str_values_int_dict}")
+        source_str_values_int_dict = {source_str: len(value_any_list) for source_str, value_any_list in self.source_str_input_value_any_list_dict.items()}
+        print(f"Inputs: {source_str_values_int_dict}")
         #
         print()
         print("---")
