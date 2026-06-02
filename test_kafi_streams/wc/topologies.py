@@ -2,7 +2,7 @@ from kafi.streams.topologynode import source
 
 #
 
-def get_wc_root_tn(lines_str):
+def get_root_tn_wc(lines_str):
     _source_tn = source(lines_str)
     #
     split_tn = _source_tn.flatmap(

@@ -15,7 +15,7 @@ CREATE TABLE shoe_clickstream (
 );
 
 CREATE VIEW click_view AS
-SELECT
+SELECT DISTINCT
     user_id as user_id,
     ip as ip
 FROM
@@ -44,7 +44,7 @@ CREATE TABLE shoe_customers (
 );
 
 CREATE VIEW customer_view AS
-SELECT
+SELECT DISTINCT
     id as id,
     first_name as first_name
 FROM
@@ -59,7 +59,7 @@ FROM
     click_view
     JOIN customer_view ON click_view.user_id = customer_view.id;
 
---upsert-kafka sink
+--
 
 CREATE TABLE upsert_kafka_sink (
     user_id STRING,
@@ -82,22 +82,3 @@ SELECT
     ip
 FROM
     join_1_view;
-
---kafka-sink
--- CREATE TABLE kafka_sink (
---     user_id STRING,
---     first_name STRING,
---     ip STRING
--- ) WITH (
---     'connector' = 'kafka',
---     'topic' = '1_join_kafka_sink',
---     'properties.bootstrap.servers' = 'localhost:9092',
---     'format' = 'avro-confluent',
---     'avro-confluent.url' = 'http://localhost:8081'
--- );
--- INSERT INTO kafka_sink
--- SELECT 
---     user_id,
---     first_name,
---     ip
--- FROM join_1_view;

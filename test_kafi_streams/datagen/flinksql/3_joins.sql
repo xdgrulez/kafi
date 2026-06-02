@@ -1,10 +1,10 @@
 CREATE TABLE shoe_clickstream (
-    payload ROW < product_id STRING,
+    product_id STRING,
     user_id STRING,
     view_time INT,
     page_url STRING,
     ip STRING,
-    ts TIMESTAMP(3) >
+    ts TIMESTAMP(3)
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_clickstream',
@@ -15,17 +15,17 @@ CREATE TABLE shoe_clickstream (
 );
 
 CREATE VIEW click_view AS
-SELECT
-    payload.user_id as user_id,
-    payload.ip as ip,
-    payload.product_id as product_id
+SELECT DISTINCT
+    user_id as user_id,
+    ip as ip,
+    product_id as product_id
 from
     shoe_clickstream;
 
 --
 
 CREATE TABLE shoe_customers (
-    payload ROW < id STRING,
+    id STRING,
     first_name STRING,
     last_name STRING,
     email STRING,
@@ -34,7 +34,7 @@ CREATE TABLE shoe_customers (
     state STRING,
     zip_code STRING,
     country STRING,
-    country_code STRING >
+    country_code STRING
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_customers',
@@ -45,20 +45,20 @@ CREATE TABLE shoe_customers (
 );
 
 CREATE VIEW customer_view AS
-SELECT
-    payload.id as id,
-    payload.first_name as first_name
+SELECT DISTINCT
+    id as id,
+    first_name as first_name
 FROM
     shoe_customers;
 
 --
 
 CREATE TABLE shoes (
-    payload ROW < id STRING,
+    id STRING,
     brand STRING,
     name STRING,
     sale_price INT,
-    rating DOUBLE >
+    rating DOUBLE
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoes',
@@ -69,19 +69,19 @@ CREATE TABLE shoes (
 );
 
 CREATE VIEW product_view AS
-SELECT
-    payload.id as id,
-    payload.brand as brand
+SELECT DISTINCT
+    id as id,
+    brand as brand
 FROM
     shoes;
 
 --
 
 CREATE TABLE shoe_orders (
-    payload ROW < order_id INT,
+    order_id INT,
     product_id STRING,
     customer_id STRING,
-    ts TIMESTAMP(3) >
+    ts TIMESTAMP(3)
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_orders',
@@ -93,9 +93,9 @@ CREATE TABLE shoe_orders (
 
 CREATE VIEW order_view AS
 SELECT
-    payload.order_id order_id,
-    payload.product_id as product_id,
-    payload.customer_id as customer_id
+    order_id order_id,
+    product_id as product_id,
+    customer_id as customer_id
 FROM
     shoe_orders;
 
@@ -122,7 +122,7 @@ FROM
     join_2_view
     JOIN order_view ON join_2_view.product_id = order_view.product_id AND join_2_view.user_id = order_view.customer_id;
 
---upsert-kafka sink
+--
 
 CREATE TABLE upsert_kafka_sink (
     user_id STRING,
@@ -149,30 +149,3 @@ SELECT
     brand,
     order_id
 FROM join_3_view;
-
---kafka-sink
-
--- CREATE TABLE kafka_sink (
---     user_id STRING,
---     ip STRING,
---     product_id STRING,
---     first_name STRING,
---     brand STRING,
---     order_id INT
--- ) WITH (
---     'connector' = 'kafka',
---     'topic' = '2_join_kafka_sink',
---     'properties.bootstrap.servers' = 'localhost:9092',
---     'format' = 'avro-confluent',
---     'avro-confluent.url' = 'http://localhost:8081'
--- );
-
--- INSERT INTO kafka_sink
--- SELECT 
---     user_id,
---     ip,
---     product_id,
---     first_name,
---     brand,
---     order_id
--- FROM join_3_view;

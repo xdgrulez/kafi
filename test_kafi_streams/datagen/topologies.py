@@ -2,7 +2,7 @@ from kafi.streams.topologynode import source
 
 #
 
-def get_datagen_1_join_root_tn(click_source_str, customer_source_str):
+def get_root_tn_datagen_1_join(click_source_str, customer_source_str):
     click_source_tn = source(click_source_str)
     customer_source_tn = source(customer_source_str)
     #
@@ -34,7 +34,7 @@ def get_datagen_1_join_root_tn(click_source_str, customer_source_str):
     #
     return root_tn
 
-def get_datagen_2_joins_root_tn(click_source_str, customer_source_str, product_source_str):
+def get_root_tn_datagen_2_joins(click_source_str, customer_source_str, product_source_str):
     click_source_tn = source(click_source_str)
     customer_source_tn = source(customer_source_str)
     product_source_tn = source(product_source_str)
@@ -83,7 +83,7 @@ def get_datagen_2_joins_root_tn(click_source_str, customer_source_str, product_s
     #
     return root_tn
 
-def get_datagen_3_joins_root_tn(click_source_str, customer_source_str, product_source_str, order_source_str):
+def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_source_str, order_source_str):
     click_source_tn = source(click_source_str)
     customer_source_tn = source(customer_source_str)
     product_source_tn = source(product_source_str)

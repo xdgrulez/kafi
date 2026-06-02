@@ -60,7 +60,7 @@ WITH
         'connector' = 'upsert-kafka',
         'property-version' = 'universal',
         'properties.bootstrap.servers' = 'localhost:9092',
-        'topic' = 'flink_jamie_total',
+        'topic' = 'flink_total',
         'key.format' = 'json',
         'value.format' = 'json'
     );

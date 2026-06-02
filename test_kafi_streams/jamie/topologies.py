@@ -2,7 +2,7 @@ from kafi.streams.topologynode import source
 
 #
 
-def get_jamie_root_tn(transaction_source_str):
+def get_root_tn_jamie(transaction_source_str):
     transaction_source_tn = source(transaction_source_str)
     #
     transaction_tn = transaction_source_tn.map(

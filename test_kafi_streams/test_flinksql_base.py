@@ -24,7 +24,9 @@ class TestFlinkSqlBase(TestKafkaBase):
     def tearDown(self):
         super().tearDown()
         #
+        print("Killing all Flink processes...")
         subprocess.run("pgrep -f flink | xargs kill -9", shell=True)
+        print("...done.")
 
     #
 
@@ -69,7 +71,7 @@ class TestFlinkSqlBase(TestKafkaBase):
     
     #
 
-    def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int, key_type="str", value_type="json"):
+    def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int, source_key_type="str", source_value_type="json", target_key_type="str", target_value_type="json"):
         source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list]
         #
         self.source_str_values_int_dict = {source_str: 0 for _, source_str in source_storage_topic_str_tuple_list}
@@ -81,7 +83,7 @@ class TestFlinkSqlBase(TestKafkaBase):
         for _, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list:
             self.init_generate(topic_str)
         #
-        thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int, key_type, value_type))
+        thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int, source_key_type, source_value_type))
         #
         thread2 = threading.Thread(target=self.process, args=(flinksql_sql_path_str, ))
         #
@@ -99,4 +101,4 @@ class TestFlinkSqlBase(TestKafkaBase):
         thread1.join()
         thread2.join()
         #
-        self.read(target_storage, target_topic_str, key_type, value_type)
+        self.read(target_storage, target_topic_str, target_key_type, target_value_type)

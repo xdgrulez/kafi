@@ -9,6 +9,11 @@ default_unpack_function = json.loads
 
 #
 
+default_batch_size_int = 100
+default_steps_int = 50
+
+#
+
 class TestBase(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         print("Test:", self._testMethodName)
@@ -61,3 +66,27 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         elif changes_int > 0:
             print("Last:")
             print(default_unpack_function(changed_serialized_value_any_list[-1]))
+
+    #
+
+    def assert_jamie(self):
+        self.assertEqual(len(self.updated_value_any_list), 1)
+        self.assertEqual(self.updated_value_any_list[0]["value"]["total"], 0)
+
+    #
+
+    def assert_wc(self, line_source_str):
+        input_word_str_count_int_dict = {}
+        for message_dict in self.source_str_input_value_any_list_dict[line_source_str]:
+            line_str = message_dict["value"]
+            word_str_list = line_str.split()
+            for word_str in word_str_list:
+                input_word_str_count_int_dict[word_str] = input_word_str_count_int_dict.get(word_str, 0) + 1
+        #
+        output_word_str_count_int_dict = {}
+        for message_dict in self.updated_value_any_list:
+            word_str = message_dict["value"]["word"]
+            count_int = message_dict["value"]["count"]
+            output_word_str_count_int_dict[word_str] = count_int
+        #
+        self.assertEqual(input_word_str_count_int_dict, output_word_str_count_int_dict)
