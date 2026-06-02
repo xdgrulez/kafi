@@ -1,5 +1,5 @@
 CREATE TABLE
-    transactions (from_account INT, to_account INT, amount DOUBLE)
+    transactions (from_account INT, to_account INT, amount INT)
 WITH
     (
         'connector' = 'kafka',
@@ -60,7 +60,7 @@ WITH
         'connector' = 'upsert-kafka',
         'property-version' = 'universal',
         'properties.bootstrap.servers' = 'localhost:9092',
-        'topic' = 'flink_total',
+        'topic' = 'flink_jamie_total',
         'key.format' = 'json',
         'value.format' = 'json'
     );

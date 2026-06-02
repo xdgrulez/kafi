@@ -1,4 +1,4 @@
-import json, subprocess, threading, time
+import os, json, subprocess, threading, time
 
 from test_kafi_streams.test_kafka_base import TestKafkaBase
 
@@ -11,8 +11,7 @@ default_unpack_function = json.loads
 
 #
 
-home_path_str = "/home/ralph"
-# home_path_str = "/Users/m0724822"
+home_path_str = os.environ["HOME"]
 flinksql_path_str = f"{home_path_str}/apps/flink-2.2.0"
 flinksql_start_cluster_str = f"{flinksql_path_str}/bin/start-cluster.sh"
 flinksql_stop_cluster_str = f"{flinksql_path_str}/bin/stop-cluster.sh"

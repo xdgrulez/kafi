@@ -39,8 +39,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         print("---")
         print()
 
-    def print_changes(self, changed_value_any_list, changes_str):
-        changed_serialized_value_any_list = [default_pack_function(value_any) for value_any in changed_value_any_list]
+    def print_changes(self, changed_value_any_list, changes_str, select_function=lambda x: x["value"]):
+        changed_serialized_value_any_list = [default_pack_function(select_function(value_any)) for value_any in changed_value_any_list]
         changes_int = len(changed_serialized_value_any_list)
         unique_changes_int = len(set(changed_serialized_value_any_list))
         print(f"{changes_str}: {changes_int}")

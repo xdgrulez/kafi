@@ -50,6 +50,7 @@ class TestStreamsBase(TestKafkaBase):
         #
         while True:
             if all(self.stop(storage, topic_str, batch_size_int, group_str, steps_int) for storage, topic_str, batch_size_int in source_storage_topic_str_batch_size_int_tuple_list):
+                time.sleep(5)
                 break
             #
             time.sleep(0.1)
