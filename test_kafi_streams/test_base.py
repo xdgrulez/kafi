@@ -48,24 +48,24 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         print()
 
     def print_changes(self, changed_value_any_list, changes_str, select_function=lambda x: x["value"]):
-        changed_serialized_value_any_list = [default_pack_function(select_function(value_any)) for value_any in changed_value_any_list]
-        changes_int = len(changed_serialized_value_any_list)
-        unique_changes_int = len(set(changed_serialized_value_any_list))
+        changed_packed_value_any_list = [default_pack_function(select_function(value_any)) for value_any in changed_value_any_list]
+        changes_int = len(changed_packed_value_any_list)
+        unique_changes_int = len(set(changed_packed_value_any_list))
         print(f"{changes_str}: {changes_int}")
         print()
         print(f"Unique: {unique_changes_int}")
         print()
         if changes_int > 6:
             print("First three:")
-            for changed_serialized_value_any in changed_serialized_value_any_list[:3]: 
-                print(default_unpack_function(changed_serialized_value_any))
+            for changed_packed_value_any in changed_packed_value_any_list[:3]: 
+                print(default_unpack_function(changed_packed_value_any))
             print()
             print("Last three:")
-            for changed_serialized_value_any in changed_serialized_value_any_list[-3:]: 
-                print(default_unpack_function(changed_serialized_value_any))
+            for changed_packed_value_any in changed_packed_value_any_list[-3:]: 
+                print(default_unpack_function(changed_packed_value_any))
         elif changes_int > 0:
             print("Last:")
-            print(default_unpack_function(changed_serialized_value_any_list[-1]))
+            print(default_unpack_function(changed_packed_value_any_list[-1]))
 
     #
 

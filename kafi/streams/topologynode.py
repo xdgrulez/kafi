@@ -55,8 +55,8 @@ class TopologyNode:
     #
 
     def map(self, map_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _map_function(serialized_value_any):
-            value_any = self._unpack_function(serialized_value_any)
+        def _map_function(packed_value_any):
+            value_any = self._unpack_function(packed_value_any)
             return self._pack_function(map_function(value_any))
         #
         def _build_function(evaluator):
@@ -76,12 +76,12 @@ class TopologyNode:
         return tn
 
     def peek(self, peek_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _peek_function(serialized_value_any):
-            value_any = self._unpack_function(serialized_value_any)
+        def _peek_function(packed_value_any):
+            value_any = self._unpack_function(packed_value_any)
             #
             peek_function(value_any)
             #
-            return serialized_value_any
+            return packed_value_any
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -102,11 +102,11 @@ class TopologyNode:
     def flatmap(self, flatmap_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _flatmap_function(zSet):
             out_inner_dict = {}
-            for serialized_value_any, weight_int in zSet.inner.items():
-                for value_any in flatmap_function(self._unpack_function(serialized_value_any)):
-                    serialized_key_any = self._pack_function(value_any)
-                    out_inner_dict[serialized_key_any] = out_inner_dict.get(serialized_key_any, 0) + weight_int
-            return ZSet({serialized_key_any: weight_int for serialized_key_any, weight_int in out_inner_dict.items() if weight_int != 0})
+            for packed_value_any, weight_int in zSet.inner.items():
+                for value_any in flatmap_function(self._unpack_function(packed_value_any)):
+                    packed_key_any = self._pack_function(value_any)
+                    out_inner_dict[packed_key_any] = out_inner_dict.get(packed_key_any, 0) + weight_int
+            return ZSet({packed_key_any: weight_int for packed_key_any, weight_int in out_inner_dict.items() if weight_int != 0})
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -126,8 +126,8 @@ class TopologyNode:
         return tn
 
     def filter(self, filter_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _filter_function(serialized_value_any):
-            value_any = self._unpack_function(serialized_value_any)
+        def _filter_function(packed_value_any):
+            value_any = self._unpack_function(packed_value_any)
             return filter_function(value_any)
         #
         def _build_function(evaluator):
@@ -212,14 +212,14 @@ class TopologyNode:
         return tn
 
     def join(self, other_tn, predicate_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _predicate_function(left_serialized_value_any, right_serialized_value_any):
-            left_value_any = self._unpack_function(left_serialized_value_any)
-            right_value_any = self._unpack_function(right_serialized_value_any)
+        def _predicate_function(left_packed_value_any, right_packed_value_any):
+            left_value_any = self._unpack_function(left_packed_value_any)
+            right_value_any = self._unpack_function(right_packed_value_any)
             return predicate_function(left_value_any, right_value_any)
         #
-        def _projection_function(left_serialized_value_any, right_serialized_value_any):
-            left_value_any = self._unpack_function(left_serialized_value_any)
-            right_value_any = self._unpack_function(right_serialized_value_any)
+        def _projection_function(left_packed_value_any, right_packed_value_any):
+            left_value_any = self._unpack_function(left_packed_value_any)
+            right_value_any = self._unpack_function(right_packed_value_any)
             return self._pack_function(projection_function(left_value_any, right_value_any))
         #
         def _build_function(evaluator):
@@ -247,17 +247,17 @@ class TopologyNode:
         return tn
 
     def join_equi(self, other_tn, left_select_function, right_select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _left_select_function(left_serialized_value_any):
-            left_value_any = self._unpack_function(left_serialized_value_any)
+        def _left_select_function(left_packed_value_any):
+            left_value_any = self._unpack_function(left_packed_value_any)
             return self._pack_function(left_select_function(left_value_any))
         #
-        def _right_select_function(right_serialized_value_any):
-            right_value_any = self._unpack_function(right_serialized_value_any)
+        def _right_select_function(right_packed_value_any):
+            right_value_any = self._unpack_function(right_packed_value_any)
             return self._pack_function(right_select_function(right_value_any))
         #
-        def _projection_function(_, left_serialized_value_any, right_serialized_value_any):
-            left_value_any = self._unpack_function(left_serialized_value_any)
-            right_value_any = self._unpack_function(right_serialized_value_any)
+        def _projection_function(_, left_packed_value_any, right_packed_value_any):
+            left_value_any = self._unpack_function(left_packed_value_any)
+            right_value_any = self._unpack_function(right_packed_value_any)
             return self._pack_function(projection_function(left_value_any, right_value_any))
         #
         def _build_function(evaluator):
@@ -286,12 +286,12 @@ class TopologyNode:
         return tn
 
     def group_by_agg(self, by_function, select_function, projection_function, agg_function, agg_initial_any, pydbsp_aggregate_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _by_function(serialized_value_any):
-            value_any = self._unpack_function(serialized_value_any)
+        def _by_function(packed_value_any):
+            value_any = self._unpack_function(packed_value_any)
             return by_function(value_any)
         #
-        def _select_function(serialized_value_any):
-            value_any = self._unpack_function(serialized_value_any)
+        def _select_function(packed_value_any):
+            value_any = self._unpack_function(packed_value_any)
             return select_function(value_any)
         #
         def _projection_function(key_any_sum_any_tuple):
@@ -423,18 +423,18 @@ class TopologyNode:
         #
         updated_value_any_list = []
         deleted_value_any_list = []
-        for serialized_value_any, weight_int in zSet.items():
+        for packed_value_any, weight_int in zSet.items():
             if weight_int > 0:
                 if not bag_boolean:
                     weight_int = 1
                 for _ in range(weight_int):
-                    value_any = self._unpack_function(serialized_value_any)
+                    value_any = self._unpack_function(packed_value_any)
                     updated_value_any_list.append(value_any)
             elif weight_int < 0:
                 if not bag_boolean:
                     weight_int = -1
                 for _ in range(-weight_int):
-                    value_any = self._unpack_function(serialized_value_any)
+                    value_any = self._unpack_function(packed_value_any)
                     deleted_value_any_list.append(value_any)
         #
         return updated_value_any_list, deleted_value_any_list
