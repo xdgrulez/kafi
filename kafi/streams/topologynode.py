@@ -3,8 +3,10 @@ from pydbsp.compute import ComputeCtx
 from pydbsp.core import Antichain, dbsp_time
 from pydbsp.evaluate import Evaluator
 from pydbsp.indexed_relational_operators import (
+    DeltaLiftedDeltaLiftedGroupBy,
     IndexedDeltaLiftedDeltaLiftedJoin,
     LiftIndex,
+    LiftLiftIndex,
 )
 from pydbsp.indexed_zset import IndexedZSetAddition
 from pydbsp.operator import Differentiate, Input, Integrate, Lift1, Lift2, LiftStreamIntroduction
@@ -300,14 +302,26 @@ class TopologyNode:
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
+            g_idx = IndexedZSetAddition[str, str](g, _by_function)
+
             #
             input_nodeId = self._output_nodeId
             #
-            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            lift1_agg_nodeId = Lift1(f=self.zset_group_agg_function(_by_function, _select_function, agg_function, agg_initial_any, _output_function)).connect(evaluator.circuit, (integrate_nodeId,))
-            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (lift1_agg_nodeId,))
+            # integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
+            # lift1_agg_nodeId = Lift1(f=self.zset_group_agg_function(_by_function, _select_function, agg_function, agg_initial_any, _output_function)).connect(evaluator.circuit, (integrate_nodeId,))
+            # differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (lift1_agg_nodeId,))
+            # #
+            # tn._output_nodeId = differentiate_nodeId
+            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(group=g).connect(evaluator.circuit, (input_nodeId,))
+            liftLiftIndex_nodeId = LiftLiftIndex(indexer=_by_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
+            deltaLiftedDeltaLiftedGroupBy_nodeId = DeltaLiftedDeltaLiftedGroupBy(
+                aggregate=agg_function,
+                group=g_idx,
+                out_group=g,
+            ).connect(evaluator.circuit, (liftLiftIndex_nodeId,))
+            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (deltaLiftedDeltaLiftedGroupBy_nodeId,))
             #
-            tn._output_nodeId = differentiate_nodeId
+            tn._output_nodeId = integrate_nodeId
         #
         tn = TopologyNode("group_by_agg_op", {self}, _build_function, pack_function, unpack_function)
         #
