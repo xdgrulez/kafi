@@ -67,9 +67,9 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
             last_snapshot_hash_str_list[0] = root_tn_hash_str
             #
             print("Loading snaphot...")
-            root_tn = cloudpickle.loads(root_tn_bytes)
-        #
-        return root_tn
+            return cloudpickle.loads(root_tn_bytes)
+        else:
+            return root_tn
     #
     if snapshot_storage is not None:
         root_tn = load_snapshot()
@@ -151,7 +151,6 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
             finally_function()
     #
     async with asyncio.TaskGroup() as taskGroup:
-        # Create one task for each source of the topology.
         for storage, source_tn, queue in storage_source_tn_queue_tuple_list:
             storage_id = storage.get_id()
             topic_str = source_tn._name_str

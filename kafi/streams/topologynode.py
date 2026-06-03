@@ -264,6 +264,8 @@ class TopologyNode:
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
+            l_g_idx = IndexedZSetAddition(g, _left_select_function)
+            r_g_idx = IndexedZSetAddition(g, _right_select_function)
             #
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = other_tn._output_nodeId
@@ -274,8 +276,8 @@ class TopologyNode:
             r_liftIndex_nodeId = LiftIndex(indexer=_right_select_function).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
             indexedDeltaLiftedDeltaLiftedJoin_nodeId = IndexedDeltaLiftedDeltaLiftedJoin(
                 proj=_projection_function,
-                group_a=IndexedZSetAddition(g, _left_select_function),
-                group_b=IndexedZSetAddition(g, _right_select_function),
+                group_a=l_g_idx,
+                group_b=r_g_idx,
                 out_group=g,
             ).connect(evaluator.circuit, (l_liftIndex_nodeId, r_liftIndex_nodeId))
             #
@@ -407,14 +409,17 @@ class TopologyNode:
         return zSet
 
     def push(self, source_str, value_any_list, weight_int=1):
-        source_str_tn_dict = self.get_source_nodes()
-        source_topologyNode = source_str_tn_dict[source_str]
+        source_str_source_tn_dict = self.get_source_nodes()
         #
-        input_nodeId = source_topologyNode._output_nodeId
-        #
-        zSet = ZSet({self._pack_function(value_any): weight_int for value_any in value_any_list})
-        #
-        self._evaluator.push(input_nodeId, zSet)
+        for source_str_, source_tn in source_str_source_tn_dict.items():
+            input_nodeId = source_tn._output_nodeId
+            #
+            if source_str_ == source_str:
+                zSet = ZSet({self._pack_function(value_any): weight_int for value_any in value_any_list})
+            else:
+                zSet = ZSet({})
+            #
+            self._evaluator.push(input_nodeId, zSet)
 
     def step(self, gc=True, bag=False):
         bag_boolean = bag
