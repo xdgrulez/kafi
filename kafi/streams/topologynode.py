@@ -285,7 +285,7 @@ class TopologyNode:
         #
         return tn
 
-    def group_by_agg(self, by_function, select_function, output_function, agg_function, agg_initial_any, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def group_by_agg(self, by_function, select_function, projection_function, agg_function, agg_initial_any, pydbsp_aggregate_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _by_function(serialized_value_any):
             value_any = self._unpack_function(serialized_value_any)
             return by_function(value_any)
@@ -294,34 +294,43 @@ class TopologyNode:
             value_any = self._unpack_function(serialized_value_any)
             return select_function(value_any)
         #
-        def _output_function(key, sum_any):
-            value_any = output_function(key, sum_any)
+        def _projection_function(key_any_sum_any_tuple):
+            key_any, sum_any = key_any_sum_any_tuple
+            value_any = projection_function(key_any, sum_any)
             return self._pack_function(value_any)
+        #
+        def _default_pydbsp_aggregate_function(packed_value_any_weight_int_tuple_list):
+            agg_any = agg_initial_any
+            #
+            for packed_value_any, weight_int in packed_value_any_weight_int_tuple_list:
+                select_any = _select_function(packed_value_any)
+                #
+                agg_any = agg_function(agg_any, select_any, weight_int)
+            #
+            return agg_any
+        #
+        _pydbsp_aggregate_function = _default_pydbsp_aggregate_function if pydbsp_aggregate_function is None else pydbsp_aggregate_function
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
             g_idx = IndexedZSetAddition[str, str](g, _by_function)
-
             #
             input_nodeId = self._output_nodeId
             #
-            # integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            # lift1_agg_nodeId = Lift1(f=self.zset_group_agg_function(_by_function, _select_function, agg_function, agg_initial_any, _output_function)).connect(evaluator.circuit, (integrate_nodeId,))
-            # differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (lift1_agg_nodeId,))
-            # #
-            # tn._output_nodeId = differentiate_nodeId
-            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(group=g).connect(evaluator.circuit, (input_nodeId,))
+            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
             liftLiftIndex_nodeId = LiftLiftIndex(indexer=_by_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             deltaLiftedDeltaLiftedGroupBy_nodeId = DeltaLiftedDeltaLiftedGroupBy(
-                aggregate=agg_function,
+                aggregate=_pydbsp_aggregate_function,
                 group=g_idx,
                 out_group=g,
             ).connect(evaluator.circuit, (liftLiftIndex_nodeId,))
-            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (deltaLiftedDeltaLiftedGroupBy_nodeId,))
+            liftProject_nodeId = LiftProject(f=_projection_function).connect(evaluator.circuit, (deltaLiftedDeltaLiftedGroupBy_nodeId,))
+            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (liftProject_nodeId,))
+            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (integrate_nodeId,))
             #
-            tn._output_nodeId = integrate_nodeId
+            tn._output_nodeId = differentiate_nodeId
         #
         tn = TopologyNode("group_by_agg_op", {self}, _build_function, pack_function, unpack_function)
         #
@@ -330,25 +339,25 @@ class TopologyNode:
     #
 
     def group_by_sum(self, by_function, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, z: x + y * z, 0, pack_function, unpack_function)
+        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, z: x + y * z, 0, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "group_by_sum_op"
         #
         return tn
 
     def group_by_max(self, by_function, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: max(x, y), None, pack_function, unpack_function)
+        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: max(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "group_by_max_op"
         #
         return tn
 
     def group_by_min(self, by_function, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: min(x, y), None, pack_function, unpack_function)
+        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: min(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "group_by_min_op"
         #
         return tn
 
     def group_by_count(self, by_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_sum(by_function, lambda _: 1, output_function, pack_function, unpack_function)
+        tn = self.group_by_sum(by_function, lambda _: 1, output_function, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "group_by_count_op"
         #
         return tn
@@ -356,31 +365,31 @@ class TopologyNode:
     #
 
     def agg(self, select_function, output_function, agg_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(lambda _: 0, select_function, output_function, agg_function, pack_function, unpack_function)
+        tn = self.group_by_agg(lambda _: 0, select_function, output_function, agg_function, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "agg_op"
         #
         return tn
 
     def sum(self, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_sum(lambda _: 0, select_function, output_function, pack_function, unpack_function)
+        tn = self.group_by_sum(lambda _: 0, select_function, output_function, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "sum_op"
         #
         return tn
 
     def max(self, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_max(lambda _: 0, select_function, output_function, pack_function, unpack_function)
+        tn = self.group_by_max(lambda _: 0, select_function, output_function, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "max_op"
         #
         return tn
 
     def min(self, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_min(lambda _: 0, select_function, output_function, pack_function, unpack_function)
+        tn = self.group_by_min(lambda _: 0, select_function, output_function, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "min_op"
         #
         return tn
 
     def count(self, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_count(lambda _: 0, output_function, pack_function, unpack_function)
+        tn = self.group_by_count(lambda _: 0, output_function, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "count_op"
         #
         return tn
@@ -529,26 +538,6 @@ class TopologyNode:
         mermaid_bottom_str = "```"
         #
         return mermaid_top_str + mermaid_edges_str + mermaid_bottom_str
-
-    #
-
-    @staticmethod
-    def zset_group_agg_function(_by_function, _select_function, _agg_function, agg_initial_any,_output_function):
-        def _zset_group_agg_function(zSet):
-            by_any_agg_any = {}
-            #
-            for value_json_str, weight_int in zSet.inner.items():
-                by_any = _by_function(value_json_str)
-                select_any = _select_function(value_json_str)
-                #
-                agg_any = by_any_agg_any.get(by_any, agg_initial_any)
-                by_any_agg_any[by_any] = select_any if agg_any is None else _agg_function(agg_any, select_any, weight_int)
-            #
-            zSet = ZSet({_output_function(by_any, sum_any): 1 for by_any, sum_any in by_any_agg_any.items()})
-            #
-            return zSet
-        #
-        return _zset_group_agg_function
 
     @staticmethod
     def source(source_str, pack_function=default_pack_function, unpack_function=default_unpack_function):

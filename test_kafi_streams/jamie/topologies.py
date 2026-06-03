@@ -13,10 +13,7 @@ def get_root_tn_jamie(transaction_source_str):
         }
     )
     #
-
-    x = max(v for (k, v), w in items if w > 0)
-
-    credits_tn = transaction_tn.group_by_agg(
+    credits_tn = transaction_tn.group_by_sum(
         lambda x: x["to_account"],
         lambda x: x["amount"],
         lambda x, y: {"account": x,
