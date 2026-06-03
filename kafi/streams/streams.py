@@ -36,7 +36,7 @@ async def streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topi
 async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_function, finally_function, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
     consume_sleep_float = kwargs["consume_sleep"] if "consume_sleep" in kwargs else 0.1
     process_sleep_float = kwargs["process_sleep"] if "process_sleep" in kwargs else 0.1
-    snapshot_interval_float = kwargs["snapshot_interval"] if "snapshot_interval" in kwargs else 1.0
+    snapshot_interval_float = kwargs["snapshot_interval"] if "snapshot_interval" in kwargs else 5.0
     #
     initial_time_int = get_millis()
     #
@@ -56,6 +56,7 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
             producer = snapshot_storage.producer(snapshot_topic, type="bytes", chunk_size_bytes=1000)
             producer.produce(root_tn_bytes, key=root_tn._id_str)
             producer.close()
+            print("...saving snapshot done.")
 
     #
     def load_snapshot():
@@ -67,11 +68,15 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
             last_snapshot_hash_str_list[0] = root_tn_hash_str
             #
             print("Loading snaphot...")
-            return cloudpickle.loads(root_tn_bytes)
+            root_tn_ = cloudpickle.loads(root_tn_bytes)
+            print("...loading snapshot done.")
+            return root_tn_
         else:
             return root_tn
     #
     if snapshot_storage is not None:
+        initial_time_int = get_millis()
+        #
         root_tn = load_snapshot()
     #
     storage_source_tn_queue_tuple_list = []
@@ -141,8 +146,8 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
                 #
                 for storage_id_topic_str_tuple, offsets_dict in storage_id_topic_str_tuple_offsets_dict_dict.items():
                     consumer = storage_id_topic_str_tuple_consumer_dict[storage_id_topic_str_tuple]
-                    print(f"Committed {offsets_dict} for topic {storage_id_topic_str_tuple[1]}")
                     consumer.commit(offsets_dict)
+                    print(f"Committed {offsets_dict} for topic {storage_id_topic_str_tuple[1]}.")
                 #
                 await asyncio.sleep(process_sleep_float)
         except KeyboardInterrupt:
