@@ -92,7 +92,7 @@ CREATE TABLE shoe_orders (
 );
 
 CREATE VIEW order_view AS
-SELECT
+SELECT DISTINCT
     order_id order_id,
     product_id as product_id,
     customer_id as customer_id

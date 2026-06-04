@@ -55,6 +55,20 @@ class TestFlinkSqlJamie(TestFlinkSqlBase, TestGenerate, TestBase):
         #
         self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, default_steps_int)
 
+    def test_datagen_self_join_group_by(self):
+        order_topic_str = "shoe_orders"
+        #
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/1_join.sql"
+        #
+        source_storage = Cluster("local")
+        #
+        source_storage_topic_str_batch_size_int_tuple_list = [(source_storage, order_topic_str, default_batch_size_int)]
+        #
+        target_storage = source_storage
+        target_topic_str = "flink_self_join_group_by"
+        #
+        self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, default_steps_int)
+
     #
 
     def test_jamie(self):
