@@ -150,3 +150,53 @@ def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_s
     root_tn.build()
     #
     return root_tn
+
+def get_root_tn_datagen_join_group_by(customer_source_str, product_source_str, order_source_str):
+    customer_source_tn = source(customer_source_str)
+    product_source_tn = source(product_source_str)
+    order_source_tn = source(order_source_str)
+    #
+    order_tn = (
+        order_source_tn
+        .map(lambda x: {"order_id": x["value"]["order_id"], "product_id": x["value"]["product_id"], "customer_id": x["value"]["customer_id"]})
+        .distinct()
+    )
+    #
+    product_tn = (
+        product_source_tn
+        .map(lambda x: {"id": x["value"]["id"], "brand": x["value"]["brand"]})
+        .distinct()
+    )
+    #
+    customer_tn = (
+        customer_source_tn
+        .map(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
+        .distinct()
+    )
+    #
+    enriched_order_tn = (
+        order_tn
+        .join_equi(
+            product_tn,
+            lambda l: l["product_id"],
+            lambda r: r["id"],
+            lambda l, r: {"order_id": l["order_id"],
+                          "product_id": l["product_id"],
+                          "customer_id": l["customer_id"],
+                          "brand": r["brand"]})
+        .join_equi(
+            customer_tn,
+            lambda l: l["customer_id"],
+            lambda r: r["id"],
+            lambda l, r: {"value": {"order_id": l["order_id"],
+                          "product_id": l["product_id"],
+                          "customer_id": l["customer_id"],
+                          "brand": l["brand"],
+                          "first_name": r["first_name"]}})
+    )
+    #
+    root_tn = enriched_order_tn
+    #
+    root_tn.build()
+    #
+    return root_tn
