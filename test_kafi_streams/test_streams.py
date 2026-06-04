@@ -83,7 +83,7 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage_topic_str_batch_size_int_tuple_list = [(source_storage, order_topic_str, default_batch_size_int)]
         #
         target_storage = source_storage
-        target_topic_str = "self_join"
+        target_topic_str = "self_join_group_by"
         #
         self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, 20, target_storage, target_topic_str)
         #
@@ -102,7 +102,7 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage_topic_str_batch_size_int_tuple_list = [(source_storage, transaction_topic_str, default_batch_size_int)]
         #
         target_storage = source_storage
-        target_topic_str = "jamie_total"
+        target_topic_str = "total"
         #
         self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, target_storage, target_topic_str)
         #
@@ -121,7 +121,7 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage_topic_str_batch_size_int_tuple_list = [(source_storage, transaction_topic_str, default_batch_size_int)]
         #
         target_storage = source_storage
-        target_topic_str = "wc_total"
+        target_topic_str = "wc"
         #
         self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, target_storage, target_topic_str, source_value_type="str", target_value_type="json")
         #
