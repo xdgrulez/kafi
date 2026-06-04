@@ -37,13 +37,13 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         self.process([(click_source_str, default_batch_size_int), (customer_source_str, default_batch_size_int), (product_source_str, default_batch_size_int), (order_source_str, default_batch_size_int)], default_steps_int, root_tn)
 
     def test_datagen_self_join_group_by(self):
-        customer_source_str = "shoe_customers"
-        product_source_str = "shoes"
         order_source_str = "shoe_orders"
         #
-        root_tn = get_root_tn_datagen_self_join_group_by(customer_source_str, product_source_str, order_source_str)
+        root_tn = get_root_tn_datagen_self_join_group_by(order_source_str)
         #
-        self.process([(customer_source_str, 5), (product_source_str, 5), (order_source_str, 5)], 2, root_tn)
+        self.process([(order_source_str, default_batch_size_int)], 20, root_tn)
+        #
+        self.assert_self_join_group_by(order_source_str)
 
     #
 

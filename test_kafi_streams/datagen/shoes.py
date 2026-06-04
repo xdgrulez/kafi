@@ -2,15 +2,6 @@ import random
 
 from test_kafi_streams.datagen.constants.products import product_dict_list
 
-product_dict_list = [
-    {
-        "id": "1",
-        "brand": "Jones-Stokes"
-    },
-    {
-        "id": "2",
-        "brand": "Harvey-Kuhic"
-    }]
 #
 
 class ShoeProductGenerator:

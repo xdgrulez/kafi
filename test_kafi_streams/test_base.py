@@ -68,6 +68,22 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
             for changed_packed_value_any in changed_packed_value_any_list:
                 print(default_unpack_function(changed_packed_value_any))
 
+    def assert_self_join_group_by(self, order_source_str):
+        message_dict_list = self.source_str_input_value_any_list_dict[order_source_str]
+        product_id_str_product_id_str_tuple_customer_id_set_dict = defaultdict(set)
+        #
+        for message_dict1 in message_dict_list:
+            value_dict1 = message_dict1["value"]
+            for message_dict2 in message_dict_list:
+                value_dict2 = message_dict2["value"]
+                if value_dict1["product_id"] < value_dict2["product_id"] and value_dict1["customer_id"] == value_dict2["customer_id"]:
+                    product_id_str_product_id_str_tuple_customer_id_set_dict[(value_dict1["product_id"], value_dict2["product_id"])].add(value_dict1["customer_id"])
+        #
+        json_str_set1 = set([json.dumps({"product_id_1": product_id_str_product_id_str_tuple[0], "product_id_2": product_id_str_product_id_str_tuple[1], "count": len(customer_id_set)}) for product_id_str_product_id_str_tuple, customer_id_set in product_id_str_product_id_str_tuple_customer_id_set_dict.items()])
+        #
+        json_str_set2 = set([json.dumps(message_dict["value"]) for message_dict in self.updated_value_any_list])
+        self.assertTrue(json_str_set1.issubset(json_str_set2))
+    
     #
 
     def assert_jamie(self):
