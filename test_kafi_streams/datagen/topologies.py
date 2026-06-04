@@ -151,7 +151,7 @@ def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_s
     #
     return root_tn
 
-def get_root_tn_datagen_join_group_by(customer_source_str, product_source_str, order_source_str):
+def get_root_tn_datagen_self_join_group_by(customer_source_str, product_source_str, order_source_str):
     customer_source_tn = source(customer_source_str)
     product_source_tn = source(product_source_str)
     order_source_tn = source(order_source_str)
