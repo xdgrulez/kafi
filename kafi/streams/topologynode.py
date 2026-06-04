@@ -74,28 +74,20 @@ class TopologyNode:
         tn = TopologyNode("map_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
+    
+    def to_value(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.map(lambda x: {"value": x}, pack_function, unpack_function)
+        tn._name = "to_value_op"
+        #
+        return tn
 
     def peek(self, peek_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _peek_function(packed_value_any):
-            value_any = self._unpack_function(packed_value_any)
-            #
+        def _peek_function(value_any):
             peek_function(value_any)
-            #
-            return packed_value_any
+            return value_any
         #
-        def _build_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
-            liftProject_nodeId = LiftProject(f=_peek_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
-            #
-            tn._output_nodeId = liftProject_nodeId
-        #
-        tn = TopologyNode("peek_op", {self}, _build_function, pack_function, unpack_function)
+        tn = self.map(_peek_function, pack_function, unpack_function)
+        tn._name = "peek_op"
         #
         return tn
 

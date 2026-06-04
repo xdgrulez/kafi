@@ -2,8 +2,6 @@ import unittest
 
 import cloudpickle as pickle
 
-from kafi.streams.topologynode import default_pack_function, default_unpack_function
-
 #
 
 class TestTopologyNodeBase(unittest.TestCase):

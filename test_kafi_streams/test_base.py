@@ -64,8 +64,9 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
             for changed_packed_value_any in changed_packed_value_any_list[-3:]: 
                 print(default_unpack_function(changed_packed_value_any))
         elif changes_int > 0:
-            print("Last:")
-            print(default_unpack_function(changed_packed_value_any_list[-1]))
+            print("All:")
+            for changed_packed_value_any in changed_packed_value_any_list:
+                print(default_unpack_function(changed_packed_value_any))
 
     #
 
