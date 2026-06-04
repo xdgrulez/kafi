@@ -296,9 +296,9 @@ class TopologyNode:
             value_any = self._unpack_function(packed_value_any)
             return select_function(value_any)
         #
-        def _projection_function(key_any_sum_any_tuple):
-            key_any, sum_any = key_any_sum_any_tuple
-            value_any = projection_function(key_any, sum_any)
+        def _projection_function(packed_key_any_packed_sum_any_tuple):
+            packed_key_any, packed_sum_any = packed_key_any_packed_sum_any_tuple
+            value_any = projection_function(self._unpack_function(packed_key_any), self._unpack_function(packed_sum_any))
             return self._pack_function(value_any)
         #
         def _default_pydbsp_aggregate_function(packed_value_any_weight_int_tuple_list):
@@ -309,7 +309,7 @@ class TopologyNode:
                 #
                 agg_any = agg_function(agg_any, select_any, weight_int)
             #
-            return agg_any
+            return self._pack_function(agg_any)
         #
         _pydbsp_aggregate_function = _default_pydbsp_aggregate_function if pydbsp_aggregate_function is None else pydbsp_aggregate_function
         #

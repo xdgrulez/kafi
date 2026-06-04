@@ -188,14 +188,28 @@ def get_root_tn_datagen_join_group_by(customer_source_str, product_source_str, o
             customer_tn,
             lambda l: l["customer_id"],
             lambda r: r["id"],
-            lambda l, r: {"value": {"order_id": l["order_id"],
+            lambda l, r: {"order_id": l["order_id"],
                           "product_id": l["product_id"],
                           "customer_id": l["customer_id"],
                           "brand": l["brand"],
-                          "first_name": r["first_name"]}})
+                          "first_name": r["first_name"]})
     )
     #
-    root_tn = enriched_order_tn
+    root_tn = (
+        enriched_order_tn
+        .join(
+            enriched_order_tn,
+            lambda l, r: l["product_id"] == r["product_id"] and l["customer_id"] != r["customer_id"],
+            lambda l, r: {"product_id": l["product_id"],
+                          "brand": l["brand"],
+                          "customer_id_1": l["customer_id"],
+                          "customer_id_2": r["customer_id"]}
+        ).peek(print)
+        .group_by_count(
+            lambda x: {"product_id": x["product_id"], "brand": x["brand"]},
+            lambda x, y: {"value": {"product_id": x["product_id"], "brand": x["brand"], "count": y}}
+        )
+    )
     #
     root_tn.build()
     #
