@@ -204,7 +204,7 @@ def get_root_tn_datagen_join_group_by(customer_source_str, product_source_str, o
                           "brand": l["brand"],
                           "customer_id_1": l["customer_id"],
                           "customer_id_2": r["customer_id"]}
-        ).peek(print)
+        )
         .group_by_count(
             lambda x: {"product_id": x["product_id"], "brand": x["brand"]},
             lambda x, y: {"value": {"product_id": x["product_id"], "brand": x["brand"], "count": y}}

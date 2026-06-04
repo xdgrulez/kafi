@@ -290,26 +290,33 @@ class TopologyNode:
     def group_by_agg(self, by_function, select_function, projection_function, agg_function, agg_initial_any, pydbsp_aggregate_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _by_function(packed_value_any):
             value_any = self._unpack_function(packed_value_any)
-            return by_function(value_any)
+            return self._pack_function(by_function(value_any))
         #
         def _select_function(packed_value_any):
             value_any = self._unpack_function(packed_value_any)
-            return select_function(value_any)
+            return self._pack_function(select_function(value_any))
         #
         def _projection_function(packed_key_any_packed_sum_any_tuple):
             packed_key_any, packed_sum_any = packed_key_any_packed_sum_any_tuple
             value_any = projection_function(self._unpack_function(packed_key_any), self._unpack_function(packed_sum_any))
             return self._pack_function(value_any)
         #
+        def _agg_function(packed_agg_any, packed_select_any, weight_int):
+            agg_any = self._unpack_function(packed_agg_any)
+            select_any = self._unpack_function(packed_select_any)
+            return self._pack_function(agg_function(agg_any, select_any, weight_int))
+        #
+        _agg_initial_any = self._pack_function(agg_initial_any)
+        #
         def _default_pydbsp_aggregate_function(packed_value_any_weight_int_tuple_list):
-            agg_any = agg_initial_any
+            packed_agg_any = _agg_initial_any
             #
             for packed_value_any, weight_int in packed_value_any_weight_int_tuple_list:
-                select_any = _select_function(packed_value_any)
+                packed_select_any = _select_function(packed_value_any)
                 #
-                agg_any = agg_function(agg_any, select_any, weight_int)
+                packed_agg_any = _agg_function(packed_agg_any, packed_select_any, weight_int)
             #
-            return self._pack_function(agg_any)
+            return packed_agg_any
         #
         _pydbsp_aggregate_function = _default_pydbsp_aggregate_function if pydbsp_aggregate_function is None else pydbsp_aggregate_function
         #
