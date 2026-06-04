@@ -158,19 +158,22 @@ def get_root_tn_datagen_self_join_group_by(customer_source_str, product_source_s
     #
     order_tn = (
         order_source_tn
-        .map(lambda x: {"order_id": x["value"]["order_id"], "product_id": x["value"]["product_id"], "customer_id": x["value"]["customer_id"]})
+        .from_value()
+        .map(lambda x: {"order_id": x["order_id"], "product_id": x["product_id"], "customer_id": x["customer_id"]})
         .distinct()
     )
     #
     product_tn = (
         product_source_tn
-        .map(lambda x: {"id": x["value"]["id"], "brand": x["value"]["brand"]})
+        .from_value()
+        .map(lambda x: {"id": x["id"], "brand": x["brand"]})
         .distinct()
     )
     #
     customer_tn = (
         customer_source_tn
-        .map(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
+        .from_value()
+        .map(lambda x: {"id": x["id"], "first_name": x["first_name"]})
         .distinct()
     )
     #
@@ -215,7 +218,8 @@ def get_root_tn_datagen_self_join_group_by(customer_source_str, product_source_s
             lambda l, r: {"product_id_1": l["product_id"],
                           "product_id_2": r["product_id"],
                           "customer_id": l["customer_id"]}
-        ).distinct()
+        )
+        .distinct()
         .group_by_count(
             lambda x: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"]},
             lambda x, y: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"], "count": y}

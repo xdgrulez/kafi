@@ -75,6 +75,12 @@ class TopologyNode:
         #
         return tn
     
+    def from_value(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.map(lambda x: x["value"], pack_function, unpack_function)
+        tn._name = "from_value_op"
+        #
+        return tn
+
     def to_value(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
         tn = self.map(lambda x: {"value": x}, pack_function, unpack_function)
         tn._name = "to_value_op"
