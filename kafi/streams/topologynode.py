@@ -19,7 +19,7 @@ from pydbsp.relational_operators import (
 from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
 
-import uuid
+import copy, uuid
 
 import msgpack
 
@@ -403,16 +403,6 @@ class TopologyNode:
 
     #
 
-    def latest(self, gc=True):
-        gc_boolean = gc
-        #
-        zSet = self._evaluator.latest(self._output_nodeId)
-        #
-        if gc_boolean:
-            self._evaluator.compact()
-        #
-        return zSet
-
     def push(self, source_str, value_any_list, weight_int=1):
         source_str_source_tn_dict = self.get_source_nodes()
         #
@@ -425,6 +415,32 @@ class TopologyNode:
                 zSet = ZSet({})
             #
             self._evaluator.push(input_nodeId, zSet)
+
+    def push_debezium(self, source_str, message_dict_list):
+        create_or_update_message_dict_list = [message_dict["value"]["after"] for message_dict in message_dict_list if message_dict["value"]["op"] in ["c", "u"]]
+        delete_message_dict_list = [message_dict["value"]["before"] for message_dict in message_dict_list if message_dict["value"]["op"] == "d"]
+        #
+        print("create/update")
+        for x in create_or_update_message_dict_list:
+            print(x)
+        self.push(source_str, create_or_update_message_dict_list, 1)
+        #
+        print("delete")
+        for x in delete_message_dict_list:
+            print(x)
+        self.push(source_str, delete_message_dict_list, -1)
+
+    #
+
+    def latest(self, gc=True):
+        gc_boolean = gc
+        #
+        zSet = self._evaluator.latest(self._output_nodeId)
+        #
+        if gc_boolean:
+            self._evaluator.compact()
+        #
+        return zSet
 
     def step(self, gc=True, bag=False):
         bag_boolean = bag
@@ -448,6 +464,39 @@ class TopologyNode:
                     deleted_value_any_list.append(value_any)
         #
         return updated_value_any_list, deleted_value_any_list
+
+    def step_debezium(self, gc=True, bag=False):
+        bag_boolean = bag
+        #
+        zSet = self.latest(gc)
+        #
+        message_dict_list = []
+        for packed_message_dict, weight_int in zSet.items():
+            if weight_int > 0:
+                if not bag_boolean:
+                    weight_int = 1
+                #
+                message_dict = self._unpack_function(packed_message_dict)
+                for _ in range(weight_int):
+                    message_dict1 = copy.deepcopy(message_dict)
+                    message_dict1["value"]["before"] = None
+                    message_dict1["value"]["after"] = message_dict["value"]
+                    message_dict1["value"]["op"] = "c"
+                    message_dict_list.append(message_dict1)
+            elif weight_int < 0:
+                if not bag_boolean:
+                    weight_int = -1
+                #
+                message_dict = self._unpack_function(packed_message_dict)
+                for _ in range(-weight_int):
+                    message_dict = self._unpack_function(packed_message_dict)
+                    message_dict1 = copy.deepcopy(message_dict)
+                    message_dict1["value"]["before"] = message_dict["value"]
+                    message_dict1["value"]["after"] = None
+                    message_dict1["value"]["op"] = "d"
+                    message_dict_list.append(message_dict1)
+        #
+        return message_dict_list, []
 
     #
 

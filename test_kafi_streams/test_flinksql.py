@@ -6,7 +6,7 @@ from kafi.kafi import Cluster
 
 #
 
-class TestFlinkSqlJamie(TestFlinkSqlBase, TestGenerate, TestBase):
+class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
     def test_datagen_1_join(self):
         click_topic_str = "shoe_clickstream"
         customer_topic_str = "shoe_customers"
@@ -56,9 +56,9 @@ class TestFlinkSqlJamie(TestFlinkSqlBase, TestGenerate, TestBase):
         self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, default_steps_int)
 
     def test_datagen_self_join_group_by(self):
-        order_topic_str = "shoe_orders"
+        order_topic_str = "shoe_orders_debezium"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/1_join.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/self_join_group_by.sql"
         #
         source_storage = Cluster("local")
         #

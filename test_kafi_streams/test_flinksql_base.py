@@ -45,7 +45,7 @@ class TestFlinkSqlBase(TestKafkaBase):
 
     #
 
-    def stop(self, source_topic_str, batch_size_int, steps_int):
+    def get_read_records(self, source_topic_str):
         try:
             jobs_response_dict = get(f"{flinksql_url_str}/jobs")
             job_dict_list = jobs_response_dict["jobs"]
@@ -64,11 +64,29 @@ class TestFlinkSqlBase(TestKafkaBase):
                 raise Exception(f"Could not find source vertice for {source_topic_str}.")
             read_records_int = source_vertice_dict_list[0]["metrics"]["read-records"]
             #
-            return read_records_int == batch_size_int * steps_int
+            return read_records_int
         except Exception as e:
-            print(e)
-            return False
+            # print(e)
+            return -1
+
+
+    def stop(self, source_topic_str, batch_size_int, steps_int):
+        read_records_int = self.get_read_records(source_topic_str)
+        #
+        return read_records_int == batch_size_int * steps_int
     
+    #
+
+    def produce(self, storage_topic_str_batch_size_int_tuple_list, steps_int, key_type, value_type):
+        topic_str_list = [topic_str for _, topic_str, _ in storage_topic_str_batch_size_int_tuple_list]
+        #
+        while True:
+            if all(self.get_read_records(topic_str) != -1 for topic_str in topic_str_list):
+                super().produce(storage_topic_str_batch_size_int_tuple_list, steps_int, key_type, value_type)
+                return
+            #
+            time.sleep(1)
+
     #
 
     def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int, source_key_type="str", source_value_type="json", target_key_type="str", target_value_type="json"):

@@ -2,7 +2,7 @@ from test_kafi_streams.test_topologynode_base import TestTopologyNodeBase
 from test_kafi_streams.test_generate import TestGenerate
 from test_kafi_streams.test_base import TestBase, default_batch_size_int, default_steps_int
 
-from test_kafi_streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by
+from test_kafi_streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium
 from test_kafi_streams.jamie.topologies import get_root_tn_jamie
 from test_kafi_streams.wc.topologies import get_root_tn_wc
 
@@ -41,9 +41,18 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         #
         root_tn = get_root_tn_datagen_self_join_group_by(order_source_str)
         #
-        self.process([(order_source_str, default_batch_size_int)], 20, root_tn)
+        self.process([(order_source_str, default_batch_size_int)], default_steps_int, root_tn)
         #
         self.assert_self_join_group_by(order_source_str)
+
+    def test_datagen_self_join_group_by_debezium(self):
+        order_source_str = "shoe_orders_debezium"
+        #
+        root_tn = get_root_tn_datagen_self_join_group_by_debezium(order_source_str)
+        #
+        self.process([(order_source_str, 1)], 5, root_tn, root_tn.push_debezium, root_tn.step_debezium)
+        #
+        # self.assert_self_join_group_by(order_source_str)
 
     #
 

@@ -157,35 +157,57 @@ def get_root_tn_datagen_self_join_group_by(order_source_str):
     order_tn = (
         order_source_tn
         .from_value()
-        .map(lambda x: {"order_id": x["order_id"], "product_id": x["product_id"], "customer_id": x["customer_id"]})
+        .map(lambda x: {"product_id": x["product_id"], "customer_id": x["customer_id"]})
         .distinct()
     )
     #
-#     SELECT 
-#     p1.product_id AS produkt_A, 
-#     p2.product_id AS produkt_B,
-#     COUNT(DISTINCT p1.customer_id) AS gemeinsame_kunden
-# FROM 
-#     deine_tabelle p1
-# JOIN 
-#     deine_tabelle p2 ON p1.customer_id = p2.customer_id
-# WHERE 
-#     p1.product_id < p2.product_id
-# GROUP BY 
-#     p1.product_id, p2.product_id
     root_tn = (
         order_tn
-        .join(
+        .join_equi(
             order_tn,
-            lambda l, r: l["customer_id"] == r["customer_id"] and l["product_id"] < r["product_id"],
+            lambda l: l["customer_id"],
+            lambda r: r["customer_id"],
             lambda l, r: {"product_id_1": l["product_id"],
                           "product_id_2": r["product_id"],
                           "customer_id": l["customer_id"]}
         )
+        .filter(lambda x: x["product_id_1"] < x["product_id_2"])
         .distinct()
         .group_by_count(
             lambda x: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"]},
-            lambda x, y: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"], "count": y}
+            lambda x, y: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"], "cross_purchases": y}
+        )
+        .to_value()
+    )
+    #
+    root_tn.build()
+    #
+    return root_tn
+
+def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
+    order_source_tn = source(order_source_str)
+    #
+    order_tn = (
+        order_source_tn
+        .map(lambda x: {"product_id": x["product_id"], "customer_id": x["customer_id"]})
+        .distinct()
+    )
+    #
+    root_tn = (
+        order_tn
+        .join_equi(
+            order_tn,
+            lambda l: l["customer_id"],
+            lambda r: r["customer_id"],
+            lambda l, r: {"product_id_1": l["product_id"],
+                          "product_id_2": r["product_id"],
+                          "customer_id": l["customer_id"]}
+        )
+        .filter(lambda x: x["product_id_1"] < x["product_id_2"])
+        .distinct()
+        .group_by_count(
+            lambda x: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"]},
+            lambda x, y: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"], "cross_purchases": y}
         )
         .to_value()
     )

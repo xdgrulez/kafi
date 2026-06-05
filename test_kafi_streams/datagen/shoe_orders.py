@@ -4,6 +4,13 @@ from test_kafi_streams.datagen.constants.product_ids import product_id_str_list
 from test_kafi_streams.datagen.constants.customer_ids import customer_id_str_list
 
 #
+
+# import sys
+# sys.path.insert(1, ".")
+
+#
+
+#
 # product_id_str_list =["1", "2"]
 # customer_id_str_list = ["1", "2", "3"]
 #

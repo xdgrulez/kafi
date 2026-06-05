@@ -10,7 +10,7 @@ default_unpack_function = json.loads
 #
 
 default_batch_size_int = 100
-default_steps_int = 50
+default_steps_int = 20
 
 #
 
@@ -79,7 +79,7 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
                 if value_dict1["product_id"] < value_dict2["product_id"] and value_dict1["customer_id"] == value_dict2["customer_id"]:
                     product_id_str_product_id_str_tuple_customer_id_set_dict[(value_dict1["product_id"], value_dict2["product_id"])].add(value_dict1["customer_id"])
         #
-        json_str_set1 = set([json.dumps({"product_id_1": product_id_str_product_id_str_tuple[0], "product_id_2": product_id_str_product_id_str_tuple[1], "count": len(customer_id_set)}) for product_id_str_product_id_str_tuple, customer_id_set in product_id_str_product_id_str_tuple_customer_id_set_dict.items()])
+        json_str_set1 = set([json.dumps({"product_id_1": product_id_str_product_id_str_tuple[0], "product_id_2": product_id_str_product_id_str_tuple[1], "cross_purchases": len(customer_id_set)}) for product_id_str_product_id_str_tuple, customer_id_set in product_id_str_product_id_str_tuple_customer_id_set_dict.items()])
         #
         json_str_set2 = set([json.dumps(message_dict["value"]) for message_dict in self.updated_value_any_list])
         self.assertTrue(json_str_set1.issubset(json_str_set2))

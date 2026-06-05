@@ -4,6 +4,7 @@ from datagen.shoe_clickstream import ShoeClickstreamGenerator
 from datagen.shoe_customers import ShoeCustomerGenerator
 from datagen.shoes import ShoeProductGenerator 
 from datagen.shoe_orders import ShoeOrderGenerator
+from datagen.shoe_orders_debezium import ShoeOrderDebeziumGenerator
 from jamie.transactions import TransactionGenerator
 from test_kafi_streams.wc.lines import LineGenerator
 
@@ -20,6 +21,8 @@ class TestGenerate:
                 self.source_str_generator_dict[source_str] = ShoeProductGenerator()
             case "shoe_orders":
                 self.source_str_generator_dict[source_str] = ShoeOrderGenerator()
+            case "shoe_orders_debezium":
+                self.source_str_generator_dict[source_str] = ShoeOrderDebeziumGenerator()
             #
             case "transactions": 
                 self.source_str_generator_dict[source_str] = TransactionGenerator()
@@ -47,5 +50,8 @@ class TestGenerate:
             value_any_list.append(value_any)
         #
         self.source_str_input_value_any_list_dict[source_str] += value_any_list
+        #
+        for x in value_any_list:
+            print(x)
         #
         return value_any_list

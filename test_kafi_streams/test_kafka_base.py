@@ -1,3 +1,7 @@
+import time
+
+#
+
 class TestKafkaBase:
     def produce(self, storage_topic_str_batch_size_int_tuple_list, steps_int, key_type, value_type):
         for _ in range(steps_int):
@@ -6,7 +10,12 @@ class TestKafkaBase:
                     #
                     producer = storage.producer(topic_str, key_type=key_type, value_type=value_type)
                     producer.produce_list(value_any_list)
+                    #
+                    print(f"Produced {len(value_any_list)} messages to topic {topic_str}.")
+                    #
                     producer.close()
+                    #
+                    time.sleep(0.5)
 
     def read(self, storage, topic_str, key_type, value_type):
         print(f"Reading target topic: {topic_str}")

@@ -4,6 +4,13 @@ from test_kafi_streams.datagen.constants.products import product_dict_list
 
 #
 
+# import sys
+# sys.path.insert(1, ".")
+
+#
+
+#
+
 class ShoeProductGenerator:
     def generate_record(self):
         record_dict = random.choice(product_dict_list)
