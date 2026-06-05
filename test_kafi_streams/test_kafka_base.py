@@ -1,27 +1,31 @@
+from collections import defaultdict
 import time
 
 #
 
 class TestKafkaBase:
     def produce(self, storage_topic_str_batch_size_int_tuple_list, steps_int, key_type, value_type):
+        topic_str_messages_int_dict = defaultdict(int)
         for _ in range(steps_int):
             for storage, topic_str, batch_size_int in storage_topic_str_batch_size_int_tuple_list:
-                    value_any_list = self.generate(topic_str, batch_size_int)
+                    message_dict_list = self.generate(topic_str, batch_size_int)
                     #
                     producer = storage.producer(topic_str, key_type=key_type, value_type=value_type)
-                    producer.produce_list(value_any_list)
+                    producer.produce_list(message_dict_list)
                     #
-                    print(f"Produced {len(value_any_list)} messages to topic {topic_str}.")
+                    messages_int = len(message_dict_list)
+                    topic_str_messages_int_dict[topic_str] += messages_int
+                    print(f"Produced {messages_int} messages to topic {topic_str} ({topic_str_messages_int_dict[topic_str]}/{steps_int * batch_size_int}).")
                     #
                     producer.close()
                     #
-                    time.sleep(0.5)
+                    time.sleep(0.1)
 
     def read(self, storage, topic_str, key_type, value_type):
         print(f"Reading target topic: {topic_str}")
-        value_any_list = storage.cat(topic_str, key_type=key_type, value_type=value_type)
+        record_any_list = storage.cat(topic_str, key_type=key_type, value_type=value_type)
         print("...done.")
         #
-        self.updates_int = len(value_any_list)
+        self.updates_int = len(record_any_list)
         #
-        self.updated_value_any_list = value_any_list
+        self.updated_record_any_list = record_any_list

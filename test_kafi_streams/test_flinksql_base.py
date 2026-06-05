@@ -21,12 +21,12 @@ flinksql_url_str = "http://localhost:9081"
 #
 
 class TestFlinkSqlBase(TestKafkaBase):
-    def tearDown(self):
-        super().tearDown()
-        #
+    def setUp(self):
         print("Killing all Flink processes...")
         subprocess.run("pgrep -f flink | xargs kill -9", shell=True)
         print("...done.")
+        #
+        super().setUp()
 
     #
 

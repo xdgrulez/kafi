@@ -1,4 +1,4 @@
-from kafi.streams.topologynode import source
+from kafi.streams.topologynode import TopologyNode, source
 
 #
 
@@ -186,9 +186,11 @@ def get_root_tn_datagen_self_join_group_by(order_source_str):
 
 def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
     order_source_tn = source(order_source_str)
+    order_source_tn._to_zSet_function = order_source_tn.debezium_to_zSet
     #
     order_tn = (
         order_source_tn
+        .from_value()
         .map(lambda x: {"product_id": x["product_id"], "customer_id": x["customer_id"]})
         .distinct()
     )
@@ -204,13 +206,13 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
                           "customer_id": l["customer_id"]}
         )
         .filter(lambda x: x["product_id_1"] < x["product_id_2"])
-        .distinct()
         .group_by_count(
             lambda x: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"]},
             lambda x, y: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"], "cross_purchases": y}
         )
         .to_value()
     )
+    root_tn._from_zSet_function = root_tn.zSet_to_debezium
     #
     root_tn.build()
     #

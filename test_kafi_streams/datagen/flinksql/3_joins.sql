@@ -4,26 +4,24 @@ CREATE TABLE shoe_clickstream (
     view_time INT,
     page_url STRING,
     ip STRING,
-    ts TIMESTAMP(3)
+    ts BIGINT
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_clickstream',
     'properties.bootstrap.servers' = 'localhost:9092',
     'scan.startup.mode' = 'earliest-offset',
-    'format' = 'json',
-    'json.ignore-parse-errors' = 'true'
+    'format' = 'json'
 );
 
 CREATE VIEW click_view AS
-SELECT DISTINCT
-    user_id as user_id,
+SELECT
+    DISTINCT user_id as user_id,
     ip as ip,
     product_id as product_id
 from
     shoe_clickstream;
 
 --
-
 CREATE TABLE shoe_customers (
     id STRING,
     first_name STRING,
@@ -40,19 +38,17 @@ CREATE TABLE shoe_customers (
     'topic' = 'shoe_customers',
     'scan.startup.mode' = 'earliest-offset',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'json',
-    'json.ignore-parse-errors' = 'true'
+    'format' = 'json'
 );
 
 CREATE VIEW customer_view AS
-SELECT DISTINCT
-    id as id,
+SELECT
+    DISTINCT id as id,
     first_name as first_name
 FROM
     shoe_customers;
 
 --
-
 CREATE TABLE shoes (
     id STRING,
     brand STRING,
@@ -64,43 +60,39 @@ CREATE TABLE shoes (
     'topic' = 'shoes',
     'scan.startup.mode' = 'earliest-offset',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'json',
-    'json.ignore-parse-errors' = 'true'
+    'format' = 'json'
 );
 
 CREATE VIEW product_view AS
-SELECT DISTINCT
-    id as id,
+SELECT
+    DISTINCT id as id,
     brand as brand
 FROM
     shoes;
 
 --
-
 CREATE TABLE shoe_orders (
     order_id INT,
     product_id STRING,
     customer_id STRING,
-    ts TIMESTAMP(3)
+    ts BIGINT
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_orders',
     'scan.startup.mode' = 'earliest-offset',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'json',
-    'json.ignore-parse-errors' = 'true'
+    'format' = 'json'
 );
 
 CREATE VIEW order_view AS
-SELECT DISTINCT
-    order_id order_id,
+SELECT
+    DISTINCT order_id order_id,
     product_id as product_id,
     customer_id as customer_id
 FROM
     shoe_orders;
 
 --
-
 CREATE VIEW join_1_view AS
 SELECT
     *
@@ -120,11 +112,11 @@ SELECT
     *
 FROM
     join_2_view
-    JOIN order_view ON join_2_view.product_id = order_view.product_id AND join_2_view.user_id = order_view.customer_id;
+    JOIN order_view ON join_2_view.product_id = order_view.product_id
+    AND join_2_view.user_id = order_view.customer_id;
 
 --
-
-CREATE TABLE upsert_kafka_sink (
+CREATE TABLE kafka_sink (
     user_id STRING,
     ip STRING,
     product_id STRING,
@@ -140,12 +132,14 @@ CREATE TABLE upsert_kafka_sink (
     'value.format' = 'json'
 );
 
-INSERT INTO upsert_kafka_sink
-SELECT 
+INSERT INTO
+    kafka_sink
+SELECT
     user_id,
     ip,
     product_id,
     first_name,
     brand,
     order_id
-FROM join_3_view;
+FROM
+    join_3_view;

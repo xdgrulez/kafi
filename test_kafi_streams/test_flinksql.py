@@ -56,7 +56,7 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
         self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, default_steps_int)
 
     def test_datagen_self_join_group_by(self):
-        order_topic_str = "shoe_orders_debezium"
+        order_topic_str = "shoe_orders"
         #
         flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/self_join_group_by.sql"
         #
@@ -66,6 +66,20 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
         #
         target_storage = source_storage
         target_topic_str = "flink_self_join_group_by"
+        #
+        self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, default_steps_int)
+
+    def test_datagen_self_join_group_by_debezium(self):
+        order_topic_str = "shoe_orders_debezium"
+        #
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/self_join_group_by_debezium.sql"
+        #
+        source_storage = Cluster("local")
+        #
+        source_storage_topic_str_batch_size_int_tuple_list = [(source_storage, order_topic_str, default_batch_size_int)]
+        #
+        target_storage = source_storage
+        target_topic_str = "flink_self_join_group_by_debezium"
         #
         self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, default_steps_int)
 
@@ -86,4 +100,4 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
         #
         self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, default_steps_int)
         #
-        self.assertEqual(self.updated_value_any_list[-1]["value"], {"total": 0})
+        self.assertEqual(self.updated_record_any_list[-1]["value"], {"total": 0})

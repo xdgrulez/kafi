@@ -11,8 +11,8 @@ from test_kafi_streams.datagen.constants.product_ids import product_id_str_list
 from test_kafi_streams.datagen.constants.customer_ids import customer_id_str_list
 
 #
-product_id_str_list =["1", "2"]
-customer_id_str_list = ["1"]
+# product_id_str_list =["1", "2"]
+# customer_id_str_list = ["1"]
 #customer_id_str_list = ["1", "2", "3"]
 #
 
@@ -27,7 +27,7 @@ class ShoeOrderDebeziumGenerator:
         self.inner_record_dict_list = []
 
     def generate_record(self):
-        if random.choice([True, False]) or not self.inner_record_dict_list:
+        if random.randrange(10) <= 8 or not self.inner_record_dict_list:
             inner_record_dict = {
                 "order_id": self.order_id_int,
                 "product_id": random.choice(product_id_str_list),

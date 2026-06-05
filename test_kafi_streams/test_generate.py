@@ -33,7 +33,7 @@ class TestGenerate:
                 raise Exception(f"Source not supported: {source_str}")
 
     def generate(self, source_str, batch_size_int):
-        value_any_list = []
+        record_any_list = []
         #
         generator = self.source_str_generator_dict[source_str]
         #
@@ -42,16 +42,13 @@ class TestGenerate:
         for _ in range(batch_size_int):
             record_dict = generator.generate_record()
             partition_int = random.randrange(partitions_int)
-            value_any = {"key": None,
+            record_any = {"key": None,
                          "value": record_dict,
                          "partition": partition_int,
                          "offset": partition_int_counter_int_dict[partition_int]}
             partition_int_counter_int_dict[partition_int] += 1
-            value_any_list.append(value_any)
+            record_any_list.append(record_any)
         #
-        self.source_str_input_value_any_list_dict[source_str] += value_any_list
+        self.source_str_input_record_any_list_dict[source_str] += record_any_list
         #
-        for x in value_any_list:
-            print(x)
-        #
-        return value_any_list
+        return record_any_list

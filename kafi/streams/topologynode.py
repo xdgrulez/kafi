@@ -31,7 +31,7 @@ default_unpack_function = msgpack.unpackb
 #
 
 class TopologyNode:
-    def __init__(self, name_str, daughter_tn_set, build_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def __init__(self, name_str, daughter_tn_set, build_function, pack_function=default_pack_function, unpack_function=default_unpack_function, to_zSet_function=None, from_zSet_function=None):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
         self._daughter_tn_set = daughter_tn_set
@@ -42,6 +42,17 @@ class TopologyNode:
         #
         self._evaluator = None
         self._output_nodeId = None
+        #
+        if to_zSet_function is None:
+            self._to_zSet_function = self.record_any_list_to_zSet
+        else:
+            self._to_zSet_function = to_zSet_function
+        #
+        if from_zSet_function is None:
+            self._from_zSet_function = self.zSet_to_record_any_list
+        else:
+            self._from_zSet_function = from_zSet_function
+
 
     def build(self):
         evaluator = Evaluator(
@@ -55,9 +66,9 @@ class TopologyNode:
     #
 
     def map(self, map_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _map_function(packed_value_any):
-            value_any = self._unpack_function(packed_value_any)
-            return self._pack_function(map_function(value_any))
+        def _map_function(packed_record_any):
+            record_any = self._unpack_function(packed_record_any)
+            return self._pack_function(map_function(record_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -87,22 +98,54 @@ class TopologyNode:
         #
         return tn
 
-    def peek(self, peek_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _peek_function(value_any):
-            peek_function(value_any)
-            return value_any
+    def peek(self, peek_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def _peek_function(zSet):
+            for packed_record_any, weight_int in zSet.inner.items():
+                peek_function(self._unpack_function(packed_record_any), weight_int)
+            #
+            return zSet
         #
-        tn = self.map(_peek_function, pack_function, unpack_function)
-        tn._name = "peek_op"
+        if peek_function is None:
+            peek_function = lambda x, y: print((x, y))
+        #
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            input_nodeId = self._output_nodeId
+            #
+            lift1_nodeId = Lift1(f=_peek_function).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = lift1_nodeId
+        #
+        tn = TopologyNode("peek_op", {self}, _build_function, pack_function, unpack_function)
+        #
+        return tn
+
+    def peek_zSet(self, peek_zSet_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def _peek_zSet_function(zSet):
+            peek_zSet_function(zSet)
+            #
+            return zSet
+        #
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            input_nodeId = self._output_nodeId
+            #
+            lift1_nodeId = Lift1(f=_peek_zSet_function).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = lift1_nodeId
+        #
+        tn = TopologyNode("peek_zSet_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
     def flatmap(self, flatmap_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
         def _flatmap_function(zSet):
             out_inner_dict = {}
-            for packed_value_any, weight_int in zSet.inner.items():
-                for value_any in flatmap_function(self._unpack_function(packed_value_any)):
-                    packed_key_any = self._pack_function(value_any)
+            for packed_record_any, weight_int in zSet.inner.items():
+                for record_any in flatmap_function(self._unpack_function(packed_record_any)):
+                    packed_key_any = self._pack_function(record_any)
                     out_inner_dict[packed_key_any] = out_inner_dict.get(packed_key_any, 0) + weight_int
             return ZSet({packed_key_any: weight_int for packed_key_any, weight_int in out_inner_dict.items() if weight_int != 0})
         #
@@ -124,9 +167,9 @@ class TopologyNode:
         return tn
 
     def filter(self, filter_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _filter_function(packed_value_any):
-            value_any = self._unpack_function(packed_value_any)
-            return filter_function(value_any)
+        def _filter_function(packed_record_any):
+            record_any = self._unpack_function(packed_record_any)
+            return filter_function(record_any)
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -210,15 +253,15 @@ class TopologyNode:
         return tn
 
     def join(self, other_tn, predicate_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _predicate_function(left_packed_value_any, right_packed_value_any):
-            left_value_any = self._unpack_function(left_packed_value_any)
-            right_value_any = self._unpack_function(right_packed_value_any)
-            return predicate_function(left_value_any, right_value_any)
+        def _predicate_function(left_packed_record_any, right_packed_record_any):
+            left_record_any = self._unpack_function(left_packed_record_any)
+            right_record_any = self._unpack_function(right_packed_record_any)
+            return predicate_function(left_record_any, right_record_any)
         #
-        def _projection_function(left_packed_value_any, right_packed_value_any):
-            left_value_any = self._unpack_function(left_packed_value_any)
-            right_value_any = self._unpack_function(right_packed_value_any)
-            return self._pack_function(projection_function(left_value_any, right_value_any))
+        def _projection_function(left_packed_record_any, right_packed_record_any):
+            left_record_any = self._unpack_function(left_packed_record_any)
+            right_record_any = self._unpack_function(right_packed_record_any)
+            return self._pack_function(projection_function(left_record_any, right_record_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -245,18 +288,18 @@ class TopologyNode:
         return tn
 
     def join_equi(self, other_tn, left_select_function, right_select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _left_select_function(left_packed_value_any):
-            left_value_any = self._unpack_function(left_packed_value_any)
-            return self._pack_function(left_select_function(left_value_any))
+        def _left_select_function(left_packed_record_any):
+            left_record_any = self._unpack_function(left_packed_record_any)
+            return self._pack_function(left_select_function(left_record_any))
         #
-        def _right_select_function(right_packed_value_any):
-            right_value_any = self._unpack_function(right_packed_value_any)
-            return self._pack_function(right_select_function(right_value_any))
+        def _right_select_function(right_packed_record_any):
+            right_record_any = self._unpack_function(right_packed_record_any)
+            return self._pack_function(right_select_function(right_record_any))
         #
-        def _projection_function(_, left_packed_value_any, right_packed_value_any):
-            left_value_any = self._unpack_function(left_packed_value_any)
-            right_value_any = self._unpack_function(right_packed_value_any)
-            return self._pack_function(projection_function(left_value_any, right_value_any))
+        def _projection_function(_, left_packed_record_any, right_packed_record_any):
+            left_record_any = self._unpack_function(left_packed_record_any)
+            right_record_any = self._unpack_function(right_packed_record_any)
+            return self._pack_function(projection_function(left_record_any, right_record_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -286,18 +329,18 @@ class TopologyNode:
         return tn
 
     def group_by_agg(self, by_function, select_function, projection_function, agg_function, agg_initial_any, pydbsp_aggregate_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _by_function(packed_value_any):
-            value_any = self._unpack_function(packed_value_any)
-            return self._pack_function(by_function(value_any))
+        def _by_function(packed_record_any):
+            record_any = self._unpack_function(packed_record_any)
+            return self._pack_function(by_function(record_any))
         #
-        def _select_function(packed_value_any):
-            value_any = self._unpack_function(packed_value_any)
-            return self._pack_function(select_function(value_any))
+        def _select_function(packed_record_any):
+            record_any = self._unpack_function(packed_record_any)
+            return self._pack_function(select_function(record_any))
         #
         def _projection_function(packed_key_any_packed_sum_any_tuple):
             packed_key_any, packed_sum_any = packed_key_any_packed_sum_any_tuple
-            value_any = projection_function(self._unpack_function(packed_key_any), self._unpack_function(packed_sum_any))
-            return self._pack_function(value_any)
+            record_any = projection_function(self._unpack_function(packed_key_any), self._unpack_function(packed_sum_any))
+            return self._pack_function(record_any)
         #
         def _agg_function(packed_agg_any, packed_select_any, weight_int):
             agg_any = self._unpack_function(packed_agg_any)
@@ -306,11 +349,11 @@ class TopologyNode:
         #
         _agg_initial_any = self._pack_function(agg_initial_any)
         #
-        def _default_pydbsp_aggregate_function(packed_value_any_weight_int_tuple_list):
+        def _default_pydbsp_aggregate_function(packed_record_any_weight_int_tuple_list):
             packed_agg_any = _agg_initial_any
             #
-            for packed_value_any, weight_int in packed_value_any_weight_int_tuple_list:
-                packed_select_any = _select_function(packed_value_any)
+            for packed_record_any, weight_int in packed_record_any_weight_int_tuple_list:
+                packed_select_any = _select_function(packed_record_any)
                 #
                 packed_agg_any = _agg_function(packed_agg_any, packed_select_any, weight_int)
             #
@@ -403,72 +446,56 @@ class TopologyNode:
 
     #
 
-    def push(self, source_str, value_any_list, weight_int=1):
-        source_str_source_tn_dict = self.get_source_nodes()
-        #
-        for source_str_, source_tn in source_str_source_tn_dict.items():
-            input_nodeId = source_tn._output_nodeId
-            #
-            if source_str_ == source_str:
-                zSet = ZSet({self._pack_function(value_any): weight_int for value_any in value_any_list})
-            else:
-                zSet = ZSet({})
-            #
-            self._evaluator.push(input_nodeId, zSet)
-
-    def push_debezium(self, source_str, message_dict_list):
-        create_or_update_message_dict_list = [message_dict["value"]["after"] for message_dict in message_dict_list if message_dict["value"]["op"] in ["c", "u"]]
-        delete_message_dict_list = [message_dict["value"]["before"] for message_dict in message_dict_list if message_dict["value"]["op"] == "d"]
-        #
-        print("create/update")
-        for x in create_or_update_message_dict_list:
-            print(x)
-        self.push(source_str, create_or_update_message_dict_list, 1)
-        #
-        print("delete")
-        for x in delete_message_dict_list:
-            print(x)
-        self.push(source_str, delete_message_dict_list, -1)
-
-    #
-
-    def latest(self, gc=True):
-        gc_boolean = gc
-        #
-        zSet = self._evaluator.latest(self._output_nodeId)
-        #
-        if gc_boolean:
-            self._evaluator.compact()
+    def record_any_list_to_zSet(self, record_any_list):
+        zSet = ZSet({self._pack_function(record_any): 1 for record_any in record_any_list})
         #
         return zSet
 
-    def step(self, gc=True, bag=False):
+    def debezium_to_zSet(self, message_dict_list):
+        inner_dict = {}
+        for message_dict in message_dict_list:
+            if message_dict["value"]["op"] in ["c", "u"]:
+                message_dict1 = copy.deepcopy(message_dict)
+                message_dict1["value"] = message_dict["value"]["after"]
+                inner_dict[self._pack_function(message_dict1)] = 1
+            elif message_dict["value"]["op"] == "d":
+                message_dict1 = copy.deepcopy(message_dict)
+                message_dict1["value"] = message_dict["value"]["before"]
+                inner_dict[self._pack_function(message_dict1)] = -1
+        #
+        return ZSet(inner_dict)
+    
+    def push(self, source_str, record_any_list):
+        source_str_source_tn_dict = self.get_source_nodes()
+        #
+        for source_str1, source_tn in source_str_source_tn_dict.items():
+            input_nodeId = source_tn._output_nodeId
+            #
+            if source_str1 == source_str:
+                zSet1 = source_tn._to_zSet_function(record_any_list)
+            else:
+                zSet1 = ZSet({})
+            #
+            self._evaluator.push(input_nodeId, zSet1)
+
+    #
+
+    def zSet_to_record_any_list(self, zSet, bag=True):
         bag_boolean = bag
         #
-        zSet = self.latest(gc)
-        #
-        updated_value_any_list = []
-        deleted_value_any_list = []
-        for packed_value_any, weight_int in zSet.items():
+        record_any_list = []
+        for packed_record_any, weight_int in zSet.items():
             if weight_int > 0:
                 if not bag_boolean:
                     weight_int = 1
                 for _ in range(weight_int):
-                    value_any = self._unpack_function(packed_value_any)
-                    updated_value_any_list.append(value_any)
-            elif weight_int < 0:
-                if not bag_boolean:
-                    weight_int = -1
-                for _ in range(-weight_int):
-                    value_any = self._unpack_function(packed_value_any)
-                    deleted_value_any_list.append(value_any)
+                    record_any = self._unpack_function(packed_record_any)
+                    record_any_list.append(record_any)
         #
-        return updated_value_any_list, deleted_value_any_list
+        return record_any_list
 
-    def step_debezium(self, gc=True, bag=False):
+    def zSet_to_debezium(self, zSet, bag=True):
         bag_boolean = bag
-        #
-        zSet = self.latest(gc)
         #
         message_dict_list = []
         for packed_message_dict, weight_int in zSet.items():
@@ -496,7 +523,17 @@ class TopologyNode:
                     message_dict1["value"]["op"] = "d"
                     message_dict_list.append(message_dict1)
         #
-        return message_dict_list, []
+        return message_dict_list
+
+    def latest(self, gc=True, bag=True):
+        gc_boolean = gc
+        #
+        zSet = self._evaluator.latest(self._output_nodeId)
+        #
+        if gc_boolean:
+            self._evaluator.compact()
+        #
+        return self._from_zSet_function(zSet, bag)
 
     #
 

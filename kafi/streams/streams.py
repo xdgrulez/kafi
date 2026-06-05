@@ -7,9 +7,9 @@ from kafi.helpers import get_millis
 
 #
 
-def run_streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, push_function=None, **kwargs):
+def run_streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, **kwargs):
         def _run(stop_thread):
-            asyncio.run(streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage=snapshot_storage, snapshot_topic=snapshot_topic, stop_thread=stop_thread, push_function=None, **kwargs))
+            asyncio.run(streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage=snapshot_storage, snapshot_topic=snapshot_topic, stop_thread=stop_thread, **kwargs))
         #
         def _stop():
             stop_thread.set()
@@ -22,7 +22,7 @@ def run_streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_
         #
         return _stop
 
-async def streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, stop_thread=None, push_function=None, **kwargs):
+async def streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
     producer = sink_storage.producer(sink_topic_str, **kwargs)
     #
     def sink_function(message_dict_list):
@@ -31,15 +31,12 @@ async def streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topi
     def finally_function():
         producer.close()
     #
-    await streams_function(storage_topic_str_tuple_list, root_tn, sink_function, finally_function, snapshot_storage, snapshot_topic, stop_thread, push_function, **kwargs)
+    await streams_function(storage_topic_str_tuple_list, root_tn, sink_function, finally_function, snapshot_storage, snapshot_topic, stop_thread, **kwargs)
 
-async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_function, finally_function, snapshot_storage=None, snapshot_topic=None, stop_thread=None, push_function=None, **kwargs):
+async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_function, finally_function, snapshot_storage=None, snapshot_topic=None, stop_thread=None, **kwargs):
     consume_sleep_float = kwargs["consume_sleep"] if "consume_sleep" in kwargs else 0.1
     process_sleep_float = kwargs["process_sleep"] if "process_sleep" in kwargs else 0.1
     snapshot_interval_float = kwargs["snapshot_interval"] if "snapshot_interval" in kwargs else 5.0
-    #
-    if push_function is None:
-        push_function = lambda topic_str, message_dict_list: root_tn.push(topic_str, message_dict_list)
     #
     initial_time_int = get_millis()
     #
@@ -134,12 +131,12 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
                             if offset_int is not None:
                                 storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int + 1
                         #
-                        push_function(source_tn._name_str, message_dict_list)
+                        root_tn.push(source_tn._name_str, message_dict_list)
                         #
                         sent_bool = True
                 #
                 if sent_bool:
-                    message_dict_list, _ = root_tn.step(bag=True)
+                    message_dict_list = root_tn.latest()
                     #
                     foreach_function(message_dict_list)
                 #

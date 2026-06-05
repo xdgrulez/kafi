@@ -50,9 +50,9 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         #
         root_tn = get_root_tn_datagen_self_join_group_by_debezium(order_source_str)
         #
-        self.process([(order_source_str, 1)], 5, root_tn, root_tn.push_debezium, root_tn.step_debezium)
+        self.process([(order_source_str, default_batch_size_int)], default_steps_int, root_tn)
         #
-        # self.assert_self_join_group_by(order_source_str)
+        self.assert_self_join_group_by_debezium(order_source_str)
 
     #
 

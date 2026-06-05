@@ -1,14 +1,14 @@
-CREATE TABLE shoe_orders (
+CREATE TABLE shoe_orders_debezium (
     order_id INT,
     product_id STRING,
     customer_id STRING,
     ts BIGINT
 ) WITH (
     'connector' = 'kafka',
-    'topic' = 'shoe_orders',
+    'topic' = 'shoe_orders_debezium',
     'scan.startup.mode' = 'earliest-offset',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'json'
+    'format' = 'debezium-json'
 );
 
 CREATE VIEW order_view AS
@@ -16,7 +16,7 @@ SELECT
     DISTINCT product_id AS product_id,
     customer_id AS customer_id
 FROM
-    shoe_orders;
+    shoe_orders_debezium;
 
 --
 CREATE VIEW self_join_group_by_view AS
@@ -35,14 +35,12 @@ GROUP BY
 --
 CREATE TABLE kafka_sink (
     product_id_1 STRING,
-    product_id_2 STRING,
-    PRIMARY KEY (product_id_1, product_id_2) NOT ENFORCED
+    product_id_2 STRING
 ) WITH (
-    'connector' = 'upsert-kafka',
-    'topic' = 'flink_self_join_group_by',
+    'connector' = 'kafka',
+    'topic' = 'flink_self_join_group_by_debezium',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'key.format' = 'json',
-    'value.format' = 'json'
+    'format' = 'debezium-json'
 );
 
 INSERT INTO

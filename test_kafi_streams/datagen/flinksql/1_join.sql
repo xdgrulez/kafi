@@ -4,7 +4,7 @@ CREATE TABLE shoe_clickstream (
     view_time INT,
     page_url STRING,
     ip STRING,
-    ts TIMESTAMP(3)
+    ts BIGINT
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'shoe_clickstream',
@@ -15,14 +15,13 @@ CREATE TABLE shoe_clickstream (
 );
 
 CREATE VIEW click_view AS
-SELECT DISTINCT
-    user_id as user_id,
+SELECT
+    DISTINCT user_id as user_id,
     ip as ip
 FROM
     shoe_clickstream;
 
 --
-
 CREATE TABLE shoe_customers (
     id STRING,
     first_name STRING,
@@ -39,19 +38,17 @@ CREATE TABLE shoe_customers (
     'topic' = 'shoe_customers',
     'scan.startup.mode' = 'earliest-offset',
     'properties.bootstrap.servers' = 'localhost:9092',
-    'format' = 'json',
-    'json.ignore-parse-errors' = 'true'
+    'format' = 'json'
 );
 
 CREATE VIEW customer_view AS
-SELECT DISTINCT
-    id as id,
+SELECT
+    DISTINCT id as id,
     first_name as first_name
 FROM
     shoe_customers;
 
 --
-
 CREATE VIEW join_1_view AS
 SELECT
     *
@@ -60,8 +57,7 @@ FROM
     JOIN customer_view ON click_view.user_id = customer_view.id;
 
 --
-
-CREATE TABLE upsert_kafka_sink (
+CREATE TABLE kafka_sink (
     user_id STRING,
     first_name STRING,
     ip STRING,
@@ -75,7 +71,7 @@ CREATE TABLE upsert_kafka_sink (
 );
 
 INSERT INTO
-    upsert_kafka_sink
+    kafka_sink
 SELECT
     user_id,
     first_name,
