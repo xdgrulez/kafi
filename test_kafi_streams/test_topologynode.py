@@ -15,8 +15,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         #
         root_tn = get_root_tn_datagen_1_join(click_source_str, customer_source_str)
         #
-        # self.process([(click_source_str, default_batch_size_int), (customer_source_str, default_batch_size_int)], default_steps_int, root_tn)
-        self.process([(click_source_str, default_batch_size_int), (customer_source_str, 10)], 2, root_tn)
+        self.process([(click_source_str, default_batch_size_int), (customer_source_str, default_batch_size_int)], default_steps_int, root_tn)
 
     def test_datagen_2_joins(self):
         click_source_str = "shoe_clickstream"
