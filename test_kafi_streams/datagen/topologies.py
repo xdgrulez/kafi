@@ -12,15 +12,15 @@ def get_root_tn_datagen_1_join(click_source_str, customer_source_str):
         click_source_tn
         .peek(lambda x, _: print((x["value"]["ts"], int(time.time() * 1000))))
         .peek(lambda x, _: print(x["value"]["ts"] - int(time.time() * 1000)))
-        .filter(lambda x: x["value"]["ts"] - int(time.time() * 1000) < 100000)
+        .select(lambda x: x["value"]["ts"] - int(time.time() * 1000) < 100000)
         .peek()
-        .map(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"]})
+        .project(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"]})
         .distinct()
     )
     #
     customer_tn = (
         customer_source_tn
-        .map(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
+        .project(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
         .distinct()
     )
     #
@@ -47,19 +47,19 @@ def get_root_tn_datagen_2_joins(click_source_str, customer_source_str, product_s
     #
     click_tn = (
         click_source_tn
-        .map(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"], "product_id": x["value"]["product_id"]})
+        .project(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"], "product_id": x["value"]["product_id"]})
         .distinct()
     )
     #
     customer_tn = (
         customer_source_tn
-        .map(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
+        .project(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
         .distinct()
     )
     #
     product_tn = (
         product_source_tn
-        .map(lambda x: {"id": x["value"]["id"], "brand": x["value"]["brand"]})
+        .project(lambda x: {"id": x["value"]["id"], "brand": x["value"]["brand"]})
         .distinct()
     )
     #
@@ -97,25 +97,25 @@ def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_s
     #
     click_tn = (
         click_source_tn
-        .map(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"], "product_id": x["value"]["product_id"]})
+        .project(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"], "product_id": x["value"]["product_id"]})
         .distinct()
     )
     #
     customer_tn = (
         customer_source_tn
-        .map(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
+        .project(lambda x: {"id": x["value"]["id"], "first_name": x["value"]["first_name"]})
         .distinct()
     )
     #
     product_tn = (
         product_source_tn
-        .map(lambda x: {"id": x["value"]["id"], "brand": x["value"]["brand"]})
+        .project(lambda x: {"id": x["value"]["id"], "brand": x["value"]["brand"]})
         .distinct()
     )
     #
     order_tn = (
         order_source_tn
-        .map(lambda x: {"order_id": x["value"]["order_id"], "product_id": x["value"]["product_id"], "customer_id": x["value"]["customer_id"]})
+        .project(lambda x: {"order_id": x["value"]["order_id"], "product_id": x["value"]["product_id"], "customer_id": x["value"]["customer_id"]})
         .distinct()
     )
     #
@@ -163,7 +163,7 @@ def get_root_tn_datagen_self_join_group_by(order_source_str):
     order_tn = (
         order_source_tn
         .from_value()
-        .map(lambda x: {"product_id": x["product_id"], "customer_id": x["customer_id"]})
+        .project(lambda x: {"product_id": x["product_id"], "customer_id": x["customer_id"]})
         .distinct()
     )
     #
@@ -177,7 +177,7 @@ def get_root_tn_datagen_self_join_group_by(order_source_str):
                           "product_id_2": r["product_id"],
                           "customer_id": l["customer_id"]}
         )
-        .filter(lambda x: x["product_id_1"] < x["product_id_2"])
+        .select(lambda x: x["product_id_1"] < x["product_id_2"])
         .distinct()
         .group_by_count(
             lambda x: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"]},
@@ -197,7 +197,7 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
     order_tn = (
         order_source_tn
         .from_value()
-        .map(lambda x: {"product_id": x["product_id"], "customer_id": x["customer_id"]})
+        .project(lambda x: {"product_id": x["product_id"], "customer_id": x["customer_id"]})
         .distinct()
     )
     #
@@ -211,7 +211,7 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
                           "product_id_2": r["product_id"],
                           "customer_id": l["customer_id"]}
         )
-        .filter(lambda x: x["product_id_1"] < x["product_id_2"])
+        .select(lambda x: x["product_id_1"] < x["product_id_2"])
         .group_by_count(
             lambda x: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"]},
             lambda x, y: {"product_id_1": x["product_id_1"], "product_id_2": x["product_id_2"], "cross_purchases": y}

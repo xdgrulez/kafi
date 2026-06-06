@@ -50,11 +50,11 @@ def get_root_tn():
     #
     root_tn = (
         employees_source_tn
-        .map(lambda x: {"id": x["value"]["id"], "name": x["value"]["name"]})
-        .filter(lambda x: x["name"] != "mark")
+        .project(lambda x: {"id": x["value"]["id"], "name": x["value"]["name"]})
+        .select(lambda x: x["name"] != "mark")
         .join_equi(
             salaries_source_tn
-            .map(lambda x: {"id": x["value"]["id"], "salary": x["value"]["salary"]}),
+            .project(lambda x: {"id": x["value"]["id"], "salary": x["value"]["salary"]}),
             lambda x: x["id"],
             lambda x: x["id"],
             lambda l, r: {"value": {"id": l["id"], "name": l["name"] + "_abc", "salary": r["salary"]}}
