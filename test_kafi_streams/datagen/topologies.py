@@ -1,4 +1,6 @@
-from kafi.streams.topologynode import TopologyNode, source
+import time
+
+from kafi.streams.topologynode import source
 
 #
 
@@ -8,6 +10,10 @@ def get_root_tn_datagen_1_join(click_source_str, customer_source_str):
     #
     click_tn = (
         click_source_tn
+        .peek(lambda x, _: print((x["value"]["ts"], int(time.time() * 1000))))
+        .peek(lambda x, _: print(x["value"]["ts"] - int(time.time() * 1000)))
+        .filter(lambda x: x["value"]["ts"] - int(time.time() * 1000) < 100000)
+        .peek()
         .map(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"]})
         .distinct()
     )

@@ -156,11 +156,9 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            lift1_nodeId = Lift1(f=_flatmap_function).connect(evaluator.circuit, (integrate_nodeId,))
-            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (lift1_nodeId,))
+            lift1_nodeId = Lift1(f=_flatmap_function).connect(evaluator.circuit, (input_nodeId,))
             #
-            tn._output_nodeId = differentiate_nodeId
+            tn._output_nodeId = lift1_nodeId
         #
         tn = TopologyNode("flatmap_op", {self}, _build_function, pack_function, unpack_function)
         #

@@ -1,4 +1,4 @@
-import random
+import random, time
 
 from test_kafi_streams.datagen.constants.product_ids import product_id_str_list
 from test_kafi_streams.datagen.constants.customer_ids import customer_id_str_list
@@ -13,7 +13,8 @@ from test_kafi_streams.datagen.constants.ips import ip_str_list
 
 class ShoeClickstreamGenerator:
     def __init__(self):
-        self.ts_int = 1609457200000
+        # self.ts_int = 1609457200000
+        self.ts_int = int(time.time() * 1000)
         self.ts_step_int = 10000
 
     def generate_record(self):
