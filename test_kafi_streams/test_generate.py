@@ -49,6 +49,4 @@ class TestGenerate:
             partition_int_counter_int_dict[partition_int] += 1
             record_any_list.append(record_any)
         #
-        self.source_str_input_record_any_list_dict[source_str] += record_any_list
-        #
         return record_any_list

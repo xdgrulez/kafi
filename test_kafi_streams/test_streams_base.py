@@ -27,8 +27,7 @@ class TestStreamsBase(TestKafkaBase):
 
     #
     
-    def go(self, root_tn, source_storage_topic_str_batch_size_int_tuple_list, steps_int, target_storage, target_topic_str, source_key_type="str", source_value_type="json", target_key_type="str", target_value_type="json"):
-        group_str = f"test_group_{get_millis()}"
+    def go(self, root_tn, source_storage_topic_str_batch_size_int_tuple_list, steps_int, target_storage, target_topic_str, group_str=f"test_group_{get_millis()}", source_key_type="str", source_value_type="json", target_key_type="str", target_value_type="json"):
         #
         source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list]
         #
@@ -60,4 +59,6 @@ class TestStreamsBase(TestKafkaBase):
         thread1.join()
         thread2.join()
         #
-        self.read(target_storage, target_topic_str, key_type=target_key_type, value_type=target_value_type)
+        self.read_source_topics(source_storage_topic_str_tuple_list, key_type=source_key_type, value_type=source_value_type)
+        #
+        self.read_target_topic(target_storage, target_topic_str, key_type=target_key_type, value_type=target_value_type)

@@ -21,11 +21,18 @@ class TestKafkaBase:
                     #
                     time.sleep(0.1)
 
-    def read(self, storage, topic_str, key_type, value_type):
-        print(f"Reading target topic: {topic_str}")
-        record_any_list = storage.cat(topic_str, key_type=key_type, value_type=value_type)
+    def read_source_topics(self, source_storage_topic_str_tuple_list, key_type, value_type):
+        for source_storage, topic_str in source_storage_topic_str_tuple_list:
+            print(f"Reading source topic {topic_str}...")
+            message_dict_list = source_storage.cat(topic_str, key_type=key_type, value_type=value_type)
+            self.source_str_input_record_any_list_dict[topic_str] = message_dict_list
+            print("...done.")
+
+    def read_target_topic(self, storage, topic_str, key_type, value_type):
+        print(f"Reading target topic {topic_str}...")
+        message_dict_list = storage.cat(topic_str, key_type=key_type, value_type=value_type)
         print("...done.")
         #
-        self.updates_int = len(record_any_list)
+        self.updates_int = len(message_dict_list)
         #
-        self.updated_record_any_list = record_any_list
+        self.updated_record_any_list = message_dict_list

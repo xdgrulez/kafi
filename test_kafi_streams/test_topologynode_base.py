@@ -12,6 +12,7 @@ class TestTopologyNodeBase(unittest.TestCase):
         for step_int in range(steps_int):
             for source_str, batch_size_int in source_str_batch_size_int_tuple_list:
                 record_any_list = self.generate(source_str, batch_size_int)
+                self.source_str_input_record_any_list_dict[source_str] += record_any_list
                 #
                 root_tn.push(source_str, record_any_list)
             #

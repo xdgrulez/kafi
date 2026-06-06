@@ -144,3 +144,23 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, target_storage, target_topic_str, source_value_type="str", target_value_type="json")
         #
         self.assert_wc(line_source_str)
+
+    def test_wc(self):
+        line_source_str = "lines"
+        #
+        root_tn = get_root_tn_wc(line_source_str)
+        #
+        source_storage = Cluster("local")
+        #
+        transaction_topic_str = line_source_str
+        source_storage_topic_str_batch_size_int_tuple_list = [(source_storage, transaction_topic_str, default_batch_size_int)]
+        #
+        target_storage = source_storage
+        target_topic_str = "wc"
+        #
+        group_str = "test_group_wc"
+        print(source_storage.group_offsets(group_str))
+        #
+        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, target_storage, target_topic_str, group_str=group_str, source_value_type="str", target_value_type="json")
+        #
+        self.assert_wc(line_source_str)
