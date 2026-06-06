@@ -5,7 +5,7 @@ from kafi.streams.topologynode import source
 def get_root_tn_jamie(transaction_source_str):
     transaction_source_tn = source(transaction_source_str)
     #
-    transaction_tn = transaction_source_tn.project(
+    transaction_tn = transaction_source_tn.map(
         lambda x: {
             "from_account": x["value"]["from_account"],
             "to_account": x["value"]["to_account"],

@@ -57,30 +57,42 @@ class TopologyNode:
     # Relational operator
     ###
 
-    def project(self, map_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _project_function(packed_record_any):
-            record_any = self._unpack_function(packed_record_any)
-            return self._pack_function(map_function(record_any))
+    # Map
+
+    def map_weight(self, map_weight_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def _map_weight_function(zSet):
+            out_inner_dict = {}
+            for packed_record_any, weight_int in zSet.inner.items():
+                out_record_any, out_weight_int = map_weight_function(self._unpack_function(packed_record_any), weight_int)
+                #
+                if out_weight_int != 0:
+                    out_packed_record_any = self._pack_function(out_record_any)
+                    out_inner_dict[out_packed_record_any] = out_weight_int
+            #
+            return ZSet(out_inner_dict)
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
-            g = ZSetAddition()
-            #
             input_nodeId = self._output_nodeId
             #
-            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
-            liftProject_nodeId = LiftProject(f=_project_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
+            lift1_nodeId = Lift1(f=_map_weight_function).connect(evaluator.circuit, (input_nodeId,))
             #
-            tn._output_nodeId = liftProject_nodeId
+            tn._output_nodeId = lift1_nodeId
+
         #
-        tn = TopologyNode("project_op", {self}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("map_weight_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
     def map(self, map_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.project(map_function, pack_function, unpack_function)
-        tn._name = "map_op"
+        def map_weight_function(record_any, weight_int):
+            out_record_any = map_function(record_any)
+            #
+            return out_record_any, weight_int
+        #
+        tn = self.map_weight(map_weight_function, pack_function, unpack_function)
+        tn._name_str = "map_op"
         #
         return tn
 
@@ -108,16 +120,10 @@ class TopologyNode:
         #
         return tn
     
-    def flatmap(self, flatmap_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.explode(flatmap_function, pack_function, unpack_function)
-        tn._name = "flatmap_op"
-        #
-        return tn
+    # Filter
 
-    # Select
-
-    def select(self, select_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _select_function(packed_record_any):
+    def filter(self, select_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def _filter_function(packed_record_any):
             record_any = self._unpack_function(packed_record_any)
             return select_function(record_any)
         #
@@ -129,17 +135,11 @@ class TopologyNode:
             input_nodeId = self._output_nodeId
             #
             liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
-            liftSelect_nodeId = LiftSelect(pred=_select_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
+            liftSelect_nodeId = LiftSelect(pred=_filter_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             #
             tn._output_nodeId = liftSelect_nodeId
         #
-        tn = TopologyNode("select_op", {self}, _build_function, pack_function, unpack_function)
-        #
-        return tn
-
-    def filter(self, filter_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.select(filter_function, pack_function, unpack_function)
-        tn._name = "filter_op"
+        tn = TopologyNode("filter_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
@@ -427,44 +427,30 @@ class TopologyNode:
         return tn
 
     def peek(self, peek_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _peek_function(zSet):
-            for packed_record_any, weight_int in zSet.inner.items():
-                peek_function(self._unpack_function(packed_record_any), weight_int)
+        def map_function(record_any):
+            peek_function(record_any)
             #
-            return zSet
+            return record_any
+        #
+        if peek_function is None:
+            peek_function = print
+        #
+        tn = self.map(map_function, pack_function, unpack_function)
+        tn._name_str = "peek_op"
+        #
+        return tn
+
+    def peek_weight(self, peek_weight_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def map_weight_function(record_any, weight_int):
+            peek_weight_function(record_any, weight_int)
+            #
+            return record_any
         #
         if peek_function is None:
             peek_function = lambda x, y: print((x, y))
         #
-        def _build_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            input_nodeId = self._output_nodeId
-            #
-            lift1_nodeId = Lift1(f=_peek_function).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = lift1_nodeId
-        #
-        tn = TopologyNode("peek_op", {self}, _build_function, pack_function, unpack_function)
-        #
-        return tn
-
-    def peek_zSet(self, peek_zSet_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _peek_zSet_function(zSet):
-            peek_zSet_function(zSet)
-            #
-            return zSet
-        #
-        def _build_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            input_nodeId = self._output_nodeId
-            #
-            lift1_nodeId = Lift1(f=_peek_zSet_function).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = lift1_nodeId
-        #
-        tn = TopologyNode("peek_zSet_op", {self}, _build_function, pack_function, unpack_function)
+        tn = self.map_weight(map_weight_function, pack_function, unpack_function)
+        tn._name_str = "peek_weight_op"
         #
         return tn
 
