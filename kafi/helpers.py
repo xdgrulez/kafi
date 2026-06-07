@@ -413,3 +413,28 @@ def key_to_chunk_key(key_bytes, chunk_int):
 
 def is_internal(resource_str):
     return resource_str.startswith("_")
+
+
+def copy_kwargs(name_str, **kwargs):
+    copied_kwargs = kwargs.copy()
+    #
+    if f"{name_str}_group" in kwargs:
+        copied_kwargs["group"] = kwargs[f"{name_str}_group"]
+    if f"{name_str}_offsets" in kwargs:
+        copied_kwargs["offsets"] = kwargs[f"{name_str}_offsets"]
+    if f"{name_str}_key_type" in kwargs:
+        copied_kwargs["key_type"] = kwargs[f"{name_str}_key_type"]
+    if f"{name_str}_value_type" in kwargs:
+        copied_kwargs["value_type"] = kwargs[f"{name_str}_value_type"]
+    if f"{name_str}_type" in kwargs:
+        copied_kwargs["type"] = kwargs[f"{name_str}_type"]
+    if f"{name_str}_key_schema" in kwargs:
+        copied_kwargs["key_schema"] = kwargs[f"{name_str}_key_schema"]
+    if f"{name_str}_value_schema" in kwargs:
+        copied_kwargs["value_schema"] = kwargs[f"{name_str}_value_schema"]
+    if f"{name_str}_key_schema_id" in kwargs:
+        copied_kwargs["key_schema_id"] = kwargs[f"{name_str}_key_schema_id"]
+    if f"{name_str}_value_schema_id" in kwargs:
+        copied_kwargs["value_schema_id"] = kwargs[f"{name_str}_value_schema_id"]
+    #
+    return copied_kwargs

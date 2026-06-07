@@ -17,6 +17,9 @@ class StorageConsumer(Dechunker):
         #
         # Get next (=start) and end offsets for the subscribed topics. If not explicitly set, set to OFFSET_INVALID on all partitions.
         self.topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
+        for topic_str in self.topic_str_list:
+            if topic_str not in self.topic_str_partitions_int_dict:
+                raise Exception(f"Topic \"{topic_str}\" does not exist.")
         self.topic_str_next_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "offsets", "ts", **kwargs)
         if self.topic_str_next_offsets_dict_dict is None:
             self.topic_str_next_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}

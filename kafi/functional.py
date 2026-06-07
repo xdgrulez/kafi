@@ -460,28 +460,3 @@ class Functional:
         #
         return acc, message_counter_int1, message_counter_int2, produce_message_counter_int
 
-    #
-
-    def copy_kwargs(self, name_str, **kwargs):
-        copied_kwargs = kwargs.copy()
-        #
-        if f"{name_str}_group" in kwargs:
-            copied_kwargs["group"] = kwargs[f"{name_str}_group"]
-        if f"{name_str}_offsets" in kwargs:
-            copied_kwargs["offsets"] = kwargs[f"{name_str}_offsets"]
-        if f"{name_str}_key_type" in kwargs:
-            copied_kwargs["key_type"] = kwargs[f"{name_str}_key_type"]
-        if f"{name_str}_value_type" in kwargs:
-            copied_kwargs["value_type"] = kwargs[f"{name_str}_value_type"]
-        if f"{name_str}_type" in kwargs:
-            copied_kwargs["type"] = kwargs[f"{name_str}_type"]
-        if f"{name_str}_key_schema" in kwargs:
-            copied_kwargs["key_schema"] = kwargs[f"{name_str}_key_schema"]
-        if f"{name_str}_value_schema" in kwargs:
-            copied_kwargs["value_schema"] = kwargs[f"{name_str}_value_schema"]
-        if f"{name_str}_key_schema_id" in kwargs:
-            copied_kwargs["key_schema_id"] = kwargs[f"{name_str}_key_schema_id"]
-        if f"{name_str}_value_schema_id" in kwargs:
-            copied_kwargs["value_schema_id"] = kwargs[f"{name_str}_value_schema_id"]
-        #
-        return copied_kwargs

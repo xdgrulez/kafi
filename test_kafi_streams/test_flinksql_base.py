@@ -119,4 +119,4 @@ class TestFlinkSqlBase(TestKafkaBase):
         thread1.join()
         thread2.join()
         #
-        self.read_target_topic(target_storage, target_topic_str, target_key_type, target_value_type)
+        self.read_sink_topic(target_storage, target_topic_str, target_key_type, target_value_type)
