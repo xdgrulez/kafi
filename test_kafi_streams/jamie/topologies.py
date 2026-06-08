@@ -17,14 +17,14 @@ def get_root_tn_jamie(transaction_source_str):
         lambda x: x["to_account"],
         lambda x: x["amount"],
         lambda x, y: {"account": x,
-                        "credits": y}
+                      "credits": y}
     )
     #
     debits_tn = transaction_tn.group_by_sum(
         lambda x: x["from_account"],
         lambda x: x["amount"],
         lambda x, y: {"account": x,
-                        "debits": y}
+                      "debits": y}
     )
     #
     balance_tn = credits_tn.join_equi(
@@ -39,8 +39,8 @@ def get_root_tn_jamie(transaction_source_str):
     #
     root_tn = balance_tn.sum(
         lambda x: x["balance"],
-        lambda _, y: {"value": 
-                        {"total": y}}
+        lambda _, y: {"value":
+                      {"total": y}}
     )
     #
     root_tn.build()

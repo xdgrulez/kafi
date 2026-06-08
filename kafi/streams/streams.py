@@ -136,7 +136,8 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
                             offset_int = get_latest_offset(message_dict_list, partition_int)
                             # By convention, committed offsets reflect the next message to be consumed, not the last message consumed. (from https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html)
                             if offset_int is not None:
-                                storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int + 1
+                                # storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int + 1
+                                storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int
                         #
                         root_tn.push(source_tn._name_str, message_dict_list)
                         #
@@ -150,11 +151,11 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
                 time_int = get_millis()
                 if snapshot_storage is not None and (time_int - initial_time_int) > snapshot_interval_float * 1000:
                     save_snapshot()
-                #
-                for storage_id_topic_str_tuple, offsets_dict in storage_id_topic_str_tuple_offsets_dict_dict.items():
-                    consumer = storage_id_topic_str_tuple_consumer_dict[storage_id_topic_str_tuple]
-                    consumer.commit(offsets_dict)
-                    print(f"Committed {offsets_dict} for topic {storage_id_topic_str_tuple[1]}.")
+                    #
+                    for storage_id_topic_str_tuple, offsets_dict in storage_id_topic_str_tuple_offsets_dict_dict.items():
+                        consumer = storage_id_topic_str_tuple_consumer_dict[storage_id_topic_str_tuple]
+                        consumer.commit(offsets_dict)
+                        print(f"Committed {offsets_dict} for topic {storage_id_topic_str_tuple[1]}.")
                 #
                 await asyncio.sleep(process_sleep_float)
         except KeyboardInterrupt:
