@@ -120,6 +120,8 @@ class TopologyNode:
         #
         return tn
     
+    flatmap = explode
+
     # Filter
 
     def filter(self, select_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
@@ -444,10 +446,10 @@ class TopologyNode:
         def map_weight_function(record_any, weight_int):
             peek_weight_function(record_any, weight_int)
             #
-            return record_any
+            return record_any, weight_int
         #
-        if peek_function is None:
-            peek_function = lambda x, y: print((x, y))
+        if peek_weight_function is None:
+            peek_weight_function = lambda x, y: print((x, y))
         #
         tn = self.map_weight(map_weight_function, pack_function, unpack_function)
         tn._name_str = "peek_weight_op"
@@ -505,6 +507,11 @@ class TopologyNode:
             #
             self._evaluator.push(input_nodeId, zSet1)
 
+    def record_any_weight_int_tuple_list_to_zSet(self, record_any_weight_int_tuple_list):
+        zSet = ZSet({self._pack_function(record_any): weight_int for record_any, weight_int in record_any_weight_int_tuple_list})
+        #
+        return zSet
+
     def record_any_list_to_zSet(self, record_any_list):
         zSet = ZSet({self._pack_function(record_any): 1 for record_any in record_any_list})
         #
@@ -534,7 +541,17 @@ class TopologyNode:
         if gc_boolean:
             self._evaluator.compact()
         #
-        return self._from_zSet_function(zSet, bag)
+        record_any_list = self._from_zSet_function(zSet, bag)
+        #
+        return record_any_list
+     
+    def zSet_to_record_any_weight_int_tuple_list(self, zSet, bag=True):
+        record_any_weight_int_tuple_list = []
+        for packed_record_any, weight_int in zSet.items():
+            record_any = self._unpack_function(packed_record_any)
+            record_any_weight_int_tuple_list.append((record_any, weight_int))
+        #
+        return record_any_weight_int_tuple_list
 
     def zSet_to_record_any_list(self, zSet, bag=True):
         bag_boolean = bag
