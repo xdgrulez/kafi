@@ -1,4 +1,4 @@
-<img src="pics/kafi_streams.jpg" style="width: 70%; height: auto; display: block; margin: 20 auto;"/>
+![kafi logo](pics/kafi_streams.jpg)
 
 *Kafi*[^1] (now called *Kafi Streams*) is a Python library for anybody working with Kafka (or any solution based on the Kafka API). It is your *Swiss army knife for Kafka*. It has already been presented at [Current 2023](https://www.confluent.io/events/current/2023/kash-py-how-to-make-your-data-scientists-love-real-time-1/) and [Current 2024](https://current.confluent.io/2024-sessions/your-swiss-army-knife-for-kafka-based-applications) (you can find the Jupyter notebook [here](https://github.com/xdgrulez/cur24)).
 
