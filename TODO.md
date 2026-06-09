@@ -1,9 +1,15 @@
 # other TODOs
 
-# def json_default(obj):
-#     if isinstance(obj, datetime.datetime):
-#         return obj.isoformat()
-#     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+KS
+* time windows/waterlines
+
+* multiple sinks (=> tn, sink_storage, sink_topic-tuples?)
+
+* spill to disk (slatedb? python-libs?)
+
+* multicore
+
+
 
 * Support für neue Schema-GUIDs etc.
 

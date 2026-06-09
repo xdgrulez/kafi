@@ -52,7 +52,8 @@ class TestStreamsBase(TestKafkaBase):
                     storage.delete_groups(group_str)
             #
             sink_storage.recreate(sink_topic_str)
-            snapshot_storage.recreate(snapshot_topic_str)
+            if snapshot_storage is not None:
+                snapshot_storage.recreate(snapshot_topic_str)
         #
         for _, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list:
             self.init_generate(topic_str)
