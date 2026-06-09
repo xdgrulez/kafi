@@ -2,6 +2,7 @@ from kafi.streams.topologynode import source
 
 #
 
+
 def get_root_tn_jamie(transaction_source_str):
     transaction_source_tn = source(transaction_source_str)
     #
@@ -39,8 +40,8 @@ def get_root_tn_jamie(transaction_source_str):
     #
     root_tn = balance_tn.sum(
         lambda x: x["balance"],
-        lambda _, y: {"value":
-                      {"total": y}}
+        lambda x: {"value":
+                    {"total": x}}
     )
     #
     root_tn.build()

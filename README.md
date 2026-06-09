@@ -1,6 +1,12 @@
-![kafi logo](pics/kafi.jpg)
+![kafi logo](pics/kafi_streams.jpg)
 
-*Kafi*[^1] is a Python library for anybody working with Kafka (or any solution based on the Kafka API). It is your *Swiss army knife for Kafka*. It has already been presented at [Current 2023](https://www.confluent.io/events/current/2023/kash-py-how-to-make-your-data-scientists-love-real-time-1/) and [Current 2024](https://current.confluent.io/2024-sessions/your-swiss-army-knife-for-kafka-based-applications) (you can find the Jupyter notebook [here](https://github.com/xdgrulez/cur24)).
+*Kafi*[^1] (now called *Kafi Streams*) is a Python library for anybody working with Kafka (or any solution based on the Kafka API). It is your *Swiss army knife for Kafka*. It has already been presented at [Current 2023](https://www.confluent.io/events/current/2023/kash-py-how-to-make-your-data-scientists-love-real-time-1/) and [Current 2024](https://current.confluent.io/2024-sessions/your-swiss-army-knife-for-kafka-based-applications) (you can find the Jupyter notebook [here](https://github.com/xdgrulez/cur24)).
+
+With version 0.1.0 (not yet released), Kafi is now *Kafi Streams* and offers support for complex stateful stream processing based on Bruno Rucy's ingenious pydbsp (https://github.com/brurucy/pydbsp), a pure Python implementation of DataBase Stream Processing (DBSP) by Mihai Budiu, Leonard Rhyzhyk et al. of Feldera (https://www.feldera.com/) - in the spirit of the Kafka Streams JVM library.
+
+Sorry, but this documentation is not yet updated for Kafi Streams. You can already play around with the tests in the [test_streams](https://github.com/xdgrulez/kafi/tree/main/test_kafi_streams) folder. Or go through the [Jupyter notebook = presentation](https://github.com/xdgrulez/kafi/blob/main/presentations/2026-06-09-Berlin_Buzzwords/bbuzz2026.ipynb) I created for the Berlin Buzzwords 2026 conference.
+
+(the old documentation follows...)
 
 Kafi supports two main modes:
 * Real Kafka

@@ -77,19 +77,19 @@ class TestFlinkSqlBase(TestKafkaBase):
     
     #
 
-    def produce(self, storage_topic_str_batch_size_int_tuple_list, steps_int, key_type, value_type):
+    def produce(self, storage_topic_str_batch_size_int_tuple_list, steps_int, **kwargs):
         topic_str_list = [topic_str for _, topic_str, _ in storage_topic_str_batch_size_int_tuple_list]
         #
         while True:
             if all(self.get_read_records(topic_str) != -1 for topic_str in topic_str_list):
-                super().produce(storage_topic_str_batch_size_int_tuple_list, steps_int, key_type, value_type)
+                super().produce(storage_topic_str_batch_size_int_tuple_list, steps_int, **kwargs)
                 return
             #
             time.sleep(1)
 
     #
 
-    def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int, source_key_type="str", source_value_type="json", target_key_type="str", target_value_type="json"):
+    def go(self, flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, steps_int, **kwargs):
         source_storage_topic_str_tuple_list = [(storage, topic_str) for storage, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list]
         #
         self.source_str_values_int_dict = {source_str: 0 for _, source_str in source_storage_topic_str_tuple_list}
@@ -101,7 +101,7 @@ class TestFlinkSqlBase(TestKafkaBase):
         for _, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list:
             self.init_generate(topic_str)
         #
-        thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int, source_key_type, source_value_type))
+        thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int), kwargs=kwargs)
         #
         thread2 = threading.Thread(target=self.process, args=(flinksql_sql_path_str, ))
         #
@@ -119,4 +119,4 @@ class TestFlinkSqlBase(TestKafkaBase):
         thread1.join()
         thread2.join()
         #
-        self.read_sink_topic(target_storage, target_topic_str, target_key_type, target_value_type)
+        self.read_sink_topic(target_storage, target_topic_str, **kwargs)

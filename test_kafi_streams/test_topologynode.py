@@ -61,7 +61,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         #
         root_tn = get_root_tn_jamie(transaction_source_str)
         #
-        self.process([(transaction_source_str, default_batch_size_int)], default_steps_int, root_tn)
+        self.process([(transaction_source_str, default_batch_size_int)], 1000, root_tn)
         #
         self.assert_jamie()
 

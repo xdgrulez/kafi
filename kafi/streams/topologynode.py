@@ -59,11 +59,11 @@ class TopologyNode:
 
     # Map
 
-    def map_weight(self, map_weight_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def _map_weight_function(zSet):
+    def _map(self, _map_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def __map_function(zSet):
             out_inner_dict = {}
             for packed_record_any, weight_int in zSet.inner.items():
-                out_record_any, out_weight_int = map_weight_function(self._unpack_function(packed_record_any), weight_int)
+                out_record_any, out_weight_int = _map_function(self._unpack_function(packed_record_any), weight_int)
                 #
                 if out_weight_int != 0:
                     out_packed_record_any = self._pack_function(out_record_any)
@@ -76,23 +76,55 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            lift1_nodeId = Lift1(f=_map_weight_function).connect(evaluator.circuit, (input_nodeId,))
+            lift1_nodeId = Lift1(f=__map_function).connect(evaluator.circuit, (input_nodeId,))
             #
             tn._output_nodeId = lift1_nodeId
 
         #
-        tn = TopologyNode("map_weight_op", {self}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("_map_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
     def map(self, map_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def map_weight_function(record_any, weight_int):
+        def _map_function(record_any, weight_int):
             out_record_any = map_function(record_any)
             #
             return out_record_any, weight_int
         #
-        tn = self.map_weight(map_weight_function, pack_function, unpack_function)
+        tn = self._map(_map_function, pack_function, unpack_function)
         tn._name_str = "map_op"
+        #
+        return tn
+
+    def _integrate(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = integrate_nodeId
+        #
+        tn = TopologyNode("_integrate_op", {self}, _build_function, pack_function, unpack_function)
+        #
+        return tn
+
+    def _differentiate(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = differentiate_nodeId
+        #
+        tn = TopologyNode("_differentiate_op", {self}, _build_function, pack_function, unpack_function)
         #
         return tn
 
@@ -356,58 +388,58 @@ class TopologyNode:
         #
         return tn
 
-    def group_by_sum(self, by_function, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, z: x + y * z, 0, pack_function=pack_function, unpack_function=unpack_function)
+    def group_by_sum(self, by_function, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, z: x + y * z, 0, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "group_by_sum_op"
         #
         return tn
 
-    def group_by_max(self, by_function, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: max(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
+    def group_by_max(self, by_function, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: max(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "group_by_max_op"
         #
         return tn
 
-    def group_by_min(self, by_function, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(by_function, select_function, output_function, lambda x, y, _: min(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
+    def group_by_min(self, by_function, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: min(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "group_by_min_op"
         #
         return tn
 
-    def group_by_count(self, by_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_sum(by_function, lambda _: 1, output_function, pack_function=pack_function, unpack_function=unpack_function)
+    def group_by_count(self, by_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_sum(by_function, lambda _: 1, projection_function, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "group_by_count_op"
         #
         return tn
 
     # Aggregation
 
-    def agg(self, select_function, output_function, agg_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(lambda _: 0, select_function, output_function, agg_function, pack_function=pack_function, unpack_function=unpack_function)
+    def agg(self, select_function, projection_function, agg_function, agg_initial_any, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.group_by_agg(lambda _: 0, select_function, lambda _, y: projection_function(y), agg_function, agg_initial_any, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "agg_op"
         #
         return tn
 
-    def sum(self, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_sum(lambda _: 0, select_function, output_function, pack_function=pack_function, unpack_function=unpack_function)
+    def sum(self, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.agg(select_function, projection_function, lambda x, y, z: x + y * z, 0, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "sum_op"
         #
         return tn
 
-    def max(self, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_max(lambda _: 0, select_function, output_function, pack_function=pack_function, unpack_function=unpack_function)
+    def max(self, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.agg(select_function, projection_function, lambda x, y, _: max(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "max_op"
         #
         return tn
 
-    def min(self, select_function, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_min(lambda _: 0, select_function, output_function, pack_function=pack_function, unpack_function=unpack_function)
+    def min(self, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.agg(select_function, projection_function, lambda x, y, _: min(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "min_op"
         #
         return tn
 
-    def count(self, output_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_count(lambda _: 0, output_function, pack_function=pack_function, unpack_function=unpack_function)
+    def count(self, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        tn = self.sum(lambda _: 1, projection_function, pack_function=pack_function, unpack_function=unpack_function)
         tn._name = "count_op"
         #
         return tn
@@ -435,24 +467,24 @@ class TopologyNode:
             return record_any
         #
         if peek_function is None:
-            peek_function = print
+            peek_function = lambda x: (print(x), print(""))
         #
         tn = self.map(map_function, pack_function, unpack_function)
         tn._name_str = "peek_op"
         #
         return tn
 
-    def peek_weight(self, peek_weight_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        def map_weight_function(record_any, weight_int):
-            peek_weight_function(record_any, weight_int)
+    def _peek(self, _peek_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
+        def _map_function(record_any, weight_int):
+            _peek_function(record_any, weight_int)
             #
             return record_any, weight_int
         #
-        if peek_weight_function is None:
-            peek_weight_function = lambda x, y: print((x, y))
+        if _peek_function is None:
+            _peek_function = lambda x, y: (print((x, y)), print(""))
         #
-        tn = self.map_weight(map_weight_function, pack_function, unpack_function)
-        tn._name_str = "peek_weight_op"
+        tn = self._map(_map_function, pack_function, unpack_function)
+        tn._name_str = "_peek_op"
         #
         return tn
 
@@ -686,9 +718,9 @@ class TopologyNode:
         def collect_edges(tn):
             for daughter_tn in tn._daughter_tn_set:
                 if include_ids_bool:
-                    mermaid_edge_str = f"{tn._id_str}[{tn._name_str}_{tn._id_str}] --> {daughter_tn._id_str}[{daughter_tn._name_str}_{tn._id_str}]\n"
+                    mermaid_edge_str = f"{daughter_tn._id_str}[{daughter_tn._name_str}_{tn._id_str}] --> {tn._id_str}[{tn._name_str}_{tn._id_str}]\n"
                 else:
-                    mermaid_edge_str = f"{tn._id_str}[{tn._name_str}] --> {daughter_tn._id_str}[{daughter_tn._name_str}]\n"
+                    mermaid_edge_str = f"{daughter_tn._id_str}[{daughter_tn._name_str}] --> {tn._id_str}[{tn._name_str}]\n"
                 #
                 mermaid_edge_str_set.add(mermaid_edge_str)
                 #
