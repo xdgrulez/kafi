@@ -467,7 +467,7 @@ class TopologyNode:
             return record_any
         #
         if peek_function is None:
-            peek_function = lambda x: (print(x), print(""))
+            peek_function = print
         #
         tn = self.map(map_function, pack_function, unpack_function)
         tn._name_str = "peek_op"
@@ -481,7 +481,7 @@ class TopologyNode:
             return record_any, weight_int
         #
         if _peek_function is None:
-            _peek_function = lambda x, y: (print((x, y)), print(""))
+            _peek_function = lambda x, y: print((x, y))
         #
         tn = self._map(_map_function, pack_function, unpack_function)
         tn._name_str = "_peek_op"

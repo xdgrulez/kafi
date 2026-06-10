@@ -12,6 +12,8 @@ from test_kafi_streams.wc.lines import LineGenerator
 
 class TestGenerate:
     def init_generate(self, source_str):
+        self.generate_offset_int = 0
+        #
         match source_str:
             case "shoe_clickstream":
                 self.source_str_generator_dict[source_str] = ShoeClickstreamGenerator()
@@ -37,16 +39,13 @@ class TestGenerate:
         #
         generator = self.source_str_generator_dict[source_str]
         #
-        partitions_int = 10
-        partition_int_counter_int_dict = {partition_int: 0 for partition_int in range(partitions_int)}
         for _ in range(batch_size_int):
             record_dict = generator.generate_record()
-            partition_int = random.randrange(partitions_int)
             record_any = {"key": None,
                          "value": record_dict,
-                         "partition": partition_int,
-                         "offset": partition_int_counter_int_dict[partition_int]}
-            partition_int_counter_int_dict[partition_int] += 1
+                         "partition": 0,
+                         "offset": self.generate_offset_int}
             record_any_list.append(record_any)
+            self.generate_offset_int += 1
         #
         return record_any_list
