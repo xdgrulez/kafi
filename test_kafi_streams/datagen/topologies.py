@@ -219,3 +219,20 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
     root_tn.build()
     #
     return root_tn
+
+def get_root_tn_datagen_gc(click_source_str):
+    click_source_tn = source(click_source_str)
+    #
+    click_tn = (
+        click_source_tn
+        .filter(lambda x: int(time.time() * 1000) - x["timestamp"] < 100)
+        .map(lambda x: {"user_id": x["value"]["user_id"], "ip": x["value"]["ip"]})
+        .distinct()
+        .to_value()
+    )
+    #
+    root_tn = click_tn
+    #
+    root_tn.build()
+    #
+    return root_tn

@@ -1,4 +1,4 @@
-import random
+import time
 
 from datagen.shoe_clickstream import ShoeClickstreamGenerator
 from datagen.shoe_customers import ShoeCustomerGenerator
@@ -44,7 +44,8 @@ class TestGenerate:
             record_any = {"key": None,
                          "value": record_dict,
                          "partition": 0,
-                         "offset": self.generate_offset_int}
+                         "offset": self.generate_offset_int,
+                         "timestamp": int(time.time() * 1000)}
             record_any_list.append(record_any)
             self.generate_offset_int += 1
         #
