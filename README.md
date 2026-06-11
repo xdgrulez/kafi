@@ -1,4 +1,4 @@
-<img src="pics/kafi_streams.jpg" alt="Kafi Streams Logo" width="30%"/>
+<img src="pics/kafi_streams.jpg" alt="Kafi Streams Logo" width="40%"/>
 
 *Kafi Streams*[^1] is a Python library for anybody working with Kafka (or any solution based on the Kafka API). It has been presented at [Current 2023 San Jose](https://www.confluent.io/events/current/2023/kash-py-how-to-make-your-data-scientists-love-real-time-1/), [Current 2024 Austin](https://current.confluent.io/2024-sessions/your-swiss-army-knife-for-kafka-based-applications) (you can find the Jupyter notebook [here](https://github.com/xdgrulez/cur24)) and [Berlin Buzzwords 2026](https://2026.berlinbuzzwords.de/session/kafi-streams-complex-stream-processing-made-simple/) (Juypter notebook [here](https://github.com/xdgrulez/kafi/blob/main/presentations/2026-06-09-Berlin_Buzzwords/bbuzz2026.ipynb)).
 
