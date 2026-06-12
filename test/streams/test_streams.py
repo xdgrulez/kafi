@@ -8,11 +8,6 @@ from streams.wc.topologies import get_root_tn_wc
 
 #
 
-# from pathlib import Path
-# import sys
-# this_dir = Path(__file__).parent
-# sys.path.insert(0, str(this_dir / "../../src"))
-
 from kafi.kafi import Cluster
 
 #

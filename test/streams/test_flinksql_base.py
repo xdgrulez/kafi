@@ -2,13 +2,6 @@ import os, json, subprocess, threading, time
 
 from streams.test_kafka_base import TestKafkaBase
 
-# #
-
-# from pathlib import Path
-# import sys
-# this_dir = Path(__file__).parent
-# sys.path.insert(0, str(this_dir / "../../src"))
-
 from kafi.helpers import get
 
 #

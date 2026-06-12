@@ -1,8 +1,3 @@
-# from pathlib import Path
-# import sys
-# this_dir = Path(__file__).parent
-# sys.path.insert(0, str(this_dir / "../../src"))
-
 from kafi.streams.topologynode import source
 
 #
