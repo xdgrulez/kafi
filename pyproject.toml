@@ -41,3 +41,4 @@ dependencies = [
 ]
 [tool.setuptools.packages.find]
 where = ["src"]
+exclude = ["test*", "test.*"]
