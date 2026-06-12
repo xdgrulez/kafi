@@ -1,6 +1,7 @@
 import json
 
 from kafi.functional import Functional
+from kafi.helpers import copy_kwargs
 
 # Constants
 
@@ -40,8 +41,8 @@ class AddOns(Functional):
         return message_dict_list
 
     def compact_to(self, topic, target_storage, target_topic, n=ALL_MESSAGES, **kwargs):
-        source_kwargs = self.copy_kwargs("source", **kwargs)
-        target_kwargs = self.copy_kwargs("target", **kwargs)
+        source_kwargs = copy_kwargs("source", **kwargs)
+        target_kwargs = copy_kwargs("target", **kwargs)
         #
         message_dict_list = self.compact(topic, n, **source_kwargs)
         #

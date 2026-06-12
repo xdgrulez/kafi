@@ -1,11 +1,11 @@
-import asyncio, os, sys, threading
+import asyncio, threading
 
 #
 
-if os.path.basename(os.getcwd()) == "kafi":
-    sys.path.insert(1, ".")
-else:
-    sys.path.insert(1, "../..")
+# from pathlib import Path
+# import sys
+# this_dir = Path(__file__).parent
+# sys.path.insert(0, str(this_dir / "../../src"))
 
 from kafi.kafi import *
 

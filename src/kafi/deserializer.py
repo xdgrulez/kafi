@@ -61,9 +61,7 @@ class Deserializer(SchemaRegistry):
         if bytes is None:
             return None
         #
-        schema_id_int = int.from_bytes(bytes[1:5], "big")
-        schema_dict = self.get_schema(schema_id_int)
-        schema_str = schema_dict["schema_str"]
+        schema_str = self.get_schema_str(bytes, headers_dict, key_bool)
         #
         avroDeserializer = AvroDeserializer(self.schemaRegistryClient, schema_str, self.deser_from_dict, self.deser_return_record_name, self.deser_conf, self.deser_rule_conf, self.deser_rule_registry)
         serializationContext = SerializationContext(topic_str, MessageField.KEY if key_bool else MessageField.VALUE)
@@ -73,22 +71,8 @@ class Deserializer(SchemaRegistry):
     def bytes_jsonschema_to_dict(self, bytes, topic_str, headers_dict, key_bool):
         if bytes is None:
             return None
-        schema_id_key_str = "__key_schema_id" if key_bool else "__value_schema_id"
-        if schema_id_key_str in headers_dict:
-            # Get the Schema ID from headers_dict if available.
-            schema_guid_bytes = headers_dict[schema_id_key_str]
-            # Skip the version byte (\x01).
-            schema_guid_bytes1 = schema_guid_bytes[1:]
-            # Convert to UUID.
-            schema_guid_str = str(uuid.UUID(bytes=schema_guid_bytes1))
-            # Get the schema at last.
-            schema_dict = self.get_schema_by_guid(schema_guid_str)
-        else:
-            # Else get the Schema ID from the payload.
-            schema_id_int = int.from_bytes(bytes[1:5], "big")
-            schema_dict = self.get_schema(schema_id_int)
         #
-        schema_str = schema_dict["schema_str"]
+        schema_str = self.get_schema_str(bytes, headers_dict, key_bool)
         #
         jsonDeserializer = JSONDeserializer(schema_str, self.deser_from_dict, None, self.deser_conf, self.deser_rule_conf, self.deser_rule_registry, self.deser_json_decode)
         serializationContext = SerializationContext(topic_str, MessageField.KEY if key_bool else MessageField.VALUE)
@@ -116,6 +100,27 @@ class Deserializer(SchemaRegistry):
         return dict
 
     # Helpers
+
+    def get_schema_str(self, bytes, headers_dict, key_bool):
+        schema_id_key_str = "__key_schema_id" if key_bool else "__value_schema_id"
+        #
+        if headers_dict is not None and schema_id_key_str in headers_dict:
+            # Get the Schema ID from headers_dict if available.
+            schema_guid_bytes = headers_dict[schema_id_key_str]
+            # Skip the version byte (\x01).
+            schema_guid_bytes1 = schema_guid_bytes[1:]
+            # Convert to UUID.
+            schema_guid_str = str(uuid.UUID(bytes=schema_guid_bytes1))
+            # Get the schema at last.
+            schema_dict = self.get_schema_by_guid(schema_guid_str)
+        else:
+            # Else get the Schema ID from the payload.
+            schema_id_int = int.from_bytes(bytes[1:5], "big")
+            schema_dict = self.get_schema(schema_id_int)
+        #
+        schema_str = schema_dict["schema_str"]
+        #
+        return schema_str
 
     def schema_id_int_to_generalizedProtocolMessageType_protobuf_schema_str_tuple(self, schema_id_int):
         schema_dict = self.get_schema(schema_id_int)

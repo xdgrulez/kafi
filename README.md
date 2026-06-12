@@ -2,9 +2,9 @@
 
 *Kafi Streams*[^1] is a Python library for anybody working with Kafka (or any solution based on the Kafka API). It has been presented at [Current 2023 San Jose](https://www.confluent.io/events/current/2023/kash-py-how-to-make-your-data-scientists-love-real-time-1/), [Current 2024 Austin](https://current.confluent.io/2024-sessions/your-swiss-army-knife-for-kafka-based-applications) (you can find the Jupyter notebook [here](https://github.com/xdgrulez/cur24)) and [Berlin Buzzwords 2026](https://2026.berlinbuzzwords.de/session/kafi-streams-complex-stream-processing-made-simple/) (Juypter notebook [here](https://github.com/xdgrulez/kafi/blob/main/presentations/2026-06-09-Berlin_Buzzwords/bbuzz2026.ipynb)).
 
-With version 0.1.0 (not yet released), Kafi is called *Kafi Streams* because it now supports complex stateful stream processing in the spirit of, *Kafka Streams*, but technically based on Bruno Rucy's ingenious *pydbsp* (https://github.com/brurucy/pydbsp), a pure Python implementation of *DataBase Stream Processing* (*DBSP*) by Mihai Budiu, Leonard Rhyzhyk et al. of Feldera (https://www.feldera.com/).
+With version 0.1.0, Kafi is called *Kafi Streams* because it now supports complex stateful stream processing in the spirit of, *Kafka Streams*, but technically based on Bruno Rucy's ingenious *pydbsp* (https://github.com/brurucy/pydbsp), a pure Python implementation of *DataBase Stream Processing* (*DBSP*) by Mihai Budiu, Leonard Rhyzhyk et al. of Feldera (https://www.feldera.com/).
 
-This documentation is not yet updated for Kafi Streams. You can already play around with the tests in the [test_streams](https://github.com/xdgrulez/kafi/tree/main/test_kafi_streams) folder.
+This documentation is not yet updated for Kafi Streams. You can already play around with the tests in the [test_streams](https://github.com/xdgrulez/kafi/tree/main/test_kafi_streams) folder (and of course the Berlin Buzzwords notebook above).
 
 (the old documentation follows...)
 

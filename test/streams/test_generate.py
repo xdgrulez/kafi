@@ -1,12 +1,12 @@
 import time
 
-from datagen.shoe_clickstream import ShoeClickstreamGenerator
-from datagen.shoe_customers import ShoeCustomerGenerator
-from datagen.shoes import ShoeProductGenerator 
-from datagen.shoe_orders import ShoeOrderGenerator
-from datagen.shoe_orders_debezium import ShoeOrderDebeziumGenerator
-from jamie.transactions import TransactionGenerator
-from test_kafi_streams.wc.lines import LineGenerator
+from streams.datagen.shoe_clickstream import ShoeClickstreamGenerator
+from streams.datagen.shoe_customers import ShoeCustomerGenerator
+from streams.datagen.shoes import ShoeProductGenerator 
+from streams.datagen.shoe_orders import ShoeOrderGenerator
+from streams.datagen.shoe_orders_debezium import ShoeOrderDebeziumGenerator
+from streams.jamie.transactions import TransactionGenerator
+from streams.wc.lines import LineGenerator
 
 #
 

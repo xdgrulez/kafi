@@ -1,15 +1,16 @@
 import math
-import os
-import sys
 import time
 import unittest
 import warnings
-# from confluent_kafka import KafkaError
 
-if os.path.basename(os.getcwd()) == "test":
-    sys.path.insert(1, "..")
-else:
-    sys.path.insert(1, ".")
+#
+
+from pathlib import Path
+import sys
+this_dir = Path(__file__).parent
+sys.path.insert(0, str(this_dir / "../src"))
+
+#
 
 from kafi.storage import *
 from kafi.helpers import *
@@ -1021,6 +1022,7 @@ class TestSingleStorageBase(unittest.TestCase):
         config_str_config_dict_dict = s.configs(verbose=True)
         self.assertIn("local", config_str_config_dict_dict)
 
+    #  The python test process was terminated before it could exit on its own, the process errored with: Code: null, Signal: SIGSEGV
     def test_delete_records(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return
@@ -1040,6 +1042,7 @@ class TestSingleStorageBase(unittest.TestCase):
             offsets = topic_str
             s.delete_records(offsets)
             time.sleep(1)
+            x = s.watermarks(topic_str)
             n_int = s.l(topic_str)[topic_str]
             self.assertEqual(n_int, 0)
             ###

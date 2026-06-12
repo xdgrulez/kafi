@@ -281,7 +281,8 @@ def explode_normalize(df):
         elif isinstance(df.iloc[0][col_str], object):
             df_child = pd.json_normalize(df[col_str])
             df_child.columns = [f'{col_str}.{child_col_str}' for child_col_str in df_child.columns]
-            df = pd.concat([df.loc[:, ~df.columns.isin([col_str])].reset_index(drop=True), df_child], axis=1)
+            df_cleaned = df.drop(columns=[col_str]).reset_index(drop=True)
+            df = pd.concat([df_cleaned, df_child.reset_index(drop=True)], axis=1)
         #
         return df
     #

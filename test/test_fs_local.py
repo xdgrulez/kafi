@@ -1,12 +1,6 @@
 import os
-import sys
 
-if os.path.basename(os.getcwd()) == "test":
-    sys.path.insert(1, "..")
-else:
-    sys.path.insert(1, ".")
-
-from test.test_single_storage_base import TestSingleStorageBase
+from test_single_storage_base import TestSingleStorageBase
 from kafi.fs.local.local import Local
 
 #

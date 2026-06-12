@@ -31,42 +31,35 @@ default_unpack_function = msgpack.unpackb
 #
 
 class TopologyNode:
-    def __init__(self, name_str, daughter_tn_set, build_function, pack_function=default_pack_function, unpack_function=default_unpack_function, to_zSet_function=None, from_zSet_function=None):
+    def __init__(self, name_str, daughter_tn_set, build_function, **kwargs):
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
         self._daughter_tn_set = daughter_tn_set
         self._build_function = build_function
         #
-        self._pack_function = pack_function
-        self._unpack_function = unpack_function
-        #
         self._evaluator = None
         self._output_nodeId = None
         #
-        if to_zSet_function is None:
-            self._to_zSet_function = self.record_any_list_to_zSet
-        else:
-            self._to_zSet_function = to_zSet_function
+        self._pack_function = kwargs["pack_function"] if "pack_function" in kwargs else default_pack_function
+        self._unpack_function = kwargs["unpack_function"] if "unpack_function" in kwargs else default_unpack_function
         #
-        if from_zSet_function is None:
-            self._from_zSet_function = self.zSet_to_record_any_list
-        else:
-            self._from_zSet_function = from_zSet_function
+        self._to_zSet_function = kwargs["to_zSet_function"] if "to_zSet_function" in kwargs else self.record_any_list_to_zSet
+        self._from_zSet_function = kwargs["from_zSet_function"] if "from_zSet_function" in kwargs else self.zSet_to_record_any_list
 
     ###
-    # Relational operator
+    # Relational operators
     ###
 
     # Map
 
-    def _map(self, _map_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def _map(self, _map_function, **kwargs):
         def __map_function(zSet):
             out_inner_dict = {}
             for packed_record_any, weight_int in zSet.inner.items():
-                out_record_any, out_weight_int = _map_function(self._unpack_function(packed_record_any), weight_int)
+                out_record_any, out_weight_int = _map_function(tn._unpack_function(packed_record_any), weight_int)
                 #
                 if out_weight_int != 0:
-                    out_packed_record_any = self._pack_function(out_record_any)
+                    out_packed_record_any = tn._pack_function(out_record_any)
                     out_inner_dict[out_packed_record_any] = out_weight_int
             #
             return ZSet(out_inner_dict)
@@ -81,22 +74,33 @@ class TopologyNode:
             tn._output_nodeId = lift1_nodeId
 
         #
-        tn = TopologyNode("_map_op", {self}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("_map_op", {self}, _build_function, **kwargs)
         #
         return tn
 
-    def map(self, map_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def map(self, map_function, **kwargs):
         def _map_function(record_any, weight_int):
             out_record_any = map_function(record_any)
             #
             return out_record_any, weight_int
         #
-        tn = self._map(_map_function, pack_function, unpack_function)
+        tn = self._map(_map_function, **kwargs)
         tn._name_str = "map_op"
         #
         return tn
 
-    def _integrate(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def neg(self, **kwargs):
+        def _map_function(record_any, weight_int):
+            return record_any, -weight_int
+        #
+        tn = self._map(_map_function, **kwargs)
+        tn._name_str = "neg_op"
+        #
+        return tn
+
+    #
+
+    def _integrate(self, **kwargs):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -108,11 +112,11 @@ class TopologyNode:
             #
             tn._output_nodeId = integrate_nodeId
         #
-        tn = TopologyNode("_integrate_op", {self}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("_integrate_op", {self}, _build_function, **kwargs)
         #
         return tn
 
-    def _differentiate(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def _differentiate(self, **kwargs):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -124,18 +128,18 @@ class TopologyNode:
             #
             tn._output_nodeId = differentiate_nodeId
         #
-        tn = TopologyNode("_differentiate_op", {self}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("_differentiate_op", {self}, _build_function, **kwargs)
         #
         return tn
 
     # Explode
 
-    def explode(self, explode_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def explode(self, explode_function, **kwargs):
         def _explode_function(zSet):
             out_inner_dict = {}
             for packed_record_any, weight_int in zSet.inner.items():
-                for record_any in explode_function(self._unpack_function(packed_record_any)):
-                    packed_key_any = self._pack_function(record_any)
+                for record_any in explode_function(tn._unpack_function(packed_record_any)):
+                    packed_key_any = tn._pack_function(record_any)
                     out_inner_dict[packed_key_any] = out_inner_dict.get(packed_key_any, 0) + weight_int
             return ZSet({packed_key_any: weight_int for packed_key_any, weight_int in out_inner_dict.items() if weight_int != 0})
         #
@@ -148,7 +152,7 @@ class TopologyNode:
             #
             tn._output_nodeId = lift1_nodeId
         #
-        tn = TopologyNode("explode_op", {self}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("explode_op", {self}, _build_function, **kwargs)
         #
         return tn
     
@@ -156,9 +160,9 @@ class TopologyNode:
 
     # Filter
 
-    def filter(self, select_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def filter(self, select_function, **kwargs):
         def _filter_function(packed_record_any):
-            record_any = self._unpack_function(packed_record_any)
+            record_any = tn._unpack_function(packed_record_any)
             return select_function(record_any)
         #
         def _build_function(evaluator):
@@ -168,18 +172,18 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
+            liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, input_nodeId)
             liftSelect_nodeId = LiftSelect(pred=_filter_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             #
             tn._output_nodeId = liftSelect_nodeId
         #
-        tn = TopologyNode("filter_op", {self}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("filter_op", {self}, _build_function, **kwargs)
         #
         return tn
 
     # Distinct
 
-    def distinct(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def distinct(self, **kwargs):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -187,18 +191,18 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
+            liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, input_nodeId)
             deltaLiftedDeltaLiftedDistinct_nodeId = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
-        tn = TopologyNode("distinct_op", {self}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("distinct_op", {self}, _build_function, **kwargs)
         #
         return tn
 
     # Union
 
-    def union(self, other_tn, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def union(self, other_tn, **kwargs):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -207,29 +211,29 @@ class TopologyNode:
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = other_tn._output_nodeId
             #
-            l_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
             deltaLiftedDeltaLiftedDistinct_nodeId = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (lift2_add_nodeId,))
             integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (deltaLiftedDeltaLiftedDistinct_nodeId,))
             #
             tn._output_nodeId = integrate_nodeId
         #
-        tn = TopologyNode("union_op", {self, other_tn}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("union_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
 
     # Intersect
 
-    def intersect(self, other_tn, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.join(other_tn, lambda l, r: l == r, lambda l, _: l, pack_function, unpack_function)
+    def intersect(self, other_tn, **kwargs):
+        tn = self.join(other_tn, lambda l, r: l == r, lambda l, _: l, **kwargs)
         tn._name = "intersect_op"
         #
         return tn
 
     # Diff
 
-    def diff(self, other_tn, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def diff(self, other_tn, **kwargs):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -238,30 +242,30 @@ class TopologyNode:
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = other_tn._output_nodeId
             #
-            l_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             r_lift1_neg_nodeId = Lift1(f=g.neg).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
             lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_lift1_neg_nodeId))
             deltaLiftedDeltaLiftedDistinct_nodeId = DeltaLiftedDeltaLiftedDistinct(inner_group=g).connect(evaluator.circuit, (lift2_add_nodeId,))
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
-        tn = TopologyNode("diff_op", {self, other_tn}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("diff_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
     
     # Join
 
-    def join(self, other_tn, predicate_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def join(self, other_tn, predicate_function, projection_function, **kwargs):
         def _predicate_function(left_packed_record_any, right_packed_record_any):
-            left_record_any = self._unpack_function(left_packed_record_any)
-            right_record_any = self._unpack_function(right_packed_record_any)
+            left_record_any = tn._unpack_function(left_packed_record_any)
+            right_record_any = tn._unpack_function(right_packed_record_any)
             return predicate_function(left_record_any, right_record_any)
         #
         def _projection_function(left_packed_record_any, right_packed_record_any):
-            left_record_any = self._unpack_function(left_packed_record_any)
-            right_record_any = self._unpack_function(right_packed_record_any)
-            return self._pack_function(projection_function(left_record_any, right_record_any))
+            left_record_any = tn._unpack_function(left_packed_record_any)
+            right_record_any = tn._unpack_function(right_packed_record_any)
+            return tn._pack_function(projection_function(left_record_any, right_record_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -271,8 +275,8 @@ class TopologyNode:
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = other_tn._output_nodeId
             #
-            l_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             deltaLiftedDeltaLiftedJoin_nodeId = DeltaLiftedDeltaLiftedJoin(
                 pred=_predicate_function,
                 proj=_projection_function,
@@ -283,23 +287,23 @@ class TopologyNode:
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedJoin_nodeId
         #
-        tn = TopologyNode("join_op", {self, other_tn}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("join_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
 
-    def join_equi(self, other_tn, left_select_function, right_select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def join_equi(self, other_tn, left_select_function, right_select_function, projection_function, **kwargs):
         def _left_select_function(left_packed_record_any):
-            left_record_any = self._unpack_function(left_packed_record_any)
-            return self._pack_function(left_select_function(left_record_any))
+            left_record_any = tn._unpack_function(left_packed_record_any)
+            return tn._pack_function(left_select_function(left_record_any))
         #
         def _right_select_function(right_packed_record_any):
-            right_record_any = self._unpack_function(right_packed_record_any)
-            return self._pack_function(right_select_function(right_record_any))
+            right_record_any = tn._unpack_function(right_packed_record_any)
+            return tn._pack_function(right_select_function(right_record_any))
         #
         def _projection_function(_, left_packed_record_any, right_packed_record_any):
-            left_record_any = self._unpack_function(left_packed_record_any)
-            right_record_any = self._unpack_function(right_packed_record_any)
-            return self._pack_function(projection_function(left_record_any, right_record_any))
+            left_record_any = tn._unpack_function(left_packed_record_any)
+            right_record_any = tn._unpack_function(right_packed_record_any)
+            return tn._pack_function(projection_function(left_record_any, right_record_any))
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -311,8 +315,8 @@ class TopologyNode:
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = other_tn._output_nodeId
             #
-            l_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             l_liftIndex_nodeId = LiftIndex(indexer=_left_select_function).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId,))
             r_liftIndex_nodeId = LiftIndex(indexer=_right_select_function).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
             indexedDeltaLiftedDeltaLiftedJoin_nodeId = IndexedDeltaLiftedDeltaLiftedJoin(
@@ -324,32 +328,30 @@ class TopologyNode:
             #
             tn._output_nodeId = indexedDeltaLiftedDeltaLiftedJoin_nodeId
         #
-        tn = TopologyNode("join_equi_op", {self, other_tn}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("join_equi_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
     
     # Group By + Aggregation
 
-    def group_by_agg(self, by_function, select_function, projection_function, agg_function, agg_initial_any, pydbsp_aggregate_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def group_by_agg(self, by_function, select_function, projection_function, agg_function, agg_initial_any, pydbsp_aggregate_function=None, **kwargs):
         def _by_function(packed_record_any):
-            record_any = self._unpack_function(packed_record_any)
-            return self._pack_function(by_function(record_any))
+            record_any = tn._unpack_function(packed_record_any)
+            return tn._pack_function(by_function(record_any))
         #
         def _select_function(packed_record_any):
-            record_any = self._unpack_function(packed_record_any)
-            return self._pack_function(select_function(record_any))
+            record_any = tn._unpack_function(packed_record_any)
+            return tn._pack_function(select_function(record_any))
         #
         def _projection_function(packed_key_any_packed_sum_any_tuple):
             packed_key_any, packed_sum_any = packed_key_any_packed_sum_any_tuple
-            record_any = projection_function(self._unpack_function(packed_key_any), self._unpack_function(packed_sum_any))
-            return self._pack_function(record_any)
+            record_any = projection_function(tn._unpack_function(packed_key_any), tn._unpack_function(packed_sum_any))
+            return tn._pack_function(record_any)
         #
         def _agg_function(packed_agg_any, packed_select_any, weight_int):
-            agg_any = self._unpack_function(packed_agg_any)
-            select_any = self._unpack_function(packed_select_any)
-            return self._pack_function(agg_function(agg_any, select_any, weight_int))
-        #
-        _agg_initial_any = self._pack_function(agg_initial_any)
+            agg_any = tn._unpack_function(packed_agg_any)
+            select_any = tn._unpack_function(packed_select_any)
+            return tn._pack_function(agg_function(agg_any, select_any, weight_int))
         #
         def _default_pydbsp_aggregate_function(packed_record_any_weight_int_tuple_list):
             packed_agg_any = _agg_initial_any
@@ -371,7 +373,7 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            liftStreamIntroduction_nodeId = self.liftStreamIntroduction(g, evaluator, input_nodeId)
+            liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, input_nodeId)
             liftLiftIndex_nodeId = LiftLiftIndex(indexer=_by_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             deltaLiftedDeltaLiftedGroupBy_nodeId = DeltaLiftedDeltaLiftedGroupBy(
                 aggregate=_pydbsp_aggregate_function,
@@ -384,62 +386,64 @@ class TopologyNode:
             #
             tn._output_nodeId = differentiate_nodeId
         #
-        tn = TopologyNode("group_by_agg_op", {self}, _build_function, pack_function, unpack_function)
+        tn = TopologyNode("group_by_agg_op", {self}, _build_function, **kwargs)
+        #
+        _agg_initial_any = tn._pack_function(agg_initial_any)
         #
         return tn
 
-    def group_by_sum(self, by_function, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, z: x + y * z, 0, pack_function=pack_function, unpack_function=unpack_function)
+    def group_by_sum(self, by_function, select_function, projection_function, **kwargs):
+        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, z: x + y * z, 0, **kwargs)
         tn._name = "group_by_sum_op"
         #
         return tn
 
-    def group_by_max(self, by_function, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: max(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
+    def group_by_max(self, by_function, select_function, projection_function, **kwargs):
+        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: max(x, y), None, **kwargs)
         tn._name = "group_by_max_op"
         #
         return tn
 
-    def group_by_min(self, by_function, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: min(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
+    def group_by_min(self, by_function, select_function, projection_function, **kwargs):
+        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: min(x, y), None, **kwargs)
         tn._name = "group_by_min_op"
         #
         return tn
 
-    def group_by_count(self, by_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_sum(by_function, lambda _: 1, projection_function, pack_function=pack_function, unpack_function=unpack_function)
+    def group_by_count(self, by_function, projection_function, **kwargs):
+        tn = self.group_by_sum(by_function, lambda _: 1, projection_function, **kwargs)
         tn._name = "group_by_count_op"
         #
         return tn
 
     # Aggregation
 
-    def agg(self, select_function, projection_function, agg_function, agg_initial_any, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.group_by_agg(lambda _: 0, select_function, lambda _, y: projection_function(y), agg_function, agg_initial_any, pack_function=pack_function, unpack_function=unpack_function)
+    def agg(self, select_function, projection_function, agg_function, agg_initial_any, **kwargs):
+        tn = self.group_by_agg(lambda _: 0, select_function, lambda _, y: projection_function(y), agg_function, agg_initial_any, **kwargs)
         tn._name = "agg_op"
         #
         return tn
 
-    def sum(self, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.agg(select_function, projection_function, lambda x, y, z: x + y * z, 0, pack_function=pack_function, unpack_function=unpack_function)
+    def sum(self, select_function, projection_function, **kwargs):
+        tn = self.agg(select_function, projection_function, lambda x, y, z: x + y * z, 0, **kwargs)
         tn._name = "sum_op"
         #
         return tn
 
-    def max(self, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.agg(select_function, projection_function, lambda x, y, _: max(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
+    def max(self, select_function, projection_function, **kwargs):
+        tn = self.agg(select_function, projection_function, lambda x, y, _: max(x, y), None, **kwargs)
         tn._name = "max_op"
         #
         return tn
 
-    def min(self, select_function, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.agg(select_function, projection_function, lambda x, y, _: min(x, y), None, pack_function=pack_function, unpack_function=unpack_function)
+    def min(self, select_function, projection_function, **kwargs):
+        tn = self.agg(select_function, projection_function, lambda x, y, _: min(x, y), None, **kwargs)
         tn._name = "min_op"
         #
         return tn
 
-    def count(self, projection_function, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.sum(lambda _: 1, projection_function, pack_function=pack_function, unpack_function=unpack_function)
+    def count(self, projection_function, **kwargs):
+        tn = self.sum(lambda _: 1, projection_function, **kwargs)
         tn._name = "count_op"
         #
         return tn
@@ -448,19 +452,19 @@ class TopologyNode:
     # Util operators
     ###
 
-    def from_value(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.map(lambda x: x["value"], pack_function, unpack_function)
+    def from_value(self, **kwargs):
+        tn = self.map(lambda x: x["value"], **kwargs)
         tn._name = "from_value_op"
         #
         return tn
 
-    def to_value(self, pack_function=default_pack_function, unpack_function=default_unpack_function):
-        tn = self.map(lambda x: {"value": x}, pack_function, unpack_function)
+    def to_value(self, **kwargs):
+        tn = self.map(lambda x: {"value": x}, **kwargs)
         tn._name = "to_value_op"
         #
         return tn
 
-    def peek(self, peek_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def peek(self, peek_function=None, **kwargs):
         def map_function(record_any):
             peek_function(record_any)
             #
@@ -469,12 +473,12 @@ class TopologyNode:
         if peek_function is None:
             peek_function = print
         #
-        tn = self.map(map_function, pack_function, unpack_function)
+        tn = self.map(map_function, **kwargs)
         tn._name_str = "peek_op"
         #
         return tn
 
-    def _peek(self, _peek_function=None, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def _peek(self, _peek_function=None, **kwargs):
         def _map_function(record_any, weight_int):
             _peek_function(record_any, weight_int)
             #
@@ -483,7 +487,7 @@ class TopologyNode:
         if _peek_function is None:
             _peek_function = lambda x, y: print((x, y))
         #
-        tn = self._map(_map_function, pack_function, unpack_function)
+        tn = self._map(_map_function, **kwargs)
         tn._name_str = "_peek_op"
         #
         return tn
@@ -501,7 +505,7 @@ class TopologyNode:
     ###
 
     @staticmethod
-    def source(source_str, pack_function=default_pack_function, unpack_function=default_unpack_function):
+    def source(source_str, **kwargs):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -509,7 +513,7 @@ class TopologyNode:
             #
             tn._output_nodeId = input
         #
-        tn = TopologyNode(source_str, [], _build_function, pack_function, unpack_function)
+        tn = TopologyNode(source_str, [], _build_function, **kwargs)
         #
         return tn
 
@@ -565,7 +569,7 @@ class TopologyNode:
     
     # Output
 
-    def latest(self, gc=True, bag=True):
+    def latest(self, gc=True):
         gc_boolean = gc
         #
         zSet = self._evaluator.latest(self._output_nodeId)
@@ -573,11 +577,11 @@ class TopologyNode:
         if gc_boolean:
             self._evaluator.compact()
         #
-        record_any_list = self._from_zSet_function(zSet, bag)
+        record_any_list = self._from_zSet_function(zSet)
         #
         return record_any_list
      
-    def zSet_to_record_any_weight_int_tuple_list(self, zSet, bag=True):
+    def zSet_to_record_any_weight_int_tuple_list(self, zSet):
         record_any_weight_int_tuple_list = []
         for packed_record_any, weight_int in zSet.items():
             record_any = self._unpack_function(packed_record_any)
@@ -585,29 +589,20 @@ class TopologyNode:
         #
         return record_any_weight_int_tuple_list
 
-    def zSet_to_record_any_list(self, zSet, bag=True):
-        bag_boolean = bag
-        #
+    def zSet_to_record_any_list(self, zSet):
         record_any_list = []
         for packed_record_any, weight_int in zSet.items():
             if weight_int > 0:
-                if not bag_boolean:
-                    weight_int = 1
                 for _ in range(weight_int):
                     record_any = self._unpack_function(packed_record_any)
                     record_any_list.append(record_any)
         #
         return record_any_list
 
-    def zSet_to_debezium(self, zSet, bag=True):
-        bag_boolean = bag
-        #
+    def zSet_to_debezium(self, zSet):
         message_dict_list = []
         for packed_message_dict, weight_int in zSet.items():
             if weight_int > 0:
-                if not bag_boolean:
-                    weight_int = 1
-                #
                 message_dict = self._unpack_function(packed_message_dict)
                 for _ in range(weight_int):
                     message_dict1 = copy.deepcopy(message_dict)
@@ -616,9 +611,6 @@ class TopologyNode:
                     message_dict1["value"]["op"] = "c"
                     message_dict_list.append(message_dict1)
             elif weight_int < 0:
-                if not bag_boolean:
-                    weight_int = -1
-                #
                 message_dict = self._unpack_function(packed_message_dict)
                 for _ in range(-weight_int):
                     message_dict = self._unpack_function(packed_message_dict)

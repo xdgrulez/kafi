@@ -1,10 +1,17 @@
-from test_kafi_streams.test_streams_base import TestStreamsBase
-from test_kafi_streams.test_generate import TestGenerate
-from test_kafi_streams.test_base import TestBase, default_batch_size_int, default_steps_int
+from streams.test_streams_base import TestStreamsBase
+from streams.test_generate import TestGenerate
+from streams.test_base import TestBase, default_batch_size_int, default_steps_int
 
-from test_kafi_streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium
-from test_kafi_streams.jamie.topologies import get_root_tn_jamie
-from test_kafi_streams.wc.topologies import get_root_tn_wc
+from streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium
+from streams.jamie.topologies import get_root_tn_jamie
+from streams.wc.topologies import get_root_tn_wc
+
+#
+
+# from pathlib import Path
+# import sys
+# this_dir = Path(__file__).parent
+# sys.path.insert(0, str(this_dir / "../../src"))
 
 from kafi.kafi import Cluster
 

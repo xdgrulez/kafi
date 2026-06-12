@@ -1,5 +1,4 @@
 from fnmatch import fnmatch
-import time
 
 from kafi.kafka.kafka_admin import KafkaAdmin
 
@@ -278,7 +277,7 @@ class ClusterAdmin(KafkaAdmin):
         timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
         #
         config_dict = self.storage_obj.kafka_config_dict.copy()
-        config_dict["group.id"] = "dummy_group_id"
+        config_dict["group.id"] = f"dummy_group_id"
         consumer = Consumer(config_dict)
         #
         topic_str_list = self.list_topics(pattern)

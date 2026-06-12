@@ -1,5 +1,4 @@
-import time
-from kafi.helpers import zip2
+from kafi.helpers import copy_kwargs, zip2
 
 # Constants
 
@@ -91,9 +90,9 @@ class Functional:
                 return (acc, consume_message_counter_int, produce_batch_size_int, produce_batch_message_dict_list, produce_message_counter_int)
 
         #
-        source_kwargs = self.copy_kwargs("source", **kwargs)
+        source_kwargs = copy_kwargs("source", **kwargs)
         #
-        target_kwargs = self.copy_kwargs("target", **kwargs)
+        target_kwargs = copy_kwargs("target", **kwargs)
         #
         produce_batch_size_int = kwargs["produce_batch_size"] if "produce_batch_size" in kwargs else target_storage.produce_batch_size()
         #
@@ -146,8 +145,8 @@ class Functional:
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
         #
-        source1_kwargs = self.copy_kwargs("source1", **kwargs)
-        source2_kwargs = self.copy_kwargs("source2", **kwargs)
+        source1_kwargs = copy_kwargs("source1", **kwargs)
+        source2_kwargs = copy_kwargs("source2", **kwargs)
         #
         consumer1 = self.consumer(source1_topic, **source1_kwargs)
         consumer2 = source2_storage.consumer(source2_topic, **source2_kwargs)
@@ -214,10 +213,10 @@ class Functional:
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
         #
-        source1_kwargs = self.copy_kwargs("source1", **kwargs)
-        source2_kwargs = self.copy_kwargs("source2", **kwargs)
+        source1_kwargs = copy_kwargs("source1", **kwargs)
+        source2_kwargs = copy_kwargs("source2", **kwargs)
         #
-        target_kwargs = self.copy_kwargs("target", **kwargs)
+        target_kwargs = copy_kwargs("target", **kwargs)
         #
         produce_batch_size_int = kwargs["produce_batch_size"] if "produce_batch_size" in kwargs else target_storage.produce_batch_size()
         #
@@ -310,8 +309,8 @@ class Functional:
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
         #
-        source1_kwargs = self.copy_kwargs("source1", **kwargs)
-        source2_kwargs = self.copy_kwargs("source2", **kwargs)
+        source1_kwargs = copy_kwargs("source1", **kwargs)
+        source2_kwargs = copy_kwargs("source2", **kwargs)
         #
         consumer1 = self.consumer(source1_topic, **source1_kwargs)
         consumer2 = source2_storage.consumer(source2_topic, **source2_kwargs)
@@ -378,10 +377,10 @@ class Functional:
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
         #
-        source1_kwargs = self.copy_kwargs("source1", **kwargs)
-        source2_kwargs = self.copy_kwargs("source2", **kwargs)
+        source1_kwargs = copy_kwargs("source1", **kwargs)
+        source2_kwargs = copy_kwargs("source2", **kwargs)
         #
-        target_kwargs = self.copy_kwargs("target", **kwargs)
+        target_kwargs = copy_kwargs("target", **kwargs)
         #
         produce_batch_size_int = kwargs["produce_batch_size"] if "produce_batch_size" in kwargs else target_storage.produce_batch_size()
         #

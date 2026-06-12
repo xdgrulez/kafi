@@ -1,6 +1,13 @@
-from test_kafi_streams.test_flinksql_base import TestFlinkSqlBase, home_path_str
-from test_kafi_streams.test_generate import TestGenerate
-from test_kafi_streams.test_base import TestBase, default_batch_size_int, default_steps_int
+from streams.test_flinksql_base import TestFlinkSqlBase, home_path_str
+from streams.test_generate import TestGenerate
+from streams.test_base import TestBase, default_batch_size_int, default_steps_int
+
+#
+
+# from pathlib import Path
+# import sys
+# this_dir = Path(__file__).parent
+# sys.path.insert(0, str(this_dir / "../../src"))
 
 from kafi.kafi import Cluster
 

@@ -1,11 +1,14 @@
-FROM python:3.12 as base
+FROM python:3.14-alpine as base
 
 WORKDIR /app
 
+RUN apk add --no-cache gcc musl-dev linux-headers librdkafka-dev
+
 ADD requirements.txt .
 
-RUN pip install -r requirements.txt
+RUN pip install --root-user-action ignore --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY configs/ ./configs/
+COPY kafi/ ./kafi/
 
-CMD exec /bin/bash -c "trap : TERM INT; sleep infinity & wait"
+CMD ["/bin/sh", "-c", "trap 'exit 0' TERM INT; while true; do sleep 3600; done"]

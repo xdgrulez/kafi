@@ -1,20 +1,18 @@
-confluent-kafka[avro,json,protobuf,schemaregistry]==2.14.0
-grpcio-tools==1.76.0
+# config
 piny==1.1.0
+# kafka
+confluent-kafka[avro,json,protobuf,schemaregistry]==2.14.2
+grpcio-tools==1.81.1
 requests==2.34.2
-# Azure Blob Storage
-azure-storage-blob==12.28.0
-# Cloudpickle
-cloudpickle==3.1.2
-# MinIO/S3
+# files
+azure-storage-blob==12.30.0
 minio==7.2.20
-# Pandas
-fastparquet==2025.12.0
+# pandas
+fastparquet==2026.5.0
 lxml==6.1.1
 openpyxl==3.1.5
-pandas==2.3.3
-# pydbsp
+pandas==3.0.3
+# streams
+cloudpickle==3.1.2
+msgpack==1.2.0
 pydbsp==2.1.0
-# msgpack
-msgpack==1.1.2
-
