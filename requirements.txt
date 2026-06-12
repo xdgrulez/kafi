@@ -16,3 +16,6 @@ pandas==3.0.3
 cloudpickle==3.1.2
 msgpack==1.2.0
 pydbsp==2.1.0
+# build
+hatchling
+uv
