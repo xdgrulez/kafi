@@ -9,6 +9,8 @@ KS
 
 * multicore
 
+* .index, .timeindex für FS
+
 
 
 * Support für neue Schema-GUIDs etc.

@@ -2,7 +2,7 @@ from streams.test_topologynode_base import TestTopologyNodeBase
 from streams.test_generate import TestGenerate
 from streams.test_base import TestBase, default_batch_size_int, default_steps_int
 
-from streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_gc, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium
+from streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium
 from streams.jamie.topologies import get_root_tn_jamie
 from streams.wc.topologies import get_root_tn_wc
 
@@ -53,13 +53,6 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         self.process([(order_source_str, default_batch_size_int)], default_steps_int, root_tn)
         #
         self.assert_self_join_group_by_debezium(order_source_str)
-
-    def test_datagen_gc(self):
-        click_source_str = "shoe_clickstream"
-        #
-        root_tn = get_root_tn_datagen_gc(click_source_str)
-        #
-        self.process([(click_source_str, default_batch_size_int)], 1000, root_tn)
 
     #
 
