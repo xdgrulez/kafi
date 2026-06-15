@@ -5,7 +5,7 @@ from kafi.streams.topologynode import source
 def get_root_tn_wc(lines_str):
     _source_tn = source(lines_str)
     #
-    split_tn = _source_tn.explode(
+    split_tn = _source_tn.flatmap(
         lambda x: [{"word": word_str,
                     "partition": x["partition"],
                     "offset": x["offset"],

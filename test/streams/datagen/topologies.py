@@ -219,3 +219,37 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
     root_tn.build()
     #
     return root_tn
+
+def get_root_tn_datagen_gc(order_source_str):
+    order_source_tn = source(order_source_str)
+    order_tn = order_source_tn.from_value()
+    order_with_window_end_tn = (
+        order_tn
+        .map(lambda x: x | {"window_end": x["ts"] + 100000 * 2})
+    )
+    order_cur_ts_tn = (
+        order_tn
+        .map(lambda x: {"ts": x["ts"]})
+        .max(lambda x: x["ts"],
+             lambda x: {"cur_ts": x})
+    )
+    join_window_end_tn = (
+        order_with_window_end_tn
+        .join(order_cur_ts_tn,
+            lambda l, r: r["cur_ts"] > l["window_end"],
+            lambda l, _: l)
+        .neg()
+        ._delay()
+    )
+    root_tn = (
+        # join_window_end_tn
+        order_with_window_end_tn
+        .union(order_with_window_end_tn)
+        ._differentiate()
+        .distinct()
+        .to_value()
+    )
+    #
+    root_tn.build()
+    #
+    return root_tn

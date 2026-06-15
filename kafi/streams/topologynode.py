@@ -148,13 +148,13 @@ class TopologyNode:
         #
         return tn
 
-    # Explode
+    # Flatmap
 
-    def explode(self, explode_function, **kwargs):
-        def _explode_function(zSet):
+    def flatmap(self, flatmap_function, **kwargs):
+        def _flatmap_function(zSet):
             out_inner_dict = {}
             for packed_record_any, weight_int in zSet.inner.items():
-                for record_any in explode_function(tn._unpack_function(packed_record_any)):
+                for record_any in flatmap_function(tn._unpack_function(packed_record_any)):
                     packed_key_any = tn._pack_function(record_any)
                     out_inner_dict[packed_key_any] = out_inner_dict.get(packed_key_any, 0) + weight_int
             return ZSet({packed_key_any: weight_int for packed_key_any, weight_int in out_inner_dict.items() if weight_int != 0})
@@ -164,15 +164,13 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            lift1_nodeId = Lift1(f=_explode_function).connect(evaluator.circuit, (input_nodeId,))
+            lift1_nodeId = Lift1(f=_flatmap_function).connect(evaluator.circuit, (input_nodeId,))
             #
             tn._output_nodeId = lift1_nodeId
         #
-        tn = TopologyNode("explode_op", {self}, _build_function, **kwargs)
+        tn = TopologyNode("flatmap_op", {self}, _build_function, **kwargs)
         #
         return tn
-    
-    flatmap = explode
 
     # Filter
 
@@ -247,9 +245,9 @@ class TopologyNode:
         #
         return tn
 
-    # Diff
+    # Minus
 
-    def diff(self, other_tn, **kwargs):
+    def minus(self, other_tn, **kwargs):
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
@@ -408,20 +406,20 @@ class TopologyNode:
         #
         return tn
 
-    def group_by_sum(self, by_function, select_function, projection_function, **kwargs):
-        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, z: x + y * z, 0, **kwargs)
+    def group_by_sum(self, by_function, select_function, projection_function, sum_initial_any=0, **kwargs):
+        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, z: x + y * z, sum_initial_any, **kwargs)
         tn._name = "group_by_sum_op"
         #
         return tn
 
-    def group_by_max(self, by_function, select_function, projection_function, **kwargs):
-        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: max(x, y), None, **kwargs)
+    def group_by_max(self, by_function, select_function, projection_function, max_initial_any=0, **kwargs):
+        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: max(x, y), max_initial_any, **kwargs)
         tn._name = "group_by_max_op"
         #
         return tn
 
-    def group_by_min(self, by_function, select_function, projection_function, **kwargs):
-        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: min(x, y), None, **kwargs)
+    def group_by_min(self, by_function, select_function, projection_function, min_initial_any=0, **kwargs):
+        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: min(x, y), min_initial_any, **kwargs)
         tn._name = "group_by_min_op"
         #
         return tn
@@ -440,20 +438,20 @@ class TopologyNode:
         #
         return tn
 
-    def sum(self, select_function, projection_function, **kwargs):
-        tn = self.agg(select_function, projection_function, lambda x, y, z: x + y * z, 0, **kwargs)
+    def sum(self, select_function, projection_function, sum_initial_any=0, **kwargs):
+        tn = self.agg(select_function, projection_function, lambda x, y, z: x + y * z, sum_initial_any, **kwargs)
         tn._name = "sum_op"
         #
         return tn
 
-    def max(self, select_function, projection_function, **kwargs):
-        tn = self.agg(select_function, projection_function, lambda x, y, _: max(x, y), None, **kwargs)
+    def max(self, select_function, projection_function, max_initial_any=0, **kwargs):
+        tn = self.agg(select_function, projection_function, lambda x, y, _: max(x, y), max_initial_any, **kwargs)
         tn._name = "max_op"
         #
         return tn
 
-    def min(self, select_function, projection_function, **kwargs):
-        tn = self.agg(select_function, projection_function, lambda x, y, _: min(x, y), None, **kwargs)
+    def min(self, select_function, projection_function, min_initial_any=0, **kwargs):
+        tn = self.agg(select_function, projection_function, lambda x, y, _: min(x, y), min_initial_any, **kwargs)
         tn._name = "min_op"
         #
         return tn
@@ -529,18 +527,23 @@ class TopologyNode:
             #
             tn._output_nodeId = input
         #
-        tn = TopologyNode(source_str, [], _build_function, **kwargs)
+        tn = TopologyNode(source_str, {}, _build_function, **kwargs)
         #
         return tn
 
     #
 
-    def build(self):
+    def _get_evaluator(self):
         evaluator = Evaluator(
             circuit=Circuit(),
             storage=DictStorage(),
             ctx=ComputeCtx(lattice=dbsp_time(2)),
             group=ZSetAddition())
+        #
+        return evaluator
+
+    def build(self):
+        evaluator = self._get_evaluator()
         #
         self._foreach_bu(lambda tn: tn._build_function(evaluator))
 
