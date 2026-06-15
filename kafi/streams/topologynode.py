@@ -9,7 +9,7 @@ from pydbsp.indexed_relational_operators import (
     LiftLiftIndex,
 )
 from pydbsp.indexed_zset import IndexedZSetAddition
-from pydbsp.operator import Differentiate, Input, Integrate, Lift1, Lift2, LiftStreamIntroduction
+from pydbsp.operator import Delay, Differentiate, Input, Integrate, Lift1, Lift2, LiftStreamIntroduction
 from pydbsp.relational_operators import (
     DeltaLiftedDeltaLiftedDistinct,
     DeltaLiftedDeltaLiftedJoin,
@@ -129,6 +129,22 @@ class TopologyNode:
             tn._output_nodeId = differentiate_nodeId
         #
         tn = TopologyNode("_differentiate_op", {self}, _build_function, **kwargs)
+        #
+        return tn
+
+    def _delay(self, **kwargs):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            integrate_nodeId = Delay(group=g).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = integrate_nodeId
+        #
+        tn = TopologyNode("_delay_op", {self}, _build_function, **kwargs)
         #
         return tn
 
@@ -642,8 +658,13 @@ class TopologyNode:
 
     def _filter_td(self, filter_function):
         tn_set = set()
+        visited_tn_set = set()
         #
         def __filter_td(tn):
+            if tn in visited_tn_set:
+                return
+            visited_tn_set.add(tn)
+            #
             if filter_function(tn):
                 tn_set.add(tn)
             #
@@ -681,10 +702,23 @@ class TopologyNode:
 
     #
 
-    def topology(self, include_ids=False):
-        include_ids_bool = include_ids
+    def topology(self, include_ids=False, visited_tn_set=None):
+        if visited_tn_set is None:
+            visited_tn_set = set()
         #
+        if self in visited_tn_set:
+            if include_ids:
+                return f"REF:{self._name_str}_{self._id_str}"
+            else:
+                return f"REF:{self._name_str}"
+        #       
+        visited_tn_set.add(self)
+        #        
+        include_ids_bool = include_ids
         daughters_int = len(self._daughter_tn_set)
+        #
+        daughters_list = list(self._daughter_tn_set)
+        #
         match daughters_int:
             case 0:
                 if include_ids_bool:
@@ -692,22 +726,29 @@ class TopologyNode:
                 else:
                     return self._name_str
             case 1:
+                daughter_str = daughters_list[0].topology(include_ids_bool, visited_tn_set)
                 if include_ids_bool:
-                    return f"{self._name_str}_{self._id_str}({list(self._daughter_tn_set)[0].topology(include_ids_bool)})"
+                    return f"{self._name_str}_{self._id_str}({daughter_str})"
                 else:
-                    return f"{self._name_str}({list(self._daughter_tn_set)[0].topology(include_ids_bool)})"
+                    return f"{self._name_str}({daughter_str})"
             case 2:
+                d1_str = daughters_list[0].topology(include_ids_bool, visited_tn_set)
+                d2_str = daughters_list[1].topology(include_ids_bool, visited_tn_set)
                 if include_ids_bool:
-                    return  f"{self._name_str}_{self._id_str}({list(self._daughter_tn_set)[0].topology(include_ids_bool)}, {list(self._daughter_tn_set)[1].topology(include_ids_bool)})"
+                    return f"{self._name_str}_{self._id_str}({d1_str}, {d2_str})"
                 else:
-                    return  f"{self._name_str}({list(self._daughter_tn_set)[0].topology(include_ids_bool)}, {list(self._daughter_tn_set)[1].topology(include_ids_bool)})"
+                    return f"{self._name_str}({d1_str}, {d2_str})"
 
     def mermaid(self, include_ids=False):
         include_ids_bool = include_ids
-        #
         mermaid_edge_str_set = set()
+        visited_tn_set = set()
         #
         def collect_edges(tn):
+            if tn in visited_tn_set:
+                return
+            visited_tn_set.add(tn)
+            #
             for daughter_tn in tn._daughter_tn_set:
                 if include_ids_bool:
                     mermaid_edge_str = f"{daughter_tn._id_str}[{daughter_tn._name_str}_{tn._id_str}] --> {tn._id_str}[{tn._name_str}_{tn._id_str}]\n"
@@ -725,7 +766,6 @@ class TopologyNode:
         mermaid_bottom_str = "```"
         #
         return mermaid_top_str + mermaid_edges_str + mermaid_bottom_str
-
 #
 
 source = TopologyNode.source
