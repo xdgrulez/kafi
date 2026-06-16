@@ -47,6 +47,58 @@ class TopologyNode:
         self._from_zSet_function = kwargs["from_zSet_function"] if "from_zSet_function" in kwargs else self.zSet_to_record_any_list
 
     ###
+    # DBSP base operators
+    ###
+
+    def _integrate(self, **kwargs):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = integrate_nodeId
+        #
+        tn = TopologyNode("_integrate_op", {self}, _build_function, **kwargs)
+        #
+        return tn
+
+    def _differentiate(self, **kwargs):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = differentiate_nodeId
+        #
+        tn = TopologyNode("_differentiate_op", {self}, _build_function, **kwargs)
+        #
+        return tn
+
+    def _delay(self, **kwargs):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            integrate_nodeId = Delay(group=g).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = integrate_nodeId
+        #
+        tn = TopologyNode("_delay_op", {self}, _build_function, **kwargs)
+        #
+        return tn
+
+    ###
     # Relational operators
     ###
 
@@ -98,77 +150,38 @@ class TopologyNode:
         #
         return tn
 
-    #
-
-    def _integrate(self, **kwargs):
-        def _build_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = integrate_nodeId
-        #
-        tn = TopologyNode("_integrate_op", {self}, _build_function, **kwargs)
-        #
-        return tn
-
-    def _differentiate(self, **kwargs):
-        def _build_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = differentiate_nodeId
-        #
-        tn = TopologyNode("_differentiate_op", {self}, _build_function, **kwargs)
-        #
-        return tn
-
-    def _delay(self, **kwargs):
-        def _build_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            integrate_nodeId = Delay(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = integrate_nodeId
-        #
-        tn = TopologyNode("_delay_op", {self}, _build_function, **kwargs)
-        #
-        return tn
-
     # Flatmap
 
-    def flatmap(self, flatmap_function, **kwargs):
-        def _flatmap_function(zSet):
+    def _flatmap(self, _flatmap_function, **kwargs):
+        def __flatmap_function(zSet):
             out_inner_dict = {}
             for packed_record_any, weight_int in zSet.inner.items():
-                for record_any in flatmap_function(tn._unpack_function(packed_record_any)):
-                    packed_key_any = tn._pack_function(record_any)
-                    out_inner_dict[packed_key_any] = out_inner_dict.get(packed_key_any, 0) + weight_int
-            return ZSet({packed_key_any: weight_int for packed_key_any, weight_int in out_inner_dict.items() if weight_int != 0})
+                for out_record_any, out_weight_int in _flatmap_function(tn._unpack_function(packed_record_any), weight_int):
+                    out_packed_key_any = tn._pack_function(out_record_any)
+                    out_inner_dict[out_packed_key_any] = out_inner_dict.get(out_packed_key_any, 0) + out_weight_int
+            return ZSet({out_packed_key_any: out_weight_int for out_packed_key_any, out_weight_int in out_inner_dict.items() if out_weight_int != 0})
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
             input_nodeId = self._output_nodeId
             #
-            lift1_nodeId = Lift1(f=_flatmap_function).connect(evaluator.circuit, (input_nodeId,))
+            lift1_nodeId = Lift1(f=__flatmap_function).connect(evaluator.circuit, (input_nodeId,))
             #
             tn._output_nodeId = lift1_nodeId
         #
-        tn = TopologyNode("flatmap_op", {self}, _build_function, **kwargs)
+        tn = TopologyNode("_flatmap_op", {self}, _build_function, **kwargs)
+        #
+        return tn
+
+    def flatmap(self, flatmap_function, **kwargs):
+        def _flatmap_function(record_any, weight_int):
+            out_record_any = flatmap_function(record_any)
+            #
+            return out_record_any, weight_int
+        #
+        tn = self._flatmap(_flatmap_function, **kwargs)
+        tn._name_str = "flatmap_op"
         #
         return tn
 
@@ -264,40 +277,6 @@ class TopologyNode:
             tn._output_nodeId = lift2_add_nodeId
         #
         tn = TopologyNode("add_op", {self, other_tn}, _build_function, **kwargs)
-        #
-        return tn
-
-    def _zip(self, other_tn, _zip_function, **kwargs):
-        def __zip_function(zSet1, zSet2):
-            result = zSet1.inner | zSet2.inner
-            for k, v in zSet2.inner.items():
-                if k in zSet1.inner:
-                    new_weight = zSet1.inner[k] + v
-                    if new_weight == 0:
-                        del result[k]
-                    else:
-                        if new_weight > 0:
-                            new_weight = min(1, new_weight)
-                        else:
-                            new_weight = max(-1, new_weight)
-                        result[k] = new_weight
-            return ZSet(result)
-        #
-        def _build_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
-            #
-            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
-            lift2_add_nodeId = Lift2(op=__zip_function).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
-            #
-            tn._output_nodeId = lift2_add_nodeId
-        #
-        tn = TopologyNode("_zip_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
 
