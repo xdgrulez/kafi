@@ -472,25 +472,25 @@ class TopologyNode:
 
     def group_by_sum(self, by_function, select_function, projection_function, sum_initial_any=0, **kwargs):
         tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, z: x + y * z, sum_initial_any, **kwargs)
-        tn._name = "group_by_sum_op"
+        tn._name_str = "group_by_sum_op"
         #
         return tn
 
     def group_by_max(self, by_function, select_function, projection_function, max_initial_any=0, **kwargs):
         tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: max(x, y), max_initial_any, **kwargs)
-        tn._name = "group_by_max_op"
+        tn._name_str = "group_by_max_op"
         #
         return tn
 
     def group_by_min(self, by_function, select_function, projection_function, min_initial_any=0, **kwargs):
         tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: min(x, y), min_initial_any, **kwargs)
-        tn._name = "group_by_min_op"
+        tn._name_str = "group_by_min_op"
         #
         return tn
 
     def group_by_count(self, by_function, projection_function, **kwargs):
         tn = self.group_by_sum(by_function, lambda _: 1, projection_function, **kwargs)
-        tn._name = "group_by_count_op"
+        tn._name_str = "group_by_count_op"
         #
         return tn
 
@@ -498,31 +498,31 @@ class TopologyNode:
 
     def agg(self, select_function, projection_function, agg_function, agg_initial_any, **kwargs):
         tn = self.group_by_agg(lambda _: 0, select_function, lambda _, y: projection_function(y), agg_function, agg_initial_any, **kwargs)
-        tn._name = "agg_op"
+        tn._name_str = "agg_op"
         #
         return tn
 
     def sum(self, select_function, projection_function, sum_initial_any=0, **kwargs):
         tn = self.agg(select_function, projection_function, lambda x, y, z: x + y * z, sum_initial_any, **kwargs)
-        tn._name = "sum_op"
+        tn._name_str = "sum_op"
         #
         return tn
 
     def max(self, select_function, projection_function, max_initial_any=0, **kwargs):
         tn = self.agg(select_function, projection_function, lambda x, y, _: max(x, y), max_initial_any, **kwargs)
-        tn._name = "max_op"
+        tn._name_str = "max_op"
         #
         return tn
 
     def min(self, select_function, projection_function, min_initial_any=0, **kwargs):
         tn = self.agg(select_function, projection_function, lambda x, y, _: min(x, y), min_initial_any, **kwargs)
-        tn._name = "min_op"
+        tn._name_str = "min_op"
         #
         return tn
 
     def count(self, projection_function, **kwargs):
         tn = self.sum(lambda _: 1, projection_function, **kwargs)
-        tn._name = "count_op"
+        tn._name_str = "count_op"
         #
         return tn
 
@@ -613,11 +613,11 @@ class TopologyNode:
 
     # Input
 
-    def push(self, source_str_record_any_list_tuple_list):
+    def push(self, source_str_record_any_list_dict):
         source_str_source_tn_dict = self.get_source_nodes()
         #
-        for source_str, record_any_list in source_str_record_any_list_tuple_list:
-            source_tn = source_str_source_tn_dict[source_str]
+        for source_str, source_tn in source_str_source_tn_dict.items():
+            record_any_list = source_str_record_any_list_dict.get(source_str, [])
             input_nodeId = source_tn._output_nodeId
             #
             zSet = source_tn._to_zSet_function(record_any_list)
