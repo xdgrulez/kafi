@@ -478,28 +478,28 @@ class TopologyNode:
         #
         return tn
 
-    def peek(self, peek_function=None, **kwargs):
+    def peek(self, description_str="", peek_function=None, **kwargs):
         def map_function(record_any):
             peek_function(record_any)
             #
             return record_any
         #
         if peek_function is None:
-            peek_function = print
+            peek_function = lambda x: print(f"{description_str}{x}")
         #
         tn = self.map(map_function, **kwargs)
         tn._name_str = "peek_op"
         #
         return tn
 
-    def _peek(self, _peek_function=None, **kwargs):
+    def _peek(self, description_str="", _peek_function=None, **kwargs):
         def _map_function(record_any, weight_int):
             _peek_function(record_any, weight_int)
             #
             return record_any, weight_int
         #
         if _peek_function is None:
-            _peek_function = lambda x, y: print((x, y))
+            _peek_function = lambda x, y: print(f"{description_str}{(x, y)}")
         #
         tn = self._map(_map_function, **kwargs)
         tn._name_str = "_peek_op"
@@ -549,18 +549,16 @@ class TopologyNode:
 
     # Input
 
-    def push(self, source_str, record_any_list):
+    def push(self, source_str_record_any_list_tuple_list):
         source_str_source_tn_dict = self.get_source_nodes()
         #
-        for source_str1, source_tn in source_str_source_tn_dict.items():
+        for source_str, record_any_list in source_str_record_any_list_tuple_list:
+            source_tn = source_str_source_tn_dict[source_str]
             input_nodeId = source_tn._output_nodeId
             #
-            if source_str1 == source_str:
-                zSet1 = source_tn._to_zSet_function(record_any_list)
-            else:
-                zSet1 = ZSet({})
+            zSet = source_tn._to_zSet_function(record_any_list)
             #
-            self._evaluator.push(input_nodeId, zSet1)
+            self._evaluator.push(input_nodeId, zSet)
 
     def record_any_weight_int_tuple_list_to_zSet(self, record_any_weight_int_tuple_list):
         zSet = ZSet({self._pack_function(record_any): weight_int for record_any, weight_int in record_any_weight_int_tuple_list})
