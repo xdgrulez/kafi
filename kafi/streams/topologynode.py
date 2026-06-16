@@ -174,24 +174,35 @@ class TopologyNode:
 
     # Filter
 
-    def filter(self, select_function, **kwargs):
-        def _filter_function(packed_record_any):
-            record_any = tn._unpack_function(packed_record_any)
-            return select_function(record_any)
+    def _filter(self, _filter_function, **kwargs):
+        def __filter_function(zSet):
+            out_inner_dict = {}
+            for packed_record_any, weight_int in zSet.inner.items():
+                if _filter_function(tn._unpack_function(packed_record_any), weight_int):
+                    out_inner_dict[packed_record_any] = weight_int
+            #
+            return ZSet(out_inner_dict)
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
             #
-            g = ZSetAddition()
-            #
             input_nodeId = self._output_nodeId
             #
-            liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, input_nodeId)
-            liftSelect_nodeId = LiftSelect(pred=_filter_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
+            lift1_nodeId = Lift1(f=__filter_function).connect(evaluator.circuit, (input_nodeId,))
             #
-            tn._output_nodeId = liftSelect_nodeId
+            tn._output_nodeId = lift1_nodeId
+
         #
-        tn = TopologyNode("filter_op", {self}, _build_function, **kwargs)
+        tn = TopologyNode("_filter_op", {self}, _build_function, **kwargs)
+        #
+        return tn
+
+    def filter(self, filter_function, **kwargs):
+        def _filter_function(record_any, weight_int):
+            return filter_function(record_any)
+        #
+        tn = self._filter(_filter_function, **kwargs)
+        tn._name_str = "filter_op"
         #
         return tn
 
@@ -234,6 +245,59 @@ class TopologyNode:
             tn._output_nodeId = integrate_nodeId
         #
         tn = TopologyNode("union_op", {self, other_tn}, _build_function, **kwargs)
+        #
+        return tn
+
+    def add(self, other_tn, **kwargs):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            l_input_nodeId = self._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
+            #
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
+            #
+            tn._output_nodeId = lift2_add_nodeId
+        #
+        tn = TopologyNode("add_op", {self, other_tn}, _build_function, **kwargs)
+        #
+        return tn
+
+    def _zip(self, other_tn, _zip_function, **kwargs):
+        def __zip_function(zSet1, zSet2):
+            result = zSet1.inner | zSet2.inner
+            for k, v in zSet2.inner.items():
+                if k in zSet1.inner:
+                    new_weight = zSet1.inner[k] + v
+                    if new_weight == 0:
+                        del result[k]
+                    else:
+                        if new_weight > 0:
+                            new_weight = min(1, new_weight)
+                        else:
+                            new_weight = max(-1, new_weight)
+                        result[k] = new_weight
+            return ZSet(result)
+        #
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            l_input_nodeId = self._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
+            #
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            lift2_add_nodeId = Lift2(op=__zip_function).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
+            #
+            tn._output_nodeId = lift2_add_nodeId
+        #
+        tn = TopologyNode("_zip_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
 
@@ -499,7 +563,7 @@ class TopologyNode:
             return record_any, weight_int
         #
         if _peek_function is None:
-            _peek_function = lambda x, y: print(f"{description_str}{(x, y)}")
+            _peek_function = lambda x, y: print(f"{description_str}: {(x, y)}")
         #
         tn = self._map(_map_function, **kwargs)
         tn._name_str = "_peek_op"
