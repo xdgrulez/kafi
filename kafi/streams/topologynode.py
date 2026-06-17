@@ -548,6 +548,52 @@ class TopologyNode:
         return tn
 
     ###
+    # Time windows
+    ###
+
+    def feedback(self, **kwargs):
+        feedback_source_str = "feedback"
+        feedback_source_tn = TopologyNode.source(feedback_source_str, **kwargs)
+
+        input_with_window_end_tn = (
+            self
+            .map(lambda x: x | {"window_end": x["value"]["ts"] + 10})
+        )
+
+        combined_input_with_window_end_tn = (
+            input_with_window_end_tn
+            .add(feedback_source_tn)
+        )
+
+        input_cur_ts_tn = (
+            combined_input_with_window_end_tn
+            .map(lambda x: {"ts": x["value"]["ts"]})
+            .max(lambda x: x["ts"],
+                lambda x: {"cur_ts": x})
+        )
+
+        join_window_end_tn = (
+            combined_input_with_window_end_tn
+            .join(input_cur_ts_tn,
+                lambda l, r: r["cur_ts"] > l["window_end"],
+                lambda l, _: l)
+            ._filter(lambda _, w: w > 0)
+            .neg()
+            ._delay()
+        )
+
+        feedback_tn = (
+            join_window_end_tn
+            .add(input_with_window_end_tn)
+        )
+
+        feedback_tn._feedback_source_tn = feedback_source_tn
+        feedback_tn._join_window_end_tn = join_window_end_tn
+
+        return feedback_tn
+
+
+    ###
     # Operator utils
     ###
 
