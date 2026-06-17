@@ -6,13 +6,14 @@ With version 0.1.0, Kafi is called *Kafi Streams* because it now supports comple
 
 This documentation is not yet updated for Kafi Streams. You can already play around with the tests in the [test_streams](https://github.com/xdgrulez/kafi/tree/main/test_kafi_streams) folder (and of course the Berlin Buzzwords notebook above).
 
-## License Addendum
+## ⚖️ Licensing & AI Restrictions
 
-Important Licensing Notice:
-   
-This software is dual-licensed under the Apache License 2.0 AND the Human Source License Addendum.
-   
-While free and completely unrestricted for all standard commercial users, enterprises, and developers (including those using AI assistants like Claude Code), explicit exclusions, mandatory licensing, and scaled damages apply to Primary AI Infrastructure Providers (such as OpenAI, Anthropic, xAI). See LICENSE-AI-ADDENDUM for full legal terms.
+This Software is dual-licensed under the **Apache License 2.0** AND the **Human Source Addenum**.
+
+* **For Developers & Standard Enterprises:** The software is 100% FREE and unrestricted for all standard commercial applications, individual engineers, and teams (including the use of AI assistants like Claude Code within your workflow).
+* **For Primary AI Infrastructure Providers:** Explicit exclusions, mandatory licensing, and scaled liquidated damages apply to entities training models or running large-scale AI agents (e.g., OpenAI, Anthropic, xAI).
+
+For full legal terms, please review [LICENSE](LICENSE) and the [AI-ADDENDUM](AI-ADDENDUM).
 
 (the old documentation follows...)
 
