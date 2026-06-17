@@ -44,6 +44,9 @@ class TopologyNode:
         #
         self._to_zSet_function = kwargs["to_zSet_function"] if "to_zSet_function" in kwargs else self.from_records
         self._from_zSet_function = kwargs["from_zSet_function"] if "from_zSet_function" in kwargs else self.to_records
+        #
+        self._join_window_end_tn = None
+
 
     ###
     # DBSP base operators
@@ -551,46 +554,47 @@ class TopologyNode:
     # Time windows
     ###
 
-    def feedback(self, **kwargs):
-        feedback_source_str = "feedback"
-        feedback_source_tn = TopologyNode.source(feedback_source_str, **kwargs)
-
-        input_with_window_end_tn = (
+    def ttl(self, time_function, expiry_function, **kwargs):
+        ttl_source_str = f"ttl_{uuid.uuid4()}"
+        ttl_source_tn = TopologyNode.source(ttl_source_str, **kwargs)
+        #
+        input_with_expiry_tn = (
             self
-            .map(lambda x: x | {"window_end": x["value"]["ts"] + 10})
+            .map(lambda x: x | {"_ttl": {"_expiry": expiry_function(x)}})
         )
-
-        combined_input_with_window_end_tn = (
-            input_with_window_end_tn
-            .add(feedback_source_tn)
+        #
+        added_input_with_expiry_tn = (
+            input_with_expiry_tn
+            .add(ttl_source_tn)
         )
-
-        input_cur_ts_tn = (
-            combined_input_with_window_end_tn
-            .map(lambda x: {"ts": x["value"]["ts"]})
-            .max(lambda x: x["ts"],
-                lambda x: {"cur_ts": x})
+        #
+        input_now__tn = (
+            added_input_with_expiry_tn
+            .map(lambda x: {"_ttl": {"_time": time_function(x)}})
+            .max(lambda x: x["_ttl"]["_time"],
+                 lambda x: {"_ttl": {"_now": x}})
         )
 
         join_window_end_tn = (
-            combined_input_with_window_end_tn
-            .join(input_cur_ts_tn,
-                lambda l, r: r["cur_ts"] > l["window_end"],
+            added_input_with_expiry_tn
+            .join(input_now__tn,
+                lambda l, r: r["_ttl"]["_now"] > l["_ttl"]["_expiry"],
                 lambda l, _: l)
             ._filter(lambda _, w: w > 0)
             .neg()
             ._delay()
         )
 
-        feedback_tn = (
+        ttl_tn = (
             join_window_end_tn
-            .add(input_with_window_end_tn)
+            .add(input_with_expiry_tn)
         )
 
-        feedback_tn._feedback_source_tn = feedback_source_tn
-        feedback_tn._join_window_end_tn = join_window_end_tn
+        ttl_source_tn.to_zSet(TopologyNode._from_records)
+        join_window_end_tn.from_zSet(TopologyNode._to_records)
+        ttl_source_tn._join_window_end_tn = join_window_end_tn
 
-        return feedback_tn
+        return ttl_tn
 
 
     ###
@@ -645,7 +649,11 @@ class TopologyNode:
         source_str_source_tn_dict = self.get_source_nodes()
         #
         for source_str, source_tn in source_str_source_tn_dict.items():
-            input_any_list = source_str_input_any_list_dict.get(source_str, [])
+            if source_str.startswith("ttl_"):
+                input_any_list = source_tn._join_window_end_tn.latest()
+            else:
+                input_any_list = source_str_input_any_list_dict.get(source_str, [])
+            #
             input_nodeId = source_tn._output_nodeId
             #
             zSet = source_tn._to_zSet_function(input_any_list, self._pack_function)
