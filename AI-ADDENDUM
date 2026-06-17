@@ -1,90 +1,151 @@
-                                            Human Source Addendum
-                                            Version 0.1, June 2026
-                        (PolyForm-Based AI Infrastructure Restriction & Liquidated Damages)
+                             Human Source Addendum
+                             Version 0.1, June 2026
+         (PolyForm-Based AI Infrastructure Restriction & Liquidated Damages)
 
 
     1. Purpose and Scope
         This Addendum supplements the primary license of this software.
         
-        It is designed to ensure the free, unrestricted, and commercial use of the software for all standard business
-        applications, enterprises, startups, and human developers, while strictly requiring licensing and compensation
-        from entities utilizing the software for large-scale Artificial Intelligence (AI) infrastructure and automated
-        agents.
+        It is designed to ensure the free, unrestricted, and commercial use
+        of the software for all standard business applications, enterprises,
+        startups, and human developers, while strictly requiring licensing
+        and compensation from entities utilizing the software for large-scale
+        Artificial Intelligence (AI) infrastructure and automated agents.
 
     2. Grant of Free Commercial License
-        Subject to the terms of this Addendum, the Licensor grants you a worldwide, royalty-free, non-exclusive,
-        perpetual license to use, copy, modify, and distribute this software for any commercial or non-commercial
-        purpose, PROVIDED THAT you are not a "Primary AI Infrastructure Provider" as defined in Section 3.
+        Subject to the terms of this Addendum, the Licensor grants you a
+        worldwide, royalty-free, non-exclusive, perpetual license to use,
+        copy, modify, and distribute this software for any commercial or
+        non-commercial purpose, PROVIDED THAT you are not a "Primary AI
+        Infrastructure Provider" as defined in Section 3.
 
     3. Exclusion of Primary AI Infrastructure Providers
-        The grant in Section 2 does not apply to any individual, corporate entity, or organization classified as a
-        "Primary AI Infrastructure Provider".
+        The grant in Section 2 does not apply to any individual, corporate
+        entity, or organization classified as a "Primary AI Infrastructure
+        Provider".
         
-        A Primary AI Infrastructure Provider is defined as any entity whose primary business model, or a substantial
-        source of revenue/funding, consists of:
+        A Primary AI Infrastructure Provider is defined as any entity whose
+        primary business model, or a substantial source of revenue/funding,
+        consists of:
         
-        (a) Developing, training, fine-tuning, or hosting Large Language Models (LLMs), foundational machine learning
-            models, or generative AI systems.
+        (a) Developing, training, fine-tuning, or hosting Large Language
+            Models (LLMs), foundational machine learning models, or
+            generative AI systems.
         
-        (b) Operating autonomous AI coding agents, automated software-engineering bots, or AI-driven developer 
-            platforms.
+        (b) Operating autonomous AI coding agents, automated
+            software-engineering bots, or AI-driven developer platforms.
         
-        (c) Scraping, parsing, or indexing software repositories for the purpose of training neural networks or
-            automated code-generation tools.
+        (c) Scraping, parsing, or indexing software repositories for the
+            purpose of training neural networks or automated code-generation
+            tools.
 
-        This exclusion applies strictly regardless of whether such activities are conducted for commercial profit,
-        non-profit research, or academic purposes.
+        This exclusion applies strictly regardless of whether such activities
+        are conducted for commercial profit, non-profit research, or academic
+        purposes.
         
-        Exemplary entities include, but are not limited to: OpenAI, Anthropic, xAI, Google (AI/DeepMind Divisions),
-        Meta (AI Division), and Microsoft (AI/Copilot Divisions).
+        Exemplary entities include, but are not limited to: OpenAI,
+        Anthropic, xAI, Google (AI/DeepMind Divisions), Meta (AI Division),
+        and Microsoft (AI/Copilot Divisions).
 
-        For the avoidance of doubt, standard end-users, software engineers, and commercial enterprises utilizing
-        third-party AI coding assistants (such as Claude Code, GitHub Copilot, or similar tools) within their
-        workflows to build applications with this software are explicitly NOT classified as Primary AI Infrastructure
-        Providers and remain fully covered under the free license granted in Section 2.
+        For the avoidance of doubt, standard end-users, software engineers,
+        and commercial enterprises utilizing third-party AI coding assistants
+        (such as Claude Code, GitHub Copilot, or similar tools) within their
+        workflows to build applications with this software are explicitly NOT
+        classified as Primary AI Infrastructure Providers and remain fully
+        covered under the free license granted in Section 2.
 
     4. Mandatory Commercial Licensing & Automated Contract Conclusion
-        Any use, parsing, live-analysis by software agents, or ingestion into training datasets of this software by a
-        Primary AI Infrastructure Provider without a prior, explicitly signed written commercial agreement with the
-        Licensor constitutes a material breach of copyright and contract. 
+        Any use, parsing, live-analysis by software agents, or ingestion into
+        training datasets of this software by a Primary AI Infrastructure
+        Provider without a prior, explicitly signed written commercial
+        agreement with the Licensor constitutes a material breach of
+        copyright and contract. 
 
-        By the act of accessing, reading, parsing, or executing the software's source code, the Primary AI Infrastructure Provider automatically enters into a legally binding Commercial Licensing Agreement with the Licensor under the financial terms specified in Section 5.
+        By the act of accessing, reading, parsing, or executing the
+        software's source code, the Primary AI Infrastructure Provider
+        automatically enters into a legally binding Commercial Licensing
+        Agreement with the Licensor under the financial terms specified in
+        Section 5.
 
     5. Contractual Fees and Liquidated Damages (Revenue & Compute-Scaled Model)
-        To reflect the massive scale, economic value derivation, and infrastructure cost reduction achieved through the software, the Primary AI Infrastructure Provider agrees to pay the Licensor a contractually agreed Liquidated Damages fee.
+        To reflect the massive scale, economic value derivation, and
+        infrastructure cost reduction achieved through the software, the
+        Primary AI Infrastructure Provider agrees to pay the Licensor a
+        contractually agreed Liquidated Damages fee.
 
-        The applicable fee shall automatically be whichever of the following models (A or B) results in the higher financial amount:
+        The applicable fee shall automatically be whichever of the following
+        models (A or B) results in the higher financial amount:
 
         A. The Revenue-Percentage Model (The Global Corporate Floor)
-           If the Primary AI Infrastructure Provider (including its parent companies, subsidiaries, and affiliates)
-           has a total annual global revenue exceeding $100 Million USD, the minimum annual damages fee shall be
-           calculated as 0.5% (zero point five percent) of the Provider's total global gross revenue for the preceding
-           fiscal year. 
+           If the Primary AI Infrastructure Provider (including its parent
+           companies, subsidiaries, and affiliates) has a total annual global
+           revenue exceeding $100 Million USD, the minimum annual damages fee
+           shall be calculated as 0.5% (zero point five percent) of the
+           Provider's total global gross revenue for the preceding fiscal
+           year. 
 
-           For the avoidance of doubt, if a Provider generates $20 Billion USD in annual revenue, the mandatory annual
-           fee under this provision is strictly set at $100,000,000 USD.
+           For the avoidance of doubt, if a Provider generates $20 Billion
+           USD in annual revenue, the mandatory annual fee under this
+           provision is strictly set at $100,000,000 USD.
 
         B. The Compute-Scaled Infrastructure Model
-           The annual licensing and damages fee shall be calculated at a rate of $500,000 USD per year for every 1,000
-           CPU cores deployed across the Provider's operational infrastructure. 
+           The annual licensing and damages fee shall be calculated at a rate
+           of $500,000 USD per year for every 1,000 CPU cores deployed across
+           the Provider's operational infrastructure. 
 
-           To prevent licensing evasion through specialized AI hardware, if the Provider utilizes GPU-heavy clusters
-           (where standard CPU core counts do not reflect the true scale of the compute infrastructure), the damages
-           shall be calculated based on the equivalent total compute footprint, where each deployed AI/GPU Tensor Core
-           (or equivalent hardware accelerator) is contractually factored as equivalent to 8 standard CPU cores for
-           pricing purposes.
+           To prevent licensing evasion through specialized AI hardware, if
+           the Provider utilizes GPU-heavy clusters (where standard CPU core
+           counts do not reflect the true scale of the compute
+           infrastructure), the damages shall be calculated based on the
+           equivalent total compute footprint, where each deployed AI/GPU
+           Tensor Core (or equivalent hardware accelerator) is contractually
+           factored as equivalent to 8 standard CPU cores for pricing
+           purposes.
 
         C. Absolute Minimum Floor
-           In no event shall the total annual fee for an unauthorized breach by a Primary AI Infrastructure Provider
-           with a market valuation or total funding exceeding $1 Billion USD fall below an absolute minimum floor of
-           $5,000,000 USD per calendar year, regardless of the current revenue or compute infrastructure allocation.
+           In no event shall the total annual fee for an unauthorized breach
+           by a Primary AI Infrastructure Provider with a market valuation or
+           total funding exceeding $1 Billion USD fall below an absolute
+           minimum floor of $5,000,000 USD per calendar year, regardless of
+           the current revenue or compute infrastructure allocation.
 
         D. Due Date and Immediate Audit Rights
-           All fees accrued under this Section are due within thirty (30) days of the initial unauthorized access,
-           parsing, or ingestion.
+           All fees accrued under this Section are due within thirty (30)
+           days of the initial unauthorized access, parsing, or ingestion.
            
-           To verify compliance, the Licensor shall have the immediate legal right to demand
-           certified financial audits and independent audits of the Provider's compute infrastructure logs.
+           To verify compliance, the Licensor shall have the immediate legal
+           right to demand certified financial audits and independent audits
+           of the Provider's compute infrastructure logs.
+
+        E. Inflation Adjustment (Indexation)
+           All fixed monetary USD amounts stated in this Section 5 (including
+           the $100 Million revenue threshold, the $500,000 compute rate, and
+           the $5,000,000 absolute minimum floor) shall be automatically
+           adjusted on the first day of each calendar year, starting January 1,
+           2027.
+
+           The adjustment shall be calculated based on the percentage increase,
+           if any, in the Consumer Price Index for All Urban Consumers (CPI-U),
+           U.S. City Average, as published by the United States Bureau of Labor
+           Statistics, using June 2026 as the base period. If the index
+           decreases, the fees shall remain at the highest level previously
+           attained.
 
     6. Severability
-        If any provision of this Addendum is held to be invalid or unenforceable under applicable jurisdiction, such provision shall be modified to the minimum extent necessary to make it valid and enforceable, and the remaining provisions of this Addendum shall remain in full force and effect.
+        If any provision of this Addendum is held to be invalid or
+        unenforceable under applicable jurisdiction, such provision shall be
+        modified to the minimum extent necessary to make it valid and
+        enforceable, and the remaining provisions of this Addendum shall
+        remain in full force and effect.
+
+    7. Governing Law and Jurisdiction
+        This Addendum, and any disputes arising out of or in connection with
+        it (including non-contractual disputes or claims), shall be governed
+        by, and construed in accordance with, the laws of the State of
+        Delaware, United States, without regard to its conflict of law
+        principles.
+
+        The Primary AI Infrastructure Provider irrevocably agrees that the
+        federal and state courts located in Wilmington, Delaware, USA, shall
+        have exclusive jurisdiction to settle any dispute or claim arising
+        out of or in connection with this Addendum or its subject matter.
