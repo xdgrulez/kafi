@@ -34,7 +34,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         #
         root_tn = get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_source_str, order_source_str)
         #
-        self.process([(click_source_str, default_batch_size_int), (customer_source_str, default_batch_size_int), (product_source_str, default_batch_size_int), (order_source_str, default_batch_size_int)], default_steps_int, root_tn)
+        self.process([(click_source_str, default_batch_size_int), (customer_source_str, default_batch_size_int), (product_source_str, default_batch_size_int), (order_source_str, default_batch_size_int)], 100, root_tn)
 
     def test_datagen_self_join_group_by(self):
         order_source_str = "shoe_orders"

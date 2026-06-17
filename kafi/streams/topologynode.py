@@ -13,8 +13,7 @@ from pydbsp.operator import Delay, Differentiate, Input, Integrate, Lift1, Lift2
 from pydbsp.relational_operators import (
     DeltaLiftedDeltaLiftedDistinct,
     DeltaLiftedDeltaLiftedJoin,
-    LiftProject,
-    LiftSelect,
+    LiftProject
 )
 from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
@@ -43,8 +42,8 @@ class TopologyNode:
         self._pack_function = kwargs["pack_function"] if "pack_function" in kwargs else default_pack_function
         self._unpack_function = kwargs["unpack_function"] if "unpack_function" in kwargs else default_unpack_function
         #
-        self._to_zSet_function = kwargs["to_zSet_function"] if "to_zSet_function" in kwargs else self.record_any_list_to_zSet
-        self._from_zSet_function = kwargs["from_zSet_function"] if "from_zSet_function" in kwargs else self.zSet_to_record_any_list
+        self._to_zSet_function = kwargs["to_zSet_function"] if "to_zSet_function" in kwargs else self.from_records
+        self._from_zSet_function = kwargs["from_zSet_function"] if "from_zSet_function" in kwargs else self.to_records
 
     ###
     # DBSP base operators
@@ -204,7 +203,6 @@ class TopologyNode:
             lift1_nodeId = Lift1(f=__filter_function).connect(evaluator.circuit, (input_nodeId,))
             #
             tn._output_nodeId = lift1_nodeId
-
         #
         tn = TopologyNode("_filter_op", {self}, _build_function, **kwargs)
         #
@@ -592,38 +590,46 @@ class TopologyNode:
 
     # Input
 
-    def push(self, source_str_record_any_list_dict):
+    def push(self, source_str_input_any_list_dict_or_source_str, input_any_list=None):
+        if input_any_list is None:
+            source_str_input_any_list_dict = source_str_input_any_list_dict_or_source_str
+        else:
+            source_str_input_any_list_dict = {source_str_input_any_list_dict_or_source_str: input_any_list}
+        #
         source_str_source_tn_dict = self.get_source_nodes()
         #
         for source_str, source_tn in source_str_source_tn_dict.items():
-            record_any_list = source_str_record_any_list_dict.get(source_str, [])
+            input_any_list = source_str_input_any_list_dict.get(source_str, [])
             input_nodeId = source_tn._output_nodeId
             #
-            zSet = source_tn._to_zSet_function(record_any_list)
+            zSet = source_tn._to_zSet_function(input_any_list, self._pack_function)
             #
             self._evaluator.push(input_nodeId, zSet)
 
-    def record_any_weight_int_tuple_list_to_zSet(self, record_any_weight_int_tuple_list):
-        zSet = ZSet({self._pack_function(record_any): weight_int for record_any, weight_int in record_any_weight_int_tuple_list})
+    @staticmethod
+    def _from_records(record_any_weight_int_tuple_list, pack_function):
+        zSet = ZSet({pack_function(record_any): weight_int for record_any, weight_int in record_any_weight_int_tuple_list})
         #
         return zSet
 
-    def record_any_list_to_zSet(self, record_any_list):
-        zSet = ZSet({self._pack_function(record_any): 1 for record_any in record_any_list})
+    @staticmethod
+    def from_records(record_any_list, pack_function):
+        zSet = ZSet({pack_function(record_any): 1 for record_any in record_any_list})
         #
         return zSet
 
-    def debezium_to_zSet(self, message_dict_list):
+    @staticmethod
+    def from_debezium(message_dict_list, pack_function):
         inner_dict = {}
         for message_dict in message_dict_list:
             if message_dict["value"]["op"] in ["c", "u"]:
                 message_dict1 = copy.deepcopy(message_dict)
                 message_dict1["value"] = message_dict["value"]["after"]
-                inner_dict[self._pack_function(message_dict1)] = 1
+                inner_dict[pack_function(message_dict1)] = 1
             elif message_dict["value"]["op"] == "d":
                 message_dict1 = copy.deepcopy(message_dict)
                 message_dict1["value"] = message_dict["value"]["before"]
-                inner_dict[self._pack_function(message_dict1)] = -1
+                inner_dict[pack_function(message_dict1)] = -1
         #
         return ZSet(inner_dict)
     
@@ -637,33 +643,36 @@ class TopologyNode:
         if gc_boolean:
             self._evaluator.compact()
         #
-        record_any_list = self._from_zSet_function(zSet)
+        output_list = self._from_zSet_function(zSet, self._unpack_function)
         #
-        return record_any_list
+        return output_list
      
-    def zSet_to_record_any_weight_int_tuple_list(self, zSet):
+    @staticmethod
+    def _to_records(zSet, unpack_function):
         record_any_weight_int_tuple_list = []
         for packed_record_any, weight_int in zSet.items():
-            record_any = self._unpack_function(packed_record_any)
+            record_any = unpack_function(packed_record_any)
             record_any_weight_int_tuple_list.append((record_any, weight_int))
         #
         return record_any_weight_int_tuple_list
 
-    def zSet_to_record_any_list(self, zSet):
+    @staticmethod
+    def to_records(zSet, unpack_function):
         record_any_list = []
         for packed_record_any, weight_int in zSet.items():
             if weight_int > 0:
                 for _ in range(weight_int):
-                    record_any = self._unpack_function(packed_record_any)
+                    record_any = unpack_function(packed_record_any)
                     record_any_list.append(record_any)
         #
         return record_any_list
 
-    def zSet_to_debezium(self, zSet):
+    @staticmethod
+    def to_debezium(zSet, unpack_function):
         message_dict_list = []
         for packed_message_dict, weight_int in zSet.items():
             if weight_int > 0:
-                message_dict = self._unpack_function(packed_message_dict)
+                message_dict = unpack_function(packed_message_dict)
                 for _ in range(weight_int):
                     message_dict1 = copy.deepcopy(message_dict)
                     message_dict1["value"]["before"] = None
@@ -671,9 +680,9 @@ class TopologyNode:
                     message_dict1["value"]["op"] = "c"
                     message_dict_list.append(message_dict1)
             elif weight_int < 0:
-                message_dict = self._unpack_function(packed_message_dict)
+                message_dict = unpack_function(packed_message_dict)
                 for _ in range(-weight_int):
-                    message_dict = self._unpack_function(packed_message_dict)
+                    message_dict = unpack_function(packed_message_dict)
                     message_dict1 = copy.deepcopy(message_dict)
                     message_dict1["value"]["before"] = message_dict["value"]
                     message_dict1["value"]["after"] = None

@@ -188,7 +188,7 @@ def get_root_tn_datagen_self_join_group_by(order_source_str):
 
 def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
     order_source_tn = source(order_source_str)
-    order_source_tn._to_zSet_function = order_source_tn.debezium_to_zSet
+    order_source_tn._to_zSet_function = order_source_tn.from_debezium
     #
     order_tn = (
         order_source_tn
@@ -214,7 +214,7 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
         )
         .to_value()
     )
-    root_tn._from_zSet_function = root_tn.zSet_to_debezium
+    root_tn._from_zSet_function = root_tn.to_debezium
     #
     root_tn.build()
     #
