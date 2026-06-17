@@ -633,6 +633,9 @@ class TopologyNode:
         #
         return ZSet(inner_dict)
     
+    def to_zSet(self, to_zSet_function):
+        self._to_zSet_function = to_zSet_function
+    
     # Output
 
     def latest(self, gc=True):
@@ -647,6 +650,10 @@ class TopologyNode:
         #
         return output_list
      
+    def from_zSet(self, from_zSet_function):
+        self._from_zSet_function = from_zSet_function
+            
+
     @staticmethod
     def _to_records(zSet, unpack_function):
         record_any_weight_int_tuple_list = []
@@ -819,6 +826,3 @@ class TopologyNode:
         mermaid_bottom_str = "```"
         #
         return mermaid_top_str + mermaid_edges_str + mermaid_bottom_str
-#
-
-source = TopologyNode.source

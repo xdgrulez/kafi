@@ -1,10 +1,10 @@
-from kafi.streams.topologynode import source
+from kafi.streams.topologynode import TopologyNode as Tn
 
 #
 
 
 def get_root_tn_jamie(transaction_source_str):
-    transaction_source_tn = source(transaction_source_str)
+    transaction_source_tn = Tn.source(transaction_source_str)
     #
     transaction_tn = transaction_source_tn.map(
         lambda x: {

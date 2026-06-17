@@ -1,4 +1,4 @@
-from kafi.streams.topologynode import source
+from kafi.streams.topologynode import TopologyNode as Tn
 
 #
 
@@ -13,8 +13,8 @@ salary_message_dict_list = [{"key": "2", "value": {"id": 2, "salary": 40000}},
                             {"key": "1", "value": {"id": 1, "salary": 50000}}]
 #
 def get_root_tn():
-    employees_source_tn = source(t1)
-    salaries_source_tn = source(t2)
+    employees_source_tn = Tn.source(t1)
+    salaries_source_tn = Tn.source(t2)
     #
     root_tn = (
         employees_source_tn

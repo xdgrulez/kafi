@@ -1,9 +1,9 @@
-from kafi.streams.topologynode import source
+from kafi.streams.topologynode import TopologyNode as Tn
 
 #
 
 def get_root_tn_wc(lines_str):
-    _source_tn = source(lines_str)
+    _source_tn = Tn.source(lines_str)
     #
     split_tn = _source_tn.flatmap(
         lambda x: [{"word": word_str,

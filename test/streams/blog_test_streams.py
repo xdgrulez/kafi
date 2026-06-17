@@ -38,8 +38,8 @@ for x in salary_message_dict_list:
 pr.close()
 #
 def get_root_tn():
-    employees_source_tn = source(t1)
-    salaries_source_tn = source(t2)
+    employees_source_tn = Tn.source(t1)
+    salaries_source_tn = Tn.source(t2)
     #
     root_tn = (
         employees_source_tn
