@@ -282,7 +282,7 @@ class TopologyNode:
 
     def intersect(self, other_tn, **kwargs):
         tn = self.join(other_tn, lambda l, r: l == r, lambda l, _: l, **kwargs)
-        tn._name = "intersect_op"
+        tn._name_str = "intersect_op"
         #
         return tn
 
@@ -509,38 +509,38 @@ class TopologyNode:
 
     def from_value(self, **kwargs):
         tn = self.map(lambda x: x["value"], **kwargs)
-        tn._name = "from_value_op"
+        tn._name_str = "from_value_op"
         #
         return tn
 
     def to_value(self, **kwargs):
         tn = self.map(lambda x: {"value": x}, **kwargs)
-        tn._name = "to_value_op"
+        tn._name_str = "to_value_op"
         #
         return tn
 
-    def peek(self, description_str="", peek_function=None, **kwargs):
+    def peek(self, description_str=None, peek_function=None, **kwargs):
         def map_function(record_any):
             peek_function(record_any)
             #
             return record_any
         #
         if peek_function is None:
-            peek_function = lambda x: print(f"{description_str}{x}")
+            peek_function = lambda x: print(x) if description_str is None else print(f"{description_str}: {x}")
         #
         tn = self.map(map_function, **kwargs)
         tn._name_str = "peek_op"
         #
         return tn
 
-    def _peek(self, description_str="", _peek_function=None, **kwargs):
+    def _peek(self, description_str=None, _peek_function=None, **kwargs):
         def _map_function(record_any, weight_int):
             _peek_function(record_any, weight_int)
             #
             return record_any, weight_int
         #
         if _peek_function is None:
-            _peek_function = lambda x, y: print(f"{description_str}: {(x, y)}")
+            _peek_function = lambda x, y: print((x, y)) if description_str is None else print(f"{description_str}: {(x, y)}")
         #
         tn = self._map(_map_function, **kwargs)
         tn._name_str = "_peek_op"
