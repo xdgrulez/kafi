@@ -554,13 +554,13 @@ class TopologyNode:
     # Time windows
     ###
 
-    def expire(self, time_function, expiry_function, **kwargs):
+    def expire(self, get_time_function, get_expiry_function, out_function=lambda x: x[0], **kwargs):
         expire_source_str = f"expire_{uuid.uuid4()}"
         expire_source_tn = TopologyNode.source(expire_source_str, **kwargs)
         #
         input_with_expiry_tn = (
             self
-            .map(lambda x: x | {"_expire": {"_expiry": expiry_function(x)}})
+            .map(lambda x: (x, get_expiry_function(x)))
         )
         #
         added_input_with_expiry_tn = (
@@ -570,32 +570,32 @@ class TopologyNode:
         #
         input_now__tn = (
             added_input_with_expiry_tn
-            .map(lambda x: {"_expire": {"_time": time_function(x)}})
-            .max(lambda x: x["_expire"]["_time"],
-                 lambda x: {"_expire": {"_now": x}})
+            .map(lambda x: get_time_function(x[0]))
+            .max(lambda x: x,
+                 lambda x: x)
         )
-
+        #
         join_window_end_tn = (
             added_input_with_expiry_tn
             .join(input_now__tn,
-                lambda l, r: r["_expire"]["_now"] > l["_expire"]["_expiry"],
+                lambda l, r: r > l[1],
                 lambda l, _: l)
             ._filter(lambda _, w: w > 0)
             .neg()
             ._delay()
         )
-
+        #
         expire_tn = (
             join_window_end_tn
             .add(input_with_expiry_tn)
+            .map(out_function)
         )
-
+        #
         expire_source_tn.to_zSet(TopologyNode._from_records)
         join_window_end_tn.from_zSet(TopologyNode._to_records)
         expire_source_tn._join_window_end_tn = join_window_end_tn
-
+        #
         return expire_tn
-
 
     ###
     # Operator utils
