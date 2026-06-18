@@ -554,47 +554,47 @@ class TopologyNode:
     # Time windows
     ###
 
-    def ttl(self, time_function, expiry_function, **kwargs):
-        ttl_source_str = f"ttl_{uuid.uuid4()}"
-        ttl_source_tn = TopologyNode.source(ttl_source_str, **kwargs)
+    def expire(self, time_function, expiry_function, **kwargs):
+        expire_source_str = f"expire_{uuid.uuid4()}"
+        expire_source_tn = TopologyNode.source(expire_source_str, **kwargs)
         #
         input_with_expiry_tn = (
             self
-            .map(lambda x: x | {"_ttl": {"_expiry": expiry_function(x)}})
+            .map(lambda x: x | {"_expire": {"_expiry": expiry_function(x)}})
         )
         #
         added_input_with_expiry_tn = (
             input_with_expiry_tn
-            .add(ttl_source_tn)
+            .add(expire_source_tn)
         )
         #
         input_now__tn = (
             added_input_with_expiry_tn
-            .map(lambda x: {"_ttl": {"_time": time_function(x)}})
-            .max(lambda x: x["_ttl"]["_time"],
-                 lambda x: {"_ttl": {"_now": x}})
+            .map(lambda x: {"_expire": {"_time": time_function(x)}})
+            .max(lambda x: x["_expire"]["_time"],
+                 lambda x: {"_expire": {"_now": x}})
         )
 
         join_window_end_tn = (
             added_input_with_expiry_tn
             .join(input_now__tn,
-                lambda l, r: r["_ttl"]["_now"] > l["_ttl"]["_expiry"],
+                lambda l, r: r["_expire"]["_now"] > l["_expire"]["_expiry"],
                 lambda l, _: l)
             ._filter(lambda _, w: w > 0)
             .neg()
             ._delay()
         )
 
-        ttl_tn = (
+        expire_tn = (
             join_window_end_tn
             .add(input_with_expiry_tn)
         )
 
-        ttl_source_tn.to_zSet(TopologyNode._from_records)
+        expire_source_tn.to_zSet(TopologyNode._from_records)
         join_window_end_tn.from_zSet(TopologyNode._to_records)
-        ttl_source_tn._join_window_end_tn = join_window_end_tn
+        expire_source_tn._join_window_end_tn = join_window_end_tn
 
-        return ttl_tn
+        return expire_tn
 
 
     ###
@@ -649,7 +649,7 @@ class TopologyNode:
         source_str_source_tn_dict = self.get_source_nodes()
         #
         for source_str, source_tn in source_str_source_tn_dict.items():
-            if source_str.startswith("ttl_"):
+            if source_str.startswith("expire_"):
                 input_any_list = source_tn._join_window_end_tn.latest()
             else:
                 input_any_list = source_str_input_any_list_dict.get(source_str, [])
