@@ -238,7 +238,7 @@ def get_root_tn_datagen_gc(order_source_str):
         .join(order_cur_ts_tn,
             lambda l, r: r["cur_ts"] > l["window_end"],
             lambda l, _: l)
-        .neg()
+        ._neg()
         ._delay()
     )
     root_tn = (

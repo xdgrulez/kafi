@@ -100,6 +100,25 @@ class TopologyNode:
         #
         return tn
 
+    def _add(self, other_tn, **kwargs):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            l_input_nodeId = self._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
+            #
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
+            #
+            tn._output_nodeId = lift2_add_nodeId
+        #
+        tn = TopologyNode("add_op", {self, other_tn}, _build_function, **kwargs)
+        #
+        return tn
+
     ###
     # Relational operators
     ###
@@ -143,7 +162,47 @@ class TopologyNode:
         #
         return tn
 
-    def neg(self, **kwargs):
+    def peek(self, description_str=None, peek_function=None, **kwargs):
+        def map_function(record_any):
+            peek_function(record_any)
+            #
+            return record_any
+        #
+        if peek_function is None:
+            peek_function = lambda x: print(x) if description_str is None else print(f"{description_str}: {x}")
+        #
+        tn = self.map(map_function, **kwargs)
+        tn._name_str = "peek_op"
+        #
+        return tn
+
+    def _peek(self, description_str=None, _peek_function=None, **kwargs):
+        def _map_function(record_any, weight_int):
+            _peek_function(record_any, weight_int)
+            #
+            return record_any, weight_int
+        #
+        if _peek_function is None:
+            _peek_function = lambda x, y: print((x, y)) if description_str is None else print(f"{description_str}: {(x, y)}")
+        #
+        tn = self._map(_map_function, **kwargs)
+        tn._name_str = "_peek_op"
+        #
+        return tn
+
+    def from_value(self, **kwargs):
+        tn = self.map(lambda x: x["value"], **kwargs)
+        tn._name_str = "from_value_op"
+        #
+        return tn
+
+    def to_value(self, **kwargs):
+        tn = self.map(lambda x: {"value": x}, **kwargs)
+        tn._name_str = "to_value_op"
+        #
+        return tn
+
+    def _neg(self, **kwargs):
         def _map_function(record_any, weight_int):
             return record_any, -weight_int
         #
@@ -178,9 +237,9 @@ class TopologyNode:
 
     def flatmap(self, flatmap_function, **kwargs):
         def _flatmap_function(record_any, weight_int):
-            out_record_any = flatmap_function(record_any)
+            out_record_any_list = flatmap_function(record_any)
             #
-            return out_record_any, weight_int
+            return [(out_record_any, weight_int) for out_record_any in out_record_any_list]
         #
         tn = self._flatmap(_flatmap_function, **kwargs)
         tn._name_str = "flatmap_op"
@@ -259,25 +318,6 @@ class TopologyNode:
             tn._output_nodeId = integrate_nodeId
         #
         tn = TopologyNode("union_op", {self, other_tn}, _build_function, **kwargs)
-        #
-        return tn
-
-    def add(self, other_tn, **kwargs):
-        def _build_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
-            #
-            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
-            lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
-            #
-            tn._output_nodeId = lift2_add_nodeId
-        #
-        tn = TopologyNode("add_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
 
@@ -507,51 +547,7 @@ class TopologyNode:
         return tn
 
     ###
-    # Util operators
-    ###
-
-    def from_value(self, **kwargs):
-        tn = self.map(lambda x: x["value"], **kwargs)
-        tn._name_str = "from_value_op"
-        #
-        return tn
-
-    def to_value(self, **kwargs):
-        tn = self.map(lambda x: {"value": x}, **kwargs)
-        tn._name_str = "to_value_op"
-        #
-        return tn
-
-    def peek(self, description_str=None, peek_function=None, **kwargs):
-        def map_function(record_any):
-            peek_function(record_any)
-            #
-            return record_any
-        #
-        if peek_function is None:
-            peek_function = lambda x: print(x) if description_str is None else print(f"{description_str}: {x}")
-        #
-        tn = self.map(map_function, **kwargs)
-        tn._name_str = "peek_op"
-        #
-        return tn
-
-    def _peek(self, description_str=None, _peek_function=None, **kwargs):
-        def _map_function(record_any, weight_int):
-            _peek_function(record_any, weight_int)
-            #
-            return record_any, weight_int
-        #
-        if _peek_function is None:
-            _peek_function = lambda x, y: print((x, y)) if description_str is None else print(f"{description_str}: {(x, y)}")
-        #
-        tn = self._map(_map_function, **kwargs)
-        tn._name_str = "_peek_op"
-        #
-        return tn
-
-    ###
-    # Time windows
+    # Expiration
     ###
 
     def expire(self, get_time_function, get_expiry_function, out_function=lambda x: x[0], **kwargs):
@@ -565,7 +561,7 @@ class TopologyNode:
         #
         added_input_with_expiry_tn = (
             input_with_expiry_tn
-            .add(expire_source_tn)
+            ._add(expire_source_tn)
         )
         #
         input_now__tn = (
@@ -581,13 +577,13 @@ class TopologyNode:
                 lambda l, r: r > l[1],
                 lambda l, _: l)
             ._filter(lambda _, w: w > 0)
-            .neg()
+            ._neg()
             ._delay()
         )
         #
         expire_tn = (
             join_window_end_tn
-            .add(input_with_expiry_tn)
+            ._add(input_with_expiry_tn)
             .map(out_function)
         )
         #
