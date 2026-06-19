@@ -787,6 +787,17 @@ class TopologyNode:
 
     #
 
+    def get_id(self):
+        return self._id_str
+    
+    def get_name(self):
+        return self._name_str
+
+    def get_daughters(self):
+        return self._daughter_tn_set
+
+    #
+
     def get_node_by_id(self, id_str):
         tn_set = self._filter_td(lambda tn: tn._id_str == id_str)
         #
