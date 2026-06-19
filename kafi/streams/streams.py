@@ -2,6 +2,7 @@ import asyncio
 import cloudpickle
 import hashlib
 import threading
+import zlib
 
 from kafi.helpers import get_millis, copy_kwargs, compress, decompress
 
@@ -54,23 +55,20 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
     checkpoint_interval_float = kwargs["checkpoint_interval"] if "checkpoint_interval" in kwargs else 1.0
     initial_time_int = get_millis()
     #
-    def get_latest_offset(message_dict_list, partition_int):
-        """Helper to extract the highest consumer offset seen in a batch for a given partition."""
-        return next((message_dict["offset"] for message_dict in reversed(message_dict_list) if message_dict["partition"] == partition_int), None)
-    #
-    last_checkpoint_hash_str_list = [None]
+    last_checkpoint_hash_int = None
     
     def save_checkpoint():
         """
         Serializes and dumps the root TopologyNode object into a compacted storage system.
         Skips writing if the hash matches the previous state to reduce unneeded I/O ops.
         """
+        nonlocal last_checkpoint_hash_int
         uncompressed_root_tn_bytes = cloudpickle.dumps(root_tn)
         compressed_root_tn_bytes = compress(uncompressed_root_tn_bytes)
-        root_tn_hash_str = hashlib.md5(compressed_root_tn_bytes).hexdigest()
+        root_tn_hash_int = zlib.adler32(compressed_root_tn_bytes)
         #
-        if root_tn_hash_str != last_checkpoint_hash_str_list[0]:
-            last_checkpoint_hash_str_list[0] = root_tn_hash_str
+        if root_tn_hash_int != last_checkpoint_hash_int:
+            last_checkpoint_hash_int = root_tn_hash_int
             #
             print("Saving checkpoint...")
             producer = checkpoint_storage.producer(checkpoint_topic_str, type="bytes", chunk_size_bytes=1000, **checkpoint_kwargs)
@@ -82,12 +80,13 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
         """
         Recovers the root TopologyNode object from the latest checkpoint.
         """
+        nonlocal last_checkpoint_hash_int
         message_dict_list = checkpoint_storage.compact(checkpoint_topic_str, value_type="bytes", dechunk=True, **checkpoint_kwargs)
         if len(message_dict_list) > 0:
             compressed_root_tn_bytes = message_dict_list[0]["value"]
             #
-            root_tn_hash_str = hashlib.md5(compressed_root_tn_bytes).hexdigest()
-            last_checkpoint_hash_str_list[0] = root_tn_hash_str
+            root_tn_hash_int = zlib.adler32(compressed_root_tn_bytes)
+            last_checkpoint_hash_int = root_tn_hash_int
             #
             print("Loading checkpoint...")
             uncompressed_root_tn_bytes = decompress(compressed_root_tn_bytes)
@@ -108,22 +107,6 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
         #
         # Offload potentially blocking state deserialization to a threadpool worker
         root_tn = await asyncio.to_thread(load_checkpoint)
-    #
-    # Map source topics to the source TopologyNode objects.
-    storage_source_tn_queue_tuple_list = []
-    for storage, topic_str in storage_topic_str_tuple_list:
-        source_tn = root_tn.get_node_by_name(topic_str)
-        #
-        queue = asyncio.Queue()
-        storage_source_tn_queue_tuple_list.append((storage, source_tn, queue))
-    #
-    # Lookup and cache the partition metadata layouts per source topic.
-    storage_id_topic_str_tuple_partitions_int_dict = {}
-    for storage, topic_str in storage_topic_str_tuple_list:
-        partitions_int = storage.partitions(topic_str)[topic_str]
-        #
-        storage_id = storage.get_id()
-        storage_id_topic_str_tuple_partitions_int_dict[(storage_id, topic_str)] = partitions_int
     #
     # Instantiate synchronous consumer clients for each source topic.
     storage_id_topic_str_tuple_consumer_dict = {}
@@ -168,18 +151,14 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
                 try:
                     # Wait for items to arrive. 1.0s timeout ensures periodic exit check and timed commits.
                     storage_id_topic_str_tuple, in_message_dict_list = await asyncio.wait_for(shared_queue.get(), timeout=1.0)
-                    #
-                    partitions_int = storage_id_topic_str_tuple_partitions_int_dict[storage_id_topic_str_tuple]
-                    #
                     # Track committed consumer offsets for transactional commit downstream.
                     if storage_id_topic_str_tuple not in storage_id_topic_str_tuple_offsets_dict_dict:
                         storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple] = {}
-                        
-                    # Tracking high-water-mark consumer offsets in-flight for downstream transactional commit stages
-                    for partition_int in range(partitions_int):
-                        offset_int = get_latest_offset(in_message_dict_list, partition_int)
-                        if offset_int is not None:
-                            storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int
+                    # Track last consumer offset for downstream transactional commit.
+                    for message_dict in reversed(in_message_dict_list):
+                        partition_int = message_dict["partition"]
+                        if partition_int not in storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple]:
+                            storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = message_dict["offset"]
                     # Push next list of messages consumed from one of the source topics.
                     root_tn.push(storage_id_topic_str_tuple[1], in_message_dict_list)
                     # Process next step and return the latest output batch.
