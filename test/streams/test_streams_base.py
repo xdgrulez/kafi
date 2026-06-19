@@ -11,7 +11,7 @@ from kafi.streams.streams import run_streams
 
 class TestStreamsBase(TestKafkaBase):
     def process(self, source_storage_topic_str_tuple_list, sink_storage, sink_topic_str, checkpoint_storage, checkpoint_topic, root_tn, **kwargs):
-        self.stop_function = run_streams(source_storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, checkpoint_storage, checkpoint_topic, **kwargs)
+        self.stop_function = run_streams(source_storage_topic_str_tuple_list, [(root_tn, sink_storage, sink_topic_str)], checkpoint_storage, checkpoint_topic, **kwargs)
 
     #
 

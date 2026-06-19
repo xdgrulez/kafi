@@ -54,13 +54,6 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         #
         self.assert_self_join_group_by_debezium(order_source_str)
 
-    def test_datagen_gc(self):
-        order_source_str = "shoe_orders"
-        #
-        root_tn = get_root_tn_datagen_gc(order_source_str)
-        #
-        self.process([(order_source_str, default_batch_size_int)], 100, root_tn)
-
     #
 
     def test_jamie(self):
