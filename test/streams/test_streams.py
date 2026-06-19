@@ -143,11 +143,11 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         sink_storage = source_storage
         sink_topic_str = "wc"
         #
-        snapshot_storage = source_storage
-        snapshot_topic_str = "wc_snapshot"
+        checkpoint_storage = source_storage
+        checkpoint_topic_str = "wc_checkpoint"
         #
         kwargs = {f"{line_source_str}_value_type": "str"}
-        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_storage, sink_topic_str, snapshot_storage, snapshot_topic_str, recreate_boolean=recreate_boolean, **kwargs)
+        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_storage, sink_topic_str, checkpoint_storage, checkpoint_topic_str, recreate_boolean=recreate_boolean, **kwargs)
         #
         self.assert_wc(line_source_str)
 

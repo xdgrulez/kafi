@@ -10,8 +10,8 @@ from kafi.streams.streams import run_streams
 #
 
 class TestStreamsBase(TestKafkaBase):
-    def process(self, source_storage_topic_str_tuple_list, sink_storage, sink_topic_str, snapshot_storage, snapshot_topic, root_tn, **kwargs):
-        self.stop_function = run_streams(source_storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage, snapshot_topic, **kwargs)
+    def process(self, source_storage_topic_str_tuple_list, sink_storage, sink_topic_str, checkpoint_storage, checkpoint_topic, root_tn, **kwargs):
+        self.stop_function = run_streams(source_storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, checkpoint_storage, checkpoint_topic, **kwargs)
 
     #
 
@@ -29,7 +29,7 @@ class TestStreamsBase(TestKafkaBase):
 
     #
     
-    def go(self, root_tn, source_storage_topic_str_batch_size_int_tuple_list, steps_int, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic_str=None, recreate_boolean=True, **kwargs):
+    def go(self, root_tn, source_storage_topic_str_batch_size_int_tuple_list, steps_int, sink_storage, sink_topic_str, checkpoint_storage=None, checkpoint_topic_str=None, recreate_boolean=True, **kwargs):
         group_str = kwargs["group"] if "group" in kwargs else f"test_{get_millis()}"
         kwargs["group"] = group_str
         #
@@ -54,15 +54,15 @@ class TestStreamsBase(TestKafkaBase):
                     storage.delete_groups(group_str)
             #
             sink_storage.recreate(sink_topic_str)
-            if snapshot_storage is not None:
-                snapshot_storage.recreate(snapshot_topic_str)
+            if checkpoint_storage is not None:
+                checkpoint_storage.recreate(checkpoint_topic_str)
         #
         for _, topic_str, _ in source_storage_topic_str_batch_size_int_tuple_list:
             self.init_generate(topic_str)
         #
         thread1 = threading.Thread(target=self.produce, args=(source_storage_topic_str_batch_size_int_tuple_list, steps_int), kwargs=kwargs)
         #
-        thread2 = threading.Thread(target=self.process, args=(source_storage_topic_str_tuple_list, sink_storage, sink_topic_str, snapshot_storage, snapshot_topic_str, root_tn), kwargs=kwargs)
+        thread2 = threading.Thread(target=self.process, args=(source_storage_topic_str_tuple_list, sink_storage, sink_topic_str, checkpoint_storage, checkpoint_topic_str, root_tn), kwargs=kwargs)
         #
         thread1.start()
         thread2.start()

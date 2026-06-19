@@ -12,6 +12,12 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 import sys
 import time
+import zstandard as zstd
+
+#
+
+zstdCompressor = zstd.ZstdCompressor(level=3)
+zstdDecompressor = zstd.ZstdDecompressor()
 
 # Constants
 
@@ -353,22 +359,6 @@ def set_value(d, key_str_list, any):
         d = d[key]
     d[key_str_list[-1]] = any
 
-
-# def get_value_jsonpath(value_dict, jsonpath_str):
-#     child = jsonpath_ng.parse(jsonpath_str)
-#     datumInContextList = child.find(value_dict)
-#     if len(datumInContextList) == 1:
-#         return datumInContextList[0].value
-#     elif len(datumInContextList) == 0:
-#         raise Exception(f"Could not find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict}")
-#     else:
-#         raise Exception(f"Could not unambiguously find a value with JSONPath expression {jsonpath_str} in dictionary {value_dict} (found: {[datumInContext.value for datumInContext in datumInContextList]})")
-
-# def set_value_jsonpath(value_dict, jsonpath_str, any):
-#     child = jsonpath_ng.parse(jsonpath_str)
-#     child.update_or_create(value_dict, any)
-
-
 # Partitioners
 
 def default_partitioner(message_dict, counter_int, partitions_int, projection_function=lambda x: x["key"]):
@@ -439,3 +429,10 @@ def copy_kwargs(name_str, **kwargs):
         copied_kwargs["value_schema_id"] = kwargs[f"{name_str}_value_schema_id"]
     #
     return copied_kwargs
+
+
+def compress(uncompressed_bytes):
+    return zstdCompressor.compress(uncompressed_bytes)
+
+def decompress(compressed_bytes):
+    return zstdDecompressor.decompress(compressed_bytes)

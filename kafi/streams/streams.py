@@ -3,88 +3,113 @@ import cloudpickle
 import hashlib
 import threading
 
-from kafi.helpers import get_millis, copy_kwargs
+from kafi.helpers import get_millis, copy_kwargs, compress, decompress
 
-#
 
-def run_streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic=None, **kwargs):
-        def _run(stop_thread):
-            asyncio.run(streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage=snapshot_storage, snapshot_topic_str=snapshot_topic, stop_thread_event=stop_thread, **kwargs))
-        #
-        def _stop():
-            stop_thread_event.set()
-            thread.join()
-        #
-        stop_thread_event = threading.Event()
-        thread = threading.Thread(target=_run, args=[stop_thread_event])
-        thread.daemon = True
-        thread.start()
-        #
-        return _stop
+def run_streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, checkpoint_storage=None, checkpoint_topic=None, **kwargs):
+    """
+    Entry point to run the stream processor running in a background daemon thread.
+    Returns a stop function to handle a clean shutdown sequence.
+    """
+    def _run(stop_thread):
+        # Initializes and runs the main async entry point within the thread's independent event loop.
+        asyncio.run(streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, checkpoint_storage=checkpoint_storage, checkpoint_topic_str=checkpoint_topic, stop_thread_event=stop_thread, **kwargs))
+    #
+    def _stop():
+        # Signals the async loops to stop and blocks until the worker thread exits cleanly.
+        stop_thread_event.set()
+        thread.join()
+    #
+    stop_thread_event = threading.Event()
+    thread = threading.Thread(target=_run, args=[stop_thread_event])
+    thread.daemon = True
+    thread.start()
+    #
+    return _stop
 
-async def streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, snapshot_storage=None, snapshot_topic_str=None, stop_thread_event=None, **kwargs):
+
+async def streams(storage_topic_str_tuple_list, root_tn, sink_storage, sink_topic_str, checkpoint_storage=None, checkpoint_topic_str=None, stop_thread_event=None, **kwargs):
+    """
+    Provisions the target sink producer and passes down its callbacks.
+    """
     sink_kwargs = copy_kwargs("sink", **kwargs)
     producer = sink_storage.producer(sink_topic_str, **sink_kwargs)
     #
     def sink_function(message_dict_list):
+        # Synchronous callback injected into the stream processing logic to pipe outputs to Kafka
         producer.produce_list(message_dict_list)
     #
     def finally_function():
+        # Cleanup routine triggered on stream shutdown to safely flush and release the producer
         producer.close()
     #
-    await streams_function(storage_topic_str_tuple_list, root_tn, sink_function, finally_function, snapshot_storage, snapshot_topic_str, stop_thread_event, **kwargs)
+    await streams_function(storage_topic_str_tuple_list, root_tn, sink_function, finally_function, checkpoint_storage, checkpoint_topic_str, stop_thread_event, **kwargs)
 
-async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_function, finally_function, snapshot_storage=None, snapshot_topic_str=None, stop_thread_event=None, **kwargs):
-    consume_sleep_float = kwargs["consume_sleep"] if "consume_sleep" in kwargs else 0.1
-    process_sleep_float = kwargs["process_sleep"] if "process_sleep" in kwargs else 0.1
-    snapshot_interval_float = kwargs["snapshot_interval"] if "snapshot_interval" in kwargs else 1.0
-    #
+
+async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_function, finally_function, checkpoint_storage=None, checkpoint_topic_str=None, stop_thread_event=None, **kwargs):
+    """
+    The core orchestration layer. Manages state loading, instantiates consumers, 
+    and handles concurrent data ingestion, stream processing, and fault-tolerant checkpointing.
+    """
+    checkpoint_interval_float = kwargs["checkpoint_interval"] if "checkpoint_interval" in kwargs else 1.0
     initial_time_int = get_millis()
     #
     def get_latest_offset(message_dict_list, partition_int):
+        """Helper to extract the highest consumer offset seen in a batch for a given partition."""
         return next((message_dict["offset"] for message_dict in reversed(message_dict_list) if message_dict["partition"] == partition_int), None)
     #
-    last_snapshot_hash_str_list = [None]
-    #
-    def save_snapshot():
-        root_tn_bytes = cloudpickle.dumps(root_tn)
-        root_tn_hash_str = hashlib.md5(root_tn_bytes).hexdigest()
+    last_checkpoint_hash_str_list = [None]
+    
+    def save_checkpoint():
+        """
+        Serializes and dumps the root TopologyNode object into a compacted storage system.
+        Skips writing if the hash matches the previous state to reduce unneeded I/O ops.
+        """
+        uncompressed_root_tn_bytes = cloudpickle.dumps(root_tn)
+        compressed_root_tn_bytes = compress(uncompressed_root_tn_bytes)
+        root_tn_hash_str = hashlib.md5(compressed_root_tn_bytes).hexdigest()
         #
-        if root_tn_hash_str != last_snapshot_hash_str_list[0]:
-            last_snapshot_hash_str_list[0] = root_tn_hash_str
+        if root_tn_hash_str != last_checkpoint_hash_str_list[0]:
+            last_checkpoint_hash_str_list[0] = root_tn_hash_str
             #
-            print("Saving snapshot...")
-            producer = snapshot_storage.producer(snapshot_topic_str, type="bytes", chunk_size_bytes=1000, **snapshot_kwargs)
-            producer.produce(root_tn_bytes, key=root_tn._id_str)
+            print("Saving checkpoint...")
+            producer = checkpoint_storage.producer(checkpoint_topic_str, type="bytes", chunk_size_bytes=1000, **checkpoint_kwargs)
+            producer.produce(compressed_root_tn_bytes, key=root_tn._id_str)
             producer.close()
-            print("...saving snapshot done.")
+            print("...saving checkpoint done.")
 
-    #
-    def load_snapshot():
-        message_dict_list = snapshot_storage.compact(snapshot_topic_str, value_type="bytes", dechunk=True, **snapshot_kwargs)
+    def load_checkpoint():
+        """
+        Recovers the root TopologyNode object from the latest checkpoint.
+        """
+        message_dict_list = checkpoint_storage.compact(checkpoint_topic_str, value_type="bytes", dechunk=True, **checkpoint_kwargs)
         if len(message_dict_list) > 0:
-            root_tn_bytes = message_dict_list[0]["value"]
+            compressed_root_tn_bytes = message_dict_list[0]["value"]
             #
-            root_tn_hash_str = hashlib.md5(root_tn_bytes).hexdigest()
-            last_snapshot_hash_str_list[0] = root_tn_hash_str
+            root_tn_hash_str = hashlib.md5(compressed_root_tn_bytes).hexdigest()
+            last_checkpoint_hash_str_list[0] = root_tn_hash_str
             #
-            print("Loading snaphot...")
-            root_tn_ = cloudpickle.loads(root_tn_bytes)
-            print("...loading snapshot done.")
+            print("Loading checkpoint...")
+            uncompressed_root_tn_bytes = decompress(compressed_root_tn_bytes)
+            root_tn_ = cloudpickle.loads(uncompressed_root_tn_bytes)
+            print("...loading checkpoint done.")
             return root_tn_
         else:
             return root_tn
     #
-    if snapshot_storage is not None:
+    # Cold start initialization: Recover root TopologyNode object if a checkpoint backend is provided.
+    if checkpoint_storage is not None:
         initial_time_int = get_millis()
         #
-        snapshot_kwargs = copy_kwargs("snapshot", **kwargs)
+        checkpoint_kwargs = copy_kwargs("checkpoint", **kwargs)
         #
-        if not snapshot_storage.exists(snapshot_topic_str):
-            snapshot_storage.create(snapshot_topic_str)
+        if not checkpoint_storage.exists(checkpoint_topic_str):
+            checkpoint_storage.create(checkpoint_topic_str)
         #
-        root_tn = load_snapshot()
+        # Offload potentially blocking state deserialization to a threadpool worker
+        root_tn = await asyncio.to_thread(load_checkpoint)
     #
+    # Map source topics to the source TopologyNode objects.
     storage_source_tn_queue_tuple_list = []
     for storage, topic_str in storage_topic_str_tuple_list:
         source_tn = root_tn.get_node_by_name(topic_str)
@@ -92,6 +117,7 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
         queue = asyncio.Queue()
         storage_source_tn_queue_tuple_list.append((storage, source_tn, queue))
     #
+    # Lookup and cache the partition metadata layouts per source topic.
     storage_id_topic_str_tuple_partitions_int_dict = {}
     for storage, topic_str in storage_topic_str_tuple_list:
         partitions_int = storage.partitions(topic_str)[topic_str]
@@ -99,6 +125,7 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
         storage_id = storage.get_id()
         storage_id_topic_str_tuple_partitions_int_dict[(storage_id, topic_str)] = partitions_int
     #
+    # Instantiate synchronous consumer clients for each source topic.
     storage_id_topic_str_tuple_consumer_dict = {}
     for storage, topic_str in storage_topic_str_tuple_list:
         source_kwargs = copy_kwargs(topic_str, **kwargs)
@@ -106,69 +133,97 @@ async def streams_function(storage_topic_str_tuple_list, root_tn, foreach_functi
         #
         storage_id = storage.get_id()
         storage_id_topic_str_tuple_consumer_dict[(storage_id, topic_str)] = consumer
-    #
-    async def consumer_task(consumer, queue):
+
+    # Shared asynchronous queue: all consumer tasks feed into this single multi-producer structure.
+    shared_queue = asyncio.Queue()
+
+    async def consumer_task(storage, source_tn, consumer, queue):
+        """
+        Background task running concurrently per topic stream.
+        Polls Kafka via native blocking calls in dedicated threads and moves batches to async loop space.
+        """
         try:
-            while True and (stop_thread_event is None or not stop_thread_event.is_set()):
-                message_dict_list = consumer.consume()
-                if message_dict_list != []:
-                    await queue.put(message_dict_list)
-                await asyncio.sleep(consume_sleep_float)
-        except KeyboardInterrupt:
-            pass
-        finally:
-            consumer.close()
-    #
-    async def process():
-        try:
-            while True and (stop_thread_event is None or not stop_thread_event.is_set()):
-                storage_id_topic_str_tuple_offsets_dict_dict = {}
-                sent_bool = False
-                for storage, source_tn, queue in storage_source_tn_queue_tuple_list:
-                    if not queue.empty():
-                        message_dict_list = await queue.get()
-                        #
-                        topic_str = source_tn._name_str
-                        storage_id_topic_str_tuple = (storage.get_id(), topic_str)
-                        partitions_int = storage_id_topic_str_tuple_partitions_int_dict[storage_id_topic_str_tuple]
-                        storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple] = {}
-                        for partition_int in range(partitions_int):
-                            offset_int = get_latest_offset(message_dict_list, partition_int)
-                            # By convention, committed offsets reflect the next message to be consumed, not the last message consumed. (from https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html)
-                            if offset_int is not None:
-                                # storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int + 1
-                                storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int
-                        #
-                        root_tn.push(source_tn._name_str, message_dict_list)
-                        #
-                        sent_bool = True
-                #
-                if sent_bool:
-                    message_dict_list = root_tn.latest()
-                    #
-                    foreach_function(message_dict_list)
-                #
-                time_int = get_millis()
-                if snapshot_storage is not None and (time_int - initial_time_int) > snapshot_interval_float * 1000:
-                    save_snapshot()
-                    #
-                    for storage_id_topic_str_tuple, offsets_dict in storage_id_topic_str_tuple_offsets_dict_dict.items():
-                        consumer = storage_id_topic_str_tuple_consumer_dict[storage_id_topic_str_tuple]
-                        consumer.commit(offsets_dict)
-                        print(f"Committed {offsets_dict} for topic {storage_id_topic_str_tuple[1]}.")
-                #
-                await asyncio.sleep(process_sleep_float)
-        except KeyboardInterrupt:
-            pass
-        finally:
-            finally_function()
-    #
-    async with asyncio.TaskGroup() as taskGroup:
-        for storage, source_tn, queue in storage_source_tn_queue_tuple_list:
             storage_id = storage.get_id()
             topic_str = source_tn._name_str
-            consumer = storage_id_topic_str_tuple_consumer_dict[(storage_id, topic_str)]
+            storage_id_topic_str_tuple = (storage_id, topic_str)
+            #            
+            while True and (stop_thread_event is None or not stop_thread_event.is_set()):
+                # Run the blocking synchronous fetch inside an OS thread pool to protect the event loop.
+                message_dict_list = await asyncio.to_thread(consumer.consume)
+                if message_dict_list:
+                    # Enqueue data tagged with storage_id/topic_str pairs.
+                    await queue.put((storage_id_topic_str_tuple, message_dict_list))
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            # Note: Clean-up of client objects omitted here to avoid breaking during inflight processing pipeline drops.
+            pass
+
+    async def process():
+        """
+        Processing loop. Consumes from the async shared queue, processes the deltas, and manages atomic checkpointing.
+        """
+        nonlocal initial_time_int
+        storage_id_topic_str_tuple_offsets_dict_dict = {}
+        try:
+            while True and (stop_thread_event is None or not stop_thread_event.is_set()):
+                try:
+                    # Wait for items to arrive. 1.0s timeout ensures periodic exit check and timed commits.
+                    storage_id_topic_str_tuple, in_message_dict_list = await asyncio.wait_for(shared_queue.get(), timeout=1.0)
+                    #
+                    partitions_int = storage_id_topic_str_tuple_partitions_int_dict[storage_id_topic_str_tuple]
+                    #
+                    # Track committed consumer offsets for transactional commit downstream.
+                    if storage_id_topic_str_tuple not in storage_id_topic_str_tuple_offsets_dict_dict:
+                        storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple] = {}
+                        
+                    # Tracking high-water-mark consumer offsets in-flight for downstream transactional commit stages
+                    for partition_int in range(partitions_int):
+                        offset_int = get_latest_offset(in_message_dict_list, partition_int)
+                        if offset_int is not None:
+                            storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int
+                    # Push next list of messages consumed from one of the source topics.
+                    root_tn.push(storage_id_topic_str_tuple[1], in_message_dict_list)
+                    # Process next step and return the latest output batch.
+                    out_message_dict_list = root_tn.latest()
+                    # Execute foreach_function callback (=produce/call REST API etc.) in a background thread
+                    # to safeguard against long-running processing stalls.
+                    await asyncio.to_thread(foreach_function, out_message_dict_list)
+                except asyncio.TimeoutError:
+                    # Catch queue timeout bounds quietly to cycle back into processing/eval state checks
+                    pass
+                # Checkpoint interval logic: ensures atomic dual-writes of state checkpoints and offsets
+                time_int = get_millis()
+                if checkpoint_storage is not None and (time_int - initial_time_int) > checkpoint_interval_float * 1000:
+                    # Phase 1: Save checkpoint.
+                    await asyncio.to_thread(save_checkpoint)
+                    # Phase 2: Commit offsets.
+                    for storage_id_topic_str_tuple, offsets_dict in storage_id_topic_str_tuple_offsets_dict_dict.items():
+                        if offsets_dict:
+                            consumer = storage_id_topic_str_tuple_consumer_dict[storage_id_topic_str_tuple]
+                            consumer.commit(offsets_dict)
+                            print(f"Committed {offsets_dict} for topic {storage_id_topic_str_tuple[1]}.")
+                    #
+                    storage_id_topic_str_tuple_offsets_dict_dict.clear()
+                    initial_time_int = get_millis()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            # Trigger e.g. custom producer flush/closure procedures.
+            finally_function()
+
+    # Run all consumer routines along with the processing loop within a task group.
+    try:
+        async with asyncio.TaskGroup() as taskGroup:
+            for storage, topic_str in storage_topic_str_tuple_list:
+                source_tn = root_tn.get_node_by_name(topic_str)
+                storage_id = storage.get_id()
+                consumer = storage_id_topic_str_tuple_consumer_dict[(storage_id, topic_str)]
+                taskGroup.create_task(consumer_task(storage, source_tn, consumer, shared_queue))
             #
-            taskGroup.create_task(consumer_task(consumer, queue))
-        #
-        taskGroup.create_task(process())
+            taskGroup.create_task(process())
+    finally:
+        # Strict post-termination sequence: close consumer clients only when processing loops have completely stopped
+        for consumer in storage_id_topic_str_tuple_consumer_dict.values():
+            try:
+                consumer.close()
+            except Exception:
+                pass

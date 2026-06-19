@@ -1,5 +1,26 @@
 # other TODOs
 
+async def produce(self, topic, value):
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
+
+    def delivery_callback(err, msg):
+        if err:
+            loop.call_soon_threadsafe(future.set_exception, Exception(err))
+        else:
+            loop.call_soon_threadsafe(future.set_result, msg)
+
+    self._producer.produce(topic, value, on_delivery=delivery_callback)
+    self._producer.poll(0)  # librdkafka queue antriggern
+    return await future
+    
+async def consume(self, n=1, timeout=1.0):
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        self._executor,
+        lambda: self._consumer.consume(n, timeout)
+    )    
+
 KS
 * time windows/waterlines
 
@@ -8,8 +29,6 @@ KS
 * spill to disk (slatedb? python-libs?)
 
 * multicore
-
-* .index, .timeindex für FS
 
 
 
