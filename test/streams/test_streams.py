@@ -28,8 +28,9 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         #
         sink_storage = source_storage
         sink_topic_str = "1_join"
+        sink_root_tn_storage_topic_str_tuple_list = [(root_tn, sink_storage, sink_topic_str)]
         #
-        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_storage, sink_topic_str)
+        self.go(source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_root_tn_storage_topic_str_tuple_list)
 
     def test_datagen_2_joins(self):
         click_source_str = "shoe_clickstream"
@@ -48,8 +49,9 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         #
         sink_storage = source_storage
         sink_topic_str = "2_joins"
+        sink_root_tn_storage_topic_str_tuple_list = [(root_tn, sink_storage, sink_topic_str)]
         #
-        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_storage, sink_topic_str)
+        self.go(source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_root_tn_storage_topic_str_tuple_list)
 
     def test_datagen_3_joins(self):
         click_source_str = "shoe_clickstream"
@@ -70,8 +72,9 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         #
         sink_storage = source_storage
         sink_topic_str = "3_joins"
+        sink_root_tn_storage_topic_str_tuple_list = [(root_tn, sink_storage, sink_topic_str)]
         #
-        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_storage, sink_topic_str)
+        self.go(source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_root_tn_storage_topic_str_tuple_list)
 
     def test_datagen_self_join_group_by(self):
         order_source_str = "shoe_orders"
@@ -86,10 +89,11 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         #
         sink_storage = source_storage
         sink_topic_str = "self_join_group_by"
+        sink_root_tn_storage_topic_str_tuple_list = [(root_tn, sink_storage, sink_topic_str)]
         #
-        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_storage, sink_topic_str)
+        self.go(source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_root_tn_storage_topic_str_tuple_list)
         #
-        self.assert_self_join_group_by(order_source_str)
+        self.assert_self_join_group_by(order_source_str, sink_topic_str)
 
     def test_datagen_self_join_group_by_debezium(self):
         order_source_str = "shoe_orders_debezium"
@@ -104,10 +108,11 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         #
         sink_storage = source_storage
         sink_topic_str = "self_join_group_by_debezium"
+        sink_root_tn_storage_topic_str_tuple_list = [(root_tn, sink_storage, sink_topic_str)]
         #
-        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_storage, sink_topic_str)
+        self.go(source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_root_tn_storage_topic_str_tuple_list)
         #
-        self.assert_self_join_group_by_debezium(order_source_str)
+        self.assert_self_join_group_by_debezium(order_source_str, sink_topic_str)
 
     #
 
@@ -123,10 +128,11 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         #
         sink_storage = source_storage
         sink_topic_str = "total"
+        sink_root_tn_storage_topic_str_tuple_list = [(root_tn, sink_storage, sink_topic_str)]
         #
-        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_storage, sink_topic_str)
+        self.go(source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_root_tn_storage_topic_str_tuple_list)
         #
-        self.assert_jamie()
+        self.assert_jamie(sink_topic_str)
 
     #
 
@@ -142,14 +148,15 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         #
         sink_storage = source_storage
         sink_topic_str = "wc"
+        sink_root_tn_storage_topic_str_tuple_list = [(root_tn, sink_storage, sink_topic_str)]
         #
         checkpoint_storage = source_storage
         checkpoint_topic_str = "wc_checkpoint"
         #
-        kwargs = {f"{line_source_str}_value_type": "str"}
-        self.go(root_tn, source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_storage, sink_topic_str, checkpoint_storage, checkpoint_topic_str, recreate_boolean=recreate_boolean, **kwargs)
+        kwargs = {f"source_{line_source_str}_value_type": "str"}
+        self.go(source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_root_tn_storage_topic_str_tuple_list, checkpoint_storage, checkpoint_topic_str, recreate_boolean=recreate_boolean, **kwargs)
         #
-        self.assert_wc(line_source_str)
+        self.assert_wc(line_source_str, sink_topic_str)
 
     def test_wc_crash(self):
         self.test_wc(False)

@@ -60,6 +60,7 @@ async def streams_function(source_storage_topic_str_tuple_list, sink_root_tn_for
     """
     sink_root_id_str_root_tn_dict = {root_tn.get_id(): root_tn for root_tn, _, _ in sink_root_tn_foreach_function_finally_function_tuple_list}
     sink_root_id_str_list = [root_tn.get_id() for root_tn, _, _ in sink_root_tn_foreach_function_finally_function_tuple_list]
+    checkpoint_key_str = ",".join(sink_root_id_str_list)
     #
     checkpoint_interval_float = kwargs["checkpoint_interval"] if "checkpoint_interval" in kwargs else 1.0
     initial_time_int = get_millis()
@@ -81,12 +82,11 @@ async def streams_function(source_storage_topic_str_tuple_list, sink_root_tn_for
             #
             print("Saving checkpoint...")
             producer = checkpoint_storage.producer(checkpoint_topic_str, type="bytes", chunk_size_bytes=1000, **checkpoint_kwargs)
-            key_str = ",".join(sink_root_id_str_list)
-            producer.produce(compressed_checkpoint_bytes, key=key_str)
+            producer.produce(compressed_checkpoint_bytes, key=checkpoint_key_str)
             producer.close()
             print("...saving checkpoint done.")
 
-    def load_checkpoint():
+    def load_checkpoint(sink_root_id_str_root_tn_dict):
         """
         Recovers the root TopologyNode object from the latest checkpoint.
         """
@@ -116,7 +116,7 @@ async def streams_function(source_storage_topic_str_tuple_list, sink_root_tn_for
             checkpoint_storage.create(checkpoint_topic_str)
         #
         # Offload potentially blocking state deserialization to a threadpool worker
-        sink_root_id_str_root_tn_dict = await asyncio.to_thread(load_checkpoint)
+        sink_root_id_str_root_tn_dict = await asyncio.to_thread(load_checkpoint, (sink_root_id_str_root_tn_dict, ))
     #
     # Instantiate synchronous consumer clients for each source topic.
     source_storage_id_topic_str_tuple_consumer_dict = {}
