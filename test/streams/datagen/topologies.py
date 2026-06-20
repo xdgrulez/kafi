@@ -2,7 +2,7 @@ from kafi.streams.topologynode import TopologyNode as Tn
 
 #
 
-def get_root_tn_datagen_1_join(click_source_str, customer_source_str):
+def get_root_tn_datagen_1_join(click_source_str, customer_source_str, join_1_sink_str):
     click_source_tn = Tn.source(click_source_str)
     customer_source_tn = Tn.source(customer_source_str)
     #
@@ -18,7 +18,7 @@ def get_root_tn_datagen_1_join(click_source_str, customer_source_str):
         .distinct()
     )
     #
-    root_tn = (
+    join_1_tn = (
         click_tn
         .join_equi(
             customer_tn,
@@ -30,11 +30,13 @@ def get_root_tn_datagen_1_join(click_source_str, customer_source_str):
                 "first_name": r["first_name"]}})
     )
     #
+    root_tn = Tn.sink(join_1_sink_str, join_1_tn)
+    #
     root_tn.build()
     #
     return root_tn
 
-def get_root_tn_datagen_2_joins(click_source_str, customer_source_str, product_source_str):
+def get_root_tn_datagen_2_joins(click_source_str, customer_source_str, product_source_str, joins_2_sink_str):
     click_source_tn = Tn.source(click_source_str)
     customer_source_tn = Tn.source(customer_source_str)
     product_source_tn = Tn.source(product_source_str)
@@ -57,7 +59,7 @@ def get_root_tn_datagen_2_joins(click_source_str, customer_source_str, product_s
         .distinct()
     )
     #
-    root_tn = (
+    joins_2_tn = (
         click_tn
         .join_equi(
             customer_tn,
@@ -79,11 +81,13 @@ def get_root_tn_datagen_2_joins(click_source_str, customer_source_str, product_s
                                     "brand": r["brand"]}})
     )
     #
+    root_tn = Tn.sink(joins_2_sink_str, joins_2_tn)
+    #
     root_tn.build()
     #
     return root_tn
 
-def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_source_str, order_source_str):
+def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_source_str, order_source_str, joins_3_sink_str):
     click_source_tn = Tn.source(click_source_str)
     customer_source_tn = Tn.source(customer_source_str)
     product_source_tn = Tn.source(product_source_str)
@@ -113,7 +117,7 @@ def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_s
         .distinct()
     )
     #
-    root_tn = (
+    joins_3_tn = (
         click_tn
         .join_equi(
             order_tn,
@@ -147,11 +151,13 @@ def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_s
                 "order_id": l["order_id"]}})
     )
     #
+    root_tn = Tn.sink(joins_3_sink_str, joins_3_tn)
+    #
     root_tn.build()
     #
     return root_tn
 
-def get_root_tn_datagen_self_join_group_by(order_source_str):
+def get_root_tn_datagen_self_join_group_by(order_source_str, self_join_group_by_sink_str):
     order_source_tn = Tn.source(order_source_str)
     #
     order_tn = (
@@ -161,7 +167,7 @@ def get_root_tn_datagen_self_join_group_by(order_source_str):
         .distinct()
     )
     #
-    root_tn = (
+    self_join_group_by_tn = (
         order_tn
         .join_equi(
             order_tn,
@@ -180,11 +186,13 @@ def get_root_tn_datagen_self_join_group_by(order_source_str):
         .to_value()
     )
     #
+    root_tn = Tn.sink(self_join_group_by_sink_str, self_join_group_by_tn)
+    #
     root_tn.build()
     #
     return root_tn
 
-def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
+def get_root_tn_datagen_self_join_group_by_debezium(order_source_str, self_join_group_by_debezium_sink_str):
     order_source_tn = Tn.source(order_source_str)
     order_source_tn._to_zSet_function = order_source_tn.from_debezium
     #
@@ -195,7 +203,7 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
         .distinct()
     )
     #
-    root_tn = (
+    self_join_group_by_debezium_tn = (
         order_tn
         .join_equi(
             order_tn,
@@ -212,7 +220,40 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str):
         )
         .to_value()
     )
+    #
+    root_tn = Tn.sink(self_join_group_by_debezium_sink_str, self_join_group_by_debezium_tn)
     root_tn._from_zSet_function = root_tn.to_debezium
+    #
+    root_tn.build()
+    #
+    return root_tn
+
+def get_root_tn_datagen_multiple_sinks(customer_source_str, customer_a_h_str, customer_i_q_str, customer_r_z_str):
+    customer_source_tn = Tn.source(customer_source_str)
+    #
+    customer_tn = (
+        customer_source_tn
+        .from_value()
+        .map(lambda x: {"id": x["id"], "last_name": x["last_name"]})
+        .distinct()
+    )
+    #
+    customer_a_h_tn = (
+        customer_tn
+        .filter(lambda x: x["last_name"][0].lower() >= "A".lower() and x["last_name"][0].lower() <= "H".lower())
+    )
+    customer_i_q_tn = (
+        customer_tn
+        .filter(lambda x: x["last_name"][0].lower() >= "I".lower() and x["last_name"][0].lower() <= "Q".lower())
+    )
+    customer_r_z_tn = (
+        customer_tn
+        .filter(lambda x: x["last_name"][0].lower() >= "R".lower() and x["last_name"][0].lower() <= "Z".lower())
+    )
+    #
+    root_tn = Tn.sink((customer_a_h_str, customer_a_h_tn.to_value()),
+                      (customer_i_q_str, customer_i_q_tn.to_value()),
+                      (customer_r_z_str, customer_r_z_tn.to_value()))
     #
     root_tn.build()
     #

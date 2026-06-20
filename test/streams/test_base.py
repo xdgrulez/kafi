@@ -22,7 +22,6 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         #
         self.source_str_input_record_any_list_dict = defaultdict(list)
         self.sink_str_updated_record_any_list_dict = defaultdict(list)
-        self.sink_str_deleted_record_any_list_dict = defaultdict(list)
 
     def tearDown(self):
         print()
@@ -37,18 +36,10 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         print()
         #
         for sink_str, updated_record_any_list in self.sink_str_updated_record_any_list_dict.items():
-            self.print_changes(updated_record_any_list, f"Updates for sink {sink_str}")
-        #
-        print()
-        print("---")
-        print()
-        #
-        for sink_str, deleted_record_any_list in self.sink_str_deleted_record_any_list_dict.items():
-            self.print_changes(deleted_record_any_list, f"Deletes for sink {sink_str}")
-        #
-        print()
-        print("---")
-        print()
+            self.print_changes(updated_record_any_list, f"Updates for sink \"{sink_str}\"")
+            print()
+            print("-")
+            print()
 
     def print_changes(self, changed_record_any_list, changes_str, select_function=lambda x: x["value"]):
         changed_packed_record_any_list = [default_pack_function(select_function(record_any)) for record_any in changed_record_any_list]
@@ -71,7 +62,7 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
             for changed_packed_record_any in changed_packed_record_any_list:
                 print(default_unpack_function(changed_packed_record_any))
 
-    def assert_self_join_group_by(self, order_source_str, sink_str):
+    def assert_self_join_group_by(self, order_source_str, self_join_group_by_sink_str):
         print("Asserting self_join_group_by...")
         #
         message_dict_list = self.source_str_input_record_any_list_dict[order_source_str]
@@ -86,11 +77,11 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         #
         json_str_set1 = set([json.dumps({"product_id_1": product_id_str_product_id_str_tuple[0], "product_id_2": product_id_str_product_id_str_tuple[1], "cross_purchases": len(customer_id_set)}) for product_id_str_product_id_str_tuple, customer_id_set in product_id_str_product_id_str_tuple_customer_id_set_dict.items()])
         #
-        updated_record_any_list = self.sink_str_updated_record_any_list_dict[sink_str]
+        updated_record_any_list = self.sink_str_updated_record_any_list_dict[self_join_group_by_sink_str]
         json_str_set2 = set([json.dumps(message_dict["value"]) for message_dict in updated_record_any_list])
         self.assertTrue(json_str_set1.issubset(json_str_set2))
     
-    def assert_self_join_group_by_debezium(self, order_source_str, sink_str):
+    def assert_self_join_group_by_debezium(self, order_source_str, self_join_group_by_debezium_sink_str):
         print("Asserting self_join_group_by_debezium...")
         #
         message_dict_list = self.source_str_input_record_any_list_dict[order_source_str]
@@ -107,7 +98,7 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         #
         json_str_set1 = set([json.dumps({"product_id_1": product_id_str_product_id_str_tuple[0], "product_id_2": product_id_str_product_id_str_tuple[1], "cross_purchases": len(customer_id_set)}) for product_id_str_product_id_str_tuple, customer_id_set in product_id_str_product_id_str_tuple_customer_id_set_dict.items()])
         #
-        updated_record_any_list = self.sink_str_updated_record_any_list_dict[sink_str]
+        updated_record_any_list = self.sink_str_updated_record_any_list_dict[self_join_group_by_debezium_sink_str]
         created_value_dict_list1 = [message_dict["value"]["after"] for message_dict in updated_record_any_list if message_dict["value"]["op"] == "c"]
         deleted_value_dict_list1 = [message_dict["value"]["before"] for message_dict in updated_record_any_list if message_dict["value"]["op"] == "d"]
         diff_value_dict_list1 = [value_dict for value_dict in created_value_dict_list1 if value_dict not in deleted_value_dict_list1]

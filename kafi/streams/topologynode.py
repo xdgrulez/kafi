@@ -19,6 +19,7 @@ from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
 
 import copy, uuid
+from collections import defaultdict
 
 import msgpack
 
@@ -45,8 +46,9 @@ class TopologyNode:
         self._to_zSet_function = kwargs["to_zSet_function"] if "to_zSet_function" in kwargs else self.from_records
         self._from_zSet_function = kwargs["from_zSet_function"] if "from_zSet_function" in kwargs else self.to_records
         #
-        self._join_window_end_tn = None
-
+        self._expired_tn = None
+        #
+        self._sink_str_list = None
 
     ###
     # DBSP base operators
@@ -97,25 +99,6 @@ class TopologyNode:
             tn._output_nodeId = integrate_nodeId
         #
         tn = TopologyNode("_delay_op", {self}, _build_function, **kwargs)
-        #
-        return tn
-
-    def _add(self, other_tn, **kwargs):
-        def _build_function(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
-            #
-            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
-            lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
-            #
-            tn._output_nodeId = lift2_add_nodeId
-        #
-        tn = TopologyNode("add_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
 
@@ -547,6 +530,29 @@ class TopologyNode:
         return tn
 
     ###
+    # Merge
+    ###
+
+    def merge(self, other_tn, **kwargs):
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            l_input_nodeId = self._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
+            #
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
+            #
+            tn._output_nodeId = lift2_add_nodeId
+        #
+        tn = TopologyNode("merge_op", {self, other_tn}, _build_function, **kwargs)
+        #
+        return tn
+
+    ###
     # Expiration
     ###
 
@@ -561,7 +567,7 @@ class TopologyNode:
         #
         added_input_with_expiry_tn = (
             input_with_expiry_tn
-            ._add(expire_source_tn)
+            .merge(expire_source_tn)
         )
         #
         input_now__tn = (
@@ -571,7 +577,7 @@ class TopologyNode:
                  lambda x: x)
         )
         #
-        join_window_end_tn = (
+        expired_tn = (
             added_input_with_expiry_tn
             .join(input_now__tn,
                 lambda l, r: r > l[1],
@@ -582,14 +588,14 @@ class TopologyNode:
         )
         #
         expire_tn = (
-            join_window_end_tn
-            ._add(input_with_expiry_tn)
+            expired_tn
+            .merge(input_with_expiry_tn)
             .map(out_function)
         )
         #
         expire_source_tn.to_zSet(TopologyNode._from_records)
-        join_window_end_tn.from_zSet(TopologyNode._to_records)
-        expire_source_tn._join_window_end_tn = join_window_end_tn
+        expired_tn.from_zSet(TopologyNode._to_records)
+        expire_source_tn._expired_tn = expired_tn
         #
         return expire_tn
 
@@ -617,6 +623,27 @@ class TopologyNode:
         tn = TopologyNode(source_str, {}, _build_function, **kwargs)
         #
         return tn
+
+    @staticmethod
+    def sink(*sink_str_sink_root_tn_tuple_list):
+        if isinstance(sink_str_sink_root_tn_tuple_list, tuple) and len(sink_str_sink_root_tn_tuple_list) == 2:
+            sink_str_sink_root_tn_tuple_list = [(sink_str_sink_root_tn_tuple_list[0], sink_str_sink_root_tn_tuple_list[1])]
+        #
+        head_sink_str_sink_root_tn_tuple, *tail_sink_str_sink_root_tn_tuple_list = sink_str_sink_root_tn_tuple_list
+        #
+        head_sink_str, head_sink_root_tn = head_sink_str_sink_root_tn_tuple
+        root_tn = head_sink_root_tn.map(lambda x: (head_sink_str, x))
+        # We need this little factory to avoid unwanted variable shadowing for sink_str in the loop below.
+        def get_map_function(sink_str):
+            return lambda x: (sink_str, x)
+        #
+        for sink_str, sink_root_tn in tail_sink_str_sink_root_tn_tuple_list:
+            root_tn = root_tn.merge(sink_root_tn.map(get_map_function(sink_str)))
+        #
+        sink_str_list = [sink_str for sink_str, _ in sink_str_sink_root_tn_tuple_list]
+        root_tn._sink_str_list = sink_str_list 
+        #
+        return root_tn
 
     #
 
@@ -646,7 +673,7 @@ class TopologyNode:
         #
         for source_str, source_tn in source_str_source_tn_dict.items():
             if source_str.startswith("expire_"):
-                input_any_list = source_tn._join_window_end_tn.latest()
+                input_any_list = source_tn._expired_tn.latest()
             else:
                 input_any_list = source_str_input_any_list_dict.get(source_str, [])
             #
@@ -696,40 +723,41 @@ class TopologyNode:
         if gc_boolean:
             self._evaluator.compact()
         #
-        output_list = self._from_zSet_function(zSet, self._unpack_function)
+        unpacked_zSet = [(self._unpack_function(packed_record_any), weight_int) for packed_record_any, weight_int in zSet.items()]
         #
-        return output_list
+        if self._sink_str_list is None:
+            output_any = self._from_zSet_function(unpacked_zSet)
+        else:
+            sink_str_unpacked_zSet_dict = defaultdict(list)
+            for (sink_str, unpacked_record_any), weight_int in unpacked_zSet:
+                sink_str_unpacked_zSet_dict[sink_str].append((unpacked_record_any, weight_int))
+            #
+            output_any = {sink_str: self._from_zSet_function(unpacked_zSet) for sink_str, unpacked_zSet in sink_str_unpacked_zSet_dict.items()} 
+        #
+        return output_any
      
     def from_zSet(self, from_zSet_function):
         self._from_zSet_function = from_zSet_function
             
+    @staticmethod
+    def _to_records(unpacked_zSet):
+        return unpacked_zSet
 
     @staticmethod
-    def _to_records(zSet, unpack_function):
-        record_any_weight_int_tuple_list = []
-        for packed_record_any, weight_int in zSet.items():
-            record_any = unpack_function(packed_record_any)
-            record_any_weight_int_tuple_list.append((record_any, weight_int))
-        #
-        return record_any_weight_int_tuple_list
-
-    @staticmethod
-    def to_records(zSet, unpack_function):
+    def to_records(unpacked_zSet):
         record_any_list = []
-        for packed_record_any, weight_int in zSet.items():
+        for unpacked_record_any, weight_int in unpacked_zSet:
             if weight_int > 0:
                 for _ in range(weight_int):
-                    record_any = unpack_function(packed_record_any)
-                    record_any_list.append(record_any)
+                    record_any_list.append(unpacked_record_any)
         #
         return record_any_list
 
     @staticmethod
-    def to_debezium(zSet, unpack_function):
+    def to_debezium(unpacked_zSet):
         message_dict_list = []
-        for packed_message_dict, weight_int in zSet.items():
+        for message_dict, weight_int in unpacked_zSet:
             if weight_int > 0:
-                message_dict = unpack_function(packed_message_dict)
                 for _ in range(weight_int):
                     message_dict1 = copy.deepcopy(message_dict)
                     message_dict1["value"]["before"] = None
@@ -737,9 +765,7 @@ class TopologyNode:
                     message_dict1["value"]["op"] = "c"
                     message_dict_list.append(message_dict1)
             elif weight_int < 0:
-                message_dict = unpack_function(packed_message_dict)
                 for _ in range(-weight_int):
-                    message_dict = unpack_function(packed_message_dict)
                     message_dict1 = copy.deepcopy(message_dict)
                     message_dict1["value"]["before"] = message_dict["value"]
                     message_dict1["value"]["after"] = None
