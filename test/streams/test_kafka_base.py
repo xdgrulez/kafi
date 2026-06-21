@@ -6,13 +6,15 @@ from kafi.helpers import copy_kwargs, get_millis
 #
 
 class TestKafkaBase:
-    def produce(self, source_str_topic_dict_batch_size_int_tuple_list, steps_int):
+    def produce(self, source_str_topic_dict_dict, source_str_batch_size_int_dict, steps_int):
         topic_str_messages_int_dict = defaultdict(int)
         for _ in range(steps_int):
-            for source_str, topic_dict, batch_size_int in source_str_topic_dict_batch_size_int_tuple_list:
+            for source_str, topic_dict in source_str_topic_dict_dict.items():
                     storage = topic_dict["storage"]
                     topic_str = topic_dict["topic"]
                     kwargs = topic_dict.get("kwargs", {})
+                    #
+                    batch_size_int = source_str_batch_size_int_dict[source_str]
                     #
                     message_dict_list = self.generate(source_str, batch_size_int)
                     #

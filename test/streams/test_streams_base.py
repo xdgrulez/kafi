@@ -5,7 +5,7 @@ from streams.test_kafka_base import TestKafkaBase
 #
 
 from kafi.helpers import get_millis
-from kafi.streams.streams import run_streams
+from kafi.streams.streams import run_streams, get_source_or_sink_str_topic_dict_dict
 
 #
 
@@ -29,14 +29,15 @@ class TestStreamsBase(TestKafkaBase):
 
     #
     
-    def go(self, source_str_topic_dict_batch_size_int_tuple_list, steps_int, root_tn, sink_str_topic_dict_dict, checkpoint_storage=None, checkpoint_topic_str=None, recreate_boolean=True, **kwargs):
+    def go(self, source_str_topic_dict_or_storage_dict, root_tn, sink_str_topic_dict_or_storage_dict, source_str_batch_size_int_dict, steps_int, checkpoint_storage=None, checkpoint_topic_str=None, recreate_boolean=True, **kwargs):
         if not "group" in kwargs:
             group_str = f"test_{get_millis()}"
             kwargs["group"] = group_str
         else:
             group_str = kwargs["group"]
         #
-        source_str_topic_dict_dict = {source_str: topic_dict for source_str, topic_dict, _ in source_str_topic_dict_batch_size_int_tuple_list}
+        source_str_topic_dict_dict = get_source_or_sink_str_topic_dict_dict(source_str_topic_dict_or_storage_dict)
+        sink_str_topic_dict_dict = get_source_or_sink_str_topic_dict_dict(sink_str_topic_dict_or_storage_dict)
         #
         group_deleted_boolean = False
         if recreate_boolean:
@@ -68,10 +69,10 @@ class TestStreamsBase(TestKafkaBase):
             if checkpoint_storage is not None:
                 checkpoint_storage.recreate(checkpoint_topic_str)
         #
-        for source_str, _, _ in source_str_topic_dict_batch_size_int_tuple_list:
+        for source_str, _ in source_str_topic_dict_dict.items():
             self.init_generate(source_str)
         #
-        thread1 = threading.Thread(target=self.produce, args=(source_str_topic_dict_batch_size_int_tuple_list, steps_int))
+        thread1 = threading.Thread(target=self.produce, args=(source_str_topic_dict_dict, source_str_batch_size_int_dict, steps_int))
         #
         thread2 = threading.Thread(target=self.process, args=(source_str_topic_dict_dict, root_tn, sink_str_topic_dict_dict, checkpoint_storage, checkpoint_topic_str), kwargs=kwargs)
         #
@@ -79,7 +80,7 @@ class TestStreamsBase(TestKafkaBase):
         thread2.start()
         #
         while True:
-            if all(self.stop(topic_dict["storage"], topic_dict["topic"], batch_size_int, steps_int, group_str) for _, topic_dict, batch_size_int in source_str_topic_dict_batch_size_int_tuple_list):
+            if all(self.stop(topic_dict["storage"], topic_dict["topic"], source_str_batch_size_int_dict[source_str], steps_int, group_str) for source_str, topic_dict in source_str_topic_dict_dict.items()):
                 time.sleep(5)
                 break
             #

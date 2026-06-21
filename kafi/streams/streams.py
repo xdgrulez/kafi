@@ -123,7 +123,7 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
             checkpoint_storage.create(checkpoint_topic_str)
         #
         # Offload potentially blocking state deserialization to a threadpool worker
-        root_tn = await asyncio.to_thread(load_checkpoint, (root_tn, ))
+        root_tn = await asyncio.to_thread(load_checkpoint, root_tn)
     #
     # Create consumer clients for each source topic.
     group_str = kwargs["group"] if "group" in kwargs else f"streams_{get_millis()}"
@@ -226,8 +226,6 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
                 taskGroup.create_task(consumer_task(source_str, consumer))
             #
             taskGroup.create_task(process())
-    except Exception as e:
-        print(e.cause)
     finally:
         # Strict post-termination sequence: close consumer clients only when processing loops have completely stopped
         for consumer in source_str_consumer_dict.values():
