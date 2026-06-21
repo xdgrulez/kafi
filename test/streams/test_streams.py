@@ -117,22 +117,27 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
     #
 
     def test_jamie(self):
-        transaction_source_str = "transactions"
+        source_str = "transactions"
+        sink_str = "total"
         #
-        root_tn = get_root_tn_jamie(transaction_source_str)
+        root_tn = get_root_tn_jamie(source_str, sink_str)
         #
         source_storage = Cluster("local")
-        #
-        transaction_topic_str = transaction_source_str
-        source_storage_topic_str_batch_size_int_tuple_list = [(source_storage, transaction_topic_str, default_batch_size_int)]
-        #
         sink_storage = source_storage
-        sink_topic_str = "total"
-        sink_root_tn_storage_topic_str_tuple_list = [(root_tn, sink_storage, sink_topic_str)]
         #
-        self.go(source_storage_topic_str_batch_size_int_tuple_list, default_steps_int, sink_root_tn_storage_topic_str_tuple_list)
+        transaction_topic_str = source_str
+        source_str_topic_dict_batch_size_int_tuple_list = [(source_str,
+                                                            {"storage": source_storage,
+                                                             "topic": transaction_topic_str},
+                                                             default_batch_size_int)]
         #
-        self.assert_jamie(sink_topic_str)
+        sink_topic_str = sink_str
+        sink_str_topic_dict_dict = {sink_str: {"storage": sink_storage,
+                                               "topic": sink_topic_str}}
+        #
+        self.go(source_str_topic_dict_batch_size_int_tuple_list, default_steps_int, root_tn, sink_str_topic_dict_dict)
+        #
+        self.assert_jamie(sink_str)
 
     #
 
