@@ -33,7 +33,6 @@ def run_streams(source_str_topic_dict_or_storage_dict, root_tn, sink_str_topic_d
     #
     return _stop
 
-
 async def streams(source_str_topic_dict_or_storage_dict, root_tn, sink_str_topic_dict_or_storage_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_thread_event=None, **kwargs):
     """
     Provisions the sink producers and passes down its callbacks.
@@ -193,8 +192,9 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
                     sink_str_sink_message_dict_list_dict = root_tn.latest()
                     for sink_str, (foreach_function, _) in sink_str_foreach_function_finally_function_tuple_dict.items():
                         # Call foreach function for each sink (in a background thread).
-                        sink_message_dict_list = sink_str_sink_message_dict_list_dict[sink_str]
-                        await asyncio.to_thread(foreach_function, sink_message_dict_list)
+                        sink_message_dict_list = sink_str_sink_message_dict_list_dict.get(sink_str, [])
+                        if sink_message_dict_list != []:
+                            await asyncio.to_thread(foreach_function, sink_message_dict_list)
                 except asyncio.TimeoutError:
                     # Catch queue timeout bounds quietly to cycle back into processing/eval state checks.
                     pass
@@ -216,7 +216,7 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
             pass
         finally:
             # Trigger e.g. custom producer flush/closure procedures.
-            for _, finally_function in sink_str_foreach_function_finally_function_tuple_dict.values():
+            for (_, finally_function) in sink_str_foreach_function_finally_function_tuple_dict.values():
                 finally_function()
 
     # Run all consumer routines along with the processing loop within a task group.
@@ -226,6 +226,8 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
                 taskGroup.create_task(consumer_task(source_str, consumer))
             #
             taskGroup.create_task(process())
+    except Exception as e:
+        print(e.cause)
     finally:
         # Strict post-termination sequence: close consumer clients only when processing loops have completely stopped
         for consumer in source_str_consumer_dict.values():

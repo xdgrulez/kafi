@@ -32,7 +32,7 @@ class TestKafkaBase:
         for source_str, topic_dict in source_str_topic_dict_dict.items():
             storage = topic_dict["storage"]
             topic_str = topic_dict["topic"]
-            kwargs = topic_dict["kwargs"]
+            kwargs = topic_dict.get("kwargs", {})
             #
             print(f"Reading {source_or_sink_str} topic {topic_str}...")
             kwargs["group"] = f"test_{get_millis()}"
