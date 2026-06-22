@@ -48,6 +48,8 @@ class TopologyNode:
         #
         self._expired_tn = None
         #
+        self._source_str = None
+        self._sink_str = None
         self._sink_str_list = None
 
     ###
@@ -608,7 +610,7 @@ class TopologyNode:
         return i_in if evaluator.frontiers()[i_in].lattice.nestedness == 2 else LiftStreamIntroduction(group=g).connect(evaluator.circuit, (i_in,))
 
     ###
-    # Topology utils
+    # Sources and sinks
     ###
 
     @staticmethod
@@ -620,32 +622,39 @@ class TopologyNode:
             #
             tn._output_nodeId = input
         #
-        tn = TopologyNode(source_str, {}, _build_function, **kwargs)
+        tn = TopologyNode("source", {}, _build_function, **kwargs)
+        tn._source_str = source_str
         #
         return tn
 
+    def sink(self, sink_str):
+        self._sink_str = sink_str
+        #
+        return self
+
+    #
+
     @staticmethod
-    def sink(*sink_str_sink_root_tn_tuple_list):
-        if isinstance(sink_str_sink_root_tn_tuple_list, tuple) and len(sink_str_sink_root_tn_tuple_list) == 2:
-            sink_str_sink_root_tn_tuple_list = [(sink_str_sink_root_tn_tuple_list[0], sink_str_sink_root_tn_tuple_list[1])]
+    def _build_root_tn(*sink_tn_list):
+        sink_str_sink_tn_tuple_list = [(sink_tn._sink_str, sink_tn) for sink_tn in sink_tn_list]
         #
-        head_sink_str_sink_root_tn_tuple, *tail_sink_str_sink_root_tn_tuple_list = sink_str_sink_root_tn_tuple_list
+        head_sink_str_sink_tn_tuple, *tail_sink_str_sink_tn_tuple_list = sink_str_sink_tn_tuple_list
         #
-        head_sink_str, head_sink_root_tn = head_sink_str_sink_root_tn_tuple
-        root_tn = head_sink_root_tn.map(lambda x: (head_sink_str, x))
+        head_sink_str, head_sink_tn = head_sink_str_sink_tn_tuple
+        root_tn = head_sink_tn.map(lambda x: (head_sink_str, x))
+        #
         # We need this little factory to avoid unwanted variable shadowing for sink_str in the loop below.
         def get_map_function(sink_str):
             return lambda x: (sink_str, x)
         #
-        for sink_str, sink_root_tn in tail_sink_str_sink_root_tn_tuple_list:
+        for sink_str, sink_root_tn in tail_sink_str_sink_tn_tuple_list:
             root_tn = root_tn.merge(sink_root_tn.map(get_map_function(sink_str)))
         #
-        sink_str_list = [sink_str for sink_str, _ in sink_str_sink_root_tn_tuple_list]
-        root_tn._sink_str_list = sink_str_list 
+        sink_str_list = [sink_str for sink_str, _ in sink_str_sink_tn_tuple_list]
+        root_tn._sink_str_list = sink_str_list
         #
         return root_tn
 
-    #
 
     def _get_evaluator(self):
         evaluator = Evaluator(
@@ -656,10 +665,15 @@ class TopologyNode:
         #
         return evaluator
 
-    def build(self):
-        evaluator = self._get_evaluator()
+    @staticmethod
+    def build(*sink_tn_list):
+        root_tn = TopologyNode._build_root_tn(*sink_tn_list)
         #
-        self._foreach_bu(lambda tn: tn._build_function(evaluator))
+        evaluator = root_tn._get_evaluator()
+        #
+        root_tn._foreach_bu(lambda tn: tn._build_function(evaluator))
+        #
+        return root_tn
 
     # Input
 
@@ -841,11 +855,19 @@ class TopologyNode:
             return list(tn_set)[0]
 
     def get_source_nodes(self):
-        tn_set = self._filter_td(lambda tn: len(tn._daughter_tn_set) == 0)
+        tn_set = self._filter_td(lambda tn: tn._source_str is not None)
         #
-        name_str_tn_dict = {tn._name_str: tn for tn in tn_set}
+        name_str_tn_dict = {tn._source_str: tn for tn in tn_set}
         #
         return name_str_tn_dict
+
+    def get_sink_nodes(self):
+        tn_set = self._filter_td(lambda tn: tn._sink_str is not None)
+        #
+        name_str_tn_dict = {tn._sink_str: tn for tn in tn_set}
+        #
+        return name_str_tn_dict
+
 
     #
 
