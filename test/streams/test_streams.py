@@ -4,11 +4,12 @@ from streams.test_base import TestBase, default_batch_size_int, default_steps_in
 
 from streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium
 from streams.jamie.topologies import get_built_tn_jamie
-from streams.wc.topologies import get_root_tn_wc
+from streams.wc.topologies import get_built_tn_wc
 
 #
 
 from kafi.kafi import Cluster
+from kafi.streams.streams import Streams
 
 #
 
@@ -130,22 +131,18 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_str = "transactions"
         sink_str = "total"
         #
-        root_tn = get_built_tn_jamie(source_str, sink_str)
-        #
         source_storage = Cluster("local")
         sink_storage = source_storage
         #
         source_topic_str = source_str + "_topic"
-        source_str_topic_dict_dict = {source_str: {"storage": source_storage,
-                                                   "topic": source_topic_str}}
-        #
         sink_topic_str = sink_str + "_topic"
-        sink_str_topic_dict_dict = {sink_str: {"storage": sink_storage,
-                                               "topic": sink_topic_str}}
+        #
+        built_tn = get_built_tn_jamie(lambda: Streams.source(source_str, source_storage, source_topic_str),
+                                      lambda x: x.sink(sink_str, sink_storage, sink_topic_str))
         #
         source_str_batch_size_int_dict = {source_str: default_batch_size_int}
         #
-        self.go(source_str_topic_dict_dict, root_tn, sink_str_topic_dict_dict, source_str_batch_size_int_dict, default_steps_int)
+        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int)
         #
         self.assert_jamie(sink_str)
 
@@ -155,26 +152,21 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_str = "lines"
         sink_str = "wc"
         #
-        root_tn = get_root_tn_wc(source_str, sink_str)
-        #
         source_storage = Cluster("local")
         sink_storage = source_storage
         #
         source_topic_str = source_str
-        source_str_topic_dict_batch_size_int_tuple_list = [(source_str,
-                                                            {"storage": source_storage,
-                                                             "topic": source_topic_str,
-                                                             "kwargs": {"value_type": "str"}},
-                                                             default_batch_size_int)]
-        #
         sink_topic_str = sink_str
-        sink_str_topic_dict_dict = {sink_str: {"storage": sink_storage,
-                                               "topic": sink_topic_str}}
+        #
+        built_tn = get_built_tn_wc(lambda: Streams.source(source_str, source_storage, source_topic_str, value_type="str"),
+                                   lambda x: x.sink(sink_str, sink_storage, sink_topic_str))
         #
         checkpoint_storage = source_storage
         checkpoint_topic_str = "wc_checkpoint"
         #
-        self.go(source_str_topic_dict_batch_size_int_tuple_list, default_steps_int, root_tn, sink_str_topic_dict_dict, checkpoint_storage, checkpoint_topic_str, recreate_boolean=recreate_boolean)
+        source_str_batch_size_int_dict = {source_str: default_batch_size_int}
+        #
+        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int, checkpoint_storage, checkpoint_topic_str, recreate_boolean=recreate_boolean)
         #
         self.assert_wc(source_str, sink_topic_str)
 

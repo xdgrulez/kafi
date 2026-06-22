@@ -3,8 +3,8 @@ import cloudpickle
 import threading
 import zlib
 
-from kafi.storage import Storage
 from kafi.helpers import get_millis, compress, decompress
+from kafi.streams.topologynode import TopologyNode
 
 #
 
@@ -12,14 +12,14 @@ default_checkpoint_interval_float = 1.0
 
 #
 
-def run_streams(source_str_topic_dict_or_storage_dict, root_tn, sink_str_topic_dict_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
+def run_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
     """
     Entry point to run the stream processor running in a background daemon thread.
     Returns a stop function to handle a clean shutdown sequence.
     """
     def _run(stop_thread):
         # Initializes and runs the main async entry point within the thread's independent event loop.
-        asyncio.run(streams(source_str_topic_dict_or_storage_dict, root_tn, sink_str_topic_dict_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_thread_event=stop_thread, **kwargs))
+        asyncio.run(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_thread_event=stop_thread, **kwargs))
     #
     def _stop():
         # Signals the async loops to stop and blocks until the worker thread exits cleanly.
@@ -33,12 +33,11 @@ def run_streams(source_str_topic_dict_or_storage_dict, root_tn, sink_str_topic_d
     #
     return _stop
 
-async def streams(source_str_topic_dict_or_storage_dict, root_tn, sink_str_topic_dict_or_storage_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_thread_event=None, **kwargs):
+async def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_thread_event=None, **kwargs):
     """
     Provisions the sink producers and passes down its callbacks.
     """
-    source_str_topic_dict_dict = get_source_or_sink_str_topic_dict_dict(source_str_topic_dict_or_storage_dict)
-    sink_str_topic_dict_dict = get_source_or_sink_str_topic_dict_dict(sink_str_topic_dict_or_storage_dict)
+    sink_str_topic_dict_dict = get_sink_str_topic_dict_dict(built_tn)
     #
     sink_str_producer_dict = {}
     for sink_str, topic_dict in sink_str_topic_dict_dict.items():
@@ -60,10 +59,10 @@ async def streams(source_str_topic_dict_or_storage_dict, root_tn, sink_str_topic
     #
     sink_str_foreach_function_finally_function_tuple_dict = {sink_str: (get_foreach_function(sink_str), get_finally_function(sink_str)) for sink_str, _ in sink_str_topic_dict_dict.items()}
     #
-    await streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_thread_event=stop_thread_event, **kwargs)
+    await streams_function(built_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_thread_event=stop_thread_event, **kwargs)
 
 
-async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_thread_event=None, **kwargs):
+async def streams_function(built_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_thread_event=None, **kwargs):
     """
     The core orchestration layer. Manages state loading, instantiates consumers, 
     and handles concurrent data ingestion, stream processing, and fault-tolerant checkpointing.
@@ -77,11 +76,11 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
     #
     def save_checkpoint():
         """
-        Serializes and dumps the root TopologyNode object into a compacted storage system.
+        Serializes and dumps built_tn into a compacted storage system.
         Skips writing if the hash matches the previous state to reduce unneeded I/O ops.
         """
         nonlocal last_checkpoint_hash_int
-        uncompressed_checkpoint_bytes = cloudpickle.dumps(root_tn)
+        uncompressed_checkpoint_bytes = cloudpickle.dumps(built_tn)
         compressed_checkpoint_bytes = compress(uncompressed_checkpoint_bytes)
         checkpoint_hash_int = zlib.adler32(compressed_checkpoint_bytes)
         #
@@ -91,13 +90,13 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
             print("Saving checkpoint...")
             chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else 1000
             producer = checkpoint_storage.producer(checkpoint_topic_str, type="bytes", chunk_size_bytes=chunk_size_bytes_int, **kwargs)
-            producer.produce(compressed_checkpoint_bytes, key=root_tn.get_id())
+            producer.produce(compressed_checkpoint_bytes, key=built_tn.get_id())
             producer.close()
             print("...saving checkpoint done.")
 
-    def load_checkpoint(root_tn):
+    def load_checkpoint(built_tn):
         """
-        Recovers the root TopologyNode object from the latest checkpoint.
+        Recovers the build_tn object from the latest checkpoint.
         """
         nonlocal last_checkpoint_hash_int
         message_dict_list = checkpoint_storage.compact(checkpoint_topic_str, value_type="bytes", dechunk=True, **kwargs)
@@ -109,24 +108,18 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
             #
             print("Loading checkpoint...")
             uncompressed_checkpoint_bytes = decompress(compressed_checkpoint_bytes)
-            root_tn = cloudpickle.loads(uncompressed_checkpoint_bytes)
+            built_tn = cloudpickle.loads(uncompressed_checkpoint_bytes)
             print("...loading checkpoint done.")
-            return root_tn
+            return built_tn
         else:
-            return root_tn
-    #
-    # Cold start initialization: Recover root TopologyNode object if a checkpoint backend is provided.
-    if checkpoint_storage is not None:
-        initial_time_int = get_millis()
-        #
-        if not checkpoint_storage.exists(checkpoint_topic_str):
-            checkpoint_storage.create(checkpoint_topic_str)
-        #
-        # Offload potentially blocking state deserialization to a threadpool worker
-        root_tn = await asyncio.to_thread(load_checkpoint, root_tn)
+            return built_tn
     #
     # Create consumer clients for each source topic.
     group_str = kwargs["group"] if "group" in kwargs else f"streams_{get_millis()}"
+    #
+    source_str_topic_dict_dict = get_source_str_topic_dict_dict(built_tn)
+    clear_topic_dict(built_tn)
+    #
     source_str_consumer_dict = {}
     for source_str, topic_dict in source_str_topic_dict_dict.items():
         storage = topic_dict["storage"]
@@ -166,7 +159,7 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
         except (KeyboardInterrupt, asyncio.CancelledError):
             # Note: Clean-up of client objects omitted here to avoid breaking during inflight processing pipeline drops.
             pass
-
+    #
     async def process():
         """
         Processing loop. Consumes from the async shared queue, processes the deltas, and manages atomic checkpointing.
@@ -186,10 +179,10 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
                             source_str_offsets_dict_dict.setdefault(source_str, {})[partition_int] = offset_int
                     #
                     # Push the latest source messages.
-                    root_tn.push(source_str, source_message_dict_list)
+                    built_tn.push(source_str, source_message_dict_list)
                     #
                     # Process the next step and return the latest sink messages.
-                    sink_str_sink_message_dict_list_dict = root_tn.latest()
+                    sink_str_sink_message_dict_list_dict = built_tn.latest()
                     for sink_str, (foreach_function, _) in sink_str_foreach_function_finally_function_tuple_dict.items():
                         # Call foreach function for each sink (in a background thread).
                         sink_message_dict_list = sink_str_sink_message_dict_list_dict.get(sink_str, [])
@@ -218,7 +211,17 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
             # Trigger e.g. custom producer flush/closure procedures.
             for (_, finally_function) in sink_str_foreach_function_finally_function_tuple_dict.values():
                 finally_function()
-
+    #
+    # Cold start initialization: Recover built_tn if a checkpoint backend is provided.
+    if checkpoint_storage is not None:
+        initial_time_int = get_millis()
+        #
+        if not checkpoint_storage.exists(checkpoint_topic_str):
+            checkpoint_storage.create(checkpoint_topic_str)
+        #
+        # Offload potentially blocking state deserialization to a threadpool worker
+        built_tn = await asyncio.to_thread(load_checkpoint, built_tn)
+    #
     # Run all consumer routines along with the processing loop within a task group.
     try:
         async with asyncio.TaskGroup() as taskGroup:
@@ -234,22 +237,47 @@ async def streams_function(source_str_topic_dict_dict, root_tn, sink_str_foreach
             except Exception:
                 pass
 
-# Syntactic sugar
+# Streams class (to augment sources and sinks with storage/topic/kwargs information)
 
-def get_source_or_sink_str_topic_dict_dict(source_or_sink_str_topic_dict_or_storage_dict):
-    source_or_sink_str_topic_dict_dict = {}
-    for source_or_sink_str, topic_dict_or_storage in source_or_sink_str_topic_dict_or_storage_dict.items():
-        storage = topic_dict_or_storage if isinstance(topic_dict_or_storage, Storage) else topic_dict_or_storage["storage"]
-        topic_str = source_or_sink_str if isinstance(topic_dict_or_storage, Storage) else topic_dict_or_storage.get("topic", source_or_sink_str)
-        source_or_sink_kwargs = {} if isinstance(topic_dict_or_storage, Storage) else topic_dict_or_storage.get("kwargs", {})
+class Streams(TopologyNode):
+    @staticmethod
+    def source(source_str, storage, topic_str=None, **kwargs):
+        tn = TopologyNode.source(source_str)
+        tn.__class__ = Streams
         #
-        topic_dict = {"storage": storage, "topic": topic_str, "kwargs": source_or_sink_kwargs}
+        tn._topic_dict = {"storage": storage,
+                          "topic": source_str if topic_str is None else topic_str,
+                          "kwargs": kwargs}
         #
-        source_or_sink_str_topic_dict_dict[source_or_sink_str] = topic_dict
-    #
-    return source_or_sink_str_topic_dict_dict
+        return tn
+    
+    def sink(self, sink_str, storage, topic_str=None, **kwargs):
+        tn = super().sink(sink_str)
+        #
+        tn._topic_dict = {"storage": storage,
+                          "topic": sink_str if topic_str is None else topic_str,
+                          "kwargs": kwargs}
+        #
+        return self
 
 # Helpers
 
 def get_latest_offset(message_dict_list, partition_int):
     return next((message_dict["offset"] for message_dict in reversed(message_dict_list) if message_dict["partition"] == partition_int), None)
+
+def get_source_str_topic_dict_dict(built_tn):
+    source_str_topic_dict_dict = {source_str: source_streams._topic_dict for source_str, source_streams in built_tn.get_source_nodes().items()}
+    #
+    return source_str_topic_dict_dict
+
+def get_sink_str_topic_dict_dict(built_tn):
+    sink_str_topic_dict_dict = {sink_str: sink_streams._topic_dict for sink_str, sink_streams in built_tn.get_sink_nodes().items()}
+    #
+    return sink_str_topic_dict_dict
+
+def clear_topic_dict(built_tn):
+    def _clear_topic_dict(tn):
+        if hasattr(tn, "_topic_dict") and tn._topic_dict is not None:
+            tn._topic_dict = None
+    #
+    built_tn._foreach_bu(_clear_topic_dict)

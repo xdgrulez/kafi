@@ -228,8 +228,8 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str, self_join_
     #
     return root_tn
 
-def get_root_tn_datagen_multiple_sinks(customer_source_str, customer_a_h_str, customer_i_q_str, customer_r_z_str):
-    customer_source_tn = Tn.source(customer_source_str)
+def get_built_tn_datagen_multiple_sinks(source_str, customer_a_h_str, customer_i_q_str, customer_r_z_str):
+    customer_source_tn = Tn.source(source_str)
     #
     customer_tn = (
         customer_source_tn
@@ -240,21 +240,17 @@ def get_root_tn_datagen_multiple_sinks(customer_source_str, customer_a_h_str, cu
     #
     customer_a_h_tn = (
         customer_tn
-        .filter(lambda x: x["last_name"][0].lower() >= "A".lower() and x["last_name"][0].lower() <= "H".lower())
+        .filter(lambda x: x["last_name"][0].lower() >= "A".lower() and x["last_name"][0].lower() <= "H".lower()).to_value().sink(customer_a_h_str)
     )
     customer_i_q_tn = (
         customer_tn
-        .filter(lambda x: x["last_name"][0].lower() >= "I".lower() and x["last_name"][0].lower() <= "Q".lower())
+        .filter(lambda x: x["last_name"][0].lower() >= "I".lower() and x["last_name"][0].lower() <= "Q".lower()).to_value().sink(customer_i_q_str)
     )
     customer_r_z_tn = (
         customer_tn
-        .filter(lambda x: x["last_name"][0].lower() >= "R".lower() and x["last_name"][0].lower() <= "Z".lower())
+        .filter(lambda x: x["last_name"][0].lower() >= "R".lower() and x["last_name"][0].lower() <= "Z".lower()).to_value().sink(customer_r_z_str)
     )
     #
-    root_tn = Tn.sink((customer_a_h_str, customer_a_h_tn.to_value()),
-                      (customer_i_q_str, customer_i_q_tn.to_value()),
-                      (customer_r_z_str, customer_r_z_tn.to_value()))
+    built_tn = Tn.build(customer_a_h_tn, customer_i_q_tn, customer_r_z_tn)
     #
-    root_tn.build()
-    #
-    return root_tn
+    return built_tn

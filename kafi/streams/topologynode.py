@@ -68,7 +68,8 @@ class TopologyNode:
             #
             tn._output_nodeId = integrate_nodeId
         #
-        tn = TopologyNode("_integrate_op", {self}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("_integrate_op", {self}, _build_function, **kwargs)
         #
         return tn
 
@@ -84,7 +85,8 @@ class TopologyNode:
             #
             tn._output_nodeId = differentiate_nodeId
         #
-        tn = TopologyNode("_differentiate_op", {self}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("_differentiate_op", {self}, _build_function, **kwargs)
         #
         return tn
 
@@ -100,7 +102,8 @@ class TopologyNode:
             #
             tn._output_nodeId = integrate_nodeId
         #
-        tn = TopologyNode("_delay_op", {self}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("_delay_op", {self}, _build_function, **kwargs)
         #
         return tn
 
@@ -132,7 +135,8 @@ class TopologyNode:
             tn._output_nodeId = lift1_nodeId
 
         #
-        tn = TopologyNode("_map_op", {self}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("_map_op", {self}, _build_function, **kwargs)
         #
         return tn
 
@@ -216,7 +220,8 @@ class TopologyNode:
             #
             tn._output_nodeId = lift1_nodeId
         #
-        tn = TopologyNode("_flatmap_op", {self}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("_flatmap_op", {self}, _build_function, **kwargs)
         #
         return tn
 
@@ -251,7 +256,8 @@ class TopologyNode:
             #
             tn._output_nodeId = lift1_nodeId
         #
-        tn = TopologyNode("_filter_op", {self}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("_filter_op", {self}, _build_function, **kwargs)
         #
         return tn
 
@@ -279,7 +285,8 @@ class TopologyNode:
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
-        tn = TopologyNode("distinct_op", {self}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("distinct_op", {self}, _build_function, **kwargs)
         #
         return tn
 
@@ -302,7 +309,8 @@ class TopologyNode:
             #
             tn._output_nodeId = integrate_nodeId
         #
-        tn = TopologyNode("union_op", {self, other_tn}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("union_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
 
@@ -333,7 +341,8 @@ class TopologyNode:
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
-        tn = TopologyNode("diff_op", {self, other_tn}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("diff_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
     
@@ -370,7 +379,8 @@ class TopologyNode:
             #
             tn._output_nodeId = deltaLiftedDeltaLiftedJoin_nodeId
         #
-        tn = TopologyNode("join_op", {self, other_tn}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("join_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
 
@@ -411,7 +421,8 @@ class TopologyNode:
             #
             tn._output_nodeId = indexedDeltaLiftedDeltaLiftedJoin_nodeId
         #
-        tn = TopologyNode("join_equi_op", {self, other_tn}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("join_equi_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
     
@@ -469,7 +480,8 @@ class TopologyNode:
             #
             tn._output_nodeId = differentiate_nodeId
         #
-        tn = TopologyNode("group_by_agg_op", {self}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("group_by_agg_op", {self}, _build_function, **kwargs)
         #
         _agg_initial_any = tn._pack_function(agg_initial_any)
         #
@@ -550,7 +562,8 @@ class TopologyNode:
             #
             tn._output_nodeId = lift2_add_nodeId
         #
-        tn = TopologyNode("merge_op", {self, other_tn}, _build_function, **kwargs)
+        current_class = type(self)
+        tn = current_class("merge_op", {self, other_tn}, _build_function, **kwargs)
         #
         return tn
 
@@ -635,8 +648,13 @@ class TopologyNode:
     #
 
     @staticmethod
-    def _build_root_tn(*sink_tn_list):
-        sink_str_sink_tn_tuple_list = [(sink_tn._sink_str, sink_tn) for sink_tn in sink_tn_list]
+    def _build_root_tn(*sink_tn_tuple):
+        sink_str_sink_tn_tuple_list = [(sink_tn._sink_str, sink_tn) for sink_tn in sink_tn_tuple if sink_tn._sink_str is not None]
+        if sink_str_sink_tn_tuple_list == []:
+            if len(sink_tn_tuple) == 1:
+                return sink_tn_tuple[0]
+            else:
+                raise Exception("Cannot build multiple non-sink nodes.")
         #
         head_sink_str_sink_tn_tuple, *tail_sink_str_sink_tn_tuple_list = sink_str_sink_tn_tuple_list
         #
@@ -666,8 +684,11 @@ class TopologyNode:
         return evaluator
 
     @staticmethod
-    def build(*sink_tn_list):
-        root_tn = TopologyNode._build_root_tn(*sink_tn_list)
+    def build(*sink_tn_tuple):
+        if sink_tn_tuple is None:
+            raise Exception("At least one sink node required.")
+        #
+        root_tn = TopologyNode._build_root_tn(*sink_tn_tuple)
         #
         evaluator = root_tn._get_evaluator()
         #

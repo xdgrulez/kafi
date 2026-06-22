@@ -5,13 +5,13 @@ from streams.test_kafka_base import TestKafkaBase
 #
 
 from kafi.helpers import get_millis
-from kafi.streams.streams import run_streams, get_source_or_sink_str_topic_dict_dict
+from kafi.streams.streams import run_streams, get_source_str_topic_dict_dict, get_sink_str_topic_dict_dict
 
 #
 
 class TestStreamsBase(TestKafkaBase):
-    def process(self, source_str_topic_dict_dict, root_tn, sink_str_topic_dict_dict, checkpoint_storage, checkpoint_topic, **kwargs):
-        self.stop_function = run_streams(source_str_topic_dict_dict, root_tn, sink_str_topic_dict_dict, checkpoint_storage, checkpoint_topic, **kwargs)
+    def process(self, built_tn, checkpoint_storage, checkpoint_topic, **kwargs):
+        self.stop_function = run_streams(built_tn, checkpoint_storage, checkpoint_topic, **kwargs)
 
     #
 
@@ -29,15 +29,15 @@ class TestStreamsBase(TestKafkaBase):
 
     #
     
-    def go(self, source_str_topic_dict_or_storage_dict, root_tn, sink_str_topic_dict_or_storage_dict, source_str_batch_size_int_dict, steps_int, checkpoint_storage=None, checkpoint_topic_str=None, recreate_boolean=True, **kwargs):
+    def go(self, built_tn, source_str_batch_size_int_dict, steps_int, checkpoint_storage=None, checkpoint_topic_str=None, recreate_boolean=True, **kwargs):
         if not "group" in kwargs:
             group_str = f"test_{get_millis()}"
             kwargs["group"] = group_str
         else:
             group_str = kwargs["group"]
         #
-        source_str_topic_dict_dict = get_source_or_sink_str_topic_dict_dict(source_str_topic_dict_or_storage_dict)
-        sink_str_topic_dict_dict = get_source_or_sink_str_topic_dict_dict(sink_str_topic_dict_or_storage_dict)
+        source_str_topic_dict_dict = get_source_str_topic_dict_dict(built_tn)
+        sink_str_topic_dict_dict = get_sink_str_topic_dict_dict(built_tn)
         #
         group_deleted_boolean = False
         if recreate_boolean:
@@ -74,7 +74,7 @@ class TestStreamsBase(TestKafkaBase):
         #
         thread1 = threading.Thread(target=self.produce, args=(source_str_topic_dict_dict, source_str_batch_size_int_dict, steps_int))
         #
-        thread2 = threading.Thread(target=self.process, args=(source_str_topic_dict_dict, root_tn, sink_str_topic_dict_dict, checkpoint_storage, checkpoint_topic_str), kwargs=kwargs)
+        thread2 = threading.Thread(target=self.process, args=(built_tn, checkpoint_storage, checkpoint_topic_str), kwargs=kwargs)
         #
         thread1.start()
         thread2.start()
