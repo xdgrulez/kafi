@@ -6,22 +6,20 @@ Kafi is a Python-based and Unix shell-like interface for Kafka.
 
 Kafi is fun to use either in the interactive Python interpreter, inside your Python (micro-)service code, and - it's the ideal tool for interacting with Kafka in your Jupyter notebooks.
 
-Kafi has been presented at [Current 2023 San Jose](https://www.confluent.io/events/current/2023/kash-py-how-to-make-your-data-scientists-love-real-time-1/), [Current 2024 Austin](https://current.confluent.io/2024-sessions/your-swiss-army-knife-for-kafka-based-applications) (you can find the Jupyter notebook [here](https://github.com/xdgrulez/cur24)).
-
 Kafi supports two main modes:
 * Real Kafka
   * Kafka API via [confluent_kafka](https://github.com/confluentinc/confluent-kafka-python)
-  * Kafka REST Proxy API
+  * Kafka via [Confluent REST Proxy API](https://docs.confluent.io/platform/current/kafka-rest/api.html)
 * Emulated Kafka/files
   * local file system
   * S3
   * Azure Blob Storage
 
-Kafi treats *emulated Kafka* in the same way as *real Kafka*. The only difference is that there is no need to run an additional Kafka cluster. One typical use case is downloading snapshots of Kafka topics or doing backups.
+Kafi treats *emulated Kafka* in the same way as *real Kafka* (or real Kafka via REST Proxy). The only difference is that there is no need to run an additional Kafka cluster. Typical use case are downloading snapshots of Kafka topics or doing backups.
 
-Kafi also supports the Schema Registry API (supporting Avro, Protobuf and JSONSchema).
+Kafi fully supports the Schema Registry API (supporting Avro, Protobuf and JSONSchema).
 
-This documentation is split into two parts:
+The Kafi documentation is also split into two parts:
 * Basics
   * [Installation](#installation)
   * [Basic Configuration](#basic-configuration)
@@ -959,8 +957,3 @@ classDiagram
 # All Methods
 
 ...
-
----
-
-[^1]: "Kafi" stands for "(Ka)fka and (fi)les". And, "Kafi" is the Swiss word for a coffee or a coffee place. *Kafi* is the successor of [kash.py](https://github.com/xdgrulez/kash.py) which is the successor of [streampunk](https://github.com/xdgrulez/streampunk).
-[^2]: Please note that you need to set the `consume_timeout` to `-1` on the source cluster for Kafi to always wait for new messages: `c.consume_timeout(-1)`.
