@@ -15,13 +15,18 @@ from streams.datagen.constants.customer_ids import customer_id_str_list
 # customer_id_str_list = ["1", "2", "3"]
 #
 
+ts_int = 1609459200000
+ts_step_int = 100000
+
+#
+
 class ShoeOrderGenerator:
     def __init__(self):
         self.order_id_int = 1000
         self.order_id_step_int = 1
         #
-        self.ts_int = 1609459200000
-        self.ts_step_int = 100000
+        self.ts_int = ts_int
+        self.ts_step_int = ts_step_int
 
     def generate_record(self):
         record_dict = {

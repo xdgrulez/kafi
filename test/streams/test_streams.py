@@ -2,7 +2,7 @@ from streams.test_streams_base import TestStreamsBase
 from streams.test_generate import TestGenerate
 from streams.test_base import TestBase, default_batch_size_int, default_steps_int
 
-from streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks
+from streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks, get_built_tn_datagen_expire
 from streams.jamie.topologies import get_built_tn_jamie
 from streams.wc.topologies import get_built_tn_wc
 
@@ -145,6 +145,21 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         self.go(built_tn, source_str_batch_size_int_dict, default_steps_int)
         #
         self.assert_datagen_multiple_sinks(sink_customer_a_h_str, sink_customer_i_q_str, sink_customer_r_z_str)
+
+    def test_datagen_expire(self):
+        source_str = "shoe_orders"
+        #
+        sink_str = "shoe_orders_expire"
+        #
+        source_storage = Cluster("local")
+        sink_storage = source_storage
+        #
+        built_tn = get_built_tn_datagen_expire(lambda: Streams.source(source_str, source_storage),
+                                               lambda x: x.sink(sink_str, sink_storage))
+        #
+        source_str_batch_size_int_dict = {source_str: default_batch_size_int}
+        #
+        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int)
 
     #
 

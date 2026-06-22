@@ -22,4 +22,6 @@ class TestTopologyNodeBase(unittest.TestCase):
             #
             print()
             print(f"{step_int + 1}/{steps_int}")
-            print(len(pickle.dumps(built_tn)) / 1024)
+            bytes_int = len(pickle.dumps(built_tn)) / 1024
+            self.step_int_bytes_int_dict[step_int] = bytes_int
+            print(bytes_int)

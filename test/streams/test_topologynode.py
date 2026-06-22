@@ -2,7 +2,7 @@ from streams.test_topologynode_base import TestTopologyNodeBase
 from streams.test_generate import TestGenerate
 from streams.test_base import TestBase, default_batch_size_int, default_steps_int
 
-from streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks
+from streams.datagen.topologies import get_root_tn_datagen_1_join, get_root_tn_datagen_2_joins, get_root_tn_datagen_3_joins, get_root_tn_datagen_self_join_group_by, get_root_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks, get_built_tn_datagen_expire
 from streams.jamie.topologies import get_built_tn_jamie
 from streams.wc.topologies import get_built_tn_wc
 
@@ -47,26 +47,26 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         self.process([(click_source_str, default_batch_size_int), (customer_source_str, default_batch_size_int), (product_source_str, default_batch_size_int), (order_source_str, default_batch_size_int)], default_steps_int, root_tn, [joins_3_sink_str])
 
     def test_datagen_self_join_group_by(self):
-        order_source_str = "shoe_orders"
+        source_str = "shoe_orders"
         #
-        self_join_group_by_sink_str = "self_join_group_by"
+        sink_str = "self_join_group_by"
         #
-        root_tn = get_root_tn_datagen_self_join_group_by(order_source_str, self_join_group_by_sink_str)
+        root_tn = get_root_tn_datagen_self_join_group_by(source_str, sink_str)
         #
-        self.process([(order_source_str, default_batch_size_int)], default_steps_int, root_tn, [self_join_group_by_sink_str])
+        self.process([(source_str, default_batch_size_int)], default_steps_int, root_tn, [sink_str])
         #
-        self.assert_datagen_self_join_group_by(order_source_str, self_join_group_by_sink_str)
+        self.assert_datagen_self_join_group_by(source_str, sink_str)
 
     def test_datagen_self_join_group_by_debezium(self):
-        order_source_str = "shoe_orders_debezium"
+        source_str = "shoe_orders_debezium"
         #
-        self_join_group_by_debezium_sink_str = "self_join_group_by_debezium"
+        sink_str = "self_join_group_by_debezium"
         #
-        root_tn = get_root_tn_datagen_self_join_group_by_debezium(order_source_str, self_join_group_by_debezium_sink_str)
+        root_tn = get_root_tn_datagen_self_join_group_by_debezium(source_str, sink_str)
         #
-        self.process([(order_source_str, default_batch_size_int)], default_steps_int, root_tn, [self_join_group_by_debezium_sink_str])
+        self.process([(source_str, default_batch_size_int)], default_steps_int, root_tn, [sink_str])
         #
-        self.assert_datagen_self_join_group_by_debezium(order_source_str, self_join_group_by_debezium_sink_str)
+        self.assert_datagen_self_join_group_by_debezium(source_str, sink_str)
 
     def test_datagen_multiple_sinks(self):
         source_str = "shoe_customers"
@@ -75,9 +75,25 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         customer_i_q_str = "customer_i_q"
         customer_r_z_str = "customer_r_z"
         #
-        built_tn = get_built_tn_datagen_multiple_sinks(source_str, customer_a_h_str, customer_i_q_str, customer_r_z_str)
+        built_tn = get_built_tn_datagen_multiple_sinks(lambda: Tn.source(source_str), 
+                                                       lambda x: x.sink(customer_a_h_str),
+                                                       lambda x: x.sink(customer_i_q_str),
+                                                       lambda x: x.sink(customer_r_z_str))
         #
         self.process(built_tn, {source_str: default_batch_size_int}, default_steps_int)
+        #
+        self.assert_datagen_multiple_sinks(customer_a_h_str, customer_i_q_str, customer_r_z_str)
+
+    def test_datagen_expire(self):
+        source_str = "shoe_orders"
+        #
+        sink_str = "shoe_orders_expire"
+        #
+        built_tn = get_built_tn_datagen_expire(lambda: Tn.source(source_str), lambda x: x.sink(sink_str))
+        #
+        self.process(built_tn, {source_str: default_batch_size_int}, default_steps_int)
+        #
+        self.assert_datagen_expire()
 
     #
 

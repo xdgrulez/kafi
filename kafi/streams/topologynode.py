@@ -704,10 +704,10 @@ class TopologyNode:
         else:
             source_str_input_any_list_dict = {source_str_input_any_list_dict_or_source_str: input_any_list}
         #
-        source_str_source_tn_dict = self.get_source_nodes()
+        source_str_source_tn_dict = self.get_source_nodes(True)
         #
         for source_str, source_tn in source_str_source_tn_dict.items():
-            if source_str.startswith("expire_"):
+            if source_tn._expired_tn is not None:
                 input_any_list = source_tn._expired_tn.latest()
             else:
                 input_any_list = source_str_input_any_list_dict.get(source_str, [])
@@ -875,8 +875,10 @@ class TopologyNode:
         else:
             return list(tn_set)[0]
 
-    def get_source_nodes(self):
-        tn_set = self._filter_td(lambda tn: tn._source_str is not None)
+    def get_source_nodes(self, include_expire_boolean=False):
+        tn_set = self._filter_td(lambda tn:
+                                 tn._source_str is not None and
+                                 (True if include_expire_boolean else tn._expired_tn is None))
         #
         name_str_tn_dict = {tn._source_str: tn for tn in tn_set}
         #
