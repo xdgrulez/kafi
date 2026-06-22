@@ -9,7 +9,7 @@ kafi:
   produce.batch.size: 1000
   retention.ms: 604800000
   consume.timeout: 1.0
-  consume.batch.size: 100
+  consume.batch.size: 1000
   consumer.group.prefix: ""
   enable.auto.commit: false
   session.timeout.ms: 45000

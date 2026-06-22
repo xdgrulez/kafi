@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-import json, unittest
+import json, sys, unittest
 
 #
 
@@ -64,8 +64,11 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
             for changed_packed_record_any in changed_packed_record_any_list:
                 print(default_unpack_function(changed_packed_record_any))
 
+    #
+
     def assert_datagen_self_join_group_by(self, order_source_str, self_join_group_by_sink_str):
-        print("Asserting datagen_self_join_group_by...")
+        function_str = sys._getframe().f_code.co_name
+        print(f"Asserting {function_str}...")
         #
         message_dict_list = self.source_str_input_record_any_list_dict[order_source_str]
         product_id_str_product_id_str_tuple_customer_id_set_dict = defaultdict(set)
@@ -84,7 +87,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(json_str_set1.issubset(json_str_set2))
     
     def assert_datagen_self_join_group_by_debezium(self, order_source_str, self_join_group_by_debezium_sink_str):
-        print("Asserting datagen_self_join_group_by_debezium...")
+        function_str = sys._getframe().f_code.co_name
+        print(f"Asserting {function_str}...")
         #
         message_dict_list = self.source_str_input_record_any_list_dict[order_source_str]
         created_value_dict_list = [message_dict["value"]["after"] for message_dict in message_dict_list if message_dict["value"]["op"] == "c"]
@@ -111,7 +115,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         print("...done.")
 
     def assert_datagen_multiple_sinks(self, sink_customer_a_h_str, sink_customer_i_q_str, sink_customer_r_z_str):
-        print("Asserting datagen_multiple_sinks...")
+        function_str = sys._getframe().f_code.co_name
+        print(f"Asserting {function_str}...")
         #
         for message_dict in self.sink_str_updated_record_any_list_dict[sink_customer_a_h_str]:
             self.assertTrue(message_dict["value"]["last_name"][0].lower() >= "A".lower() and message_dict["value"]["last_name"][0].lower() <= "H".lower())
@@ -125,7 +130,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         print("...done.")
 
     def assert_datagen_expire(self):
-        print("Asserting datagen_multiple_sinks...")
+        function_str = sys._getframe().f_code.co_name
+        print(f"Asserting {function_str}...")
         #
         steps_int = max(self.step_int_kbytes_int_dict.keys())
         self.assertEqual(self.step_int_kbytes_int_dict[steps_int - 1], self.step_int_kbytes_int_dict[steps_int])
@@ -135,7 +141,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
     #
 
     def assert_jamie(self, sink_str):
-        print("Asserting jamie...")
+        function_str = sys._getframe().f_code.co_name
+        print(f"Asserting {function_str}...")
         #
         updated_record_any_list = self.sink_str_updated_record_any_list_dict[sink_str]
         self.assertEqual(len(updated_record_any_list), 1)
@@ -146,7 +153,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
     #
 
     def assert_wc(self, line_source_str, sink_str):
-        print("Asserting wc...")
+        function_str = sys._getframe().f_code.co_name
+        print(f"Asserting {function_str}...")
         #
         input_word_str_count_int_dict = {}
         for message_dict in self.source_str_input_record_any_list_dict[line_source_str]:

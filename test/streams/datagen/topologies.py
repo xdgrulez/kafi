@@ -4,9 +4,11 @@ from test.streams.datagen.shoe_orders import ts_step_int
 
 #
 
-def get_root_tn_datagen_1_join(click_source_str, customer_source_str, join_1_sink_str):
-    click_source_tn = Tn.source(click_source_str)
-    customer_source_tn = Tn.source(customer_source_str)
+def get_built_tn_datagen_1_join(get_click_source_tn_function, 
+                                get_customer_source_tn_function,
+                                get_sink_tn_function):
+    click_source_tn = get_click_source_tn_function()
+    customer_source_tn = get_customer_source_tn_function()
     #
     click_tn = (
         click_source_tn
@@ -32,16 +34,19 @@ def get_root_tn_datagen_1_join(click_source_str, customer_source_str, join_1_sin
                 "first_name": r["first_name"]}})
     )
     #
-    root_tn = Tn.sink(join_1_sink_str, join_1_tn)
+    sink_tn = get_sink_tn_function(join_1_tn)
     #
-    root_tn.build()
+    built_tn = Tn.build(sink_tn)
     #
-    return root_tn
+    return built_tn
 
-def get_root_tn_datagen_2_joins(click_source_str, customer_source_str, product_source_str, joins_2_sink_str):
-    click_source_tn = Tn.source(click_source_str)
-    customer_source_tn = Tn.source(customer_source_str)
-    product_source_tn = Tn.source(product_source_str)
+def get_built_tn_datagen_2_joins(get_click_source_tn_function,
+                                 get_customer_source_tn_function, 
+                                 get_product_source_tn_function, 
+                                 get_sink_tn_function):
+    click_source_tn = get_click_source_tn_function()
+    customer_source_tn = get_customer_source_tn_function()
+    product_source_tn = get_product_source_tn_function()
     #
     click_tn = (
         click_source_tn
@@ -83,17 +88,21 @@ def get_root_tn_datagen_2_joins(click_source_str, customer_source_str, product_s
                                     "brand": r["brand"]}})
     )
     #
-    root_tn = Tn.sink(joins_2_sink_str, joins_2_tn)
+    sink_tn = get_sink_tn_function(joins_2_tn)
     #
-    root_tn.build()
+    built_tn = Tn.build(sink_tn)
     #
-    return root_tn
+    return built_tn
 
-def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_source_str, order_source_str, joins_3_sink_str):
-    click_source_tn = Tn.source(click_source_str)
-    customer_source_tn = Tn.source(customer_source_str)
-    product_source_tn = Tn.source(product_source_str)
-    order_source_tn = Tn.source(order_source_str)
+def get_built_tn_datagen_3_joins(get_click_source_tn_function, 
+                                 get_customer_source_tn_function,
+                                 get_product_source_tn_function,
+                                 get_order_source_tn_function,
+                                 get_sink_tn_function):
+    click_source_tn = get_click_source_tn_function()
+    customer_source_tn = get_customer_source_tn_function()
+    product_source_tn = get_product_source_tn_function()
+    order_source_tn = get_order_source_tn_function()
     #
     click_tn = (
         click_source_tn
@@ -153,14 +162,14 @@ def get_root_tn_datagen_3_joins(click_source_str, customer_source_str, product_s
                 "order_id": l["order_id"]}})
     )
     #
-    root_tn = Tn.sink(joins_3_sink_str, joins_3_tn)
+    sink_tn = get_sink_tn_function(joins_3_tn)
     #
-    root_tn.build()
+    built_tn = Tn.build(sink_tn)
     #
-    return root_tn
+    return built_tn
 
-def get_root_tn_datagen_self_join_group_by(order_source_str, self_join_group_by_sink_str):
-    order_source_tn = Tn.source(order_source_str)
+def get_built_tn_datagen_self_join_group_by(get_source_tn_function, get_sink_tn_function):
+    order_source_tn = get_source_tn_function()
     #
     order_tn = (
         order_source_tn
@@ -188,14 +197,14 @@ def get_root_tn_datagen_self_join_group_by(order_source_str, self_join_group_by_
         .to_value()
     )
     #
-    root_tn = Tn.sink(self_join_group_by_sink_str, self_join_group_by_tn)
+    sink_tn = get_sink_tn_function(self_join_group_by_tn)
     #
-    root_tn.build()
+    built_tn = Tn.build(sink_tn)
     #
-    return root_tn
+    return built_tn
 
-def get_root_tn_datagen_self_join_group_by_debezium(order_source_str, self_join_group_by_debezium_sink_str):
-    order_source_tn = Tn.source(order_source_str)
+def get_built_tn_datagen_self_join_group_by_debezium(get_source_tn_function, get_sink_tn_function):
+    order_source_tn = get_source_tn_function()
     order_source_tn._to_zSet_function = order_source_tn.from_debezium
     #
     order_tn = (
@@ -223,12 +232,12 @@ def get_root_tn_datagen_self_join_group_by_debezium(order_source_str, self_join_
         .to_value()
     )
     #
-    root_tn = Tn.sink(self_join_group_by_debezium_sink_str, self_join_group_by_debezium_tn)
-    root_tn._from_zSet_function = root_tn.to_debezium
+    sink_tn = get_sink_tn_function(self_join_group_by_debezium_tn)
     #
-    root_tn.build()
+    built_tn = Tn.build(sink_tn)
+    built_tn._from_zSet_function = built_tn.to_debezium
     #
-    return root_tn
+    return built_tn
 
 def get_built_tn_datagen_multiple_sinks(get_source_tn_function, get_sink_customer_a_h_function, get_sink_customer_i_q_function, get_sink_customer_r_z_function):
     customer_source_tn = get_source_tn_function()

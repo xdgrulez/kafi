@@ -21,6 +21,6 @@ def get_built_tn_wc(get_source_tn_function, get_sink_tn_function):
     #
     sink_tn = get_sink_tn_function(group_by_count_tn)
     #
-    root_tn = Tn.build(sink_tn)
+    built_tn = Tn.build(sink_tn)
     #
-    return root_tn
+    return built_tn
