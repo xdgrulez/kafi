@@ -13,7 +13,7 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
         click_topic_str = "shoe_clickstream"
         customer_topic_str = "shoe_customers"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/1_join.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test/streams/datagen/flinksql/1_join.sql"
         #
         source_storage = Cluster("local")
         #
@@ -29,7 +29,7 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
         customer_topic_str = "shoe_customers"
         product_topic_str = "shoes"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/2_joins.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test/streams/datagen/flinksql/2_joins.sql"
         #
         source_storage = Cluster("local")
         #
@@ -46,7 +46,7 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
         product_topic_str = "shoes"
         order_topic_str = "shoe_orders"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/3_joins.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test/streams/datagen/flinksql/3_joins.sql"
         #
         source_storage = Cluster("local")
         #
@@ -60,7 +60,7 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
     def test_datagen_self_join_group_by(self):
         order_topic_str = "shoe_orders"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/self_join_group_by.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test/streams/datagen/flinksql/self_join_group_by.sql"
         #
         source_storage = Cluster("local")
         #
@@ -74,7 +74,7 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
     def test_datagen_self_join_group_by_debezium(self):
         order_topic_str = "shoe_orders_debezium"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/datagen/flinksql/self_join_group_by_debezium.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test/streams/datagen/flinksql/self_join_group_by_debezium.sql"
         #
         source_storage = Cluster("local")
         #
@@ -90,7 +90,7 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
     def test_jamie(self):
         transaction_source_str = "transactions"
         #
-        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test_kafi_streams/jamie/flinksql/jamie.sql"
+        flinksql_sql_path_str = f"{home_path_str}/github/kafi/test/streams/jamie/flinksql/jamie.sql"
         #
         source_storage = Cluster("local")
         #
@@ -100,6 +100,6 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
         target_storage = source_storage
         target_topic_str = "flink_total"
         #
-        self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, 1000)
+        self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, default_steps_int)
         #
-        self.assertEqual(self.updated_record_any_list[-1]["value"], {"total": 0})
+        self.assertEqual(self.sink_str_updated_record_any_list_dict[target_topic_str][-1]["value"], {"total": 0})

@@ -47,5 +47,5 @@ class TestKafkaBase:
     def read_source_topics(self, source_str_topic_dict_dict):
          return self.read_topics(source_str_topic_dict_dict, "source")
     
-    def read_sink_topics(self, source_str_topic_dict_dict, **kwargs):
+    def read_sink_topics(self, source_str_topic_dict_dict):
          return self.read_topics(source_str_topic_dict_dict, "sink")
