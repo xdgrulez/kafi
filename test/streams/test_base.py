@@ -23,7 +23,7 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         self.source_str_input_record_any_list_dict = defaultdict(list)
         self.sink_str_updated_record_any_list_dict = defaultdict(list)
         #
-        self.step_int_bytes_int_dict = {}
+        self.step_int_kbytes_int_dict = {}
 
     def tearDown(self):
         print()
@@ -127,8 +127,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
     def assert_datagen_expire(self):
         print("Asserting datagen_multiple_sinks...")
         #
-        steps_int = max(self.step_int_bytes_int_dict.keys())
-        self.assertEqual(self.step_int_bytes_int_dict[steps_int - 1], self.step_int_bytes_int_dict[steps_int])
+        steps_int = max(self.step_int_kbytes_int_dict.keys())
+        self.assertEqual(self.step_int_kbytes_int_dict[steps_int - 1], self.step_int_kbytes_int_dict[steps_int])
         #
         print("...done.")
 

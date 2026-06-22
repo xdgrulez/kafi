@@ -1,6 +1,7 @@
 import asyncio
 import cloudpickle
 import threading
+import traceback
 import zlib
 
 from kafi.helpers import get_millis, compress, decompress
@@ -69,6 +70,8 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
     """
     checkpoint_topic_str = checkpoint_topic
     checkpoint_interval_float = checkpoint_interval
+    #
+    step_function = kwargs["step_function"] if "step_function" in kwargs else lambda _: None
     #
     initial_time_int = get_millis()
     #
@@ -159,6 +162,8 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
         except (KeyboardInterrupt, asyncio.CancelledError):
             # Note: Clean-up of client objects omitted here to avoid breaking during inflight processing pipeline drops.
             pass
+        except Exception:
+            traceback.print_exc()
     #
     async def process():
         """
@@ -183,6 +188,9 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
                     #
                     # Process the next step and return the latest sink messages.
                     sink_str_sink_message_dict_list_dict = built_tn.latest()
+                    #
+                    step_function(built_tn)
+                    #
                     for sink_str, (foreach_function, _) in sink_str_foreach_function_finally_function_tuple_dict.items():
                         # Call foreach function for each sink (in a background thread).
                         sink_message_dict_list = sink_str_sink_message_dict_list_dict.get(sink_str, [])
@@ -207,6 +215,8 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
                     initial_time_int = get_millis()
         except KeyboardInterrupt:
             pass
+        except Exception:
+            traceback.print_exc()
         finally:
             # Trigger e.g. custom producer flush/closure procedures.
             for (_, finally_function) in sink_str_foreach_function_finally_function_tuple_dict.values():
@@ -235,8 +245,8 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
             try:
                 consumer.close()
             except Exception:
-                pass
-
+                traceback.print_exc()
+    
 # Streams class (to augment sources and sinks with storage/topic/kwargs information)
 
 class Streams(TopologyNode):

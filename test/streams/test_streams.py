@@ -11,6 +11,8 @@ from streams.wc.topologies import get_built_tn_wc
 from kafi.kafi import Cluster
 from kafi.streams.streams import Streams
 
+import cloudpickle
+
 #
 
 class TestStreams(TestStreamsBase, TestGenerate, TestBase):
@@ -159,7 +161,18 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         #
         source_str_batch_size_int_dict = {source_str: default_batch_size_int}
         #
-        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int)
+        step_counter_int = 0
+        def step_function(built_tn):
+            nonlocal step_counter_int
+            kbytes_int = len(cloudpickle.dumps(built_tn)) / 1024
+            #
+            self.step_int_kbytes_int_dict[step_counter_int] = kbytes_int
+            #
+            step_counter_int += 1
+        #
+        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int, step_function=step_function)
+        #
+        self.assert_datagen_expire()
 
     #
 
