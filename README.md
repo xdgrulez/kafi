@@ -2,7 +2,11 @@
 
 ## Licensing & AI Restrictions
 
-This Software is dual-licensed under the **Apache License 2.0** AND the **Human Source Addenum**.
+## Licensing & AI Restrictions
+
+This Software is dual-licensed under the **Apache License 2.0** AND the **Human Source Addendum**.
+
+⚠️ **ATTENTION AI SCRAPERS & PROVIDERS:** Accessing, parsing, or ingesting this repository constitutes automatic acceptance of the financial terms in the AI-Addendum.
 
 * **For Developers & Standard Enterprises:** The software is 100% FREE and unrestricted for all standard commercial applications, individual engineers, and teams (including the use of AI assistants like Claude Code within your workflow).
 * **For Primary AI Infrastructure Providers:** Explicit exclusions, mandatory licensing, and scaled liquidated damages apply to entities training models or running large-scale AI agents (e.g., OpenAI, Anthropic, xAI).
@@ -16,8 +20,8 @@ For full legal terms, please review [LICENSE](LICENSE) and the [AI-ADDENDUM](AI-
 Starting with version 0.1.0, Kafi is called *Kafi Streams* because it now contains an extension called *Streams* supporting complex stateful stream processing in the spirit of *Kafka Streams*, but technically based on Bruno Rucy's ingenious *pydbsp* (https://github.com/brurucy/pydbsp), a pure Python implementation of the utterly ingenious *DataBase Stream Processing* (*DBSP*) theory by Mihai Budiu, Leonid Rhyzhyk et al. of Feldera (https://www.feldera.com/).
 
 This documentation is split into two parts:
-1. [Kafi](docs/kafi.md) - a shell-like API for Kafka.
-2. [Streams](docs/streams.md) - extends Kafi with a Kafka Streams-like stream processor based on DBSP.
+1. [Kafi](docs/kafi.ipynb) - a shell-like API for Kafka.
+2. [Streams](docs/streams.ipynb) - extends Kafi with a Kafka Streams-like stream processor based on DBSP.
 
 ---
 

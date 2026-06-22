@@ -1,7 +1,6 @@
                              Human Source Addendum
-                             Version 0.1, June 2026
-         (PolyForm-Based AI Infrastructure Restriction & Liquidated Damages)
-
+                             Version 0.2, June 2026
+         (Source-Available AI Infrastructure Restriction & Liquidated Damages)
 
     1. Purpose and Scope
         This Addendum supplements the primary license of this software.
@@ -19,18 +18,19 @@
         non-commercial purpose, PROVIDED THAT you are not a "Primary AI
         Infrastructure Provider" as defined in Section 3.
 
-    3. Exclusion of Primary AI Infrastructure Providers
+    3. Exclusion & Commercial Safe Harbor
         The grant in Section 2 does not apply to any individual, corporate
         entity, or organization classified as a "Primary AI Infrastructure
         Provider".
         
         A Primary AI Infrastructure Provider is defined as any entity whose
         primary business model, or a substantial source of revenue/funding,
-        consists of:
-        
+        consists of commercializing, selling, or provisioning public/private
+        AI infrastructure, specifically including:
+         
         (a) Developing, training, fine-tuning, or hosting Large Language
             Models (LLMs), foundational machine learning models, or
-            generative AI systems.
+            generative AI systems for third-party use or commercial API access.
         
         (b) Operating autonomous AI coding agents, automated
             software-engineering bots, or AI-driven developer platforms.
@@ -44,15 +44,23 @@
         purposes.
         
         Exemplary entities include, but are not limited to: OpenAI,
-        Anthropic, xAI, Google (AI/DeepMind Divisions), Meta (AI Division),
-        and Microsoft (AI/Copilot Divisions).
+        Anthropic, xAI, Google, Meta, and Microsoft.
 
+        CRITICAL SAFE HARBOR FOR STANDARD ENTERPRISES:
         For the avoidance of doubt, standard end-users, software engineers,
-        and commercial enterprises utilizing third-party AI coding assistants
-        (such as Claude Code, GitHub Copilot, or similar tools) within their
-        workflows to build applications with this software are explicitly NOT
-        classified as Primary AI Infrastructure Providers and remain fully
-        covered under the free license granted in Section 2.
+        and commercial enterprises are EXPLICITLY NOT classified as Primary
+        AI Infrastructure Providers. 
+        
+        This Safe Harbor fully covers and protects:
+        
+        (i)  The use of any third-party AI coding assistants (e.g., Claude Code, 
+             GitHub Copilot, or similar tools) within their workflows to build 
+             applications with this software.
+        
+        (ii) The internal deployment, local hosting, or fine-tuning of open models 
+             (e.g., Llama-3) by an enterprise strictly for its own internal business 
+             operations, provided the enterprise does not sell or lease access to 
+             the resulting AI model as a primary commercial service.
 
     4. Mandatory Commercial Licensing & Automated Contract Conclusion
         Any use, parsing, live-analysis by software agents, or ingestion into
@@ -73,6 +81,11 @@
         Primary AI Infrastructure Provider agrees to pay the Licensor a
         contractually agreed Liquidated Damages fee.
 
+        The parties expressly agree that because the true market value of 
+        proprietary dataset ingestion and model enhancement is inherently 
+        difficult to quantify, the following models represent a reasonable, 
+        non-punitive pre-estimate of harm and fair commercial value.
+
         The applicable fee shall automatically be whichever of the following
         models (A or B) results in the higher financial amount:
 
@@ -80,13 +93,13 @@
            If the Primary AI Infrastructure Provider (including its parent
            companies, subsidiaries, and affiliates) has a total annual global
            revenue exceeding $100 Million USD, the minimum annual damages fee
-           shall be calculated as 0.5% (zero point five percent) of the
+           shall be calculated as 2% (two percent percent) of the
            Provider's total global gross revenue for the preceding fiscal
            year. 
 
            For the avoidance of doubt, if a Provider generates $20 Billion
            USD in annual revenue, the mandatory annual fee under this
-           provision is strictly set at $100,000,000 USD.
+           provision is strictly set at $400,000,000 USD.
 
         B. The Compute-Scaled Infrastructure Model
            The annual licensing and damages fee shall be calculated at a rate
