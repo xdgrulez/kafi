@@ -55,7 +55,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         #
         self.process([(order_source_str, default_batch_size_int)], default_steps_int, root_tn, [self_join_group_by_sink_str])
         #
-        self.assert_self_join_group_by(order_source_str, self_join_group_by_sink_str)
+        self.assert_datagen_self_join_group_by(order_source_str, self_join_group_by_sink_str)
 
     def test_datagen_self_join_group_by_debezium(self):
         order_source_str = "shoe_orders_debezium"
@@ -66,7 +66,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         #
         self.process([(order_source_str, default_batch_size_int)], default_steps_int, root_tn, [self_join_group_by_debezium_sink_str])
         #
-        self.assert_self_join_group_by_debezium(order_source_str, self_join_group_by_debezium_sink_str)
+        self.assert_datagen_self_join_group_by_debezium(order_source_str, self_join_group_by_debezium_sink_str)
 
     def test_datagen_multiple_sinks(self):
         source_str = "shoe_customers"

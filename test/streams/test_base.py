@@ -62,8 +62,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
             for changed_packed_record_any in changed_packed_record_any_list:
                 print(default_unpack_function(changed_packed_record_any))
 
-    def assert_self_join_group_by(self, order_source_str, self_join_group_by_sink_str):
-        print("Asserting self_join_group_by...")
+    def assert_datagen_self_join_group_by(self, order_source_str, self_join_group_by_sink_str):
+        print("Asserting datagen_self_join_group_by...")
         #
         message_dict_list = self.source_str_input_record_any_list_dict[order_source_str]
         product_id_str_product_id_str_tuple_customer_id_set_dict = defaultdict(set)
@@ -81,8 +81,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         json_str_set2 = set([json.dumps(message_dict["value"]) for message_dict in updated_record_any_list])
         self.assertTrue(json_str_set1.issubset(json_str_set2))
     
-    def assert_self_join_group_by_debezium(self, order_source_str, self_join_group_by_debezium_sink_str):
-        print("Asserting self_join_group_by_debezium...")
+    def assert_datagen_self_join_group_by_debezium(self, order_source_str, self_join_group_by_debezium_sink_str):
+        print("Asserting datagen_self_join_group_by_debezium...")
         #
         message_dict_list = self.source_str_input_record_any_list_dict[order_source_str]
         created_value_dict_list = [message_dict["value"]["after"] for message_dict in message_dict_list if message_dict["value"]["op"] == "c"]
@@ -108,16 +108,36 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         #
         print("...done.")
 
+    def assert_datagen_multiple_sinks(self, sink_customer_a_h_str, sink_customer_i_q_str, sink_customer_r_z_str):
+        print("Asserting datagen_multiple_sinks...")
+        #
+        for message_dict in self.sink_str_updated_record_any_list_dict[sink_customer_a_h_str]:
+            self.assertTrue(message_dict["value"]["last_name"][0].lower() >= "A".lower() and message_dict["value"]["last_name"][0].lower() <= "H".lower())
+        #
+        for message_dict in self.sink_str_updated_record_any_list_dict[sink_customer_i_q_str]:
+            self.assertTrue(message_dict["value"]["last_name"][0].lower() >= "I".lower() and message_dict["value"]["last_name"][0].lower() <= "Q".lower())
+        #
+        for message_dict in self.sink_str_updated_record_any_list_dict[sink_customer_r_z_str]:
+            self.assertTrue(message_dict["value"]["last_name"][0].lower() >= "R".lower() and message_dict["value"]["last_name"][0].lower() <= "Z".lower())
+        #
+        print("...done.")
+
     #
 
     def assert_jamie(self, sink_str):
+        print("Asserting jamie...")
+        #
         updated_record_any_list = self.sink_str_updated_record_any_list_dict[sink_str]
         self.assertEqual(len(updated_record_any_list), 1)
         self.assertEqual(updated_record_any_list[0]["value"]["total"], 0)
+        #
+        print("...done.")
 
     #
 
     def assert_wc(self, line_source_str, sink_str):
+        print("Asserting wc...")
+        #
         input_word_str_count_int_dict = {}
         for message_dict in self.source_str_input_record_any_list_dict[line_source_str]:
             line_str = message_dict["value"]
@@ -132,3 +152,5 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
             output_word_str_count_int_dict[word_str] = count_int
         #
         self.assertEqual(input_word_str_count_int_dict, output_word_str_count_int_dict)
+        #
+        print("...done.")
