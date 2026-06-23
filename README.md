@@ -13,7 +13,7 @@ For full legal terms, please review [LICENSE](LICENSE) and the [AI-ADDENDUM](AI-
 
 ## What Is This?
 
-*Kafi Streams*[^1] (formerly known as *Kafi*) is a Python library for Kafka stream processing on Kafka.
+*Kafi Streams*[^1] (formerly known as *Kafi*) is a Python library for Kafka stream processing.
 
 Kafi Streams is technically based on Bruno Rucy's ingenious *pydbsp* (https://github.com/brurucy/pydbsp), a pure Python implementation of the revolutionary *DataBase Stream Processing* (*DBSP*) theory by Mihai Budiu, Leonid Rhyzhyk et al. of Feldera (https://www.feldera.com/).
 
@@ -22,6 +22,10 @@ Kafi Streams is technically based on Bruno Rucy's ingenious *pydbsp* (https://gi
 With Kafi Streams, stream processing, all of a sudden, becomes easy as cake.
 
 *All* - and I really mean *all* - the additional concepts and leaky abstractions (see this [blog post](https://substack.com/home/post/p-170066350)) that have kept complex stateful stream processing in a niche for streaming/distributed systems experts are, all of a sudden, gone.
+
+Kafi Streams actually consists of two parts:
+* [Kafi](docs/kafi.ipynb) - a shell-like Kafka interface for writing producers, consumers, or doing administrative tasks like backups.
+* [Streams](docs/streams.ipynb) - easy-as-cake complex stateful stream processing based on DBSP/pydbsp in the spirit of Kafka Streams.
 
 Here is the [documentation](docs/streams.ipynb).
 
