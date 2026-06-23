@@ -635,7 +635,7 @@ class TopologyNode:
             #
             tn._output_nodeId = input
         #
-        tn = TopologyNode("source", {}, _build_function, **kwargs)
+        tn = TopologyNode(f"source_{source_str}", {}, _build_function, **kwargs)
         tn._source_str = source_str
         #
         return tn
@@ -660,6 +660,7 @@ class TopologyNode:
         #
         head_sink_str, head_sink_tn = head_sink_str_sink_tn_tuple
         root_tn = head_sink_tn.map(lambda x: (head_sink_str, x))
+        root_tn._name_str = f"sink_{head_sink_str}"
         #
         # We need this little factory to avoid unwanted variable shadowing for sink_str in the loop below.
         def get_map_function(sink_str):
@@ -667,6 +668,7 @@ class TopologyNode:
         #
         for sink_str, sink_root_tn in tail_sink_str_sink_tn_tuple_list:
             root_tn = root_tn.merge(sink_root_tn.map(get_map_function(sink_str)))
+            root_tn._name_str = f"sink_{sink_str}"
         #
         sink_str_list = [sink_str for sink_str, _ in sink_str_sink_tn_tuple_list]
         root_tn._sink_str_list = sink_str_list

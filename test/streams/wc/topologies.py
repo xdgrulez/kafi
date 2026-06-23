@@ -7,9 +7,9 @@ def get_built_tn_wc(get_source_tn_function, get_sink_tn_function):
     #
     split_tn = source_tn.flatmap(
         lambda x: [{"word": word_str,
+                    "position": i,
                     "partition": x["partition"],
-                    "offset": x["offset"],
-                    "position": i} for i, word_str in enumerate(x["value"].split())]
+                    "offset": x["offset"]} for i, word_str in enumerate(x["value"].split())]
     ).distinct()
     #
     group_by_count_tn = split_tn.group_by_count(
