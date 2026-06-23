@@ -51,6 +51,8 @@ class TopologyNode:
         self._source_str = None
         self._sink_str = None
         self._sink_str_list = None
+        #
+        self._reset_function = None
 
     ###
     # DBSP base operators
@@ -571,9 +573,7 @@ class TopologyNode:
     # Expiration
     ###
 
-    def expire(self, get_time_function, get_expiry_function, out_function=lambda x: x[0], late_arrival=True, **kwargs):
-        late_arrival_boolean = late_arrival
-        #
+    def expire(self, get_time_function, get_expiry_function, out_function=lambda x: x[0], **kwargs):
         expire_source_str = f"expire_{uuid.uuid4()}"
         expire_source_tn = TopologyNode.source(expire_source_str, **kwargs)
         #
@@ -594,18 +594,15 @@ class TopologyNode:
                  lambda x: x)
         )
         #
-        _expired_tn = (
+        expired_tn = (
             merged_input_with_expiry_tn
             .join(input_now_tn,
                 lambda l, r: r > l[1],
                 lambda l, _: l)
             ._filter(lambda _, w: w > 0)
             ._neg()
+            ._delay()
         )
-        if late_arrival_boolean:
-            expired_tn = _expired_tn._delay()
-        else:
-            expire_tn = _expired_tn
         #
         expire_tn = (
             expired_tn
@@ -697,11 +694,22 @@ class TopologyNode:
         #
         root_tn = TopologyNode._build_root_tn(*sink_tn_tuple)
         #
-        evaluator = root_tn._get_evaluator()
+        def _reset_function():
+            evaluator = root_tn._get_evaluator()
+            #
+            root_tn._foreach_bu(lambda tn: tn._build_function(evaluator))
         #
-        root_tn._foreach_bu(lambda tn: tn._build_function(evaluator))
+        _reset_function()
+        #
+        root_tn._reset_function = _reset_function
         #
         return root_tn
+
+    def reset(self):
+        if self._reset_function is None:
+            raise Exception("Not built yet.")
+        #
+        self._reset_function()
 
     # Input
 
