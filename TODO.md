@@ -1,6 +1,9 @@
                         # By convention, committed offsets reflect the next message to be consumed, not the last message consumed. (from https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html)
                             # storage_id_topic_str_tuple_offsets_dict_dict[storage_id_topic_str_tuple][partition_int] = offset_int + 1
 
+retractions for windows
+NamedTuple
+
 # Kafi
 
 ## Bugs

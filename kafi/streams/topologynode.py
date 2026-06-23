@@ -196,7 +196,7 @@ class TopologyNode:
             return record_any, -weight_int
         #
         tn = self._map(_map_function, **kwargs)
-        tn._name_str = "neg_op"
+        tn._name_str = "_neg_op"
         #
         return tn
 
@@ -571,7 +571,9 @@ class TopologyNode:
     # Expiration
     ###
 
-    def expire(self, get_time_function, get_expiry_function, out_function=lambda x: x[0], **kwargs):
+    def expire(self, get_time_function, get_expiry_function, out_function=lambda x: x[0], late_arrival=True, **kwargs):
+        late_arrival_boolean = late_arrival
+        #
         expire_source_str = f"expire_{uuid.uuid4()}"
         expire_source_tn = TopologyNode.source(expire_source_str, **kwargs)
         #
@@ -580,27 +582,30 @@ class TopologyNode:
             .map(lambda x: (x, get_expiry_function(x)))
         )
         #
-        added_input_with_expiry_tn = (
+        merged_input_with_expiry_tn = (
             input_with_expiry_tn
             .merge(expire_source_tn)
         )
         #
-        input_now__tn = (
-            added_input_with_expiry_tn
+        input_now_tn = (
+            merged_input_with_expiry_tn
             .map(lambda x: get_time_function(x[0]))
             .max(lambda x: x,
                  lambda x: x)
         )
         #
-        expired_tn = (
-            added_input_with_expiry_tn
-            .join(input_now__tn,
+        _expired_tn = (
+            merged_input_with_expiry_tn
+            .join(input_now_tn,
                 lambda l, r: r > l[1],
                 lambda l, _: l)
             ._filter(lambda _, w: w > 0)
             ._neg()
-            ._delay()
         )
+        if late_arrival_boolean:
+            expired_tn = _expired_tn._delay()
+        else:
+            expire_tn = _expired_tn
         #
         expire_tn = (
             expired_tn
