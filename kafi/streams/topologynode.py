@@ -601,11 +601,11 @@ class TopologyNode:
                 lambda l, _: l)
             ._filter(lambda _, w: w > 0)
             ._neg()
-            ._delay()
+            # ._delay()
         )
         #
         expire_tn = (
-            expired_tn
+            expired_tn            
             .merge(input_with_expiry_tn)
             .map(out_function)
         )
