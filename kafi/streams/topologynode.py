@@ -573,7 +573,11 @@ class TopologyNode:
     # Expiration
     ###
 
-    def expire(self, get_time_function, get_expiry_function, out_function=lambda x: x[0], **kwargs):
+    def expire(self, get_time_function, get_expiry_function, projection_function=lambda x: x[0], **kwargs):
+        _peek_input_boolean = kwargs["_peek_input"] if "_peek_input" in kwargs else False
+        _peek_current_time_boolean = kwargs["_peek_current_time"] if "_peek_current_time" in kwargs else False
+        _peek_expired_boolean = kwargs["_peek_expired"] if "_peek_expired" in kwargs else False
+        #
         expire_source_str = f"expire_{uuid.uuid4()}"
         expire_source_tn = TopologyNode.source(expire_source_str, **kwargs)
         #
@@ -586,28 +590,33 @@ class TopologyNode:
             input_with_expiry_tn
             .merge(expire_source_tn)
         )
+        if _peek_input_boolean:
+            merged_input_with_expiry_tn = merged_input_with_expiry_tn._peek("input")
         #
-        input_now_tn = (
+        current_time_tn = (
             merged_input_with_expiry_tn
             .map(lambda x: get_time_function(x[0]))
             .max(lambda x: x,
                  lambda x: x)
         )
+        if _peek_current_time_boolean:
+            current_time_tn = current_time_tn._peek("current_time")
         #
         expired_tn = (
             merged_input_with_expiry_tn
-            .join(input_now_tn,
+            .join(current_time_tn,
                 lambda l, r: r > l[1],
                 lambda l, _: l)
             ._filter(lambda _, w: w > 0)
             ._neg()
-            # ._delay()
         )
+        if _peek_expired_boolean:
+            expired_tn = expired_tn._peek("expired")
         #
         expire_tn = (
-            expired_tn            
+            expired_tn
             .merge(input_with_expiry_tn)
-            .map(out_function)
+            .map(projection_function)
         )
         #
         expire_source_tn.to_zSet(TopologyNode._from_records)
