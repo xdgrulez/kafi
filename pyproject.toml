@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Ralph M. Debusmann", email = "matthias.debusmann@gmail.com" }
 ]
-license = "Apache License 2.0 AND LicenseRef-Proprietary"
+license = { text = "Apache License 2.0 AND LicenseRef-Proprietary" }
 license-files = [
     "LICENSE",
     "AI-ADDENDUM"
