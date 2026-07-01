@@ -1,7 +1,7 @@
 # config
 piny==1.1.0
 # kafka
-confluent-kafka[avro,json,protobuf,schemaregistry]==2.14.2
+confluent-kafka[avro,json,protobuf,schemaregistry]==2.15.0
 grpcio-tools==1.81.1
 requests==2.34.2
 # files
@@ -14,7 +14,7 @@ openpyxl==3.1.5
 pandas==3.0.3
 # streams
 cloudpickle==3.1.2
-msgpack==1.2.0
+msgpack==1.2.1
 pydbsp==2.1.0
 zstandard==0.25.0
 # build

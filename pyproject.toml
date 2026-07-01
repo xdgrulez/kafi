@@ -1,6 +1,6 @@
 [project]
 name = "kafi"
-version = "0.1.0"
+version = "0.1.1"
 description = "Kafka and Files"
 readme = "README.md"
 authors = [
@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "piny==1.1.0",
-    "confluent-kafka[avro,json,protobuf,schemaregistry]==2.14.2",
+    "confluent-kafka[avro,json,protobuf,schemaregistry]==2.15.0",
     "grpcio-tools==1.81.1",
     "requests==2.34.2",
 
@@ -36,7 +36,7 @@ dependencies = [
     "pandas==3.0.3",
 
     "cloudpickle==3.1.2",
-    "msgpack==1.2.0",
+    "msgpack==1.2.1",
     "pydbsp==2.1.0",
     'zstandard==0.25.0'
 ]

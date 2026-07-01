@@ -434,5 +434,6 @@ def copy_kwargs(name_str, **kwargs):
 def compress(uncompressed_bytes):
     return zstdCompressor.compress(uncompressed_bytes)
 
+
 def decompress(compressed_bytes):
     return zstdDecompressor.decompress(compressed_bytes)

@@ -23,6 +23,7 @@ class StorageConsumer(Dechunker):
         self.topic_str_next_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "offsets", "ts", **kwargs)
         if self.topic_str_next_offsets_dict_dict is None:
             self.topic_str_next_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
+        #
         # Get end offsets for the subscribed topics.
         self.topic_str_end_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "end_offsets", "end_ts", **kwargs)
         #
@@ -56,10 +57,16 @@ class StorageConsumer(Dechunker):
         if n_int == 0:
             return initial_acc
         #
+        # Get last_n (to read n messages from the end of the topic).
+        last_n_int = kwargs["last_n"] if "last_n" in kwargs else None
+        if last_n_int is not None and last_n_int > 0:
+            self.topic_str_next_offsets_dict_dict = self.get_last_n_start_offsets(self.topic_str_list, last_n_int)
+            n_int = last_n_int
+        #
         commit_after_processing_bool = self.storage_obj.commit_after_processing() if commit_after_processing is None else commit_after_processing
         #
         consume_batch_size_int = kwargs["consume_batch_size"] if "consume_batch_size" in kwargs else self.storage_obj.consume_batch_size()
-        if n != ALL_MESSAGES and consume_batch_size_int > n_int:
+        if n_int != ALL_MESSAGES and consume_batch_size_int > n_int:
             consume_batch_size_int = n_int
         #
         break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
@@ -152,7 +159,7 @@ class StorageConsumer(Dechunker):
         if n_int == ALL_MESSAGES:
             n_int = self.storage_obj.consume_batch_size()
         #
-        return self.foldl(foldl_function, [], n_int)
+        return self.foldl(foldl_function, [], n_int, **kwargs)
 
     #
 
@@ -186,6 +193,27 @@ class StorageConsumer(Dechunker):
         # print(topic_str_offsets_dict_dict)
         #
         return topic_str_offsets_dict_dict
+
+    def get_last_n_start_offsets(self, topic_str_list, last_n_int):
+        topic_str_partition_int_offset_int_tuple_dict_dict = self.storage_obj.watermarks(topic_str_list)
+        topic_str_start_offsets_dict_dict = {}
+        #
+        for topic_str, partition_int_offset_int_tuple_dict in topic_str_partition_int_offset_int_tuple_dict_dict.items():
+            # state = partition_int_low_watermark_int_high_watermark_int_start_offset_int_tuple_dict - start_offset_int starts with high_watermark_int.
+            state = {partition_int: [low_watermark_int, high_watermark_int, high_watermark_int] for partition_int, (low_watermark_int, high_watermark_int) in partition_int_offset_int_tuple_dict.items()}
+            for _ in range(last_n_int):
+                # Find the partition with the most remaining messages.
+                best_partition_int = max(state.keys(), key=lambda partition_int: state[partition_int][2] - state[partition_int][0])
+                if state[best_partition_int][2] == state[best_partition_int][0]:
+                    # If not even that partition doesn't carry enough remaining messages, stop.
+                    break
+                else:
+                    # Else "consume" a message from that partition.
+                    state[best_partition_int][2] -= 1
+            #
+            topic_str_start_offsets_dict_dict[topic_str] = {partition_int: start_offset_int for partition_int, (_, _, start_offset_int) in state.items()}
+        #
+        return topic_str_start_offsets_dict_dict
 
     def get_key_value_types_from_kwargs(self, topic_str_list, **kwargs):
         (key_type_str, value_type_str) = self.storage_obj.get_key_value_type_tuple(**kwargs)

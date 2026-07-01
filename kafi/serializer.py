@@ -44,16 +44,18 @@ class Serializer(SchemaRegistry):
             #
             return schema_str
         #
-
-        def payload_to_payload_dict():
-            if isinstance(payload, bytes):
-                payload_dict = json.loads(payload)
-            elif isinstance(payload, str):
-                payload_dict = json.loads(payload)
-            elif isinstance(payload, dict):
-                payload_dict = payload
+        def payload_to_serializer_payload():
+            try:
+                if isinstance(payload, bytes):
+                    serializer_payload = json.loads(payload)
+                elif isinstance(payload, str):
+                    serializer_payload = json.loads(payload)
+                elif isinstance(payload, dict):
+                    serializer_payload = payload
+            except (json.JSONDecodeError, TypeError):
+                serializer_payload = payload
             #
-            return payload_dict
+            return serializer_payload
         #
         if payload == None:
             serialized_payload_bytes = None
@@ -63,10 +65,10 @@ class Serializer(SchemaRegistry):
             elif type_str.lower() == "avro":
                 schema = get_schema_str()
                 avroSerializer = AvroSerializer(self.schemaRegistryClient, schema, self.ser_to_dict, self.ser_conf, self.ser_rule_conf, self.ser_rule_registry)
-                payload_dict = payload_to_payload_dict()
+                payload_dict = payload_to_serializer_payload()
                 serialized_payload_bytes = avroSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() in ["jsonschema", "json_sr"]:
-                payload_dict = payload_to_payload_dict()
+                payload_dict = payload_to_serializer_payload()
                 schema = get_schema_str()
                 jSONSerializer = JSONSerializer(schema, self.schemaRegistryClient, self.ser_to_dict, self.ser_conf, self.ser_rule_conf, self.ser_rule_registry, self.ser_json_encode)
                 serialized_payload_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
@@ -77,7 +79,7 @@ class Serializer(SchemaRegistry):
                 if self.ser_conf is None:
                     self.ser_conf = {"use.deprecated.format": False}
                 protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistryClient, self.ser_conf, self.ser_rule_conf, self.ser_rule_registry)
-                payload_dict = payload_to_payload_dict()
+                payload_dict = payload_to_serializer_payload()
                 protobuf_message = generalizedProtocolMessageType()
                 ParseDict(payload_dict, protobuf_message)
                 serialized_payload_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))

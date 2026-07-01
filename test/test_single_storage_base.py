@@ -32,6 +32,7 @@ class TestSingleStorageBase(unittest.TestCase):
         self.key_snack_str_list = ['{"key": "cookie"}', '{"key": "cake"}', '{"key": "timtam"}']
         self.key_snack_bytes_list = [bytes(key_snack_str, encoding="utf-8") for key_snack_str in self.key_snack_str_list]
         self.key_snack_dict_list = [json.loads(key_snack_str) for key_snack_str in self.key_snack_str_list]
+        self.key_no_dict_snack_str_list = ["cookie", "cake", "timtam"]
         # https://simon-aubury.medium.com/kafka-with-avro-vs-kafka-with-protobuf-vs-kafka-with-json-schema-667494cbb2af
         self.value_snack_str_list = ['{"name": "cookie", "calories": 500.0, "colour": "brown"}', '{"name": "cake", "calories": 260.0, "colour": "white"}', '{"name": "timtam", "calories": 80.0, "colour": "chocolate"}']
         self.value_snack_bytes_list = [bytes(value_snack_str, encoding="utf-8") for value_snack_str in self.value_snack_str_list]
@@ -58,6 +59,7 @@ class TestSingleStorageBase(unittest.TestCase):
         self.jsonschema_value_schema_one_more_field_str = '{"title":"snack_value","type":"object","required":["name","calories"],"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string", "default": ""}}}'
         self.jsonschema_value_schema_one_more_field_normalized_str = '{"additionalProperties":false,"properties":{"calories":{"type":"number"},"colour":{"type":"string"},"country":{"default":"","type":"string"},"name":{"type":"string"}},"required":["name","calories"],"title":"snack_value","type":"object"}'
         self.jsonschema_value_schema_one_more_field_normalized_redpanda_str = '{"additionalProperties":false,"properties":{"name":{"type":"string"},"calories":{"type":"number"},"colour":{"type":"string"},"country":{"type":"string","default":""}},"required":["name","calories"],"title":"snack_value","type":"object"}'
+        self.jsonschema_key_schema_str_no_dict = '{"title": "snack_key_no_dict", "type": "string"}'
         #
         self.headers_str_bytes_tuple_list = [("header_field1", b"header_value1"), ("header_field2", b"header_value2")]
         self.headers_str_bytes_dict = {"header_field1": b"header_value1", "header_field2": b"header_value2"}
@@ -674,6 +676,30 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
 
+    def test_produce_consume_jsonschema_no_dict_key(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str)
+        # Upon produce, the type "jsonschema" triggers the conversion of bytes, strings and dictionaries into JSONSchema-encoded bytes on Kafka.
+        producer = s.producer(topic_str, key_type="jsonschema", value_type="jsonschema", key_schema=self.jsonschema_key_schema_str_no_dict, value_schema=self.jsonschema_value_schema_str)
+        producer.produce(self.value_snack_dict_list, key=self.key_no_dict_snack_str_list)
+        producer.close()
+        self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
+        #
+        group_str = self.create_test_group_name()
+        # Upon consume, the types "json" and "jsonschema" (alias = "json_sr") trigger the conversion into a dictionary.
+        consumer = s.consumer(topic_str, group=group_str, key_type="json_sr", value_type="json_sr", deser_conf={"validate": False})
+        message_dict_list = consumer.consume(n=3)
+        key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
+        value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
+        self.assertEqual(key_dict_list, self.key_no_dict_snack_str_list)
+        self.assertEqual(value_dict_list, self.value_snack_dict_list)
+        consumer.close()
+
     def test_produce_consume_protobuf(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return
@@ -728,19 +754,40 @@ class TestSingleStorageBase(unittest.TestCase):
         s = self.get_storage()
         #
         topic_str = self.create_test_topic_name()
-        s.create(topic_str)
+        s.create(topic_str, partitions=3)
         producer = s.producer(topic_str, value_type="str")
-        producer.produce("message 1")
-        producer.produce("message 2")
-        producer.produce("message 3")
+        producer.produce("message 1", partition=0)
+        producer.produce("message 2", partition=0)
+        producer.produce("message 3", partition=0)
+        producer.produce("message 4", partition=2)
+        producer.produce("message 5", partition=2)
+        producer.produce("message 6", partition=2)
         producer.close()
-        #
-        group_str = self.create_test_group_name()
-        consumer = s.consumer(topic_str, group=group_str, value_type="str", offsets={0: 2})
-        message_dict_list = consumer.consume(n=1)
-        self.assertEqual(len(message_dict_list), 1)
-        self.assertEqual(message_dict_list[0]["value"], "message 3")
-        consumer.close()
+        # Positive offsets.
+        group_str1 = self.create_test_group_name()
+        consumer1 = s.consumer(topic_str, group=group_str1, value_type="str", offsets={0: 2})
+        message_dict_list1 = consumer1.consume(n=1)
+        self.assertEqual(len(message_dict_list1), 1)
+        self.assertEqual(message_dict_list1[0]["value"], "message 3")
+        consumer1.close()
+        # Negative offsets (from the current high watermark).
+        group_str2 = self.create_test_group_name()
+        consumer2 = s.consumer(topic_str, group=group_str2, value_type="str", offsets={0: -2})
+        message_dict_list2 = consumer2.consume(n=2)
+        self.assertEqual(len(message_dict_list2), 2)
+        self.assertEqual(message_dict_list2[0]["value"], "message 2")
+        self.assertEqual(message_dict_list2[1]["value"], "message 3")
+        consumer2.close()
+        # Negative n (read n messages from the end of the topic).
+        group_str3 = self.create_test_group_name()
+        consumer3 = s.consumer(topic_str, group=group_str3, value_type="str")
+        message_dict_list3 = consumer3.consume(last_n=4)
+        self.assertEqual(len(message_dict_list3), 4)
+        self.assertEqual(message_dict_list3[0]["value"], "message 2")
+        self.assertEqual(message_dict_list3[1]["value"], "message 3")
+        self.assertEqual(message_dict_list3[2]["value"], "message 5")
+        self.assertEqual(message_dict_list3[3]["value"], "message 6")
+        consumer3.close()
 
     def test_commit(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
