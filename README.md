@@ -11,7 +11,7 @@ This Software is dual-licensed under the **Apache License 2.0** AND the **Human 
 
 For full legal terms, please review [LICENSE](LICENSE) and the [AI-ADDENDUM](AI-ADDENDUM).
 
-## What Is This?
+## What's This?
 
 *Kafi Streams*[^1] (formerly known as *Kafi*) is a Python library for Kafka stream processing.
 

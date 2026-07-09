@@ -189,18 +189,21 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
     def is_headers_tuple_list(self, headers):
         return isinstance(headers, list) and len(headers) > 0 and all(isinstance(header_tuple, tuple) and len(header_tuple) == 2 and isinstance(header_tuple[0], str) for header_tuple in headers)
 
-
     def is_headers_dict(self, headers):
         return isinstance(headers, dict) and len(headers) > 0 and all(isinstance(header_key, str) for header_key in headers.keys())
 
+    def is_headers_list_list(self, headers):
+        return isinstance(headers, list) and len(headers) > 0 and all(isinstance(header_list, list) and len(header_list) == 2 and isinstance(header_list[0], str) for header_list in headers)
 
     def is_headers(self, headers):
-        return headers == None or self.is_headers_tuple_list(headers) or self.is_headers_dict(headers)
+        return headers == None or self.is_headers_tuple_list(headers) or self.is_headers_dict(headers) or self.is_headers_list_list(headers)
 
     def headers_to_headers_str_bytes_tuple_list(self, headers):
         if headers is None:
             headers_str_bytes_tuple_list = None
         elif self.is_headers_tuple_list(headers):
+            headers_str_bytes_tuple_list = [(header_tuple[0], bytes_or_str_to_bytes(header_tuple[1])) for header_tuple in headers]
+        elif self.is_headers_list_list(headers):
             headers_str_bytes_tuple_list = [(header_tuple[0], bytes_or_str_to_bytes(header_tuple[1])) for header_tuple in headers]
         elif self.is_headers_dict(headers):
             headers_str_bytes_tuple_list = [(header_key_str, bytes_or_str_to_bytes(header_value_str_or_bytes)) for header_key_str, header_value_str_or_bytes in headers.items()]

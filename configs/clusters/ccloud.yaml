@@ -5,6 +5,7 @@ kafka:
   sasl.username: ${KAFI_KAFKA_USERNAME}
   sasl.password: ${KAFI_KAFKA_PASSWORD}
 #  debug: all
+  log_level: 5
 
 schema_registry:
   schema.registry.url: ${KAFI_SCHEMA_REGISTRY_URL}
