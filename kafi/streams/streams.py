@@ -19,7 +19,7 @@ def start_streams_task(built_tn, checkpoint_storage=None, checkpoint_topic=None,
     task = asyncio.create_task(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs))
     #
     async def _stop():
-        print("Stopping streams...")
+        print("Safely stopping streams...")
         stop_event.set()
         await task
         print("...done.")
@@ -28,7 +28,7 @@ def start_streams_task(built_tn, checkpoint_storage=None, checkpoint_topic=None,
 
 #
 
-def start_streams_thread(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
+def start_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
     """
     Entry point to run the stream processor running in a background daemon thread.
     Returns a stop function to handle a clean shutdown sequence.
@@ -40,7 +40,7 @@ def start_streams_thread(built_tn, checkpoint_storage=None, checkpoint_topic=Non
     def _stop():
         # Signals the async loops to stop and blocks until the worker thread exits cleanly.
         stop_event.set()
-        print("Stopping streams...")
+        print("Safely stopping streams...")
         thread.join()
         print("...done.")
     #
