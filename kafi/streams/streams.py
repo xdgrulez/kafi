@@ -13,31 +13,38 @@ default_checkpoint_interval_float = 1.0
 
 #
 
-def streams_task(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
-    stop_thread_event = threading.Event()
+def start_streams_task(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
+    stop_event = threading.Event()
     #
-    task = asyncio.create_task(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_thread_event=stop_thread_event, **kwargs))
+    asyncio.create_task(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs))
     #
-    return task, stop_thread_event
+    def _stop():
+        print("Stopping streams...")
+        stop_event.set()
+        print("...done.")
+    #
+    return _stop
 
 #
 
-def streams_thread(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
+def start_streams_thread(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
     """
     Entry point to run the stream processor running in a background daemon thread.
     Returns a stop function to handle a clean shutdown sequence.
     """
-    def _run(stop_thread):
+    def _run(stop_event):
         # Initializes and runs the main async entry point within the thread's independent event loop.
-        asyncio.run(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_thread_event=stop_thread, **kwargs))
+        asyncio.run(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs))
     #
     def _stop():
         # Signals the async loops to stop and blocks until the worker thread exits cleanly.
-        stop_thread_event.set()
+        stop_event.set()
+        print("Stopping streams...")
         thread.join()
+        print("...done.")
     #
-    stop_thread_event = threading.Event()
-    thread = threading.Thread(target=_run, args=[stop_thread_event])
+    stop_event = threading.Event()
+    thread = threading.Thread(target=_run, args=[stop_event])
     thread.daemon = True
     thread.start()
     #
@@ -45,7 +52,7 @@ def streams_thread(built_tn, checkpoint_storage=None, checkpoint_topic=None, che
 
 #
 
-async def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_thread_event=None, **kwargs):
+async def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
     """
     Provisions the sink producers and passes down its callbacks.
     """
@@ -71,10 +78,10 @@ async def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, chec
     #
     sink_str_foreach_function_finally_function_tuple_dict = {sink_str: (get_foreach_function(sink_str), get_finally_function(sink_str)) for sink_str, _ in sink_str_topic_dict_dict.items()}
     #
-    await streams_function(built_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_thread_event=stop_thread_event, **kwargs)
+    await streams_function(built_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs)
 
 
-async def streams_function(built_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_thread_event=None, **kwargs):
+async def streams_function(built_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
     """
     The core orchestration layer. Manages state loading, instantiates consumers, 
     and handles concurrent data ingestion, stream processing, and fault-tolerant checkpointing.
@@ -164,7 +171,7 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
         Polls Kafka via native blocking calls in dedicated threads and moves batches to async loop space.
         """
         try:
-            while True and (stop_thread_event is None or not stop_thread_event.is_set()):
+            while True and (stop_event is None or not stop_event.is_set()):
                 # Run the blocking synchronous fetch inside an OS thread pool to protect the event loop.
                 message_dict_list = await asyncio.to_thread(consumer.consume)
                 if message_dict_list:
@@ -183,7 +190,7 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
         nonlocal initial_time_int
         source_str_offsets_dict_dict = {}
         try:
-            while (stop_thread_event is None or not stop_thread_event.is_set()):
+            while (stop_event is None or not stop_event.is_set()):
                 try:
                     # Wait for items to arrive. 1.0s timeout ensures periodic exit check and timed commits.
                     source_str, source_message_dict_list = await asyncio.wait_for(source_str_message_dict_list_tuple_queue.get(), timeout=1.0)
