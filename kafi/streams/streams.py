@@ -16,11 +16,12 @@ default_checkpoint_interval_float = 1.0
 def start_streams_task(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
     stop_event = threading.Event()
     #
-    asyncio.create_task(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs))
+    task = asyncio.create_task(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs))
     #
-    def _stop():
+    async def _stop():
         print("Stopping streams...")
         stop_event.set()
+        await task
         print("...done.")
     #
     return _stop
