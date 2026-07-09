@@ -13,7 +13,16 @@ default_checkpoint_interval_float = 1.0
 
 #
 
-def run_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
+def streams_task(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
+    stop_thread_event = threading.Event()
+    #
+    task = asyncio.create_task(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_thread_event=stop_thread_event, **kwargs))
+    #
+    return task, stop_thread_event
+
+#
+
+def streams_thread(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
     """
     Entry point to run the stream processor running in a background daemon thread.
     Returns a stop function to handle a clean shutdown sequence.
@@ -33,6 +42,8 @@ def run_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkp
     thread.start()
     #
     return _stop
+
+#
 
 async def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_thread_event=None, **kwargs):
     """
