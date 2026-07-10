@@ -573,7 +573,7 @@ class TopologyNode:
     # Expiration
     ###
 
-    def expire(self, get_time_function, get_expiry_function, projection_function=lambda x: x[0], **kwargs):
+    def expire(self, time_function, expiry_function, projection_function=lambda x: x[0], **kwargs):
         _peek_input_boolean = kwargs["_peek_input"] if "_peek_input" in kwargs else False
         _peek_current_time_boolean = kwargs["_peek_current_time"] if "_peek_current_time" in kwargs else False
         _peek_expired_boolean = kwargs["_peek_expired"] if "_peek_expired" in kwargs else False
@@ -583,21 +583,23 @@ class TopologyNode:
         #
         input_with_expiry_tn = (
             self
-            .map(lambda x: (x, get_expiry_function(x)))
+            .map(lambda x: (x, expiry_function(time_function(x))), **kwargs)
         )
         #
         merged_input_with_expiry_tn = (
             input_with_expiry_tn
-            .merge(expire_source_tn)
+            .merge(expire_source_tn, **kwargs)
+            .distinct()
         )
         if _peek_input_boolean:
             merged_input_with_expiry_tn = merged_input_with_expiry_tn._peek("input")
         #
         current_time_tn = (
             merged_input_with_expiry_tn
-            .map(lambda x: get_time_function(x[0]))
+            .map(lambda x: time_function(x[0]), **kwargs)
             .max(lambda x: x,
-                 lambda x: x)
+                 lambda x: x,
+                 **kwargs)
         )
         if _peek_current_time_boolean:
             current_time_tn = current_time_tn._peek("current_time")
@@ -606,17 +608,18 @@ class TopologyNode:
             merged_input_with_expiry_tn
             .join(current_time_tn,
                 lambda l, r: r > l[1],
-                lambda l, _: l)
-            ._filter(lambda _, w: w > 0)
-            ._neg()
+                lambda l, _: l,
+                **kwargs)
+            ._filter(lambda _, w: w > 0, **kwargs)
+            ._neg(**kwargs)
         )
         if _peek_expired_boolean:
             expired_tn = expired_tn._peek("expired")
         #
         expire_tn = (
             expired_tn
-            .merge(input_with_expiry_tn)
-            .map(projection_function)
+            .merge(input_with_expiry_tn, **kwargs)
+            .map(projection_function, **kwargs)
         )
         #
         expire_source_tn.to_zSet(TopologyNode._from_records)
@@ -624,6 +627,70 @@ class TopologyNode:
         expire_source_tn._expired_tn = expired_tn
         #
         return expire_tn
+
+    ###
+    # Expulsion
+    ###
+
+    def expel(self, other_tn, time_function, expulsion_function, get_window_end_function=lambda x: x[0], projection_function=lambda x: x[1], **kwargs):
+        expel_tn = (
+            self
+            .join(
+                other_tn
+                .map(time_function)
+                .max(lambda x: x,
+                     expulsion_function),
+                lambda l, r: r > get_window_end_function(l),
+                lambda l, _: projection_function(l),
+                **kwargs
+            )
+        )
+        return expel_tn
+
+    ###
+    # Time Windows
+    ###
+
+    def window(self, time_function, window_end_function, by_function, agg_function, agg_initial_any, projection_function, expiry_function, **kwargs):
+        expire_tn = (
+            self.expire(
+                time_function=time_function,
+                expiry_function=expiry_function,
+                **kwargs)
+        )
+        #
+        group_by_agg_tn = (
+            expire_tn
+            .group_by_agg(
+                by_function=lambda x: (window_end_function(time_function(x)), by_function(x)),
+                select_function=lambda x: x,
+                agg_function=agg_function,
+                projection_function=lambda by, agg: (by[0], projection_function(by[1], agg)),
+                agg_initial_any=agg_initial_any,
+                **kwargs
+            )
+        )
+        expel_tn = (
+            group_by_agg_tn
+            .expel(other_tn=expire_tn,
+                   time_function=time_function,
+                   expulsion_function=window_end_function,
+                   **kwargs)
+        )
+        #
+        return expel_tn
+
+    def tumbling_window(self, time_function, tumbling_int, by_function, agg_function, agg_initial_any, projection_function, lateness_factor_int=1, **kwargs):
+        tn = self.window(time_function=time_function,
+                         window_end_function=lambda x: (x // tumbling_int) * tumbling_int + tumbling_int,
+                         by_function=by_function,
+                         agg_function=agg_function,
+                         agg_initial_any=agg_initial_any,
+                         projection_function=projection_function,
+                         expiry_function=lambda x: (x // tumbling_int) * tumbling_int + tumbling_int * lateness_factor_int,
+                         **kwargs)
+        #
+        return tn
 
     ###
     # Operator utils
@@ -787,11 +854,11 @@ class TopologyNode:
         if self._sink_str_list is None:
             output_any = self._from_zSet_function(unpacked_zSet)
         else:
-            sink_str_unpacked_zSet_dict = defaultdict(list)
+            sink_str_unpacked_record_any_weight_int_tuple_list_dict = defaultdict(list)
             for (sink_str, unpacked_record_any), weight_int in unpacked_zSet:
-                sink_str_unpacked_zSet_dict[sink_str].append((unpacked_record_any, weight_int))
+                sink_str_unpacked_record_any_weight_int_tuple_list_dict[sink_str].append((unpacked_record_any, weight_int))
             #
-            output_any = {sink_str: self._from_zSet_function(unpacked_zSet) for sink_str, unpacked_zSet in sink_str_unpacked_zSet_dict.items()} 
+            output_any = {sink_str: self._from_zSet_function(unpacked_record_any_weight_int_tuple_list) for sink_str, unpacked_record_any_weight_int_tuple_list in sink_str_unpacked_record_any_weight_int_tuple_list_dict.items()} 
         #
         return output_any
      
@@ -799,13 +866,13 @@ class TopologyNode:
         self._from_zSet_function = from_zSet_function
             
     @staticmethod
-    def _to_records(unpacked_zSet):
-        return unpacked_zSet
+    def _to_records(unpacked_record_any_weight_int_tuple_list):
+        return unpacked_record_any_weight_int_tuple_list
 
     @staticmethod
-    def to_records(unpacked_zSet):
+    def to_records(unpacked_record_any_weight_int_tuple_list):
         record_any_list = []
-        for unpacked_record_any, weight_int in unpacked_zSet:
+        for unpacked_record_any, weight_int in unpacked_record_any_weight_int_tuple_list:
             if weight_int > 0:
                 for _ in range(weight_int):
                     record_any_list.append(unpacked_record_any)
@@ -813,9 +880,9 @@ class TopologyNode:
         return record_any_list
 
     @staticmethod
-    def to_debezium(unpacked_zSet):
+    def to_debezium(unpacked_record_any_weight_int_tuple_list):
         message_dict_list = []
-        for message_dict, weight_int in unpacked_zSet:
+        for message_dict, weight_int in unpacked_record_any_weight_int_tuple_list:
             if weight_int > 0:
                 for _ in range(weight_int):
                     message_dict1 = copy.deepcopy(message_dict)

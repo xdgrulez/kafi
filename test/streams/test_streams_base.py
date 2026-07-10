@@ -5,13 +5,13 @@ from streams.test_kafka_base import TestKafkaBase
 #
 
 from kafi.helpers import get_millis
-from kafi.streams.streams import start_streams_thread, get_source_str_topic_dict_dict, get_sink_str_topic_dict_dict
+from kafi.streams.streams import start_streams, get_source_str_topic_dict_dict, get_sink_str_topic_dict_dict
 
 #
 
 class TestStreamsBase(TestKafkaBase):
     def process(self, built_tn, checkpoint_storage, checkpoint_topic, **kwargs):
-        self.stop_function = start_streams_thread(built_tn, checkpoint_storage, checkpoint_topic, **kwargs)
+        self.stop_function = start_streams(built_tn, checkpoint_storage, checkpoint_topic, **kwargs)
 
     #
 

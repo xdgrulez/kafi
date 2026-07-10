@@ -205,7 +205,7 @@ def get_built_tn_datagen_self_join_group_by(get_source_tn_function, get_sink_tn_
 
 def get_built_tn_datagen_self_join_group_by_debezium(get_source_tn_function, get_sink_tn_function):
     order_source_tn = get_source_tn_function()
-    order_source_tn._to_zSet_function = order_source_tn.from_debezium
+    order_source_tn.to_zSet(Tn.from_debezium)
     #
     order_tn = (
         order_source_tn
@@ -235,7 +235,7 @@ def get_built_tn_datagen_self_join_group_by_debezium(get_source_tn_function, get
     sink_tn = get_sink_tn_function(self_join_group_by_debezium_tn)
     #
     built_tn = Tn.build(sink_tn)
-    built_tn._from_zSet_function = built_tn.to_debezium
+    built_tn.from_zSet(Tn.to_debezium)
     #
     return built_tn
 
