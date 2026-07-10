@@ -589,7 +589,6 @@ class TopologyNode:
         merged_input_with_expiry_tn = (
             input_with_expiry_tn
             .merge(expire_source_tn, **kwargs)
-            .distinct()
         )
         if _peek_input_boolean:
             merged_input_with_expiry_tn = merged_input_with_expiry_tn._peek("input")
@@ -653,10 +652,13 @@ class TopologyNode:
 
     def window(self, time_function, window_end_function, by_function, agg_function, agg_initial_any, projection_function, expiry_function, **kwargs):
         expire_tn = (
-            self.expire(
+            self
+            .expire(
                 time_function=time_function,
                 expiry_function=expiry_function,
                 **kwargs)
+            .distinct(**kwargs)
+
         )
         #
         group_by_agg_tn = (
