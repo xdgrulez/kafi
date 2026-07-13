@@ -521,25 +521,25 @@ class TopologyNode:
         #
         return tn
 
-    def sum(self, select_function, projection_function, sum_initial_any=0, **kwargs):
+    def sum(self, select_function, projection_function=lambda x: x, sum_initial_any=0, **kwargs):
         tn = self.agg(select_function, projection_function, lambda x, y, z: x + y * z, sum_initial_any, **kwargs)
         tn._name_str = "sum_op"
         #
         return tn
 
-    def max(self, select_function, projection_function, max_initial_any=0, **kwargs):
+    def max(self, select_function, projection_function=lambda x: x, max_initial_any=0, **kwargs):
         tn = self.agg(select_function, projection_function, lambda x, y, _: max(x, y), max_initial_any, **kwargs)
         tn._name_str = "max_op"
         #
         return tn
 
-    def min(self, select_function, projection_function, min_initial_any=0, **kwargs):
+    def min(self, select_function, projection_function=lambda x: x, min_initial_any=0, **kwargs):
         tn = self.agg(select_function, projection_function, lambda x, y, _: min(x, y), min_initial_any, **kwargs)
         tn._name_str = "min_op"
         #
         return tn
 
-    def count(self, projection_function, **kwargs):
+    def count(self, projection_function=lambda x: x, **kwargs):
         tn = self.sum(lambda _: 1, projection_function, **kwargs)
         tn._name_str = "count_op"
         #
@@ -626,73 +626,6 @@ class TopologyNode:
         expire_source_tn._expired_tn = expired_tn
         #
         return expire_tn
-
-    ###
-    # Expulsion
-    ###
-
-    def expel(self, other_tn, time_function, expulsion_function, get_window_end_function=lambda x: x[0], projection_function=lambda x: x[1], **kwargs):
-        expel_tn = (
-            self
-            .join(
-                other_tn
-                .map(time_function)
-                .max(lambda x: x,
-                     expulsion_function),
-                lambda l, r: r > get_window_end_function(l),
-                lambda l, _: projection_function(l),
-                **kwargs
-            )
-        )
-        return expel_tn
-
-    ###
-    # Time Windows
-    ###
-
-    def window(self, time_function, window_end_function, by_function, agg_function, agg_initial_any, projection_function, expiry_function, **kwargs):
-        expire_tn = (
-            self
-            .expire(
-                time_function=time_function,
-                expiry_function=expiry_function,
-                **kwargs)
-            .distinct(**kwargs)
-
-        )
-        #
-        group_by_agg_tn = (
-            expire_tn
-            .group_by_agg(
-                by_function=lambda x: (window_end_function(time_function(x)), by_function(x)),
-                select_function=lambda x: x,
-                agg_function=agg_function,
-                projection_function=lambda by, agg: (by[0], projection_function(by[1], agg)),
-                agg_initial_any=agg_initial_any,
-                **kwargs
-            )
-        )
-        expel_tn = (
-            group_by_agg_tn
-            .expel(other_tn=expire_tn,
-                   time_function=time_function,
-                   expulsion_function=window_end_function,
-                   **kwargs)
-        )
-        #
-        return expel_tn
-
-    def tumbling_window(self, time_function, tumbling_int, by_function, agg_function, agg_initial_any, projection_function, lateness_factor_int=1, **kwargs):
-        tn = self.window(time_function=time_function,
-                         window_end_function=lambda x: (x // tumbling_int) * tumbling_int + tumbling_int,
-                         by_function=by_function,
-                         agg_function=agg_function,
-                         agg_initial_any=agg_initial_any,
-                         projection_function=projection_function,
-                         expiry_function=lambda x: (x // tumbling_int) * tumbling_int + tumbling_int * lateness_factor_int,
-                         **kwargs)
-        #
-        return tn
 
     ###
     # Operator utils

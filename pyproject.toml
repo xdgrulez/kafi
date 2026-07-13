@@ -9,7 +9,7 @@ authors = [
 license = { text = "Apache License 2.0 AND LicenseRef-Proprietary" }
 license-files = [
     "LICENSE",
-    "AI-ADDENDUM"
+    "HUMAN-SOURCE-ADDENDUM"
 ]
 requires-python = ">=3.12"
 classifiers = [
