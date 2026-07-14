@@ -430,7 +430,7 @@ class TopologyNode:
     
     # Group By + Aggregation
 
-    def group_by_agg(self, by_function, select_function, projection_function, agg_function, agg_initial_any, pydbsp_aggregate_function=None, **kwargs):
+    def group_by_agg(self, by_function, select_function, agg_function, agg_initial_any, projection_function, pydbsp_aggregate_function=None, **kwargs):
         def _by_function(packed_record_any):
             record_any = tn._unpack_function(packed_record_any)
             return tn._pack_function(by_function(record_any))
@@ -490,19 +490,19 @@ class TopologyNode:
         return tn
 
     def group_by_sum(self, by_function, select_function, projection_function, sum_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, z: x + y * z, sum_initial_any, **kwargs)
+        tn = self.group_by_agg(by_function, select_function, lambda x, y, z: x + y * z, sum_initial_any, projection_function, **kwargs)
         tn._name_str = "group_by_sum_op"
         #
         return tn
 
     def group_by_max(self, by_function, select_function, projection_function, max_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: max(x, y), max_initial_any, **kwargs)
+        tn = self.group_by_agg(by_function, select_function, lambda x, y, _: max(x, y), max_initial_any, projection_function, **kwargs)
         tn._name_str = "group_by_max_op"
         #
         return tn
 
     def group_by_min(self, by_function, select_function, projection_function, min_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_function, select_function, projection_function, lambda x, y, _: min(x, y), min_initial_any, **kwargs)
+        tn = self.group_by_agg(by_function, select_function, lambda x, y, _: min(x, y), min_initial_any, projection_function, **kwargs)
         tn._name_str = "group_by_min_op"
         #
         return tn
@@ -515,26 +515,26 @@ class TopologyNode:
 
     # Aggregation
 
-    def agg(self, select_function, projection_function, agg_function, agg_initial_any, **kwargs):
-        tn = self.group_by_agg(lambda _: 0, select_function, lambda _, y: projection_function(y), agg_function, agg_initial_any, **kwargs)
+    def agg(self, select_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        tn = self.group_by_agg(lambda _: 0, select_function, agg_function, agg_initial_any, lambda _, y: projection_function(y), **kwargs)
         tn._name_str = "agg_op"
         #
         return tn
 
     def sum(self, select_function, projection_function=lambda x: x, sum_initial_any=0, **kwargs):
-        tn = self.agg(select_function, projection_function, lambda x, y, z: x + y * z, sum_initial_any, **kwargs)
+        tn = self.agg(select_function, lambda x, y, z: x + y * z, sum_initial_any, projection_function, **kwargs)
         tn._name_str = "sum_op"
         #
         return tn
 
     def max(self, select_function, projection_function=lambda x: x, max_initial_any=0, **kwargs):
-        tn = self.agg(select_function, projection_function, lambda x, y, _: max(x, y), max_initial_any, **kwargs)
+        tn = self.agg(select_function, lambda x, y, _: max(x, y), max_initial_any, projection_function, **kwargs)
         tn._name_str = "max_op"
         #
         return tn
 
     def min(self, select_function, projection_function=lambda x: x, min_initial_any=0, **kwargs):
-        tn = self.agg(select_function, projection_function, lambda x, y, _: min(x, y), min_initial_any, **kwargs)
+        tn = self.agg(select_function, lambda x, y, _: min(x, y), min_initial_any, projection_function, **kwargs)
         tn._name_str = "min_op"
         #
         return tn
@@ -627,20 +627,30 @@ class TopologyNode:
         #
         return expire_tn
 
-    def trigger(self, time_tn, time_function, trigger_time_function=lambda x: x[1], trigger_function=lambda l, r: r >= l, projection_function=lambda l, _: l, **kwargs):
+    ###
+    # Trigger
+    ###
+
+    def trigger(self, time_tn, time_function, trigger_time_function=lambda x: x[1], trigger_function=lambda l, r: r >= l, projection_function=lambda l, _: l, positive_only=True, **kwargs):
+        positive_only_boolean = positive_only
+        #
         trigger_tn = (
             self
             .join(time_tn.max(time_function),
                   lambda l, r: trigger_function(trigger_time_function(l), r),
                   projection_function,
                   **kwargs)
-            ._filter(lambda _, w: w > 0, **kwargs)
         )
+        trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if positive_only_boolean else trigger_tn
         #
         return trigger_tn
-    
+
+    ###
+    # Group By Agg/Time Windows
+    ###
+
     @staticmethod
-    def create_hopping(size_int, advance_int):
+    def create_hopping_window(size_int, advance_int):
         def _create(ts):
             first_end = (ts // advance_int) * advance_int + advance_int
             #
@@ -649,14 +659,14 @@ class TopologyNode:
         return _create
 
     @staticmethod
-    def create_tumbling(size_int):
+    def create_tumbling_window(size_int):
         def _create(ts):
             return [(ts // size_int) * size_int + size_int]
         #
         return _create
     
     @staticmethod
-    def create_cumulative(size_int, advance_int):
+    def create_cumulative_window(size_int, advance_int):
         def _create(ts):
             macro_start = (ts // size_int) * size_int
             first_step_end = ((ts // advance_int) * advance_int) + advance_int
@@ -666,27 +676,26 @@ class TopologyNode:
         #
         return _create
 
-    def window(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function):
+    def group_by_agg_fixed_window(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function):
         _agg_function = lambda agg, x, _: agg_function(agg, x)
         #
         _projection_function = lambda by, agg: (projection_function(by[0], agg), by[1])
         #
-        window_tn = (
+        group_by_agg_tn = (
             self
             .flatmap(lambda x: [(x, window_end_int) for window_end_int in create_function(time_function(x))])
             .group_by_agg(
-                by_function=lambda x: (by_function(x[0]), x[1]),
-                select_function=lambda x: x[0],
-                agg_function=_agg_function,
-                agg_initial_any=agg_initial_any,
-                projection_function=_projection_function
+                lambda x: (by_function(x[0]), x[1]),
+                lambda x: x[0],
+                _agg_function,
+                agg_initial_any,
+                _projection_function
             )
         )
         #
-        return window_tn
+        return group_by_agg_tn
 
-
-    def session(self, time_function, by_function, gap_int, agg_function, agg_initial, projection_function):
+    def group_by_agg_session_window(self, gap_int, time_function, by_function, agg_function, agg_initial, projection_function):
         def insert_session(sessions, ts, event):
             # 1. Passende Session suchen
             left_s = next((s for s in sessions if s["start"] - gap_int <= ts <= s["last_ts"] + gap_int), None)
@@ -736,16 +745,109 @@ class TopologyNode:
         group_by_tn = (
             self
             .group_by_agg(
-                by_function=by_function,
-                select_function=lambda x: x,
-                agg_function=lambda agg, x, _: {"sessions": (sessions := insert_session(agg.get("sessions", []), time_function(x), x)),
-                                                "output": [(s["value"], s["last_ts"] + gap_int) for s in sessions]},
-                agg_initial_any={"sessions": [], "output": []},
-                projection_function=lambda by, agg: (by, agg["output"])
+                by_function,
+                lambda x: x,
+                lambda agg, x, _: 
+                {"sessions": (sessions := insert_session(agg.get("sessions", []), time_function(x), x)),
+                 "output": [(s["value"], s["last_ts"] + gap_int) for s in sessions]},
+                {"sessions": [], "output": []},
+                lambda by, agg: (by, agg["output"])
             )
             .flatmap(_flatmap_function)
         )
         return group_by_tn
+
+    ###
+    # Time Windows
+    ###
+
+    def tumbling_window(self, size_int, lateness_factor_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        expire_tn = (
+            self.expire(time_function,
+                        lambda x: (x // size_int) * size_int + size_int + (size_int * lateness_factor_int),
+                        **kwargs)
+                        .distinct()
+        )
+        #
+        group_by_agg_tn = (
+            expire_tn
+            .group_by_agg_fixed_window(TopologyNode.create_tumbling_window(size_int),
+                                       time_function,
+                                       by_function,
+                                       agg_function,
+                                       agg_initial_any,
+                                       projection_function)
+        )
+        #
+        trigger_tn = group_by_agg_tn.trigger(expire_tn, time_function)
+        #
+        return trigger_tn
+    
+    def hopping_window(self, size_int, advance_int, lateness_factor_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        expire_tn = (
+            self.expire(time_function,
+                        lambda x: (x // size_int) * size_int + size_int + (size_int * lateness_factor_int),
+                        **kwargs)
+                        .distinct()
+        )
+        #
+        group_by_agg_tn = (
+            expire_tn
+            .group_by_agg_fixed_window(TopologyNode.create_hopping_window(size_int, advance_int),
+                                       time_function,
+                                       by_function,
+                                       agg_function,
+                                       agg_initial_any,
+                                       projection_function)
+        )
+        #
+        trigger_tn = group_by_agg_tn.trigger(expire_tn, time_function)
+        #
+        return trigger_tn
+
+    def cumulative_window(self, size_int, advance_int, lateness_factor_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        expire_tn = (
+            self.expire(time_function,
+                        lambda x: (x // size_int) * size_int + size_int + (size_int * lateness_factor_int),
+                        **kwargs)
+                        .distinct()
+        )
+        #
+        group_by_agg_tn = (
+            expire_tn
+            .group_by_agg_fixed_window(TopologyNode.create_cumulative_window(size_int, advance_int),
+                                       time_function,
+                                       by_function,
+                                       agg_function,
+                                       agg_initial_any,
+                                       projection_function)
+        )
+        #
+        trigger_tn = group_by_agg_tn.trigger(expire_tn, time_function)
+        #
+        return trigger_tn
+
+    def session_window(self, gap_int, max_session_int, lateness_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        expire_tn = (
+            self
+            .expire(time_function,
+                    lambda x: ((x // max_session_int) * max_session_int + max_session_int) + lateness_int)
+            .distinct()
+        )
+        #
+        group_by_agg_tn = (
+            expire_tn
+            .group_by_agg_session_window(gap_int,
+                                         time_function,
+                                         by_function, 
+                                         agg_function,
+                                         agg_initial_any,
+                                         projection_function)
+        )
+        #
+        trigger_tn = group_by_agg_tn.trigger(expire_tn, lambda x: x["ts"])
+        #
+        return trigger_tn
 
     ###
     # Operator utils
