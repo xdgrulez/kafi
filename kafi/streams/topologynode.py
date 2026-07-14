@@ -639,23 +639,32 @@ class TopologyNode:
         #
         return trigger_tn
     
-# def assign(ts):
-#     first_end = (ts // hop_int) * hop_int + hop_int
-#     x = [
-#         first_end + i * hop_int 
-#         for i in range(tumbling_int // hop_int)
-#         if first_end + i * hop_int >= tumbling_int
-#     ]
-#     return x
-
     @staticmethod
     def create_hopping(size_int, advance_int):
-        def _create_hopping(ts):
+        def _create(ts):
             first_end = (ts // advance_int) * advance_int + advance_int
             #
             return [first_end + i * advance_int for i in range(size_int // advance_int) if first_end + i * advance_int >= size_int]
         #
-        return _create_hopping
+        return _create
+
+    @staticmethod
+    def create_tumbling(size_int):
+        def _create(ts):
+            return [(ts // size_int) * size_int + size_int]
+        #
+        return _create
+    
+    @staticmethod
+    def create_cumulative(size_int, advance_int):
+        def _create(ts):
+            macro_start = (ts // size_int) * size_int
+            first_step_end = ((ts // advance_int) * advance_int) + advance_int
+            macro_end = macro_start + size_int
+            #
+            return [end for end in range(first_step_end, macro_end + advance_int, advance_int) if end <= macro_end]
+        #
+        return _create
 
     def window(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function):
         _agg_function = lambda agg, x, _: agg_function(agg, x)
