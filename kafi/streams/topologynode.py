@@ -686,53 +686,64 @@ class TopologyNode:
         return window_tn
 
 
-    def session(self, time_function, by_function, gap_int, combine, event_value):
-        def insert_session(sessions, ts, value, gap_int):
-            """sessions: sortierte Liste [{'start','last_ts','value'}, ...].
-            Reiner Insert-Fall (w immer 1) -> O(log n) Suche + O(1) Merge, kein Full-Rebuild."""
-            starts = [s["start"] for s in sessions]
-            i = bisect.bisect_right(starts, ts) - 1
-            #
-            # ts liegt bereits innerhalb einer bestehenden Session (gleicher ts nochmal aggregiert)
-            if i >= 0 and sessions[i]["start"] <= ts <= sessions[i]["last_ts"]:
-                sessions[i]["value"] = combine(sessions[i]["value"], value)
-                return sessions
-            #
-            left = sessions[i] if i >= 0 else None
-            right = sessions[i+1] if i+1 < len(sessions) else None
-            merges_left = left is not None and ts - left["last_ts"] <= gap_int
-            merges_right = right is not None and right["start"] - ts <= gap_int
-            #
-            if merges_left and merges_right:
-                merged = {"start": left["start"], "last_ts": right["last_ts"],
-                        "value": combine(combine(left["value"], value), right["value"])}
-                sessions[i:i+2] = [merged]
-            elif merges_left:
-                left["last_ts"] = ts
-                left["value"] = combine(left["value"], value)
-            elif merges_right:
-                right["start"] = ts
-                right["value"] = combine(value, right["value"])
+    def session(self, time_function, by_function, gap_int, agg_function, agg_initial, projection_function):
+        def insert_session(sessions, ts, event):
+            # 1. Passende Session suchen
+            left_s = next((s for s in sessions if s["start"] - gap_int <= ts <= s["last_ts"] + gap_int), None)
+            
+            if left_s:
+                left_s["events"].append(event)
+                left_s["start"] = min(left_s["start"], ts)
+                left_s["last_ts"] = max(left_s["last_ts"], ts)
+                left_s["value"] = agg_function(left_s["value"], event)
+                
+                # 2. Merge-Prüfung
+                right_s = next((s for s in sessions if s != left_s 
+                                and s["start"] - gap_int <= left_s["last_ts"] + gap_int 
+                                and left_s["start"] - gap_int <= s["last_ts"]), None)
+                if right_s:
+                    # Wir fusionieren die Roh-Event-Listen
+                    left_s["events"].extend(right_s["events"])
+                    left_s["start"] = min(left_s["start"], right_s["start"])
+                    left_s["last_ts"] = max(left_s["last_ts"], right_s["last_ts"])
+                    
+                    # JETZT DER TRICK: Statt die rechte Session live draufzurechnen,
+                    # fangen wir einfach mit einem frischen agg_initial an und rollen
+                    # die komplett fusionierte Event-Liste einmal sauber von vorne auf.
+                    # Da ein Merge selten ist, kostet das kaum Performance, rettet aber die Typ-Sicherheit!
+                    left_s["events"].sort(key=lambda e: e["ts"]) # Sicherstellen, dass die Reihenfolge stimmt
+                    
+                    state = agg_initial.copy()
+                    for ev in left_s["events"]:
+                        state = agg_function(state, ev)
+                    left_s["value"] = state
+                        
+                    sessions.remove(right_s)
             else:
-                sessions.insert(i+1, {"start": ts, "last_ts": ts, "value": value})
-            #
+                sessions.append({
+                    "start": ts, 
+                    "last_ts": ts, 
+                    "events": [event], 
+                    "value": agg_function(agg_initial.copy(), event)
+                })
+
+            sessions.sort(key=lambda s: s["start"])
             return sessions
+        #
+        def _flatmap_function(x):
+            return [(projection_function(x[0], s[0]), s[1]) for s in x[1]]
         #
         group_by_tn = (
             self
             .group_by_agg(
                 by_function=by_function,
                 select_function=lambda x: x,
-                agg_function=lambda agg, x, _: {"sessions": (sessions := insert_session(agg.get("sessions", []), time_function(x), event_value(x), gap_int)),
-                                                "output": [{"window_end": s["last_ts"] + gap_int, **s["value"]} for s in sessions]},
+                agg_function=lambda agg, x, _: {"sessions": (sessions := insert_session(agg.get("sessions", []), time_function(x), x)),
+                                                "output": [(s["value"], s["last_ts"] + gap_int) for s in sessions]},
                 agg_initial_any={"sessions": [], "output": []},
-                projection_function=lambda by, agg: {"customer_id": by,
-                                                     "output": agg["output"]})
-        .flatmap(lambda x: [(
-            {"customer_id": x["customer_id"],
-             "orders": s["orders"],
-             "total_price": s["price"]}, s["window_end"]) for s in x["output"]])
-            
+                projection_function=lambda by, agg: (by, agg["output"])
+            )
+            .flatmap(_flatmap_function)
         )
         return group_by_tn
 
