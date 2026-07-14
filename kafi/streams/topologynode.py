@@ -18,7 +18,7 @@ from pydbsp.relational_operators import (
 from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
 
-import copy, uuid
+import bisect, copy, uuid
 from collections import defaultdict
 
 import msgpack
@@ -685,6 +685,56 @@ class TopologyNode:
         #
         return window_tn
 
+
+    def session(self, time_function, by_function, gap_int, combine, event_value):
+        def insert_session(sessions, ts, value, gap_int):
+            """sessions: sortierte Liste [{'start','last_ts','value'}, ...].
+            Reiner Insert-Fall (w immer 1) -> O(log n) Suche + O(1) Merge, kein Full-Rebuild."""
+            starts = [s["start"] for s in sessions]
+            i = bisect.bisect_right(starts, ts) - 1
+            #
+            # ts liegt bereits innerhalb einer bestehenden Session (gleicher ts nochmal aggregiert)
+            if i >= 0 and sessions[i]["start"] <= ts <= sessions[i]["last_ts"]:
+                sessions[i]["value"] = combine(sessions[i]["value"], value)
+                return sessions
+            #
+            left = sessions[i] if i >= 0 else None
+            right = sessions[i+1] if i+1 < len(sessions) else None
+            merges_left = left is not None and ts - left["last_ts"] <= gap_int
+            merges_right = right is not None and right["start"] - ts <= gap_int
+            #
+            if merges_left and merges_right:
+                merged = {"start": left["start"], "last_ts": right["last_ts"],
+                        "value": combine(combine(left["value"], value), right["value"])}
+                sessions[i:i+2] = [merged]
+            elif merges_left:
+                left["last_ts"] = ts
+                left["value"] = combine(left["value"], value)
+            elif merges_right:
+                right["start"] = ts
+                right["value"] = combine(value, right["value"])
+            else:
+                sessions.insert(i+1, {"start": ts, "last_ts": ts, "value": value})
+            #
+            return sessions
+        #
+        group_by_tn = (
+            self
+            .group_by_agg(
+                by_function=by_function,
+                select_function=lambda x: x,
+                agg_function=lambda agg, x, _: {"sessions": (sessions := insert_session(agg.get("sessions", []), time_function(x), event_value(x), gap_int)),
+                                                "output": [{"window_end": s["last_ts"] + gap_int, **s["value"]} for s in sessions]},
+                agg_initial_any={"sessions": [], "output": []},
+                projection_function=lambda by, agg: {"customer_id": by,
+                                                     "output": agg["output"]})
+        .flatmap(lambda x: [(
+            {"customer_id": x["customer_id"],
+             "orders": s["orders"],
+             "total_price": s["price"]}, s["window_end"]) for s in x["output"]])
+            
+        )
+        return group_by_tn
 
     ###
     # Operator utils
