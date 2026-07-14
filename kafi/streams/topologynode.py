@@ -627,6 +627,56 @@ class TopologyNode:
         #
         return expire_tn
 
+    def trigger(self, time_tn, time_function, trigger_time_function=lambda x: x[1], trigger_function=lambda l, r: r >= l, projection_function=lambda l, _: l, **kwargs):
+        trigger_tn = (
+            self
+            .join(time_tn.max(time_function),
+                  lambda l, r: trigger_function(trigger_time_function(l), r),
+                  projection_function,
+                  **kwargs)
+            ._filter(lambda _, w: w > 0, **kwargs)
+        )
+        #
+        return trigger_tn
+    
+# def assign(ts):
+#     first_end = (ts // hop_int) * hop_int + hop_int
+#     x = [
+#         first_end + i * hop_int 
+#         for i in range(tumbling_int // hop_int)
+#         if first_end + i * hop_int >= tumbling_int
+#     ]
+#     return x
+
+    @staticmethod
+    def create_hopping(size_int, advance_int):
+        def _create_hopping(ts):
+            first_end = (ts // advance_int) * advance_int + advance_int
+            #
+            return [first_end + i * advance_int for i in range(size_int // advance_int) if first_end + i * advance_int >= size_int]
+        #
+        return _create_hopping
+
+    def window(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function):
+        _agg_function = lambda agg, x, _: agg_function(agg, x)
+        #
+        _projection_function = lambda by, agg: (projection_function(by[0], agg), by[1])
+        #
+        window_tn = (
+            self
+            .flatmap(lambda x: [(x, window_end_int) for window_end_int in create_function(time_function(x))])
+            .group_by_agg(
+                by_function=lambda x: (by_function(x[0]), x[1]),
+                select_function=lambda x: x[0],
+                agg_function=_agg_function,
+                agg_initial_any=agg_initial_any,
+                projection_function=_projection_function
+            )
+        )
+        #
+        return window_tn
+
+
     ###
     # Operator utils
     ###
