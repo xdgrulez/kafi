@@ -18,7 +18,7 @@ from pydbsp.relational_operators import (
 from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
 
-import bisect, copy, uuid
+import copy, uuid
 from collections import defaultdict
 
 import msgpack
@@ -264,7 +264,7 @@ class TopologyNode:
         return tn
 
     def filter(self, filter_function, **kwargs):
-        def _filter_function(record_any, weight_int):
+        def _filter_function(record_any, _):
             return filter_function(record_any)
         #
         tn = self._filter(_filter_function, **kwargs)
@@ -570,7 +570,7 @@ class TopologyNode:
         return tn
 
     ###
-    # Expiration
+    # Time Windows - Expiration
     ###
 
     def expire(self, time_function, expiry_function, projection_function=lambda x: x[0], **kwargs):
@@ -628,7 +628,7 @@ class TopologyNode:
         return expire_tn
 
     ###
-    # Trigger
+    # Time Windows - Trigger
     ###
 
     def trigger(self, time_tn, time_function, trigger_time_function=lambda x: x[1], trigger_function=lambda l, r: r >= l, projection_function=lambda l, _: l, positive_only=True, **kwargs):
@@ -646,56 +646,59 @@ class TopologyNode:
         return trigger_tn
 
     ###
-    # Group By Agg/Time Windows
+    # Time Windows - Group By Agg
     ###
 
     @staticmethod
     def create_hopping_window(size_int, advance_int):
-        def _create(ts):
-            first_end = (ts // advance_int) * advance_int + advance_int
+        def _create_function(ts_int):
+            first_end_int = (ts_int // advance_int) * advance_int + advance_int
             #
-            return [first_end + i * advance_int for i in range(size_int // advance_int) if first_end + i * advance_int >= size_int]
+            return [first_end_int + i * advance_int
+                    for i in range(size_int // advance_int) if first_end_int + i * advance_int >= size_int]
         #
-        return _create
+        return _create_function
 
     @staticmethod
     def create_tumbling_window(size_int):
-        def _create(ts):
-            return [(ts // size_int) * size_int + size_int]
+        def _create_function(ts_int):
+            return [(ts_int // size_int) * size_int + size_int]
         #
-        return _create
+        return _create_function
     
     @staticmethod
     def create_cumulative_window(size_int, advance_int):
-        def _create(ts):
-            macro_start = (ts // size_int) * size_int
-            first_step_end = ((ts // advance_int) * advance_int) + advance_int
-            macro_end = macro_start + size_int
+        def _create_function(ts_int):
+            cumulative_start_int = (ts_int // size_int) * size_int
+            first_step_end_int = ((ts_int // advance_int) * advance_int) + advance_int
+            cumulative_end_int = cumulative_start_int + size_int
             #
-            return [end for end in range(first_step_end, macro_end + advance_int, advance_int) if end <= macro_end]
+            return [step_end_int
+                    for step_end_int in range(first_step_end_int, cumulative_end_int + advance_int, advance_int)
+                    if step_end_int <= cumulative_end_int]
         #
-        return _create
+        return _create_function
 
-    def group_by_agg_fixed_window(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function):
+    def group_by_agg_fixed_window(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
         _agg_function = lambda agg, x, _: agg_function(agg, x)
         #
         _projection_function = lambda by, agg: (projection_function(by[0], agg), by[1])
         #
         group_by_agg_tn = (
             self
-            .flatmap(lambda x: [(x, window_end_int) for window_end_int in create_function(time_function(x))])
+            .flatmap(lambda x: [(x, window_end_int) for window_end_int in create_function(time_function(x))], **kwargs)
             .group_by_agg(
                 lambda x: (by_function(x[0]), x[1]),
                 lambda x: x[0],
                 _agg_function,
                 agg_initial_any,
-                _projection_function
-            )
+                _projection_function,
+                **kwargs)
         )
         #
         return group_by_agg_tn
 
-    def group_by_agg_session_window(self, gap_int, time_function, by_function, agg_function, agg_initial, projection_function):
+    def group_by_agg_session_window(self, gap_int, time_function, by_function, agg_function, agg_initial, projection_function, **kwargs):
         def insert_session(sessions, ts, event):
             # 1. Passende Session suchen
             left_s = next((s for s in sessions if s["start"] - gap_int <= ts <= s["last_ts"] + gap_int), None)
@@ -751,88 +754,87 @@ class TopologyNode:
                 {"sessions": (sessions := insert_session(agg.get("sessions", []), time_function(x), x)),
                  "output": [(s["value"], s["last_ts"] + gap_int) for s in sessions]},
                 {"sessions": [], "output": []},
-                lambda by, agg: (by, agg["output"])
+                lambda by, agg: (by, agg["output"]),
+                **kwargs
             )
-            .flatmap(_flatmap_function)
+            .flatmap(_flatmap_function, **kwargs)
         )
         return group_by_tn
 
     ###
-    # Time Windows
+    # Time Windows - Complete
     ###
 
-    def tumbling_window(self, size_int, lateness_factor_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+    def fixed_window(self, size_int, lateness_factor_int, create_window_function, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
         expire_tn = (
             self.expire(time_function,
                         lambda x: (x // size_int) * size_int + size_int + (size_int * lateness_factor_int),
                         **kwargs)
-                        .distinct()
+                        .distinct(**kwargs)
         )
         #
         group_by_agg_tn = (
             expire_tn
-            .group_by_agg_fixed_window(TopologyNode.create_tumbling_window(size_int),
+            .group_by_agg_fixed_window(create_window_function,
                                        time_function,
                                        by_function,
                                        agg_function,
                                        agg_initial_any,
-                                       projection_function)
+                                       projection_function,
+                                       **kwargs)
         )
         #
-        trigger_tn = group_by_agg_tn.trigger(expire_tn, time_function)
-        #
-        return trigger_tn
-    
-    def hopping_window(self, size_int, advance_int, lateness_factor_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
-        expire_tn = (
-            self.expire(time_function,
-                        lambda x: (x // size_int) * size_int + size_int + (size_int * lateness_factor_int),
-                        **kwargs)
-                        .distinct()
-        )
-        #
-        group_by_agg_tn = (
-            expire_tn
-            .group_by_agg_fixed_window(TopologyNode.create_hopping_window(size_int, advance_int),
-                                       time_function,
-                                       by_function,
-                                       agg_function,
-                                       agg_initial_any,
-                                       projection_function)
-        )
-        #
-        trigger_tn = group_by_agg_tn.trigger(expire_tn, time_function)
+        trigger_tn = group_by_agg_tn.trigger(expire_tn, time_function, **kwargs)
         #
         return trigger_tn
 
+
+    def tumbling_window(self, size_int, lateness_factor_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        window_tn = self.fixed_window(size_int,
+                                      lateness_factor_int,
+                                      TopologyNode.create_tumbling_window(size_int),
+                                      time_function,
+                                      by_function,
+                                      agg_function,
+                                      agg_initial_any,
+                                      projection_function,
+                                      **kwargs)
+        #
+        return window_tn
+    
+    def hopping_window(self, size_int, advance_int, lateness_factor_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        window_tn = self.fixed_window(size_int,
+                                      lateness_factor_int,
+                                      TopologyNode.create_hopping_window(size_int, advance_int),
+                                      time_function,
+                                      by_function,
+                                      agg_function,
+                                      agg_initial_any,
+                                      projection_function,
+                                      **kwargs)
+        #
+        return window_tn
+
     def cumulative_window(self, size_int, advance_int, lateness_factor_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
-        expire_tn = (
-            self.expire(time_function,
-                        lambda x: (x // size_int) * size_int + size_int + (size_int * lateness_factor_int),
-                        **kwargs)
-                        .distinct()
-        )
+        window_tn = self.fixed_window(size_int,
+                                      lateness_factor_int,
+                                      TopologyNode.create_cumulative_window(size_int, advance_int),
+                                      time_function,
+                                      by_function,
+                                      agg_function,
+                                      agg_initial_any,
+                                      projection_function,
+                                      **kwargs)
         #
-        group_by_agg_tn = (
-            expire_tn
-            .group_by_agg_fixed_window(TopologyNode.create_cumulative_window(size_int, advance_int),
-                                       time_function,
-                                       by_function,
-                                       agg_function,
-                                       agg_initial_any,
-                                       projection_function)
-        )
-        #
-        trigger_tn = group_by_agg_tn.trigger(expire_tn, time_function)
-        #
-        return trigger_tn
+        return window_tn
 
     def session_window(self, gap_int, max_session_int, lateness_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
         expire_tn = (
             self
             .expire(time_function,
-                    lambda x: ((x // max_session_int) * max_session_int + max_session_int) + lateness_int)
-            .distinct()
+                    lambda x: ((x // max_session_int) * max_session_int + max_session_int) + lateness_int,
+                    **kwargs)
+            .distinct(**kwargs)
         )
         #
         group_by_agg_tn = (
@@ -842,10 +844,11 @@ class TopologyNode:
                                          by_function, 
                                          agg_function,
                                          agg_initial_any,
-                                         projection_function)
+                                         projection_function,
+                                         **kwargs)
         )
         #
-        trigger_tn = group_by_agg_tn.trigger(expire_tn, lambda x: x["ts"])
+        trigger_tn = group_by_agg_tn.trigger(expire_tn, lambda x: x["ts"], **kwargs)
         #
         return trigger_tn
 
