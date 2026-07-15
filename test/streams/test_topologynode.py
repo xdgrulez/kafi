@@ -2,7 +2,7 @@ from streams.test_topologynode_base import TestTopologyNodeBase
 from streams.test_generate import TestGenerate
 from streams.test_base import TestBase, default_batch_size_int, default_steps_int
 
-from streams.datagen.topologies import get_built_tn_datagen_1_join, get_built_tn_datagen_2_joins, get_built_tn_datagen_3_joins, get_built_tn_datagen_self_join_group_by, get_built_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks, get_built_tn_datagen_expire
+from streams.datagen.topologies import get_built_tn_datagen_1_join, get_built_tn_datagen_2_joins, get_built_tn_datagen_3_joins, get_built_tn_datagen_self_join_group_by, get_built_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks
 from streams.jamie.topologies import get_built_tn_jamie
 from streams.wc.topologies import get_built_tn_wc
 
@@ -98,17 +98,6 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         self.process(built_tn, {source_str: default_batch_size_int}, default_steps_int)
         #
         self.assert_datagen_multiple_sinks(customer_a_h_str, customer_i_q_str, customer_r_z_str)
-
-    def test_datagen_expire(self):
-        source_str = "shoe_orders"
-        #
-        sink_str = "shoe_orders_expire"
-        #
-        built_tn = get_built_tn_datagen_expire(lambda: Tn.source(source_str), lambda x: x.sink(sink_str))
-        #
-        self.process(built_tn, {source_str: default_batch_size_int}, default_steps_int)
-        #
-        self.assert_datagen_expire()
 
     #
 

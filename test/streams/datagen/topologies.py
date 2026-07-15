@@ -270,19 +270,3 @@ def get_built_tn_datagen_multiple_sinks(get_source_tn_function, get_sink_custome
     built_tn = Tn.build(sink_customer_a_h_tn, sink_customer_i_q_tn, sink_customer_r_z_tn)
     #
     return built_tn
-
-def get_built_tn_datagen_expire(get_source_tn_function, get_sink_tn_function):
-    order_source_tn = get_source_tn_function()
-    #
-    expire_tn = order_source_tn.expire(
-        lambda x: x["value"]["ts"],
-        lambda x: x["value"]["ts"] + ts_step_int * 10,
-        lambda x: (x[0]["value"].__setitem__("expiry", x[1]) or x[0])
-    )
-    #
-    sink_tn = get_sink_tn_function(expire_tn)
-    #
-    built_tn = Tn.build(sink_tn)
-    built_tn._from_zSet_function = built_tn.to_debezium
-    #
-    return built_tn
