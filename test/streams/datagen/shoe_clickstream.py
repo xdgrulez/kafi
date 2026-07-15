@@ -4,13 +4,16 @@ from streams.datagen.constants.product_ids import product_id_str_list
 from streams.datagen.constants.customer_ids import customer_id_str_list
 from streams.datagen.constants.ips import ip_str_list
 
+ts_int = 1609459200000
+ts_step_int = 100000
+
 #
 
 class ShoeClickstreamGenerator:
     def __init__(self):
-        # self.ts_int = 1609457200000
-        self.ts_int = int(time.time() * 1000)
-        self.ts_step_int = 10000
+        self.ts_int = ts_int
+        # self.ts_int = int(time.time() * 1000)
+        self.ts_step_int = ts_step_int
 
     def generate_record(self):
         record_dict = {

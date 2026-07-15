@@ -270,3 +270,65 @@ def get_built_tn_datagen_multiple_sinks(get_source_tn_function, get_sink_custome
     built_tn = Tn.build(sink_customer_a_h_tn, sink_customer_i_q_tn, sink_customer_r_z_tn)
     #
     return built_tn
+
+#
+
+def agg_function(agg, x, w):
+    return {
+        "orders": agg["orders"] + w,
+        "total_price": agg["total_price"] + x["price"] * w
+    }
+
+def projection_function(by, agg):
+    return {
+        "customer_id": by,
+        "orders": agg["orders"],
+        "total_price": agg["total_price"]
+    }
+
+#
+
+def get_built_tn_datagen_tumbling_window(get_customer_source_tn_function,
+                                         get_order_source_tn_function,
+                                         get_sink_tn_function):
+    size_int = ts_step_int * 10
+    allowed_lateness_int = 1 * size_int
+    #
+    customer_source_tn = get_customer_source_tn_function()
+    order_source_tn = get_order_source_tn_function()
+    #
+    customer_tn = (
+        customer_source_tn
+        .from_value()
+    #
+    order_tn = (
+        order_source_tn
+        .from_value()
+        .tumbling_retention(lambda x: x["ts"], size_int, allowed_lateness_int)
+    )
+    #
+    join_tn = customer_source_tn.join_equi(
+        order_tn,
+        lambda l: l["id"],
+        lambda r: r["customer_id"],
+        lambda l, r: {
+            "customer_id": l["id"],
+            "price": r["price"],
+            "ts": r["ts"]
+        }
+    )
+    #
+    window_tn = join_tn.tumbling(
+        size_int,
+        lambda x: x["ts"],
+        lambda x: x["customer_id"],
+        agg_function,
+        {"orders": 0, "total_price": 0},
+        projection_function
+    )
+    #
+    sink_tn = get_sink_tn_function(window_tn)
+    #
+    built_tn = Tn.build(sink_tn)
+    #
+    return built_tn
