@@ -824,6 +824,8 @@ class TopologyNode:
         #
         return window_tn
 
+    #
+
     def session_window(self, gap_int, max_session_int, allowed_lateness_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
         expire_tn = (
             self
@@ -847,6 +849,77 @@ class TopologyNode:
         trigger_tn = group_by_agg_tn.trigger(expire_tn, time_function, **kwargs)
         #
         return trigger_tn
+
+    #
+
+    def sliding_window(self, size_int, allowed_lateness_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        # 1. State-Expiration
+        expire_tn = (
+            self
+            .expire(time_function,
+                    lambda ts: ts + size_int + allowed_lateness_int,
+                    **kwargs)
+            .distinct(**kwargs)
+        )
+        
+        # 2. Eintritts-Strom (Werte kommen sofort rein)
+        add_tn = expire_tn.map(
+            lambda x: (x, time_function(x)),
+            **kwargs
+        )
+        
+        # Globale Uhr ermitteln (Maximaler bisher gesehener Timestamp)
+        current_time_tn = (
+            expire_tn
+            .map(time_function, **kwargs)
+            .max(lambda x: x, lambda x: x, **kwargs)
+        )
+        
+        # 3. Austritts-Strom: Wir bereiten das Negativ-Event vor
+        raw_retract_tn = expire_tn._map(
+            lambda x, w: ((x, time_function(x) + size_int), -w),
+            **kwargs
+        )
+        
+        # WICHTIG: Das Negativ-Event darf erst freigegeben werden, 
+        # wenn die Systemzeit den Austrittszeitpunkt (ts + size) erreicht hat!
+        retract_tn = (
+            raw_retract_tn
+            .join(
+                current_time_tn,
+                # Trigger-Bedingung: Systemzeit >= Austrittszeitpunkt
+                lambda l, r: r >= l[1],
+                lambda l, _: l,
+                **kwargs
+            )
+        )
+        
+        # 4. Zusammenführen
+        merged_tn = add_tn.merge(retract_tn, **kwargs)
+        
+        def _by_function(record_any_ts_int_tuple):
+            return by_function(record_any_ts_int_tuple[0])
+            
+        def _select_function(record_any_ts_int_tuple):
+            return record_any_ts_int_tuple[0]
+
+        def _agg_function(agg_any, record_any, weight_int):
+            return agg_function(agg_any, record_any, weight_int)
+        
+        # 5. Aggregation
+        group_by_agg_tn = (
+            merged_tn
+            .group_by_agg(
+                _by_function,
+                _select_function,
+                _agg_function,
+                agg_initial_any,
+                projection_function,
+                **kwargs
+            )
+        )
+        
+        return group_by_agg_tn
 
     ###
     # Operator utils
