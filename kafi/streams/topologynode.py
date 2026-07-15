@@ -680,8 +680,6 @@ class TopologyNode:
         return _create_function
 
     def group_by_agg_fixed_window(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
-        _agg_function = lambda agg, x, _: agg_function(agg, x)
-        #
         _projection_function = lambda by, agg: (projection_function(by[0], agg), by[1])
         #
         group_by_agg_tn = (
@@ -690,7 +688,7 @@ class TopologyNode:
             .group_by_agg(
                 lambda x: (by_function(x[0]), x[1]),
                 lambda x: x[0],
-                _agg_function,
+                agg_function,
                 agg_initial_any,
                 _projection_function,
                 **kwargs)
@@ -699,48 +697,48 @@ class TopologyNode:
         return group_by_agg_tn
 
     def group_by_agg_session_window(self, gap_int, time_function, by_function, agg_function, agg_initial, projection_function, **kwargs):
-        def insert_session(sessions, ts, event):
-            # 1. Passende Session suchen
-            left_s = next((s for s in sessions if s["start"] - gap_int <= ts <= s["last_ts"] + gap_int), None)
-            
-            if left_s:
-                left_s["events"].append(event)
-                left_s["start"] = min(left_s["start"], ts)
-                left_s["last_ts"] = max(left_s["last_ts"], ts)
-                left_s["value"] = agg_function(left_s["value"], event)
-                
-                # 2. Merge-Prüfung
-                right_s = next((s for s in sessions if s != left_s 
-                                and s["start"] - gap_int <= left_s["last_ts"] + gap_int 
-                                and left_s["start"] - gap_int <= s["last_ts"]), None)
-                if right_s:
-                    # Wir fusionieren die Roh-Event-Listen
-                    left_s["events"].extend(right_s["events"])
-                    left_s["start"] = min(left_s["start"], right_s["start"])
-                    left_s["last_ts"] = max(left_s["last_ts"], right_s["last_ts"])
-                    
-                    # JETZT DER TRICK: Statt die rechte Session live draufzurechnen,
-                    # fangen wir einfach mit einem frischen agg_initial an und rollen
-                    # die komplett fusionierte Event-Liste einmal sauber von vorne auf.
-                    # Da ein Merge selten ist, kostet das kaum Performance, rettet aber die Typ-Sicherheit!
-                    left_s["events"].sort(key=lambda e: e["ts"]) # Sicherstellen, dass die Reihenfolge stimmt
-                    
-                    state = agg_initial.copy()
-                    for ev in left_s["events"]:
-                        state = agg_function(state, ev)
-                    left_s["value"] = state
-                        
-                    sessions.remove(right_s)
+        def insert_session(record_any, session_dict_list):
+            ts_int = time_function(record_any)
+            #
+            left_session_dict = next((session_dict 
+                                      for session_dict in session_dict_list 
+                                      if session_dict["start"] - gap_int <= ts_int <= session_dict["last_ts"] + gap_int), None)
+            #
+            if left_session_dict:
+                left_session_dict["records"].append(record_any)
+                left_session_dict["start"] = min(left_session_dict["start"], ts_int)
+                left_session_dict["last_ts"] = max(left_session_dict["last_ts"], ts_int)
+                left_session_dict["agg"] = agg_function(left_session_dict["agg"], record_any, 1)
+                #
+                right_session_dict = next((session_dict 
+                                           for session_dict in session_dict_list 
+                                           if session_dict != left_session_dict 
+                                           and session_dict["start"] - gap_int <= left_session_dict["last_ts"] + gap_int 
+                                           and left_session_dict["start"] - gap_int <= session_dict["last_ts"]), None)
+                if right_session_dict:
+                    left_session_dict["records"].extend(right_session_dict["records"])
+                    left_session_dict["start"] = min(left_session_dict["start"], right_session_dict["start"])
+                    left_session_dict["last_ts"] = max(left_session_dict["last_ts"], right_session_dict["last_ts"])
+                    #
+                    left_session_dict["records"].sort(key=time_function)
+                    #                    
+                    agg_any = agg_initial.copy()
+                    for record_any in left_session_dict["records"]:
+                        agg_any = agg_function(agg_any, record_any, 1)
+                    left_session_dict["agg"] = agg_any
+                    #
+                    session_dict_list.remove(right_session_dict)
             else:
-                sessions.append({
-                    "start": ts, 
-                    "last_ts": ts, 
-                    "events": [event], 
-                    "value": agg_function(agg_initial.copy(), event)
+                session_dict_list.append({
+                    "start": ts_int,
+                    "last_ts": ts_int,
+                    "records": [record_any],
+                    "agg": agg_function(agg_initial.copy(), record_any, 1)
                 })
-
-            sessions.sort(key=lambda s: s["start"])
-            return sessions
+            #
+            session_dict_list.sort(key=lambda session_dict: session_dict["start"])
+            #
+            return session_dict_list
         #
         def _flatmap_function(x):
             return [(projection_function(x[0], s[0]), s[1]) for s in x[1]]
@@ -750,9 +748,9 @@ class TopologyNode:
             .group_by_agg(
                 by_function,
                 lambda x: x,
-                lambda agg, x, _: 
-                {"sessions": (sessions := insert_session(agg.get("sessions", []), time_function(x), x)),
-                 "output": [(s["value"], s["last_ts"] + gap_int) for s in sessions]},
+                lambda agg, x, _:
+                {"sessions": (session_dict_list := insert_session(x, agg.get("sessions", []))),
+                 "output": [(session_dict["records"], session_dict["last_ts"] + gap_int) for session_dict in session_dict_list]},
                 {"sessions": [], "output": []},
                 lambda by, agg: (by, agg["output"]),
                 **kwargs
@@ -848,7 +846,7 @@ class TopologyNode:
                                          **kwargs)
         )
         #
-        trigger_tn = group_by_agg_tn.trigger(expire_tn, lambda x: x["ts"], **kwargs)
+        trigger_tn = group_by_agg_tn.trigger(expire_tn, time_function, **kwargs)
         #
         return trigger_tn
 
