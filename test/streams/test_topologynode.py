@@ -1,8 +1,10 @@
+import sys
+
 from streams.test_topologynode_base import TestTopologyNodeBase
 from streams.test_generate import TestGenerate
 from streams.test_base import TestBase, default_batch_size_int, default_steps_int
 
-from streams.datagen.topologies import get_built_tn_datagen_1_join, get_built_tn_datagen_2_joins, get_built_tn_datagen_3_joins, get_built_tn_datagen_self_join_group_by, get_built_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks, get_built_tn_datagen_tumbling_window
+from streams.datagen.topologies import get_built_tn_datagen_1_join, get_built_tn_datagen_2_joins, get_built_tn_datagen_3_joins, get_built_tn_datagen_self_join_group_by, get_built_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks, get_built_tn_datagen_tumbling_window, get_built_tn_datagen_hopping_window, get_built_tn_datagen_cumulative_window, get_built_tn_datagen_sliding_window, get_built_tn_datagen_session_window
 from streams.jamie.topologies import get_built_tn_jamie
 from streams.wc.topologies import get_built_tn_wc
 
@@ -100,18 +102,119 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         self.assert_datagen_multiple_sinks(customer_a_h_str, customer_i_q_str, customer_r_z_str)
 
     def test_datagen_tumbling_window(self):
-        customer_source_str = "shoe_customers"
+        # old_recursion_limit_int = sys.getrecursionlimit()
+        # sys.setrecursionlimit(10000)
+        #
         order_source_str = "shoe_orders"
+        customer_source_str = "shoe_customers"
+        product_source_str = "shoes"
         #
         sink_str = "tumbling_window"
         #
-        built_tn = get_built_tn_datagen_tumbling_window(lambda: Tn.source(customer_source_str),
-                                                        lambda: Tn.source(order_source_str),
+        built_tn = get_built_tn_datagen_tumbling_window(lambda: Tn.source(order_source_str),
+                                                        lambda: Tn.source(customer_source_str),
+                                                        lambda: Tn.source(product_source_str),          
                                                         lambda x: x.sink(sink_str))
         #
         self.process(built_tn,
-                     {customer_source_str: default_batch_size_int, order_source_str: default_batch_size_int},
-                     default_steps_int)
+                     {order_source_str: default_batch_size_int,
+                      customer_source_str: default_batch_size_int,
+                      product_source_str: default_batch_size_int},
+                     20)
+        #
+        # sys.setrecursionlimit(old_recursion_limit_int)
+
+    def test_datagen_hopping_window(self):
+        # old_recursion_limit_int = sys.getrecursionlimit()
+        # sys.setrecursionlimit(10000)
+        #
+        order_source_str = "shoe_orders"
+        customer_source_str = "shoe_customers"
+        product_source_str = "shoes"
+        #
+        sink_str = "hopping_window"
+        #
+        built_tn = get_built_tn_datagen_hopping_window(lambda: Tn.source(order_source_str),
+                                                       lambda: Tn.source(customer_source_str),
+                                                       lambda: Tn.source(product_source_str),          
+                                                       lambda x: x.sink(sink_str))
+        #
+        self.process(built_tn,
+                     {order_source_str: default_batch_size_int,
+                      customer_source_str: default_batch_size_int,
+                      product_source_str: default_batch_size_int},
+                     20)
+        #
+        # sys.setrecursionlimit(old_recursion_limit_int)
+
+    def test_datagen_cumulative_window(self):
+        # old_recursion_limit_int = sys.getrecursionlimit()
+        # sys.setrecursionlimit(10000)
+        #
+        order_source_str = "shoe_orders"
+        customer_source_str = "shoe_customers"
+        product_source_str = "shoes"
+        #
+        sink_str = "cumulative_window"
+        #
+        built_tn = get_built_tn_datagen_cumulative_window(lambda: Tn.source(order_source_str),
+                                                          lambda: Tn.source(customer_source_str),
+                                                          lambda: Tn.source(product_source_str),          
+                                                          lambda x: x.sink(sink_str))
+        #
+        self.process(built_tn,
+                     {order_source_str: default_batch_size_int,
+                      customer_source_str: default_batch_size_int,
+                      product_source_str: default_batch_size_int},
+                     20)
+        #
+        # sys.setrecursionlimit(old_recursion_limit_int)
+
+    def test_datagen_sliding_window(self):
+        # old_recursion_limit_int = sys.getrecursionlimit()
+        # sys.setrecursionlimit(10000)
+        #
+        order_source_str = "shoe_orders"
+        customer_source_str = "shoe_customers"
+        product_source_str = "shoes"
+        #
+        sink_str = "sliding_window"
+        #
+        built_tn = get_built_tn_datagen_sliding_window(lambda: Tn.source(order_source_str),
+                                                       lambda: Tn.source(customer_source_str),
+                                                       lambda: Tn.source(product_source_str),          
+                                                       lambda x: x.sink(sink_str))
+        #
+        self.process(built_tn,
+                     {order_source_str: default_batch_size_int,
+                      customer_source_str: default_batch_size_int,
+                      product_source_str: default_batch_size_int},
+                     20)
+        #
+        # sys.setrecursionlimit(old_recursion_limit_int)
+
+    def test_datagen_session_window(self):
+        # old_recursion_limit_int = sys.getrecursionlimit()
+        # sys.setrecursionlimit(10000)
+        #
+        order_source_str = "shoe_orders"
+        customer_source_str = "shoe_customers"
+        product_source_str = "shoes"
+        #
+        sink_str = "session_window"
+        #
+        built_tn = get_built_tn_datagen_session_window(lambda: Tn.source(order_source_str),
+                                                       lambda: Tn.source(customer_source_str),
+                                                       lambda: Tn.source(product_source_str),          
+                                                       lambda x: x.sink(sink_str))
+        #
+        self.process(built_tn,
+                     {order_source_str: default_batch_size_int,
+                      customer_source_str: default_batch_size_int,
+                      product_source_str: default_batch_size_int},
+                     20)
+        #
+        # sys.setrecursionlimit(old_recursion_limit_int)
 
     #
 

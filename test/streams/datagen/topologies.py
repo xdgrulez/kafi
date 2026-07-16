@@ -273,62 +273,235 @@ def get_built_tn_datagen_multiple_sinks(get_source_tn_function, get_sink_custome
 
 #
 
+def by_function(x):
+    return (x["customer_id"], x["email"])
+
 def agg_function(agg, x, w):
     return {
         "orders": agg["orders"] + w,
-        "total_price": agg["total_price"] + x["price"] * w
+        "total_price": agg["total_price"] + x["sale_price"] * w
     }
+
+agg_initial_any = {"orders": 0, "total_price": 0}
 
 def projection_function(by, agg):
     return {
-        "customer_id": by,
+        "customer_id": by[0],
+        "email": by[1],
         "orders": agg["orders"],
         "total_price": agg["total_price"]
     }
 
 #
 
-def get_built_tn_datagen_tumbling_window(get_customer_source_tn_function,
-                                         get_order_source_tn_function,
-                                         get_sink_tn_function):
-    size_int = ts_step_int * 10
-    allowed_lateness_int = 1 * size_int
-    #
-    customer_source_tn = get_customer_source_tn_function()
+def _get_built_tn_datagen_window(get_order_source_tn_function,
+                                 get_customer_source_tn_function,
+                                 get_product_source_tn_function,
+                                 get_sink_tn_function,
+                                 window_dict):
     order_source_tn = get_order_source_tn_function()
-    #
-    customer_tn = (
-        customer_source_tn
-        .from_value()
+    customer_source_tn = get_customer_source_tn_function()
+    product_source_tn = get_product_source_tn_function()
     #
     order_tn = (
         order_source_tn
-        .from_value()
-        .tumbling_retention(lambda x: x["ts"], size_int, allowed_lateness_int)
+        .map(lambda x: {"product_id": x["value"]["product_id"],
+                        "customer_id": x["value"]["customer_id"],
+                        "ts": x["value"]["ts"]})
     )
     #
-    join_tn = customer_source_tn.join_equi(
-        order_tn,
-        lambda l: l["id"],
-        lambda r: r["customer_id"],
-        lambda l, r: {
-            "customer_id": l["id"],
-            "price": r["price"],
-            "ts": r["ts"]
-        }
+    time_function = lambda x: x["ts"]
+    match window_dict["type"]:
+        case "tumbling":
+            retention = lambda tn: tn.tumbling_retention(time_function,
+                                                          window_dict["size"],
+                                                          window_dict["allowed_lateness"])
+        case "hopping":
+            retention = lambda tn: tn.hopping_retention(time_function,
+                                                         window_dict["size"],
+                                                         window_dict["hop"],
+                                                         window_dict["allowed_lateness"])
+        case "cumulative":
+            retention = lambda tn: tn.cumulative_retention(time_function,
+                                                            window_dict["size"],
+                                                            window_dict["advance"],
+                                                            window_dict["allowed_lateness"])
+        case "sliding":
+            retention = lambda tn: tn.sliding_retention(time_function,
+                                                        window_dict["size"],
+                                                        window_dict["allowed_lateness"])
+        case "session":
+            retention = lambda tn: tn.session_retention(time_function,
+                                                        window_dict["max_session"],
+                                                        window_dict["allowed_lateness"])
+    #
+    order_tn = retention(order_tn).distinct()
+    #
+    customer_tn = (
+        customer_source_tn
+        .map(lambda x: {"id": x["value"]["id"],
+                        "email": x["value"]["email"]})
+        .distinct()
     )
     #
-    window_tn = join_tn.tumbling(
-        size_int,
-        lambda x: x["ts"],
-        lambda x: x["customer_id"],
-        agg_function,
-        {"orders": 0, "total_price": 0},
-        projection_function
+    product_tn = (
+        product_source_tn
+        .map(lambda x: {"id": x["value"]["id"],
+                        "sale_price": x["value"]["sale_price"]})
+        .distinct()
     )
+    #
+    join_1_tn = (
+        order_tn
+        .join_equi(
+            customer_tn,
+            lambda l: l["customer_id"],
+            lambda r: r["id"],
+            lambda l, r: {
+                "product_id": l["product_id"],
+                "customer_id": l["customer_id"],
+                "ts": l["ts"],
+                "email": r["email"]
+            })
+    )
+    #
+    join_2_tn = (
+        join_1_tn
+        .join_equi(
+            product_tn,
+            lambda l: l["product_id"],
+            lambda r: r["id"],
+            lambda l, r: {
+                "product_id": l["product_id"],
+                "customer_id": l["customer_id"],
+                "ts": l["ts"],
+                "email": l["email"],
+                "sale_price": r["sale_price"]
+            }
+        )
+    )
+    #
+    match window_dict["type"]:
+        case "tumbling":
+            window_tn = join_2_tn.tumbling(window_dict["size"],
+                                           time_function,
+                                           by_function,
+                                           agg_function,
+                                           agg_initial_any,
+                                           projection_function)
+        case "hopping":
+            window_tn = join_2_tn.hopping(window_dict["size"],
+                                          window_dict["hop"],
+                                          time_function,
+                                          by_function,
+                                          agg_function,
+                                          agg_initial_any,
+                                          projection_function)
+        case "cumulative":
+            window_tn = join_2_tn.cumulative(window_dict["size"],
+                                             window_dict["advance"],
+                                             time_function,
+                                             by_function,
+                                             agg_function,
+                                             agg_initial_any,
+                                             projection_function)
+        case "sliding":
+            window_tn = join_2_tn.sliding(window_dict["size"],
+                                          time_function,
+                                          by_function,
+                                          agg_function,
+                                          agg_initial_any,
+                                          projection_function)
+        case "session":
+            window_tn = join_2_tn.session(window_dict["gap"],
+                                          time_function,
+                                          by_function,
+                                          agg_function,
+                                          agg_initial_any,
+                                          projection_function)
+    #
+    window_tn = window_tn.to_value()
     #
     sink_tn = get_sink_tn_function(window_tn)
     #
     built_tn = Tn.build(sink_tn)
+    #
+    return built_tn
+
+def get_built_tn_datagen_tumbling_window(get_order_source_tn_function,
+                                         get_customer_source_tn_function,
+                                         get_product_source_tn_function,
+                                         get_sink_tn_function):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
+                                            get_customer_source_tn_function,
+                                            get_product_source_tn_function,
+                                            get_sink_tn_function,
+                                            {"type": "tumbling",
+                                             "size": (size_int := ts_step_int * 10),
+                                             "allowed_lateness": size_int * 5}
+                                            )
+    #
+    return built_tn
+
+def get_built_tn_datagen_hopping_window(get_order_source_tn_function,
+                                        get_customer_source_tn_function,
+                                        get_product_source_tn_function,
+                                        get_sink_tn_function):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
+                                            get_customer_source_tn_function,
+                                            get_product_source_tn_function,
+                                            get_sink_tn_function,
+                                            {"type": "hopping",
+                                             "size": (size_int := ts_step_int * 10),
+                                             "hop": size_int // 5,
+                                             "allowed_lateness": size_int * 5}
+                                            )
+    #
+    return built_tn
+
+def get_built_tn_datagen_cumulative_window(get_order_source_tn_function,
+                                           get_customer_source_tn_function,
+                                           get_product_source_tn_function,
+                                           get_sink_tn_function):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
+                                            get_customer_source_tn_function,
+                                            get_product_source_tn_function,
+                                            get_sink_tn_function,
+                                            {"type": "cumulative",
+                                             "size": (size_int := ts_step_int * 20),
+                                             "advance": size_int // 5,
+                                             "allowed_lateness": size_int * 5}
+                                            )
+    #
+    return built_tn
+
+def get_built_tn_datagen_sliding_window(get_order_source_tn_function,
+                                        get_customer_source_tn_function,
+                                        get_product_source_tn_function,
+                                        get_sink_tn_function):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
+                                            get_customer_source_tn_function,
+                                            get_product_source_tn_function,
+                                            get_sink_tn_function,
+                                            {"type": "sliding",
+                                             "size": (size_int := ts_step_int * 10),
+                                             "allowed_lateness": size_int * 5}
+                                            )
+    #
+    return built_tn
+
+def get_built_tn_datagen_session_window(get_order_source_tn_function,
+                                        get_customer_source_tn_function,
+                                        get_product_source_tn_function,
+                                        get_sink_tn_function):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
+                                            get_customer_source_tn_function,
+                                            get_product_source_tn_function,
+                                            get_sink_tn_function,
+                                            {"type": "session",
+                                             "gap": (size_int := ts_step_int * 10),
+                                             "max_session": size_int * 100,
+                                             "allowed_lateness": size_int * 5}
+                                            )
     #
     return built_tn

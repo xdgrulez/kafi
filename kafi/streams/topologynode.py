@@ -631,13 +631,13 @@ class TopologyNode:
     # Time Windows - Trigger
     ###
 
-    def trigger(self, time_tn, time_function, trigger_time_function=lambda x: x[1], trigger_function=lambda l, r: r >= l, projection_function=lambda l, _: l, positive_only=True, **kwargs):
+    def trigger(self, time_tn, time_function, trigger_function=lambda l, r: r >= l[1], projection_function=lambda l, _: l, positive_only=True, **kwargs):
         positive_only_boolean = positive_only
         #
         trigger_tn = (
             self
             .join(time_tn.max(time_function),
-                  lambda l, r: trigger_function(trigger_time_function(l), r),
+                  lambda l, r: trigger_function(l, r),
                   projection_function,
                   **kwargs)
         )
@@ -657,12 +657,12 @@ class TopologyNode:
         return _assign_function
 
     @staticmethod
-    def _assign_hopping(size_int, advance_int):
+    def _assign_hopping(size_int, hop_int):
         def _assign_function(ts_int):
-            first_end_int = (ts_int // advance_int) * advance_int + advance_int
+            first_end_int = (ts_int // hop_int) * hop_int + hop_int
             #
-            return [first_end_int + i * advance_int
-                    for i in range(size_int // advance_int) if first_end_int + i * advance_int >= size_int]
+            return [first_end_int + i * hop_int
+                    for i in range(size_int // hop_int) if first_end_int + i * hop_int >= size_int]
         #
         return _assign_function
 
@@ -716,7 +716,33 @@ class TopologyNode:
 
     #
 
-    def _group_by_agg_session(self, gap_int, time_function, by_function, agg_function, agg_initial, projection_function, **kwargs):
+    def _group_by_agg_sliding(self, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        def _by_function(record_any_ts_int_tuple):
+            return by_function(record_any_ts_int_tuple[0])
+        #
+        def _select_function(record_any_ts_int_tuple):
+            return record_any_ts_int_tuple[0]
+        #
+        def _agg_function(agg_any, record_any, weight_int):
+            return agg_function(agg_any, record_any, weight_int)
+        #
+        group_by_agg_tn = (
+            self
+            .group_by_agg(
+                _by_function,
+                _select_function,
+                _agg_function,
+                agg_initial_any,
+                projection_function,
+                **kwargs
+            )
+        )
+        #        
+        return group_by_agg_tn
+
+    #
+
+    def _group_by_agg_session(self, gap_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
         def insert_session(record_any, session_dict_list):
             ts_int = time_function(record_any)
             #
@@ -742,7 +768,7 @@ class TopologyNode:
                     #
                     left_session_dict["records"].sort(key=time_function)
                     #                    
-                    agg_any = agg_initial.copy()
+                    agg_any = agg_initial_any.copy()
                     for record_any in left_session_dict["records"]:
                         agg_any = agg_function(agg_any, record_any, 1)
                     left_session_dict["agg"] = agg_any
@@ -753,7 +779,7 @@ class TopologyNode:
                     "start": ts_int,
                     "last_ts": ts_int,
                     "records": [record_any],
-                    "agg": agg_function(agg_initial.copy(), record_any, 1)
+                    "agg": agg_function(agg_initial_any.copy(), record_any, 1)
                 })
             #
             session_dict_list.sort(key=lambda session_dict: session_dict["start"])
@@ -797,9 +823,9 @@ class TopologyNode:
                                      allowed_lateness_int,
                                      **kwargs)
 
-    def hopping_retention(self, time_function, size_int, advance_int, allowed_lateness_int=0, **kwargs):
+    def hopping_retention(self, time_function, size_int, hop_int, allowed_lateness_int=0, **kwargs):
         return self._window_retention(time_function,
-                                     TopologyNode._assign_hopping(size_int, advance_int),
+                                     TopologyNode._assign_hopping(size_int, hop_int),
                                      allowed_lateness_int,
                                      **kwargs)
 
@@ -825,10 +851,10 @@ class TopologyNode:
     # Time Windows - {Group By, Trigger}
     ###
 
-    def _non_sliding_non_session(self, create_windows_function, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+    def _non_sliding_non_session(self, assign_function, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l, trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
-            ._group_by_agg_non_sliding_non_session(create_windows_function,
+            ._group_by_agg_non_sliding_non_session(assign_function,
                                                    time_function,
                                                    by_function,
                                                    agg_function,
@@ -837,42 +863,56 @@ class TopologyNode:
                                                    **kwargs)
         )
         #
-        trigger_tn = group_by_agg_tn.trigger(self, time_function, **kwargs)
+        trigger_tn = group_by_agg_tn.trigger(self,
+                                             time_function,
+                                             trigger_function,
+                                             trigger_projection_function,
+                                             trigger_positive_only,
+                                             **kwargs)
         #
         return trigger_tn
 
     #
 
-    def tumbling(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+    def tumbling(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l, trigger_positive_only=True, **kwargs):
         return self._non_sliding_non_session(TopologyNode._assign_tumbling(size_int),
                                              time_function,
                                              by_function,
                                              agg_function,
                                              agg_initial_any,
                                              projection_function,
+                                             trigger_function,
+                                             trigger_projection_function,
+                                             trigger_positive_only,
                                              **kwargs)
     
-    def hopping(self, size_int, advance_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
-        return self._non_sliding_non_session(TopologyNode._assign_hopping(size_int, advance_int),
+    def hopping(self, size_int, hop_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l, trigger_positive_only=True, **kwargs):
+        return self._non_sliding_non_session(TopologyNode._assign_hopping(size_int, hop_int),
                                              time_function,
                                              by_function,
                                              agg_function,
                                              agg_initial_any,
                                              projection_function,
+                                             trigger_function,
+                                             trigger_projection_function,
+                                             trigger_positive_only,
                                              **kwargs)
 
-    def cumulative(self, size_int, advance_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+    def cumulative(self, size_int, advance_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l, trigger_positive_only=True, **kwargs):
         return self._non_sliding_non_session(TopologyNode._assign_cumulative(size_int, advance_int),
                                              time_function,
                                              by_function,
                                              agg_function,
                                              agg_initial_any,
                                              projection_function,
+                                             trigger_function,
+                                             trigger_projection_function,
+                                             trigger_positive_only,
                                              **kwargs)
 
     #
 
-    def session(self, gap_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+    def session(self, gap_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l, trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_session(gap_int,
@@ -884,44 +924,38 @@ class TopologyNode:
                                    **kwargs)
         )
         #
-        trigger_tn = group_by_agg_tn.trigger(self, time_function, **kwargs)
+        trigger_tn = group_by_agg_tn.trigger(self,
+                                             time_function,
+                                             trigger_function,
+                                             trigger_projection_function,
+                                             trigger_positive_only,
+                                             **kwargs)
         #
         return trigger_tn
 
     #
 
-    def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
-        def _by_function(record_any_ts_int_tuple):
-            return by_function(record_any_ts_int_tuple[0])
-        #
-        def _select_function(record_any_ts_int_tuple):
-            return record_any_ts_int_tuple[0]
-        #
-        def _agg_function(agg_any, record_any, weight_int):
-            return agg_function(agg_any, record_any, weight_int)
-        #
+    def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l, trigger_positive_only=True, **kwargs):
         add_tn = self.map(lambda x: (x, time_function(x)), **kwargs
         )
         #
         retract_tn = (
             self
             ._map(lambda x, w: ((x, time_function(x) + size_int), -w), **kwargs)
-            .trigger(self, time_function)
+            .trigger(self,
+                     time_function,
+                     trigger_function,
+                     trigger_projection_function,
+                     trigger_positive_only,
+                     **kwargs)
         )
         #
         merged_tn = add_tn.merge(retract_tn, **kwargs)
         #
-        group_by_agg_tn = (
-            merged_tn
-            .group_by_agg(
-                _by_function,
-                _select_function,
-                _agg_function,
-                agg_initial_any,
-                projection_function,
-                **kwargs
-            )
-        )
+        group_by_agg_tn = merged_tn._group_by_agg_sliding(by_function,
+                                                          agg_function,
+                                                          agg_initial_any,
+                                                          projection_function)
         #        
         return group_by_agg_tn
 

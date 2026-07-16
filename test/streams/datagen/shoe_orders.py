@@ -32,7 +32,7 @@ class ShoeOrderGenerator:
         record_dict = {
             "order_id": self.order_id_int,
             "product_id": random.choice(product_id_str_list),
-            "customer_id": random.choice(customer_id_str_list),
+            "customer_id": random.choice(customer_id_str_list[:5]),
             "ts": self.ts_int
         }
         #
