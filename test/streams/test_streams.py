@@ -2,7 +2,7 @@ from streams.test_streams_base import TestStreamsBase
 from streams.test_generate import TestGenerate
 from streams.test_base import TestBase, default_batch_size_int, default_steps_int
 
-from streams.datagen.topologies import get_built_tn_datagen_1_join, get_built_tn_datagen_2_joins, get_built_tn_datagen_3_joins, get_built_tn_datagen_self_join_group_by, get_built_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks
+from streams.datagen.topologies import get_built_tn_datagen_1_join, get_built_tn_datagen_2_joins, get_built_tn_datagen_3_joins, get_built_tn_datagen_self_join_group_by, get_built_tn_datagen_self_join_group_by_debezium, get_built_tn_datagen_multiple_sinks, get_built_tn_datagen_tumbling_window, get_built_tn_datagen_hopping_window, get_built_tn_datagen_cumulative_window, get_built_tn_datagen_sliding_window, get_built_tn_datagen_session_window
 from streams.jamie.topologies import get_built_tn_jamie
 from streams.wc.topologies import get_built_tn_wc
 
@@ -127,6 +127,60 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         self.go(built_tn, source_str_batch_size_int_dict, default_steps_int)
         #
         self.assert_datagen_multiple_sinks(sink_customer_a_h_str, sink_customer_i_q_str, sink_customer_r_z_str)
+
+    #
+
+    def _test_datagen_window(self, sink_str, get_built_tn_function):
+        # old_recursion_limit_int = sys.getrecursionlimit()
+        # sys.setrecursionlimit(10000)
+        #
+        order_source_str = "shoe_orders"
+        customer_source_str = "shoe_customers"
+        product_source_str = "shoes"
+        #
+        sink_str = "tumbling_window"
+        #
+        source_storage = Cluster("local")
+        source_storage.consume_batch_size(default_batch_size_int)
+        sink_storage = source_storage
+        #
+        built_tn = get_built_tn_function(lambda: Streams.source(order_source_str, source_storage),
+                                         lambda: Streams.source(customer_source_str, source_storage),
+                                         lambda: Streams.source(product_source_str, source_storage),
+                                         lambda x: x.sink(sink_str, sink_storage))
+        #
+        source_str_batch_size_int_dict = {order_source_str: default_batch_size_int,
+                                          customer_source_str: default_batch_size_int,
+                                          product_source_str: default_batch_size_int}
+        #
+        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int)
+        #
+        # sys.setrecursionlimit(old_recursion_limit_int)
+
+    def test_datagen_tumbling_window(self):
+        sink_str = "tumbling_window"
+        #
+        self._test_datagen_window(sink_str, get_built_tn_datagen_tumbling_window)
+
+    def test_datagen_hopping_window(self):
+        sink_str = "hopping_window"
+        #
+        self._test_datagen_window(sink_str, get_built_tn_datagen_hopping_window)
+
+    def test_datagen_cumulative_window(self):
+        sink_str = "cumulative_window"
+        #
+        self._test_datagen_window(sink_str, get_built_tn_datagen_cumulative_window)
+    
+    def test_datagen_sliding_window(self):
+        sink_str = "sliding_window"
+        #
+        self._test_datagen_window(sink_str, get_built_tn_datagen_sliding_window)
+
+    def test_datagen_session_window(self):
+        sink_str = "session_window"
+        #
+        self._test_datagen_window(sink_str, get_built_tn_datagen_session_window)
 
     #
 
