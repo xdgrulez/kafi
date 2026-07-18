@@ -117,7 +117,7 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
                         {order_source_str: default_batch_size_int,
                         customer_source_str: default_batch_size_int // 10,
                         product_source_str: default_batch_size_int // 10},
-                        1000)
+                        100)
 
     def test_datagen_tumbling_window(self):
         sink_str = "tumbling_window"

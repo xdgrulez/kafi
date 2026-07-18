@@ -937,14 +937,50 @@ class TopologyNode:
 
     #
 
-    def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
-        group_by_agg_tn = self.group_by_agg(by_function,
-                                            lambda x: x,
+    # def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+    #     group_by_agg_tn = self.group_by_agg(by_function,
+    #                                         lambda x: x,
+    #                                          agg_function,
+    #                                          agg_initial_any,
+    #                                          projection_function)
+    #     #               
+    #     return group_by_agg_tn
+
+    def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l[0], trigger_positive_only=True, **kwargs):
+        return self._non_sliding_non_session(TopologyNode._assign_sliding(size_int),
+                                             time_function,
+                                             by_function,
                                              agg_function,
                                              agg_initial_any,
-                                             projection_function)
-               
-        return group_by_agg_tn
+                                             projection_function,
+                                             trigger_function,
+                                             trigger_projection_function,
+                                             trigger_positive_only,
+                                             **kwargs)
+
+    # def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l, trigger_positive_only=True, **kwargs):
+    #     add_tn = self.map(lambda x: (x, time_function(x)), **kwargs
+    #     )
+    #     #
+    #     retract_tn = (
+    #         self
+    #         ._map(lambda x, w: ((x, time_function(x) + size_int), -w), **kwargs)
+    #         .trigger(self,
+    #                  time_function,
+    #                  trigger_function,
+    #                  trigger_projection_function,
+    #                  trigger_positive_only,
+    #                  **kwargs)
+    #     )
+    #     #
+    #     merged_tn = add_tn.merge(retract_tn, **kwargs)
+    #     #
+    #     group_by_agg_tn = merged_tn._group_by_agg_sliding(by_function,
+    #                                                       agg_function,
+    #                                                       agg_initial_any,
+    #                                                       projection_function)
+    #     #        
+    #     return group_by_agg_tn
 
     #
 

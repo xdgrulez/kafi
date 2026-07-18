@@ -390,9 +390,7 @@ def _get_built_tn_datagen_window(get_order_source_tn_function,
                                            by_function,
                                            agg_function,
                                            agg_initial_any,
-                                           projection_function,
-                                           trigger_function=lambda l, r: r >= l[1],
-                                           trigger_projection_function=lambda l, _: {**l[0], "window_end": l[1]},)
+                                           projection_function)
         case "hopping":
             window_tn = join_2_tn.hopping(window_dict["size"],
                                           window_dict["hop"],
@@ -415,7 +413,9 @@ def _get_built_tn_datagen_window(get_order_source_tn_function,
                                           by_function,
                                           agg_function,
                                           agg_initial_any,
-                                          projection_function)
+                                          projection_function,
+                                          trigger_function=lambda l, r: r >= l[1],
+                                          trigger_projection_function=lambda l, _: {**l[0], "window_end": l[1]})
         case "session":
             window_tn = join_2_tn.session(window_dict["gap"],
                                           time_function,
@@ -488,7 +488,7 @@ def get_built_tn_datagen_sliding_window(get_order_source_tn_function,
                                             get_product_source_tn_function,
                                             get_sink_tn_function,
                                             {"type": "sliding",
-                                             "size": (size_int := ts_step_int * 10),
+                                             "size": (size_int := ts_step_int * default_batch_size_int // 10),
                                              "allowed_lateness": size_int * 5}
                                             )
     #
