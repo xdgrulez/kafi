@@ -432,7 +432,7 @@ class TopologyNode:
     
     # Group By + Aggregation
 
-    def group_by_agg(self, by_function, select_function, agg_function, agg_initial_any, projection_function, pydbsp_aggregate_function=None, **kwargs):
+    def group_by_agg(self, by_function, select_function, agg_function, agg_initial_any, projection_function, **kwargs):
         def _by_function(packed_record_any):
             record_any = tn._unpack_function(packed_record_any)
             return tn._pack_function(by_function(record_any))
@@ -446,22 +446,18 @@ class TopologyNode:
             record_any = projection_function(tn._unpack_function(packed_key_any), tn._unpack_function(packed_sum_any))
             return tn._pack_function(record_any)
         #
-        def _agg_function(packed_agg_any, packed_select_any, weight_int):
-            agg_any = tn._unpack_function(packed_agg_any)
-            select_any = tn._unpack_function(packed_select_any)
-            return tn._pack_function(agg_function(agg_any, select_any, weight_int))
-        #
-        def _default_pydbsp_aggregate_function(packed_record_any_weight_int_tuple_list):
+        def _agg_function(packed_record_any_weight_int_tuple_list):
             packed_agg_any = _agg_initial_any
             #
-            for packed_record_any, weight_int in packed_record_any_weight_int_tuple_list:
+            for packed_record_any, _ in packed_record_any_weight_int_tuple_list:
                 packed_select_any = _select_function(packed_record_any)
                 #
-                packed_agg_any = _agg_function(packed_agg_any, packed_select_any, weight_int)
+                agg_any = tn._unpack_function(packed_agg_any)
+                select_any = tn._unpack_function(packed_select_any)
+                #
+                packed_agg_any = tn._pack_function(agg_function(agg_any, select_any))
             #
             return packed_agg_any
-        #
-        _pydbsp_aggregate_function = _default_pydbsp_aggregate_function if pydbsp_aggregate_function is None else pydbsp_aggregate_function
         #
         def _build_function(evaluator):
             tn._evaluator = evaluator
@@ -474,7 +470,7 @@ class TopologyNode:
             liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, input_nodeId)
             liftLiftIndex_nodeId = LiftLiftIndex(indexer=_by_function).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             deltaLiftedDeltaLiftedGroupBy_nodeId = DeltaLiftedDeltaLiftedGroupBy(
-                aggregate=_pydbsp_aggregate_function,
+                aggregate=_agg_function,
                 group=g_idx,
                 out_group=g,
             ).connect(evaluator.circuit, (liftLiftIndex_nodeId,))
@@ -492,19 +488,19 @@ class TopologyNode:
         return tn
 
     def group_by_sum(self, by_function, select_function, projection_function, sum_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_function, select_function, lambda x, y, z: x + y * z, sum_initial_any, projection_function, **kwargs)
+        tn = self.group_by_agg(by_function, select_function, lambda agg, x: agg + x, sum_initial_any, projection_function, **kwargs)
         tn._name_str = "group_by_sum_op"
         #
         return tn
 
     def group_by_max(self, by_function, select_function, projection_function, max_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_function, select_function, lambda x, y, _: max(x, y), max_initial_any, projection_function, **kwargs)
+        tn = self.group_by_agg(by_function, select_function, lambda agg, x: max(agg, x), max_initial_any, projection_function, **kwargs)
         tn._name_str = "group_by_max_op"
         #
         return tn
 
     def group_by_min(self, by_function, select_function, projection_function, min_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_function, select_function, lambda x, y, _: min(x, y), min_initial_any, projection_function, **kwargs)
+        tn = self.group_by_agg(by_function, select_function, lambda agg, x: min(agg, x), min_initial_any, projection_function, **kwargs)
         tn._name_str = "group_by_min_op"
         #
         return tn
@@ -518,25 +514,25 @@ class TopologyNode:
     # Aggregation
 
     def agg(self, select_function, agg_function, agg_initial_any, projection_function, **kwargs):
-        tn = self.group_by_agg(lambda _: 0, select_function, agg_function, agg_initial_any, lambda _, y: projection_function(y), **kwargs)
+        tn = self.group_by_agg(lambda _: 0, select_function, agg_function, agg_initial_any, lambda _, x: projection_function(x), **kwargs)
         tn._name_str = "agg_op"
         #
         return tn
 
     def sum(self, select_function, projection_function=lambda x: x, sum_initial_any=0, **kwargs):
-        tn = self.agg(select_function, lambda x, y, z: x + y * z, sum_initial_any, projection_function, **kwargs)
+        tn = self.agg(select_function, lambda agg, x: agg + x, sum_initial_any, projection_function, **kwargs)
         tn._name_str = "sum_op"
         #
         return tn
 
     def max(self, select_function, projection_function=lambda x: x, max_initial_any=0, **kwargs):
-        tn = self.agg(select_function, lambda x, y, _: max(x, y), max_initial_any, projection_function, **kwargs)
+        tn = self.agg(select_function, lambda agg, x: max(agg, x), max_initial_any, projection_function, **kwargs)
         tn._name_str = "max_op"
         #
         return tn
 
     def min(self, select_function, projection_function=lambda x: x, min_initial_any=0, **kwargs):
-        tn = self.agg(select_function, lambda x, y, _: min(x, y), min_initial_any, projection_function, **kwargs)
+        tn = self.agg(select_function, lambda agg, x: min(agg, x), min_initial_any, projection_function, **kwargs)
         tn._name_str = "min_op"
         #
         return tn
@@ -572,13 +568,13 @@ class TopologyNode:
         return tn
 
     ###
-    # Time Windows - Retention
+    # Time Windows - Expiry
     ###
 
-    def retention(self, time_function, retention_function, projection_function=lambda x: x[0], **kwargs):
-        input_plus_retention_tn = (
+    def expire(self, time_function, expire_function, projection_function=lambda x: x[0], **kwargs):
+        input_plus_expiry_tn = (
             self
-            .map(lambda x: (x, retention_function(time_function(x))), **kwargs)
+            .map(lambda x: (x, expire_function(time_function(x))), **kwargs)
         )
         #
         def _build_function(evaluator):
@@ -586,7 +582,7 @@ class TopologyNode:
             #   
             NEG_INF = float("-inf")
             g = ZSetAddition()
-            input_nodeId = input_plus_retention_tn._output_nodeId
+            input_nodeId = input_plus_expiry_tn._output_nodeId
             #
             def _ts_function(packed_record_any):
                 record_any, _ = tn._unpack_function(packed_record_any)
@@ -637,18 +633,18 @@ class TopologyNode:
                 return new_state_zSet, max_ts_int, delta_zSet
             #
             own_id = evaluator.circuit.next_id()
-            retain_nodeId = evaluator.circuit.add(
+            expire_nodeId = evaluator.circuit.add(
                 ProgressFeedback(input=input_nodeId, self_id=own_id, axis=0),
                 SimpleNamespace(compute=_compute),
             )
             #
             project_nodeId = Lift1(f=lambda tup: tup[2]).connect(
-                evaluator.circuit, (retain_nodeId,))
+                evaluator.circuit, (expire_nodeId,))
             #            
             tn._output_nodeId = project_nodeId
         #
         current_class = type(self)
-        tn = current_class("_retention_op", {input_plus_retention_tn}, _build_function, **kwargs)
+        tn = current_class("expire_op", {input_plus_expiry_tn}, _build_function, **kwargs)
         #
         return tn.map(projection_function, **kwargs)
 
@@ -656,14 +652,14 @@ class TopologyNode:
     # Time Windows - Trigger
     ###
 
-    def trigger(self, time_tn, time_function, trigger_function=lambda l, r: r >= l[1], projection_function=lambda l, _: l[0], positive_only=True, **kwargs):
+    def trigger(self, time_tn, time_function, trigger_function=lambda l, r: r >= l[1], projection_function=lambda l: l[0], positive_only=True, **kwargs):
         positive_only_boolean = positive_only
         #
         trigger_tn = (
             self
             .join(time_tn.max(time_function),
                   lambda l, r: trigger_function(l, r),
-                  projection_function,
+                  lambda l, _: projection_function(l),
                   **kwargs)
         )
         trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if positive_only_boolean else trigger_tn
@@ -722,7 +718,7 @@ class TopologyNode:
     # Time Windows - Group By + Agg
     ###
 
-    def _group_by_agg_non_sliding_non_session(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+    def _group_by_agg_aligned(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
         _projection_function = lambda by, agg: (projection_function(by[0], agg), by[1])
         #
         tn = (
@@ -741,32 +737,6 @@ class TopologyNode:
 
     #
 
-    def _group_by_agg_sliding(self, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
-        def _by_function(record_any_ts_int_tuple):
-            return by_function(record_any_ts_int_tuple[0])
-        #
-        def _select_function(record_any_ts_int_tuple):
-            return record_any_ts_int_tuple[0]
-        #
-        def _agg_function(agg_any, record_any, weight_int):
-            return agg_function(agg_any, record_any, weight_int)
-        #
-        group_by_agg_tn = (
-            self
-            .group_by_agg(
-                _by_function,
-                _select_function,
-                _agg_function,
-                agg_initial_any,
-                projection_function,
-                **kwargs
-            )
-        )
-        #        
-        return group_by_agg_tn
-
-    #
-
     def _group_by_agg_session(self, gap_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
         def insert_session(record_any, session_dict_list):
             ts_int = time_function(record_any)
@@ -779,7 +749,7 @@ class TopologyNode:
                 left_session_dict["records"].append(record_any)
                 left_session_dict["start"] = min(left_session_dict["start"], ts_int)
                 left_session_dict["last_ts"] = max(left_session_dict["last_ts"], ts_int)
-                left_session_dict["agg"] = agg_function(left_session_dict["agg"], record_any, 1)
+                left_session_dict["agg"] = agg_function(left_session_dict["agg"], record_any)
                 #
                 right_session_dict = next((session_dict 
                                            for session_dict in session_dict_list 
@@ -795,7 +765,7 @@ class TopologyNode:
                     #                    
                     agg_any = agg_initial_any.copy()
                     for record_any in left_session_dict["records"]:
-                        agg_any = agg_function(agg_any, record_any, 1)
+                        agg_any = agg_function(agg_any, record_any)
                     left_session_dict["agg"] = agg_any
                     #
                     session_dict_list.remove(right_session_dict)
@@ -804,7 +774,7 @@ class TopologyNode:
                     "start": ts_int,
                     "last_ts": ts_int,
                     "records": [record_any],
-                    "agg": agg_function(agg_initial_any.copy(), record_any, 1)
+                    "agg": agg_function(agg_initial_any.copy(), record_any)
                 })
             #
             session_dict_list.sort(key=lambda session_dict: session_dict["start"])
@@ -820,7 +790,7 @@ class TopologyNode:
             .group_by_agg(
                 by_function,
                 lambda x: x,
-                lambda agg, x, _:
+                lambda agg, x:
                 {"sessions": (session_dict_list := insert_session(x, agg.get("sessions", []))),
                  "output": [(session_dict["agg"], session_dict["last_ts"] + gap_int) for session_dict in session_dict_list]},
                 {"sessions": [], "output": []},
@@ -832,42 +802,42 @@ class TopologyNode:
         return tn
 
     ###
-    # Time Windows - Retention
+    # Time Windows - Expiry
     ###
 
-    def _window_retention(self, time_function, assign_function, allowed_lateness_int=0, **kwargs):
-        return self.retention(time_function,
+    def _expire_window(self, time_function, assign_function, allowed_lateness_int=0, **kwargs):
+        return self.expire(time_function,
                               lambda x: max(assign_function(x)) + allowed_lateness_int,
                               **kwargs)
     
     #
 
-    def tumbling_retention(self, time_function, size_int, allowed_lateness_int=0, **kwargs):
-        return self._window_retention(time_function,
+    def expire_tumbling(self, time_function, size_int, allowed_lateness_int=0, **kwargs):
+        return self._expire_window(time_function,
                                      TopologyNode._assign_tumbling(size_int),
                                      allowed_lateness_int,
                                      **kwargs)
 
-    def hopping_retention(self, time_function, size_int, hop_int, allowed_lateness_int=0, **kwargs):
-        return self._window_retention(time_function,
+    def expire_hopping(self, time_function, size_int, hop_int, allowed_lateness_int=0, **kwargs):
+        return self._expire_window(time_function,
                                      TopologyNode._assign_hopping(size_int, hop_int),
                                      allowed_lateness_int,
                                      **kwargs)
 
-    def cumulative_retention(self, time_function, size_int, advance_int, allowed_lateness_int=0, **kwargs):
-        return self._window_retention(time_function,
+    def expire_cumulative(self, time_function, size_int, advance_int, allowed_lateness_int=0, **kwargs):
+        return self._expire_window(time_function,
                                      TopologyNode._assign_cumulative(size_int, advance_int),
                                      allowed_lateness_int,
                                      **kwargs)
     
-    def sliding_retention(self, time_function, size_int, allowed_lateness_int=0, **kwargs):
-        return self._window_retention(time_function,
+    def expire_sliding(self, time_function, size_int, allowed_lateness_int=0, **kwargs):
+        return self._expire_window(time_function,
                                      TopologyNode._assign_sliding(size_int),
                                      allowed_lateness_int,
                                      **kwargs)
 
-    def session_retention(self, time_function, max_session_int, allowed_lateness_int=0, **kwargs):
-        return self._window_retention(time_function,
+    def expire_session(self, time_function, max_session_int, allowed_lateness_int=0, **kwargs):
+        return self._expire_window(time_function,
                                      TopologyNode._assign_session(max_session_int),
                                      allowed_lateness_int,
                                      **kwargs)
@@ -876,16 +846,16 @@ class TopologyNode:
     # Time Windows - {Group By, Trigger}
     ###
 
-    def _non_sliding_non_session(self, assign_function, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l[0], trigger_positive_only=True, **kwargs):
+    def _window_aligned(self, assign_function, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l[0], trigger_function=lambda l, r: r >= l[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
-            ._group_by_agg_non_sliding_non_session(assign_function,
-                                                   time_function,
-                                                   by_function,
-                                                   agg_function,
-                                                   agg_initial_any,
-                                                   projection_function,
-                                                   **kwargs)
+            ._group_by_agg_aligned(assign_function,
+                                   time_function,
+                                   by_function,
+                                   agg_function,
+                                   agg_initial_any,
+                                   projection_function,
+                                   **kwargs)
         )
         #
         trigger_tn = group_by_agg_tn.trigger(self,
@@ -899,66 +869,74 @@ class TopologyNode:
 
     #
 
-    def tumbling(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l[0], trigger_positive_only=True, **kwargs):
-        return self._non_sliding_non_session(TopologyNode._assign_tumbling(size_int),
-                                             time_function,
-                                             by_function,
-                                             agg_function,
-                                             agg_initial_any,
-                                             projection_function,
-                                             trigger_function,
-                                             trigger_projection_function,
-                                             trigger_positive_only,
-                                             **kwargs)
-    
-    def hopping(self, size_int, hop_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l[0], trigger_positive_only=True, **kwargs):
-        return self._non_sliding_non_session(TopologyNode._assign_hopping(size_int, hop_int),
-                                             time_function,
-                                             by_function,
-                                             agg_function,
-                                             agg_initial_any,
-                                             projection_function,
-                                             trigger_function,
-                                             trigger_projection_function,
-                                             trigger_positive_only,
-                                             **kwargs)
+    def window_tumbling(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l[0], trigger_function=lambda l, r: r >= l[1], trigger_positive_only=True, **kwargs):
+        return self._window_aligned(TopologyNode._assign_tumbling(size_int),
+                                    time_function,
+                                    by_function,
+                                    agg_function,
+                                    agg_initial_any,
+                                    projection_function,
+                                    trigger_projection_function,
+                                    trigger_function,
+                                    trigger_positive_only,
+                                    **kwargs)
 
-    def cumulative(self, size_int, advance_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l[0], trigger_positive_only=True, **kwargs):
-        return self._non_sliding_non_session(TopologyNode._assign_cumulative(size_int, advance_int),
-                                             time_function,
-                                             by_function,
-                                             agg_function,
-                                             agg_initial_any,
-                                             projection_function,
-                                             trigger_function,
-                                             trigger_projection_function,
-                                             trigger_positive_only,
-                                             **kwargs)
+    def window_hopping(self, size_int, hop_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l[0], trigger_function=lambda l, r: r >= l[1], trigger_positive_only=True, **kwargs):
+        return self._window_aligned(TopologyNode._assign_hopping(size_int, hop_int),
+                                    time_function,
+                                    by_function,
+                                    agg_function,
+                                    agg_initial_any,
+                                    projection_function,
+                                    trigger_projection_function,
+                                    trigger_function,
+                                    trigger_positive_only,
+                                    **kwargs)
+
+    def window_cumulative(self, size_int, advance_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l[0], trigger_function=lambda l, r: r >= l[1], trigger_positive_only=True, **kwargs):
+        return self._window_aligned(TopologyNode._assign_cumulative(size_int, advance_int),
+                                    time_function,
+                                    by_function,
+                                    agg_function,
+                                    agg_initial_any,
+                                    projection_function,
+                                    trigger_projection_function,
+                                    trigger_function,
+                                    trigger_positive_only,
+                                    **kwargs)
 
     #
 
-    # def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
-    #     group_by_agg_tn = self.group_by_agg(by_function,
-    #                                         lambda x: x,
+    def window_sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l[0], trigger_positive_only=True, **kwargs):
+        trigger_positive_only_boolean = trigger_positive_only
+        #
+        create_function = TopologyNode._assign_sliding(size_int)
+        group_by_agg_tn = self.group_by_agg(by_function,
+                                            lambda x: x,
+                                            lambda agg, x: (agg_function(agg[0], x), create_function(time_function(x))[0]),
+                                            (agg_initial_any, 0),
+                                            lambda by, agg: (projection_function(by, agg[0]), agg[1]),
+                                            **kwargs)
+        #
+        trigger_tn = group_by_agg_tn.map(trigger_projection_function)
+        #
+        trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if trigger_positive_only_boolean else trigger_tn
+        #
+        return trigger_tn
+
+    # def window_sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l[0], trigger_function=lambda l, r: r >= l[1], trigger_positive_only=True, **kwargs):
+    #     return self._window_non_sliding_non_session(TopologyNode._assign_sliding(size_int),
+    #                                          time_function,
+    #                                          by_function,
     #                                          agg_function,
     #                                          agg_initial_any,
-    #                                          projection_function)
-    #     #               
-    #     return group_by_agg_tn
+    #                                          projection_function,
+    #                                          trigger_projection_function,
+    #                                          trigger_function,
+    #                                          trigger_positive_only,
+    #                                          **kwargs)
 
-    def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l[0], trigger_positive_only=True, **kwargs):
-        return self._non_sliding_non_session(TopologyNode._assign_sliding(size_int),
-                                             time_function,
-                                             by_function,
-                                             agg_function,
-                                             agg_initial_any,
-                                             projection_function,
-                                             trigger_function,
-                                             trigger_projection_function,
-                                             trigger_positive_only,
-                                             **kwargs)
-
-    # def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l, trigger_positive_only=True, **kwargs):
+    # def window_sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l, trigger_function=lambda l, r: r >= l[1], trigger_positive_only=True, **kwargs):
     #     add_tn = self.map(lambda x: (x, time_function(x)), **kwargs
     #     )
     #     #
@@ -984,7 +962,7 @@ class TopologyNode:
 
     #
 
-    def session(self, gap_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l[0], trigger_positive_only=True, **kwargs):
+    def window_session(self, gap_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l[0], trigger_function=lambda l, r: r >= l[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_session(gap_int,

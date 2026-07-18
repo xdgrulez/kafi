@@ -278,10 +278,10 @@ def get_built_tn_datagen_multiple_sinks(get_source_tn_function, get_sink_custome
 def by_function(x):
     return (x["customer_id"], x["email"])
 
-def agg_function(agg, x, w):
+def agg_function(agg, x):
     return {
-        "orders": agg["orders"] + w,
-        "total_price": agg["total_price"] + x["sale_price"] * w
+        "orders": agg["orders"] + 1,
+        "total_price": agg["total_price"] + x["sale_price"]
     }
 
 agg_initial_any = {"orders": 0, "total_price": 0}
@@ -315,27 +315,27 @@ def _get_built_tn_datagen_window(get_order_source_tn_function,
     time_function = lambda x: x["ts"]
     match window_dict["type"]:
         case "tumbling":
-            retention = lambda tn: tn.tumbling_retention(time_function,
-                                                          window_dict["size"],
-                                                          window_dict["allowed_lateness"])
+            retention = lambda tn: tn.expire_tumbling(time_function,
+                                                      window_dict["size"],
+                                                      window_dict["allowed_lateness"])
         case "hopping":
-            retention = lambda tn: tn.hopping_retention(time_function,
-                                                         window_dict["size"],
-                                                         window_dict["hop"],
-                                                         window_dict["allowed_lateness"])
+            retention = lambda tn: tn.expire_hopping(time_function,
+                                                     window_dict["size"],
+                                                     window_dict["hop"],
+                                                     window_dict["allowed_lateness"])
         case "cumulative":
-            retention = lambda tn: tn.cumulative_retention(time_function,
-                                                            window_dict["size"],
-                                                            window_dict["advance"],
-                                                            window_dict["allowed_lateness"])
-        case "sliding":
-            retention = lambda tn: tn.sliding_retention(time_function,
+            retention = lambda tn: tn.expire_cumulative(time_function,
                                                         window_dict["size"],
+                                                        window_dict["advance"],
                                                         window_dict["allowed_lateness"])
+        case "sliding":
+            retention = lambda tn: tn.expire_sliding(time_function,
+                                                     window_dict["size"],
+                                                     window_dict["allowed_lateness"])
         case "session":
-            retention = lambda tn: tn.session_retention(time_function,
-                                                        window_dict["max_session"],
-                                                        window_dict["allowed_lateness"])
+            retention = lambda tn: tn.expire_session(time_function,
+                                                     window_dict["max_session"],
+                                                     window_dict["allowed_lateness"])
     #
     order_tn = retention(order_tn).distinct()
     #
@@ -385,44 +385,47 @@ def _get_built_tn_datagen_window(get_order_source_tn_function,
     #
     match window_dict["type"]:
         case "tumbling":
-            window_tn = join_2_tn.tumbling(window_dict["size"],
-                                           time_function,
-                                           by_function,
-                                           agg_function,
-                                           agg_initial_any,
-                                           projection_function)
+            window_tn = join_2_tn.window_tumbling(window_dict["size"],
+                                                  time_function,
+                                                  by_function,
+                                                  agg_function,
+                                                  agg_initial_any,
+                                                  projection_function,
+                                                  trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
         case "hopping":
-            window_tn = join_2_tn.hopping(window_dict["size"],
-                                          window_dict["hop"],
-                                          time_function,
-                                          by_function,
-                                          agg_function,
-                                          agg_initial_any,
-                                          projection_function)
+            window_tn = join_2_tn.window_hopping(window_dict["size"],
+                                                 window_dict["hop"],
+                                                 time_function,
+                                                 by_function,
+                                                 agg_function,
+                                                 agg_initial_any,
+                                                 projection_function,
+                                                 trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
         case "cumulative":
-            window_tn = join_2_tn.cumulative(window_dict["size"],
-                                             window_dict["advance"],
-                                             time_function,
-                                             by_function,
-                                             agg_function,
-                                             agg_initial_any,
-                                             projection_function)
+            window_tn = join_2_tn.window_cumulative(window_dict["size"],
+                                                    window_dict["advance"],
+                                                    time_function,
+                                                    by_function,
+                                                    agg_function,
+                                                    agg_initial_any,
+                                                    projection_function,
+                                                    trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
         case "sliding":
-            window_tn = join_2_tn.sliding(window_dict["size"],
-                                          time_function,
-                                          by_function,
-                                          agg_function,
-                                          agg_initial_any,
-                                          projection_function,
-                                          trigger_function=lambda l, r: r >= l[1],
-                                          trigger_projection_function=lambda l, _: {**l[0], "window_end": l[1]})
+            window_tn = join_2_tn.window_sliding(window_dict["size"],
+                                                 time_function,
+                                                 by_function,
+                                                 agg_function,
+                                                 agg_initial_any,
+                                                 projection_function,
+                                                 trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
         case "session":
-            window_tn = join_2_tn.session(window_dict["gap"],
-                                          time_function,
-                                          by_function,
-                                          agg_function,
-                                          agg_initial_any,
-                                          projection_function)
+            window_tn = join_2_tn.window_session(window_dict["gap"],
+                                                 time_function,
+                                                 by_function,
+                                                 agg_function,
+                                                 agg_initial_any,
+                                                 projection_function,
+                                                 trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
     #
     window_tn = window_tn.to_value()
     #
@@ -456,7 +459,7 @@ def get_built_tn_datagen_hopping_window(get_order_source_tn_function,
                                             get_product_source_tn_function,
                                             get_sink_tn_function,
                                             {"type": "hopping",
-                                             "size": (size_int := ts_step_int * 10),
+                                             "size": (size_int := ts_step_int * default_batch_size_int),
                                              "hop": size_int // 5,
                                              "allowed_lateness": size_int * 5}
                                             )
@@ -472,7 +475,7 @@ def get_built_tn_datagen_cumulative_window(get_order_source_tn_function,
                                             get_product_source_tn_function,
                                             get_sink_tn_function,
                                             {"type": "cumulative",
-                                             "size": (size_int := ts_step_int * 20),
+                                             "size": (size_int := ts_step_int * default_batch_size_int),
                                              "advance": size_int // 5,
                                              "allowed_lateness": size_int * 5}
                                             )
@@ -488,7 +491,7 @@ def get_built_tn_datagen_sliding_window(get_order_source_tn_function,
                                             get_product_source_tn_function,
                                             get_sink_tn_function,
                                             {"type": "sliding",
-                                             "size": (size_int := ts_step_int * default_batch_size_int // 10),
+                                             "size": (size_int := ts_step_int * default_batch_size_int),
                                              "allowed_lateness": size_int * 5}
                                             )
     #
@@ -503,8 +506,8 @@ def get_built_tn_datagen_session_window(get_order_source_tn_function,
                                             get_product_source_tn_function,
                                             get_sink_tn_function,
                                             {"type": "session",
-                                             "gap": (size_int := ts_step_int * 10),
-                                             "max_session": size_int * 100,
+                                             "gap": (size_int := ts_step_int * default_batch_size_int),
+                                             "max_session": (size_int := ts_step_int * default_batch_size_int * 2),
                                              "allowed_lateness": size_int * 5}
                                             )
     #
