@@ -13,7 +13,7 @@ from streams.datagen.constants.customers import customer_dict_list
 
 class ShoeCustomerGenerator:
     def generate_record(self):
-        record_dict = random.choice(customer_dict_list[:5])
+        record_dict = random.choice(customer_dict_list)
         #
         return record_dict
 

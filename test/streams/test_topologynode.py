@@ -104,9 +104,6 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
     #
 
     def _test_datagen_window(self, sink_str, get_built_tn_function):
-        old_recursion_limit_int = sys.getrecursionlimit()
-        sys.setrecursionlimit(10000)
-        #
         order_source_str = "shoe_orders"
         customer_source_str = "shoe_customers"
         product_source_str = "shoes"
@@ -118,11 +115,9 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         #
         self.process(built_tn,
                         {order_source_str: default_batch_size_int,
-                        customer_source_str: default_batch_size_int,
-                        product_source_str: default_batch_size_int},
+                        customer_source_str: default_batch_size_int // 10,
+                        product_source_str: default_batch_size_int // 10},
                         1000)
-        #
-        sys.setrecursionlimit(old_recursion_limit_int)
 
     def test_datagen_tumbling_window(self):
         sink_str = "tumbling_window"

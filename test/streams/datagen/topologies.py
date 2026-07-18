@@ -2,6 +2,8 @@ from kafi.streams.topologynode import TopologyNode as Tn
 
 from test.streams.datagen.shoe_orders import ts_step_int
 
+from streams.test_base import default_batch_size_int
+
 #
 
 def get_built_tn_datagen_1_join(get_click_source_tn_function, 
@@ -388,7 +390,9 @@ def _get_built_tn_datagen_window(get_order_source_tn_function,
                                            by_function,
                                            agg_function,
                                            agg_initial_any,
-                                           projection_function)
+                                           projection_function,
+                                           trigger_function=lambda l, r: r >= l[1],
+                                           trigger_projection_function=lambda l, _: {**l[0], "window_end": l[1]},)
         case "hopping":
             window_tn = join_2_tn.hopping(window_dict["size"],
                                           window_dict["hop"],
@@ -437,7 +441,7 @@ def get_built_tn_datagen_tumbling_window(get_order_source_tn_function,
                                             get_product_source_tn_function,
                                             get_sink_tn_function,
                                             {"type": "tumbling",
-                                             "size": (size_int := ts_step_int * 10),
+                                             "size": (size_int := ts_step_int * default_batch_size_int),
                                              "allowed_lateness": size_int * 5}
                                             )
     #
