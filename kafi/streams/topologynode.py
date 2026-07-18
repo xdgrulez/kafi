@@ -582,7 +582,7 @@ class TopologyNode:
             self
             .map(lambda x: (x, retention_function(time_function(x))), **kwargs)
         )
-        
+
         def _build_function(evaluator):
             tn._evaluator = evaluator
             
@@ -1001,7 +1001,7 @@ class TopologyNode:
 
     #
 
-    def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l[0], trigger_positive_only=True, **kwargs):
+    def sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_function=lambda l, r: r >= l[1], trigger_projection_function=lambda l, _: l, trigger_positive_only=True, **kwargs):
         add_tn = self.map(lambda x: (x, time_function(x)), **kwargs
         )
         #
