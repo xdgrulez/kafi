@@ -1,3 +1,7 @@
+from pydbsp.progress import Feedback as ProgressFeedback
+from types import SimpleNamespace
+
+
 from pydbsp.circuit import Circuit
 from pydbsp.compute import ComputeCtx
 from pydbsp.core import Antichain, dbsp_time
@@ -574,58 +578,143 @@ class TopologyNode:
     ###
 
     def retention(self, time_function, retention_function, projection_function=lambda x: x[0], **kwargs):
-        _peek_input_boolean = kwargs["_peek_input"] if "_peek_input" in kwargs else False
-        _peek_current_time_boolean = kwargs["_peek_current_time"] if "_peek_current_time" in kwargs else False
-        _peek_expired_boolean = kwargs["_peek_expired"] if "_peek_expired" in kwargs else False
-        #
-        expired_source_str = f"expired_{uuid.uuid4()}"
-        expired_source_tn = TopologyNode.source(expired_source_str, **kwargs)
-        #
         input_plus_retention_tn = (
             self
             .map(lambda x: (x, retention_function(time_function(x))), **kwargs)
         )
-        #
-        merged_input_plus_retention_tn = (
-            input_plus_retention_tn
-            .merge(expired_source_tn, **kwargs)
-        )
-        if _peek_input_boolean:
-            merged_input_plus_retention_tn = merged_input_plus_retention_tn._peek("input")
-        #
-        current_time_tn = (
-            merged_input_plus_retention_tn
-            .map(lambda x: time_function(x[0]), **kwargs)
-            .max(lambda x: x,
-                 lambda x: x,
-                 **kwargs)
-        )
-        if _peek_current_time_boolean:
-            current_time_tn = current_time_tn._peek("current_time")
-        #
-        expired_tn = (
-            merged_input_plus_retention_tn
-            .join(current_time_tn,
-                lambda l, r: r > l[1],
-                lambda l, _: l,
-                **kwargs)
-            ._filter(lambda _, w: w > 0, **kwargs)
-            ._neg(**kwargs)
-        )
-        if _peek_expired_boolean:
-            expired_tn = expired_tn._peek("expired")
-        #
-        retention_tn = (
-            expired_tn
-            .merge(input_plus_retention_tn, **kwargs)
-            .map(projection_function, **kwargs)
-        )
-        #
-        expired_source_tn.to_zSet(TopologyNode._from_records)
-        expired_tn.from_zSet(TopologyNode._to_records)
-        expired_source_tn._expired_tn = expired_tn
-        #
-        return retention_tn
+        
+        def _build_function(evaluator):
+            tn._evaluator = evaluator
+            
+            NEG_INF = float("-inf")
+            g = ZSetAddition()
+            input_nodeId = input_plus_retention_tn._output_nodeId
+            
+            def _ts_function(packed_record_any):
+                record_any, _expiry_int = tn._unpack_function(packed_record_any)
+                return time_function(record_any)
+            
+            def _expiry_function(packed_record_any):
+                _record_any, expiry_int = tn._unpack_function(packed_record_any)
+                return expiry_int
+            
+            def _compute(t, reads, ctx):
+                read_input, read_self = reads
+                
+                chain = ctx.lattice.factors[0]
+                pred = chain.predecessor(t[0])
+                
+                if pred is None:
+                    # Initial state: (State-ZSet, Watermark, Delta-ZSet)
+                    prev_zSet, prev_watermark_int = g.identity(), NEG_INF
+                else:
+                    pred_t = (pred,) + t[1:]
+                    # Wir lesen das 3-Tupel des vorherigen Ticks
+                    prev_zSet, prev_watermark_int, _ = read_self(pred_t)
+                
+                input_zSet = read_input(t)
+                
+                input_max_ts_int = max(
+                    (_ts_function(k) for k, w in input_zSet.items() if w > 0),
+                    default=None,
+                )
+                watermark_int = prev_watermark_int if input_max_ts_int is None else max(prev_watermark_int, input_max_ts_int)
+                
+                # Input auf den alten State anwenden
+                merged_zSet = g.add(prev_zSet, input_zSet)
+                
+                new_state_dict = {}
+                expired_dict = {}
+                
+                # In einem Pass State aktualisieren UND Retractions sammeln
+                for k, w in merged_zSet.items():
+                    if w == 0:
+                        continue
+                    if _expiry_function(k) > watermark_int:
+                        new_state_dict[k] = w
+                    else:
+                        # Record läuft ab -> wir emittieren exakt das negative Gewicht
+                        expired_dict[k] = -w
+                
+                new_state_zSet = ZSet(new_state_dict)
+                expired_zSet = ZSet(expired_dict)
+                
+                # Der ausgehende Delta-Strom: Neue Records PLUS die Retractions
+                delta_zSet = g.add(input_zSet, expired_zSet)
+                
+                return new_state_zSet, watermark_int, delta_zSet
+            
+            own_id = evaluator.circuit.next_id()
+            retain_nodeId = evaluator.circuit.add(
+                ProgressFeedback(input=input_nodeId, self_id=own_id, axis=0),
+                SimpleNamespace(compute=_compute),
+            )
+            
+            # Projiziere das 3-Tupel (State, Watermark, Delta) auf das Delta (Index 2)
+            # Differentiate entfällt komplett!
+            project_nodeId = Lift1(f=lambda tup: tup[2]).connect(
+                evaluator.circuit, (retain_nodeId,))
+            
+            tn._output_nodeId = project_nodeId
+            
+        current_class = type(self)
+        tn = current_class("_retention_op", {input_plus_retention_tn}, _build_function, **kwargs)
+        
+        return tn.map(projection_function, **kwargs)
+
+    # def retention(self, time_function, retention_function, projection_function=lambda x: x[0], **kwargs):
+    #     _peek_input_boolean = kwargs["_peek_input"] if "_peek_input" in kwargs else False
+    #     _peek_current_time_boolean = kwargs["_peek_current_time"] if "_peek_current_time" in kwargs else False
+    #     _peek_expired_boolean = kwargs["_peek_expired"] if "_peek_expired" in kwargs else False
+    #     #
+    #     expired_source_str = f"expired_{uuid.uuid4()}"
+    #     expired_source_tn = TopologyNode.source(expired_source_str, **kwargs)
+    #     #
+    #     input_plus_retention_tn = (
+    #         self
+    #         .map(lambda x: (x, retention_function(time_function(x))), **kwargs)
+    #     )
+    #     #
+    #     merged_input_plus_retention_tn = (
+    #         input_plus_retention_tn
+    #         .merge(expired_source_tn, **kwargs)
+    #     )
+    #     if _peek_input_boolean:
+    #         merged_input_plus_retention_tn = merged_input_plus_retention_tn._peek("input")
+    #     #
+    #     current_time_tn = (
+    #         merged_input_plus_retention_tn
+    #         .map(lambda x: time_function(x[0]), **kwargs)
+    #         .max(lambda x: x,
+    #              lambda x: x,
+    #              **kwargs)
+    #     )
+    #     if _peek_current_time_boolean:
+    #         current_time_tn = current_time_tn._peek("current_time")
+    #     #
+    #     expired_tn = (
+    #         merged_input_plus_retention_tn
+    #         .join(current_time_tn,
+    #             lambda l, r: r > l[1],
+    #             lambda l, _: l,
+    #             **kwargs)
+    #         ._filter(lambda _, w: w > 0, **kwargs)
+    #         ._neg(**kwargs)
+    #     )
+    #     if _peek_expired_boolean:
+    #         expired_tn = expired_tn._peek("expired")
+    #     #
+    #     retention_tn = (
+    #         expired_tn
+    #         .merge(input_plus_retention_tn, **kwargs)
+    #         .map(projection_function, **kwargs)
+    #     )
+    #     #
+    #     expired_source_tn.to_zSet(TopologyNode._from_records)
+    #     expired_tn.from_zSet(TopologyNode._to_records)
+    #     expired_source_tn._expired_tn = expired_tn
+    #     #
+    #     return retention_tn
 
     ###
     # Time Windows - Trigger
