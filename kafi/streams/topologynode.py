@@ -718,12 +718,12 @@ class TopologyNode:
     # Time Windows - Group By + Agg
     ###
 
-    def _group_by_agg_aligned(self, create_function, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+    def _group_by_agg_aligned(self, assign_function, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
         _projection_function = lambda by, agg: (projection_function(by[0], agg), by[1])
         #
         tn = (
             self
-            .flatmap(lambda x: [(x, window_end_int) for window_end_int in create_function(time_function(x))], **kwargs)
+            .flatmap(lambda x: [(x, window_end_int) for window_end_int in assign_function(time_function(x))], **kwargs)
             .group_by_agg(
                 lambda x: (by_function(x[0]), x[1]),
                 lambda x: x[0],
@@ -731,6 +731,23 @@ class TopologyNode:
                 agg_initial_any,
                 _projection_function,
                 **kwargs)
+        )
+        #
+        return tn
+    
+    #
+
+    def _group_by_agg_sliding(self, assign_function, time_function, by_function, agg_function, agg_initial_any, projection_function, **kwargs):
+        assigned_tn = self.map(lambda x: (x, assign_function(time_function(x))[0]))
+        #
+        tn = (
+            assigned_tn
+            .group_by_agg(lambda x: by_function(x[0]),
+                          lambda x: x,
+                          lambda agg, r: (agg_function(agg[0], r[0]), r[1]),
+                          (agg_initial_any, 0),
+                          lambda by, agg: (projection_function(by, agg[0]), agg[1]),
+                          **kwargs)
         )
         #
         return tn
@@ -830,10 +847,9 @@ class TopologyNode:
                                      allowed_lateness_int,
                                      **kwargs)
     
-    def expire_sliding(self, time_function, size_int, allowed_lateness_int=0, **kwargs):
+    def expire_sliding(self, time_function, size_int, **kwargs):
         return self._expire_window(time_function,
                                      TopologyNode._assign_sliding(size_int),
-                                     allowed_lateness_int,
                                      **kwargs)
 
     def expire_session(self, time_function, max_session_int, allowed_lateness_int=0, **kwargs):
@@ -910,20 +926,19 @@ class TopologyNode:
     def window_sliding(self, size_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l[0], trigger_positive_only=True, **kwargs):
         trigger_positive_only_boolean = trigger_positive_only
         #
-        create_function = TopologyNode._assign_sliding(size_int)
-        group_by_agg_tn = self.group_by_agg(by_function,
-                                            lambda x: x,
-                                            lambda agg, x: (agg_function(agg[0], x), create_function(time_function(x))[0]),
-                                            (agg_initial_any, 0),
-                                            lambda by, agg: (projection_function(by, agg[0]), agg[1]),
-                                            **kwargs)
-        #
+        group_by_agg_tn = self._group_by_agg_sliding(TopologyNode._assign_sliding(size_int),
+                                                     time_function,
+                                                     by_function,
+                                                     agg_function,
+                                                     agg_initial_any,
+                                                     projection_function,
+                                                     **kwargs)
         trigger_tn = group_by_agg_tn.map(trigger_projection_function)
         #
-        trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if trigger_positive_only_boolean else trigger_tn
+        trigger_tn = trigger_tn._filter(lambda _, w: w > 0) if trigger_positive_only_boolean else trigger_tn
         #
         return trigger_tn
-
+    
     #
 
     def window_session(self, gap_int, time_function, by_function, agg_function, agg_initial_any, projection_function, trigger_projection_function=lambda l: l[0], trigger_function=lambda l, r: r >= l[1], trigger_positive_only=True, **kwargs):
