@@ -620,7 +620,7 @@ class TopologyNode:
                 for k, w in merged_zSet.items():
                     if w == 0:
                         continue
-                    if _expiry_fun(k) > max_ts_int:
+                    if _expiry_fun(k) >= max_ts_int:
                         new_state_dict[k] = w
                     else:
                         expired_dict[k] = -w
@@ -744,7 +744,7 @@ class TopologyNode:
             .group_by_agg(lambda r_end_ts_int_tuple: by_fun(r_end_ts_int_tuple[0]),
                           lambda r_end_ts_int_tuple: r_end_ts_int_tuple,
                           lambda agg_r_end_ts_int_tuple, r_end_ts_int_tuple: 
-                          (agg_fun(agg_r_end_ts_int_tuple[0], r_end_ts_int_tuple[0]), r_end_ts_int_tuple[1]),
+                          (agg_fun(agg_r_end_ts_int_tuple[0], r_end_ts_int_tuple[0]), min(agg_r_end_ts_int_tuple[1], r_end_ts_int_tuple[1]) if agg_r_end_ts_int_tuple[1] > 0 else r_end_ts_int_tuple[1]),
                           (agg_initial, 0),
                           lambda by, agg_r_end_ts_int_tuple: 
                           (projection_fun(by, agg_r_end_ts_int_tuple[0]), agg_r_end_ts_int_tuple[1]),
