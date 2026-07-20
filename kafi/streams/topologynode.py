@@ -863,7 +863,7 @@ class TopologyNode:
     # Time Windows - {Group By, Trigger}
     ###
 
-    def _window_aligned(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_or_fun=lambda r_end_ts_int_tuple, latest_ts_int: False, trigger_positive_only=True, **kwargs):
+    def _window_aligned(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_aligned(assign_fun,
@@ -877,7 +877,7 @@ class TopologyNode:
         #
         trigger_tn = group_by_agg_tn.trigger(self,
                                              time_fun,
-                                             lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1] or trigger_or_fun(r_end_ts_int_tuple, latest_ts_int),
+                                             trigger_fun,
                                              trigger_projection_fun,
                                              trigger_positive_only,
                                              **kwargs)
@@ -886,7 +886,7 @@ class TopologyNode:
 
     #
 
-    def window_tumbling(self, size_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_or_fun=lambda r_end_ts_int_tuple, latest_ts_int: False, trigger_positive_only=True, **kwargs):
+    def window_tumbling(self, size_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_tumbling(size_int),
                                     time_fun,
                                     by_fun,
@@ -894,11 +894,11 @@ class TopologyNode:
                                     agg_initial,
                                     projection_fun,
                                     trigger_projection_fun,
-                                    trigger_or_fun,
+                                    trigger_fun,
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_hopping(self, size_int, hop_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_or_fun=lambda r_end_ts_int_tuple, latest_ts_int: False, trigger_positive_only=True, **kwargs):
+    def window_hopping(self, size_int, hop_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_hopping(size_int, hop_int),
                                     time_fun,
                                     by_fun,
@@ -906,11 +906,11 @@ class TopologyNode:
                                     agg_initial,
                                     projection_fun,
                                     trigger_projection_fun,
-                                    trigger_or_fun,
+                                    trigger_fun,
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_cumulative(self, size_int, advance_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_or_fun=lambda r_end_ts_int_tuple, latest_ts_int: False, trigger_positive_only=True, **kwargs):
+    def window_cumulative(self, size_int, advance_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_cumulative(size_int, advance_int),
                                     time_fun,
                                     by_fun,
@@ -918,7 +918,7 @@ class TopologyNode:
                                     agg_initial,
                                     projection_fun,
                                     trigger_projection_fun,
-                                    trigger_or_fun,
+                                    trigger_fun,
                                     trigger_positive_only,
                                     **kwargs)
 
@@ -942,7 +942,7 @@ class TopologyNode:
     
     #
 
-    def window_session(self, gap_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_or_fun=lambda r_end_ts_int_tuple, latest_ts_int: False, trigger_positive_only=True, **kwargs):
+    def window_session(self, gap_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_session(gap_int,
@@ -956,7 +956,7 @@ class TopologyNode:
         #
         trigger_tn = group_by_agg_tn.trigger(self,
                                              time_fun,
-                                             lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1] or trigger_or_fun(r_end_ts_int_tuple, latest_ts_int),
+                                             trigger_fun,
                                              trigger_projection_fun,
                                              trigger_positive_only,
                                              **kwargs)
