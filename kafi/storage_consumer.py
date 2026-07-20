@@ -1,6 +1,8 @@
 from kafi.dechunker import Dechunker
 from kafi.helpers import get_millis
 
+import copy, sys
+
 # Constants
 
 ALL_MESSAGES = -1
@@ -15,17 +17,29 @@ class StorageConsumer(Dechunker):
         # Get topics to subscribe to.
         self.topic_str_list = list(topics)
         #
-        # Get next (=start) and end offsets for the subscribed topics. If not explicitly set, set to OFFSET_INVALID on all partitions.
+        # Get dictionary mapping the topics to their respective number of partitions.
         self.topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
         for topic_str in self.topic_str_list:
             if topic_str not in self.topic_str_partitions_int_dict:
                 raise Exception(f"Topic \"{topic_str}\" does not exist.")
-        self.topic_str_next_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "offsets", "ts", **kwargs)
-        if self.topic_str_next_offsets_dict_dict is None:
-            self.topic_str_next_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
         #
-        # Get end offsets for the subscribed topics.
-        self.topic_str_end_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "end_offsets", "end_ts", **kwargs)
+        # Get dict mapping the topics to their respective next (=start) offsets...
+        # ...1) initialize with OFFSET_INVALID (=-1001)
+        self.topic_str_next_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
+        # ...2) apply the kwargs "offsets"/"ts" args if available.
+        kwargs_topic_str_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "offsets", "ts", **kwargs)
+        for topic_str, offsets_dict in kwargs_topic_str_offsets_dict_dict.items():
+            for partition_int, offset_int in offsets_dict.items():
+                self.topic_str_next_offsets_dict_dict[topic_str][partition_int] = offset_int
+        #
+        # Get dict mapping the topics to their respective end offsets...
+        # ...1) initialize with sys.maxsize
+        self.topic_str_end_offsets_dict_dict = {topic_str: {partition_int: sys.maxsize for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
+        # ...2) apply the kwargs "end_offsets"/"end_ts" if available.
+        kwargs_topic_str_end_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "end_offsets", "end_ts", **kwargs)
+        for topic_str, offsets_dict in kwargs_topic_str_end_offsets_dict_dict.items():
+            for partition_int, offset_int in offsets_dict.items():
+                self.topic_str_end_offsets_dict_dict[topic_str][partition_int] = offset_int
         #
         # Get partitions to assign for the subscribed topics.
         self.topic_str_partition_int_list_dict = self.get_partitions_from_kwargs("partitions", **kwargs)
@@ -108,10 +122,9 @@ class StorageConsumer(Dechunker):
                 #
                 offsets_dict[partition_int] = offset_int + 1
                 #
-                if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
-                    end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
-                    if offset_int > end_offsets_dict[partition_int]:
-                        continue
+                end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
+                if offset_int > end_offsets_dict[partition_int]:
+                    continue
                 #
                 headers_str_bytes_tuple_list = message_dict["headers"]
                 message_dict1 = {"value": deserialize(message_dict["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, headers_dict=None if not headers_str_bytes_tuple_list else dict(headers_str_bytes_tuple_list), key_bool=False),
@@ -129,11 +142,10 @@ class StorageConsumer(Dechunker):
                 acc = foldl_fun(acc, message_dict1)
                 message_counter_int += 1
                 #
-                if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
-                    end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
-                    if all(offsets_dict[partition_int] > end_offset_int for partition_int, end_offset_int in end_offsets_dict.items()):
-                        break_bool = True
-                        break
+                end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
+                if all(offsets_dict[partition_int] > end_offset_int for partition_int, end_offset_int in end_offsets_dict.items()):
+                    break_bool = True
+                    break
                 #
                 if n_int != ALL_MESSAGES and message_counter_int >= n_int:
                     break_bool = True
@@ -181,14 +193,17 @@ class StorageConsumer(Dechunker):
                     print(f"Offsets for {ts_key_str} ({timestamp_int}):")
                     print(topic_str_offsets_dict_dict)
             else:
-                topic_str_offsets_dict_dict = None
-        # Check for any negative offsets - in that case, use current high watermark + negative offset as the offset.
-        # print(topic_str_offsets_dict_dict)
-        if topic_str_offsets_dict_dict is not None:
-            offset_int_list = sum({topic_str: list(offsets_dict.values()) for topic_str, offsets_dict in topic_str_offsets_dict_dict.items()}.values(), [])
-            if any(offset_int < 0 for offset_int in offset_int_list):
-                topic_str_partition_int_offset_int_tuple_dict_dict = self.storage_obj.watermarks(topic_str_list)
-                topic_str_offsets_dict_dict = {topic_str: {partition_int: (topic_str_partition_int_offset_int_tuple_dict_dict[topic_str][partition_int][1] + offset_int if topic_str_partition_int_offset_int_tuple_dict_dict[topic_str][partition_int][1] > 0 else 0) for partition_int, offset_int in offsets_dict.items() if offset_int < 0} for topic_str, offsets_dict in topic_str_offsets_dict_dict.items()}
+                topic_str_offsets_dict_dict = {topic_str: {} for topic_str in topic_str_list}
+        # Check for any negative offsets...
+        copied_topic_str_offsets_dict_dict = copy.deepcopy(topic_str_offsets_dict_dict)
+        for topic_str, offsets_dict in copied_topic_str_offsets_dict_dict.items():
+            if any(offset_int < 0 for offset_int in offsets_dict.values()):
+                # If found, replace the negative offset with the current high watermark + the negative offset.
+                partition_int_offset_int_tuple_dict = self.storage_obj.watermarks(topic_str)[topic_str]
+                #
+                for partition_int, offset_int in offsets_dict.items():
+                    if offset_int < 0:
+                        topic_str_offsets_dict_dict[topic_str][partition_int] = partition_int_offset_int_tuple_dict[partition_int][1] + offset_int
         #
         # print(topic_str_offsets_dict_dict)
         #

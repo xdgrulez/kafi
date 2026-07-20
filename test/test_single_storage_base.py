@@ -765,14 +765,14 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         # Positive offsets.
         group_str1 = self.create_test_group_name()
-        consumer1 = s.consumer(topic_str, group=group_str1, value_type="str", offsets={0: 2})
+        consumer1 = s.consumer(topic_str, group=group_str1, value_type="str", offsets={0: 2, 2: 3})
         message_dict_list1 = consumer1.consume(n=1)
         self.assertEqual(len(message_dict_list1), 1)
         self.assertEqual(message_dict_list1[0]["value"], "message 3")
         consumer1.close()
         # Negative offsets (from the current high watermark).
         group_str2 = self.create_test_group_name()
-        consumer2 = s.consumer(topic_str, group=group_str2, value_type="str", offsets={0: -2})
+        consumer2 = s.consumer(topic_str, group=group_str2, value_type="str", offsets={0: -2, 2: 3})
         message_dict_list2 = consumer2.consume(n=2)
         self.assertEqual(len(message_dict_list2), 2)
         self.assertEqual(message_dict_list2[0]["value"], "message 2")
@@ -783,10 +783,11 @@ class TestSingleStorageBase(unittest.TestCase):
         consumer3 = s.consumer(topic_str, group=group_str3, value_type="str")
         message_dict_list3 = consumer3.consume(last_n=4)
         self.assertEqual(len(message_dict_list3), 4)
-        self.assertEqual(message_dict_list3[0]["value"], "message 2")
-        self.assertEqual(message_dict_list3[1]["value"], "message 3")
-        self.assertEqual(message_dict_list3[2]["value"], "message 5")
-        self.assertEqual(message_dict_list3[3]["value"], "message 6")
+        sorted_message_dict_list3 = sorted(message_dict_list3, key=lambda x: x["timestamp"])
+        self.assertEqual(sorted_message_dict_list3[0]["value"], "message 2")
+        self.assertEqual(sorted_message_dict_list3[1]["value"], "message 3")
+        self.assertEqual(sorted_message_dict_list3[2]["value"], "message 5")
+        self.assertEqual(sorted_message_dict_list3[3]["value"], "message 6")
         consumer3.close()
 
     def test_commit(self):

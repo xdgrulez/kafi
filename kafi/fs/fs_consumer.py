@@ -49,36 +49,31 @@ class FSConsumer(StorageConsumer):
             partition_int_list = self.topic_str_partition_int_list_dict[topic_str]
             # Get the start offsets.
             start_offsets_dict = {partition_int: offset_int for partition_int, offset_int in self.topic_str_next_offsets_dict_dict[topic_str].items() if partition_int in partition_int_list}
-            # If the start offsets are not explicitly set, go deeper.
+            # If any start offset is not explicitly set, turn to the consumer group.
             if any(start_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in partition_int_list):
-                # Fetch the consumer group offsets.
                 group_dict = self.storage_obj.admin.get_group_dict(self.group_str)["offsets"]
-                if topic_str in group_dict:
-                    group_offsets_dict = group_dict[topic_str]
-                else:
-                    group_offsets_dict = {partition_int: OFFSET_INVALID for partition_int in partition_int_list}
-                # If any partition to be consumed does not yet have a committed offset, make use of auto.offset.reset.
-                if any(group_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in partition_int_list):
-                    # If auto.offset.reset == "latest", get the watermarks to be able to obtain the latest offsets for each partition (do it once here for all partitions to save Kafka API calls).
-                    if auto_offset_reset_str.lower() == "latest":
-                        partition_int_offset_tuple_dict = self.watermarks(topic_str, **kwargs)[topic_str]
-                    # Iterate through the offsets of the partitions.
-                    for partition_int, offset_int in start_offsets_dict.items():
-                        # Copy the offset of the partition from the consumer group to the start_offsets.
-                        start_offsets_dict[partition_int] = group_offsets_dict[partition_int]
-                        # If the partition does not have a committed offset yet, make use of auto.offset.reset.
-                        if offset_int == OFFSET_INVALID:
-                            if auto_offset_reset_str.lower() == "latest":
-                                # ...and if auto.offset.reset == latest, start offset = last offset.
-                                start_offsets_dict[partition_int] = partition_int_offset_tuple_dict[partition_int][1]
-                            elif auto_offset_reset_str.lower() == "earliest":
-                                # ...or if auto.offset.reset == earliest, start offset = 0.
-                                start_offsets_dict[partition_int] = 0
-                            else:
-                                raise Exception("Only \"earliest\" and \"latest\" supported for \"auto.offset.reset\".")
-                else:
-                    # Otherwise, we can set the start offsets to the group offsets.
-                    start_offsets_dict = {partition_int: offset_int for partition_int, offset_int in group_offsets_dict.items() if partition_int in partition_int_list}
+                group_offsets_dict = group_dict.get(topic_str, {})
+                #
+                for partition_int, offset_int in group_offsets_dict.items():
+                    if offset_int != OFFSET_INVALID:
+                        start_offsets_dict[partition_int] = offset_int
+            # If there is still any offset not explicitly set, turn to auto.offset.reset.
+            if any(start_offsets_dict[partition_int] == OFFSET_INVALID for partition_int in partition_int_list):
+                # If auto.offset.reset == "latest", get the watermarks to be able to obtain the latest offsets for each partition (do it once here already for all partitions to save Kafka API calls).
+                if auto_offset_reset_str.lower() == "latest":
+                    partition_int_offset_tuple_dict = self.watermarks(topic_str, **kwargs)[topic_str]
+                # Iterate through the offsets of the partitions.
+                for partition_int, offset_int in start_offsets_dict.items():
+                    # If the partition does not have a committed offset yet, make use of auto.offset.reset.
+                    if offset_int == OFFSET_INVALID:
+                        if auto_offset_reset_str.lower() == "latest":
+                            # ...and if auto.offset.reset == latest, start offset = last offset.
+                            start_offsets_dict[partition_int] = partition_int_offset_tuple_dict[partition_int][1]
+                        elif auto_offset_reset_str.lower() == "earliest":
+                            # ...or if auto.offset.reset == earliest, start offset = 0.
+                            start_offsets_dict[partition_int] = 0
+                        else:
+                            raise Exception("Only \"earliest\" and \"latest\" supported for \"auto.offset.reset\".")
             # Set the next offsets dict for the topic (for further foldl() calls).
             self.topic_str_next_offsets_dict_dict[topic_str] = start_offsets_dict.copy()
             #
