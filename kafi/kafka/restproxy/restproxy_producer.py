@@ -19,7 +19,7 @@ class RestProxyProducer(KafkaProducer):
         self.cluster_id_str = restproxy_obj.cluster_id_str
         #
         # The default partitioner function for the REST Proxy is None.
-        self.partitioner_function = kwargs["partitioner_function"] if "partitioner_function" in kwargs else None
+        self.partitioner_fun = kwargs["partitioner_fun"] if "partitioner_fun" in kwargs else None
 
     #
 
@@ -110,9 +110,9 @@ class RestProxyProducer(KafkaProducer):
             #
             partition_int = message_dict["partition"]
             if partition_int == RD_KAFKA_PARTITION_UA:
-                if self.partitioner_function is not None:
+                if self.partitioner_fun is not None:
                     # Use the custom partitioner function for the partitioning.
-                    payload_dict["partition_id"] = self.partitioner_function(message_dict, counter_int, self.partitions_int, self.projection_function)
+                    payload_dict["partition_id"] = self.partitioner_fun(message_dict, counter_int, self.partitions_int, self.projection_fun)
                 else:
                     # Let the REST Proxy do the partitioning if no custom partitioner function is specified.
                     pass

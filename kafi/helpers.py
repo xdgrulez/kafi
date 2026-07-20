@@ -361,10 +361,10 @@ def set_value(d, key_str_list, any):
 
 # Partitioners
 
-def default_partitioner(message_dict, counter_int, partitions_int, projection_function=lambda x: x["key"]):
+def default_partitioner(message_dict, counter_int, partitions_int, projection_fun=lambda x: x["key"]):
     partition_int = message_dict["partition"]
     if partition_int == RD_KAFKA_PARTITION_UA:
-        bytes = projection_function(message_dict)
+        bytes = projection_fun(message_dict)
         #
         if bytes is None:
             partition_int = counter_int

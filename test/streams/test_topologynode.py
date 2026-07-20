@@ -103,12 +103,12 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
 
     #
 
-    def _test_datagen_window(self, sink_str, get_built_tn_function):
+    def _test_datagen_window(self, sink_str, get_built_tn_fun):
         order_source_str = "shoe_orders"
         customer_source_str = "shoe_customers"
         product_source_str = "shoes"
         #
-        built_tn = get_built_tn_function(lambda: Tn.source(order_source_str),
+        built_tn = get_built_tn_fun(lambda: Tn.source(order_source_str),
                                          lambda: Tn.source(customer_source_str),
                                          lambda: Tn.source(product_source_str),          
                                          lambda x: x.sink(sink_str))

@@ -3,8 +3,8 @@ from kafi.streams.topologynode import TopologyNode as Tn
 #
 
 
-def get_built_tn_jamie(get_source_tn_function, get_sink_tn_function):
-    transaction_source_tn = get_source_tn_function()
+def get_built_tn_jamie(get_source_tn_fun, get_sink_tn_fun):
+    transaction_source_tn = get_source_tn_fun()
     #
     transaction_tn = transaction_source_tn.map(
         lambda x: {
@@ -44,7 +44,7 @@ def get_built_tn_jamie(get_source_tn_function, get_sink_tn_function):
                    {"total": x}}
     )
     #
-    sink_tn = get_sink_tn_function(sum_tn)
+    sink_tn = get_sink_tn_fun(sum_tn)
     #
     built_tn = Tn.build(sink_tn)
     #

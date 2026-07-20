@@ -6,8 +6,8 @@ from kafi.helpers import get
 
 #
 
-default_pack_function = json.dumps
-default_unpack_function = json.loads
+default_pack_fun = json.dumps
+default_unpack_fun = json.loads
 
 #
 
@@ -39,7 +39,7 @@ class TestFlinkSqlBase(TestKafkaBase):
 
     #
 
-    def stop_function(self):
+    def stop_fun(self):
         stop_cluster_completedProcess = subprocess.run([flinksql_stop_cluster_str], capture_output=True, text=True)
         print(stop_cluster_completedProcess.stdout)
 
@@ -116,10 +116,10 @@ class TestFlinkSqlBase(TestKafkaBase):
             #
             time.sleep(1)
         #
-        self.stop_function()
+        self.stop_fun()
         #
         thread1.join()
         thread2.join()
         #
         sink_str_topic_dict_dict = {sink_topic_str: {"storage": sink_storage, "topic": sink_topic_str}}
-        self.sink_str_updated_record_any_list_dict = self.read_sink_topics(sink_str_topic_dict_dict)
+        self.sink_str_updated_r_list_dict = self.read_sink_topics(sink_str_topic_dict_dict)

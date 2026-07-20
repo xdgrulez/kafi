@@ -2,8 +2,8 @@ from kafi.streams.topologynode import TopologyNode as Tn
 
 #
 
-def get_built_tn_wc(get_source_tn_function, get_sink_tn_function):
-    source_tn = get_source_tn_function()
+def get_built_tn_wc(get_source_tn_fun, get_sink_tn_fun):
+    source_tn = get_source_tn_fun()
     #
     split_tn = source_tn.flatmap(
         lambda x: [{"word": word_str,
@@ -19,7 +19,7 @@ def get_built_tn_wc(get_source_tn_function, get_sink_tn_function):
                        "count": y}}
     )
     #
-    sink_tn = get_sink_tn_function(group_by_count_tn)
+    sink_tn = get_sink_tn_fun(group_by_count_tn)
     #
     built_tn = Tn.build(sink_tn)
     #

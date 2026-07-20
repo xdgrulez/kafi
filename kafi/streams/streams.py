@@ -69,20 +69,20 @@ async def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, chec
         #
         sink_str_producer_dict[sink_str] = producer
     #
-    def get_foreach_function(sink_str):
+    def get_foreach_fun(sink_str):
         producer = sink_str_producer_dict[sink_str]
         return producer.produce_list
     #
-    def get_finally_function(sink_str):
+    def get_finally_fun(sink_str):
         producer = sink_str_producer_dict[sink_str]
         return producer.close
     #
-    sink_str_foreach_function_finally_function_tuple_dict = {sink_str: (get_foreach_function(sink_str), get_finally_function(sink_str)) for sink_str, _ in sink_str_topic_dict_dict.items()}
+    sink_str_foreach_fun_finally_fun_tuple_dict = {sink_str: (get_foreach_fun(sink_str), get_finally_fun(sink_str)) for sink_str, _ in sink_str_topic_dict_dict.items()}
     #
-    await streams_function(built_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs)
+    await streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs)
 
 
-async def streams_function(built_tn, sink_str_foreach_function_finally_function_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
+async def streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
     """
     The core orchestration layer. Manages state loading, instantiates consumers, 
     and handles concurrent data ingestion, stream processing, and fault-tolerant checkpointing.
@@ -90,7 +90,7 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
     checkpoint_topic_str = checkpoint_topic
     checkpoint_interval_float = checkpoint_interval
     #
-    step_function = kwargs["step_function"] if "step_function" in kwargs else lambda _: None
+    step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda _: None
     #
     initial_time_int = get_millis()
     #
@@ -208,13 +208,13 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
                     # Process the next step and return the latest sink messages.
                     sink_str_sink_message_dict_list_dict = built_tn.latest()
                     #
-                    step_function(built_tn)
+                    step_fun(built_tn)
                     #
-                    for sink_str, (foreach_function, _) in sink_str_foreach_function_finally_function_tuple_dict.items():
+                    for sink_str, (foreach_fun, _) in sink_str_foreach_fun_finally_fun_tuple_dict.items():
                         # Call foreach function for each sink (in a background thread).
                         sink_message_dict_list = sink_str_sink_message_dict_list_dict.get(sink_str, [])
                         if sink_message_dict_list != []:
-                            await asyncio.to_thread(foreach_function, sink_message_dict_list)
+                            await asyncio.to_thread(foreach_fun, sink_message_dict_list)
                 except asyncio.TimeoutError:
                     # Catch queue timeout bounds quietly to cycle back into processing/eval state checks.
                     pass
@@ -238,8 +238,8 @@ async def streams_function(built_tn, sink_str_foreach_function_finally_function_
             traceback.print_exc()
         finally:
             # Trigger e.g. custom producer flush/closure procedures.
-            for (_, finally_function) in sink_str_foreach_function_finally_function_tuple_dict.values():
-                finally_function()
+            for (_, finally_fun) in sink_str_foreach_fun_finally_fun_tuple_dict.values():
+                finally_fun()
     #
     # Cold start initialization: Recover built_tn if a checkpoint backend is provided.
     if checkpoint_storage is not None:

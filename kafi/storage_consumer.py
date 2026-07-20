@@ -51,7 +51,7 @@ class StorageConsumer(Dechunker):
 
     #
 
-    def foldl(self, foldl_function, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
+    def foldl(self, foldl_fun, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
         n_int = n
         #
         if n_int == 0:
@@ -69,7 +69,7 @@ class StorageConsumer(Dechunker):
         if n_int != ALL_MESSAGES and consume_batch_size_int > n_int:
             consume_batch_size_int = n_int
         #
-        break_function = kwargs["break_function"] if "break_function" in kwargs else lambda _, _1: False
+        break_fun = kwargs["break_fun"] if "break_fun" in kwargs else lambda _, _1: False
         #
         dechunk_bool = kwargs["dechunk"] if "dechunk" in kwargs else False
         #
@@ -122,11 +122,11 @@ class StorageConsumer(Dechunker):
                                  "offset": message_dict["offset"],
                                  "topic": message_dict["topic"]}
                 #
-                if break_function(acc, message_dict1):
+                if break_fun(acc, message_dict1):
                     break_bool = True
                     break
                 #
-                acc = foldl_function(acc, message_dict1)
+                acc = foldl_fun(acc, message_dict1)
                 message_counter_int += 1
                 #
                 if self.topic_str_end_offsets_dict_dict is not None and topic_str in self.topic_str_end_offsets_dict_dict:
@@ -150,7 +150,7 @@ class StorageConsumer(Dechunker):
     #
 
     def consume(self, n=ALL_MESSAGES, **kwargs):
-        def foldl_function(message_dict_list, message_dict):
+        def foldl_fun(message_dict_list, message_dict):
             message_dict_list.append(message_dict)
             #
             return message_dict_list
@@ -159,7 +159,7 @@ class StorageConsumer(Dechunker):
         if n_int == ALL_MESSAGES:
             n_int = self.storage_obj.consume_batch_size()
         #
-        return self.foldl(foldl_function, [], n_int, **kwargs)
+        return self.foldl(foldl_fun, [], n_int, **kwargs)
 
     #
 

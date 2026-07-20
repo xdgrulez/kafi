@@ -102,4 +102,4 @@ class TestFlinkSql(TestFlinkSqlBase, TestGenerate, TestBase):
         #
         self.go(flinksql_sql_path_str, source_storage_topic_str_batch_size_int_tuple_list, target_storage, target_topic_str, default_steps_int)
         #
-        self.assertEqual(self.sink_str_updated_record_any_list_dict[target_topic_str][-1]["value"], {"total": 0})
+        self.assertEqual(self.sink_str_updated_r_list_dict[target_topic_str][-1]["value"], {"total": 0})

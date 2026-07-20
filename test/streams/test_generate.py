@@ -35,18 +35,18 @@ class TestGenerate:
                 raise Exception(f"Source not supported: {source_str}")
 
     def generate(self, source_str, batch_size_int):
-        record_any_list = []
+        r_list = []
         #
         generator = self.source_str_generator_dict[source_str]
         #
         for _ in range(batch_size_int):
             record_dict = generator.generate_record()
-            record_any = {"key": None,
+            r = {"key": None,
                          "value": record_dict,
                          "partition": 0,
                          "offset": self.generate_offset_int,
                          "timestamp": int(time.time() * 1000)}
-            record_any_list.append(record_any)
+            r_list.append(r)
             self.generate_offset_int += 1
         #
-        return record_any_list
+        return r_list

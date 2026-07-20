@@ -30,7 +30,7 @@ class TestKafkaBase:
                     time.sleep(0.1)
 
     def read_topics(self, source_str_topic_dict_dict, source_or_sink_str):
-        source_str_input_record_any_list_dict = defaultdict(list)
+        source_str_input_r_list_dict = defaultdict(list)
         for source_str, topic_dict in source_str_topic_dict_dict.items():
             storage = topic_dict["storage"]
             topic_str = topic_dict["topic"]
@@ -39,10 +39,10 @@ class TestKafkaBase:
             print(f"Reading {source_or_sink_str} topic {topic_str}...")
             kwargs["group"] = f"test_{get_millis()}"
             message_dict_list = storage.cat(topic_str, **kwargs)
-            source_str_input_record_any_list_dict[source_str] = message_dict_list
+            source_str_input_r_list_dict[source_str] = message_dict_list
             print("...done.")
         #
-        return source_str_input_record_any_list_dict
+        return source_str_input_r_list_dict
 
     def read_source_topics(self, source_str_topic_dict_dict):
          return self.read_topics(source_str_topic_dict_dict, "source")

@@ -9,7 +9,7 @@ ALL_MESSAGES = -1
 
 #
 
-def default_projection_function(message_dict1, message_dict2):
+def default_projection_fun(message_dict1, message_dict2):
     message_dict = dict(message_dict1)
     message_dict["value"] = message_dict1["value"] | message_dict2["value"]
     return message_dict
@@ -17,7 +17,7 @@ def default_projection_function(message_dict1, message_dict2):
 
 class AddOns(Functional):
     def compact(self, topic, n=ALL_MESSAGES, **kwargs):
-        def foldl_function(acc, message_dict):
+        def foldl_fun(acc, message_dict):
             key_hash_int_message_dict_dict = acc
             #
             key = message_dict["key"]
@@ -34,7 +34,7 @@ class AddOns(Functional):
             return key_hash_int_message_dict_dict
         #
 
-        (key_hash_int_message_dict_dict, _) = self.foldl(topic, foldl_function, {}, n, **kwargs)
+        (key_hash_int_message_dict_dict, _) = self.foldl(topic, foldl_fun, {}, n, **kwargs)
         #
         message_dict_list = list(key_hash_int_message_dict_dict.values())
         #
@@ -54,31 +54,31 @@ class AddOns(Functional):
 
     #
 
-    def join_to(self, source_topic1, source_storage2, source_topic2, target_storage, target_topic, get_key_function1=lambda x: x["key"], get_key_function2=lambda x: x["key"], projection_function=default_projection_function, join="left", n=ALL_MESSAGES, **kwargs):
+    def join_to(self, source_topic1, source_storage2, source_topic2, target_storage, target_topic, get_key_fun1=lambda x: x["key"], get_key_fun2=lambda x: x["key"], projection_fun=default_projection_fun, join="left", n=ALL_MESSAGES, **kwargs):
         join_str = join
         #
         if join_str not in ["inner", "left", "right"]:
             raise Exception("Only \"inner\", \"left\" and \"right\" supported.")
         #
-        def zip_foldl_to_function(acc, message_dict1, message_dict2):
+        def zip_foldl_to_fun(acc, message_dict1, message_dict2):
             # print(message_dict1["value"])
             # print(message_dict2["value"])
             # print("===")
             (index_dict1, index_dict2) = acc
             #
-            key1 = get_key_function1(message_dict1)
-            key2 = get_key_function2(message_dict2)
+            key1 = get_key_fun1(message_dict1)
+            key2 = get_key_fun2(message_dict2)
             # DBSP: L join R = deltaL join deltaR + deltaL join R + L join deltaR
             out_message_dict_list = []
             # 1. deltaL join deltaR
             if key1 == key2:
                 # Match in deltaL join deltaR.
-                out_message_dict_list.append(projection_function(message_dict1, message_dict2))
+                out_message_dict_list.append(projection_fun(message_dict1, message_dict2))
             else:
                 # 2. deltaL join R
                 if key1 in index_dict2:
                     # Match in deltaL join R.
-                    out_message_dict_list.append(projection_function(message_dict1, index_dict2[key1]))
+                    out_message_dict_list.append(projection_fun(message_dict1, index_dict2[key1]))
                 else:
                     # Could not find key1 in index_dict2.
                     # Only append to the output if the join type is "left"
@@ -87,7 +87,7 @@ class AddOns(Functional):
                 # 3. L join deltaR
                 if key2 in index_dict1:
                     # Match in L join deltaR
-                    out_message_dict_list.append(projection_function(index_dict1[key2], message_dict2))
+                    out_message_dict_list.append(projection_fun(index_dict1[key2], message_dict2))
                 else:
                     # Could not find key2 in index_dict1.
                     # Only append to the output if the join type is "right"
@@ -107,7 +107,7 @@ class AddOns(Functional):
             #
             return ((index_dict1, index_dict2), list(out_message_dict_list))
 
-        return self.zip_foldl_to(source_topic1, source_storage2, source_topic2, target_storage, target_topic, zip_foldl_to_function, ({}, {}), n=n, **kwargs)
+        return self.zip_foldl_to(source_topic1, source_storage2, source_topic2, target_storage, target_topic, zip_foldl_to_fun, ({}, {}), n=n, **kwargs)
 
     #
 
@@ -271,6 +271,6 @@ class AddOns(Functional):
             value_json_str = json.dumps(message_dict["value"])
             value_json_str_set.add(value_json_str)
         #
-        self.foreach(topic_str, foreach_function=collect, **kwargs)
+        self.foreach(topic_str, foreach_fun=collect, **kwargs)
         #
         return value_json_str_set

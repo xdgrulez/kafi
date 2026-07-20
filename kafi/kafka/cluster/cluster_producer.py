@@ -12,14 +12,14 @@ RD_KAFKA_PARTITION_UA = -1
 class ClusterProducer(KafkaProducer):
     def __init__(self, cluster_obj, topic, **kwargs):
         # The default partitioner function for confluent-kafka is None.
-        self.partitioner_function = kwargs["partitioner_function"] if "partitioner_function" in kwargs else None
+        self.partitioner_fun = kwargs["partitioner_fun"] if "partitioner_fun" in kwargs else None
         #
         super().__init__(cluster_obj, topic, **kwargs)
         #
         def on_delivery(kafka_error, _):
             if kafka_error is not None:
                 raise Exception(kafka_error)
-        self.on_delivery_function = kwargs["on_delivery"] if "on_delivery" in kwargs else on_delivery
+        self.on_delivery_fun = kwargs["on_delivery"] if "on_delivery" in kwargs else on_delivery
         #
         # Producer config
         #
@@ -60,14 +60,14 @@ class ClusterProducer(KafkaProducer):
             #
             partition_int = message_dict["partition"]
             if partition_int == RD_KAFKA_PARTITION_UA:
-                if self.partitioner_function is not None:
+                if self.partitioner_fun is not None:
                     # Use the custom partitioner function for the partitioning.
-                    partition_int = self.partitioner_function(message_dict, counter_int, self.partitions_int, self.projection_function)
+                    partition_int = self.partitioner_fun(message_dict, counter_int, self.partitions_int, self.projection_fun)
                 else:
                     # Let confluent-kafka Proxy do the partitioning if no custom partitioner function is specified.
                     pass
             #
-            self.producer.produce(self.topic_str, message_dict["value"], message_dict["key"], partition=partition_int, timestamp=timestamp_int, headers=message_dict["headers"], on_delivery=self.on_delivery_function)
+            self.producer.produce(self.topic_str, message_dict["value"], message_dict["key"], partition=partition_int, timestamp=timestamp_int, headers=message_dict["headers"], on_delivery=self.on_delivery_fun)
             #
             self.written_counter_int += 1
         #

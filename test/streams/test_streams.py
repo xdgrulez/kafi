@@ -130,7 +130,7 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
 
     #
 
-    def _test_datagen_window(self, sink_str, get_built_tn_function):
+    def _test_datagen_window(self, sink_str, get_built_tn_fun):
         # old_recursion_limit_int = sys.getrecursionlimit()
         # sys.setrecursionlimit(10000)
         #
@@ -144,7 +144,7 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage.consume_batch_size(default_batch_size_int)
         sink_storage = source_storage
         #
-        built_tn = get_built_tn_function(lambda: Streams.source(order_source_str, source_storage),
+        built_tn = get_built_tn_fun(lambda: Streams.source(order_source_str, source_storage),
                                          lambda: Streams.source(customer_source_str, source_storage),
                                          lambda: Streams.source(product_source_str, source_storage),
                                          lambda x: x.sink(sink_str, sink_storage))

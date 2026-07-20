@@ -14,8 +14,8 @@ class Chunker(Serializer):
             raise Exception("Chunking not supported for RestProxy storage.")
         #
         if self.chunk_size_bytes_int > 0:
-            self.partitioner_function = default_partitioner
-            self.projection_function = message_dict_chunk_key_to_key
+            self.partitioner_fun = default_partitioner
+            self.projection_fun = message_dict_chunk_key_to_key
         #
         super().__init__(schema_registry_config_dict, **kwargs)
 

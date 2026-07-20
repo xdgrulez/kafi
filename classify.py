@@ -13,7 +13,7 @@ def get_fear_index(text_str):
                 break
     return fear_index_int
 
-def map_function(message_dict):
+def map_fun(message_dict):
     fear_index_int = get_fear_index(message_dict["value"]["text"])
     message_dict["value"]["sentiment"] = {"model": "finbert", "score": fear_index_int}
     return message_dict
@@ -23,4 +23,4 @@ c.consume_timeout(-1)
 c.produce_batch_size(1)
 c.retouch("scored_protobuf")
 schema_str = 'message Scored { required string datetime = 1; required string text = 2; message Source { required string name = 1; required string id = 2; required string user = 3; } required Source source = 3; message Sentiment { required string model = 1; required int32 score = 2; } required Sentiment sentiment = 4; }'
-c.map_to("scraped_json", c, "scored_protobuf", map_function, source_value_type="json", target_value_type="protobuf", target_value_schema=schema_str)
+c.map_to("scraped_json", c, "scored_protobuf", map_fun, source_value_type="json", target_value_type="protobuf", target_value_schema=schema_str)

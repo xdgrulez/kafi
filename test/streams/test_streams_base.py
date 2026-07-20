@@ -11,7 +11,7 @@ from kafi.streams.streams import start_streams, get_source_str_topic_dict_dict, 
 
 class TestStreamsBase(TestKafkaBase):
     def process(self, built_tn, checkpoint_storage, checkpoint_topic, **kwargs):
-        self.stop_function = start_streams(built_tn, checkpoint_storage, checkpoint_topic, **kwargs)
+        self.stop_fun = start_streams(built_tn, checkpoint_storage, checkpoint_topic, **kwargs)
 
     #
 
@@ -86,11 +86,11 @@ class TestStreamsBase(TestKafkaBase):
             #
             time.sleep(0.1)
         #
-        self.stop_function()
+        self.stop_fun()
         #
         thread1.join()
         thread2.join()
         #
-        self.source_str_input_record_any_list_dict = self.read_source_topics(source_str_topic_dict_dict)
+        self.source_str_input_r_list_dict = self.read_source_topics(source_str_topic_dict_dict)
         #
-        self.sink_str_updated_record_any_list_dict = self.read_sink_topics(sink_str_topic_dict_dict)
+        self.sink_str_updated_r_list_dict = self.read_sink_topics(sink_str_topic_dict_dict)

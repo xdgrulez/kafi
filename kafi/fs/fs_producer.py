@@ -13,8 +13,8 @@ TIMESTAMP_CREATE_TIME = 1
 class FSProducer(StorageProducer):
     def __init__(self, fs_obj, topic, **kwargs):
         # The default partitioner function for the FSProducer is the default partitioner.
-        self.partitioner_function = kwargs["partitioner_function"] if "partitioner_function" in kwargs else default_partitioner
-        self.projection_function = kwargs["projection_function"] if "projection_function" in kwargs else lambda x: x["key"]
+        self.partitioner_fun = kwargs["partitioner_fun"] if "partitioner_fun" in kwargs else default_partitioner
+        self.projection_fun = kwargs["projection_fun"] if "projection_fun" in kwargs else lambda x: x["key"]
         #
         super().__init__(fs_obj, topic, **kwargs)
         #
@@ -36,7 +36,7 @@ class FSProducer(StorageProducer):
             if timestamp == CURRENT_TIME:
                 timestamp = (TIMESTAMP_CREATE_TIME, get_millis())
             #
-            partition_int = self.partitioner_function(message_dict, counter_int, self.partitions_int, self.projection_function)
+            partition_int = self.partitioner_fun(message_dict, counter_int, self.partitions_int, self.projection_fun)
             #
             message_dict = {"topic": self.topic_str,
                             "value": message_dict["value"],

@@ -6,11 +6,11 @@ from streams.test_base import default_batch_size_int
 
 #
 
-def get_built_tn_datagen_1_join(get_click_source_tn_function, 
-                                get_customer_source_tn_function,
-                                get_sink_tn_function):
-    click_source_tn = get_click_source_tn_function()
-    customer_source_tn = get_customer_source_tn_function()
+def get_built_tn_datagen_1_join(get_click_source_tn_fun, 
+                                get_customer_source_tn_fun,
+                                get_sink_tn_fun):
+    click_source_tn = get_click_source_tn_fun()
+    customer_source_tn = get_customer_source_tn_fun()
     #
     click_tn = (
         click_source_tn
@@ -36,19 +36,19 @@ def get_built_tn_datagen_1_join(get_click_source_tn_function,
                 "first_name": r["first_name"]}})
     )
     #
-    sink_tn = get_sink_tn_function(join_1_tn)
+    sink_tn = get_sink_tn_fun(join_1_tn)
     #
     built_tn = Tn.build(sink_tn)
     #
     return built_tn
 
-def get_built_tn_datagen_2_joins(get_click_source_tn_function,
-                                 get_customer_source_tn_function, 
-                                 get_product_source_tn_function, 
-                                 get_sink_tn_function):
-    click_source_tn = get_click_source_tn_function()
-    customer_source_tn = get_customer_source_tn_function()
-    product_source_tn = get_product_source_tn_function()
+def get_built_tn_datagen_2_joins(get_click_source_tn_fun,
+                                 get_customer_source_tn_fun, 
+                                 get_product_source_tn_fun, 
+                                 get_sink_tn_fun):
+    click_source_tn = get_click_source_tn_fun()
+    customer_source_tn = get_customer_source_tn_fun()
+    product_source_tn = get_product_source_tn_fun()
     #
     click_tn = (
         click_source_tn
@@ -90,21 +90,21 @@ def get_built_tn_datagen_2_joins(get_click_source_tn_function,
                                     "brand": r["brand"]}})
     )
     #
-    sink_tn = get_sink_tn_function(joins_2_tn)
+    sink_tn = get_sink_tn_fun(joins_2_tn)
     #
     built_tn = Tn.build(sink_tn)
     #
     return built_tn
 
-def get_built_tn_datagen_3_joins(get_click_source_tn_function, 
-                                 get_customer_source_tn_function,
-                                 get_product_source_tn_function,
-                                 get_order_source_tn_function,
-                                 get_sink_tn_function):
-    click_source_tn = get_click_source_tn_function()
-    customer_source_tn = get_customer_source_tn_function()
-    product_source_tn = get_product_source_tn_function()
-    order_source_tn = get_order_source_tn_function()
+def get_built_tn_datagen_3_joins(get_click_source_tn_fun, 
+                                 get_customer_source_tn_fun,
+                                 get_product_source_tn_fun,
+                                 get_order_source_tn_fun,
+                                 get_sink_tn_fun):
+    click_source_tn = get_click_source_tn_fun()
+    customer_source_tn = get_customer_source_tn_fun()
+    product_source_tn = get_product_source_tn_fun()
+    order_source_tn = get_order_source_tn_fun()
     #
     click_tn = (
         click_source_tn
@@ -164,14 +164,14 @@ def get_built_tn_datagen_3_joins(get_click_source_tn_function,
                 "order_id": l["order_id"]}})
     )
     #
-    sink_tn = get_sink_tn_function(joins_3_tn)
+    sink_tn = get_sink_tn_fun(joins_3_tn)
     #
     built_tn = Tn.build(sink_tn)
     #
     return built_tn
 
-def get_built_tn_datagen_self_join_group_by(get_source_tn_function, get_sink_tn_function):
-    order_source_tn = get_source_tn_function()
+def get_built_tn_datagen_self_join_group_by(get_source_tn_fun, get_sink_tn_fun):
+    order_source_tn = get_source_tn_fun()
     #
     order_tn = (
         order_source_tn
@@ -199,14 +199,14 @@ def get_built_tn_datagen_self_join_group_by(get_source_tn_function, get_sink_tn_
         .to_value()
     )
     #
-    sink_tn = get_sink_tn_function(self_join_group_by_tn)
+    sink_tn = get_sink_tn_fun(self_join_group_by_tn)
     #
     built_tn = Tn.build(sink_tn)
     #
     return built_tn
 
-def get_built_tn_datagen_self_join_group_by_debezium(get_source_tn_function, get_sink_tn_function):
-    order_source_tn = get_source_tn_function()
+def get_built_tn_datagen_self_join_group_by_debezium(get_source_tn_fun, get_sink_tn_fun):
+    order_source_tn = get_source_tn_fun()
     order_source_tn.to_zSet(Tn.from_debezium)
     #
     order_tn = (
@@ -234,15 +234,15 @@ def get_built_tn_datagen_self_join_group_by_debezium(get_source_tn_function, get
         .to_value()
     )
     #
-    sink_tn = get_sink_tn_function(self_join_group_by_debezium_tn)
+    sink_tn = get_sink_tn_fun(self_join_group_by_debezium_tn)
     #
     built_tn = Tn.build(sink_tn)
     built_tn.from_zSet(Tn.to_debezium)
     #
     return built_tn
 
-def get_built_tn_datagen_multiple_sinks(get_source_tn_function, get_sink_customer_a_h_function, get_sink_customer_i_q_function, get_sink_customer_r_z_function):
-    customer_source_tn = get_source_tn_function()
+def get_built_tn_datagen_multiple_sinks(get_source_tn_fun, get_sink_customer_a_h_fun, get_sink_customer_i_q_fun, get_sink_customer_r_z_fun):
+    customer_source_tn = get_source_tn_fun()
     #
     customer_tn = (
         customer_source_tn
@@ -255,19 +255,19 @@ def get_built_tn_datagen_multiple_sinks(get_source_tn_function, get_sink_custome
         customer_tn
         .filter(lambda x: x["last_name"][0].lower() >= "A".lower() and x["last_name"][0].lower() <= "H".lower()).to_value()
     )
-    sink_customer_a_h_tn = get_sink_customer_a_h_function(customer_a_h_tn)
+    sink_customer_a_h_tn = get_sink_customer_a_h_fun(customer_a_h_tn)
     #
     customer_i_q_tn = (
         customer_tn
         .filter(lambda x: x["last_name"][0].lower() >= "I".lower() and x["last_name"][0].lower() <= "Q".lower()).to_value()
     )
-    sink_customer_i_q_tn = get_sink_customer_i_q_function(customer_i_q_tn)
+    sink_customer_i_q_tn = get_sink_customer_i_q_fun(customer_i_q_tn)
     #
     customer_r_z_tn = (
         customer_tn
         .filter(lambda x: x["last_name"][0].lower() >= "R".lower() and x["last_name"][0].lower() <= "Z".lower()).to_value()
     )
-    sink_customer_r_z_tn = get_sink_customer_r_z_function(customer_r_z_tn)
+    sink_customer_r_z_tn = get_sink_customer_r_z_fun(customer_r_z_tn)
     #
     built_tn = Tn.build(sink_customer_a_h_tn, sink_customer_i_q_tn, sink_customer_r_z_tn)
     #
@@ -275,10 +275,10 @@ def get_built_tn_datagen_multiple_sinks(get_source_tn_function, get_sink_custome
 
 #
 
-def by_function(x):
+def by_fun(x):
     return (x["customer_id"], x["email"])
 
-def agg_function(agg, x):
+def agg_fun(agg, x):
     return {
         "orders": agg["orders"] + 1,
         "total_price": agg["total_price"] + x["sale_price"]
@@ -286,7 +286,7 @@ def agg_function(agg, x):
 
 agg_initial_any = {"orders": 0, "total_price": 0}
 
-def projection_function(by, agg):
+def projection_fun(by, agg):
     return {
         "customer_id": by[0],
         "email": by[1],
@@ -296,14 +296,14 @@ def projection_function(by, agg):
 
 #
 
-def _get_built_tn_datagen_window(get_order_source_tn_function,
-                                 get_customer_source_tn_function,
-                                 get_product_source_tn_function,
-                                 get_sink_tn_function,
+def _get_built_tn_datagen_window(get_order_source_tn_fun,
+                                 get_customer_source_tn_fun,
+                                 get_product_source_tn_fun,
+                                 get_sink_tn_fun,
                                  window_dict):
-    order_source_tn = get_order_source_tn_function()
-    customer_source_tn = get_customer_source_tn_function()
-    product_source_tn = get_product_source_tn_function()
+    order_source_tn = get_order_source_tn_fun()
+    customer_source_tn = get_customer_source_tn_fun()
+    product_source_tn = get_product_source_tn_fun()
     #
     order_tn = (
         order_source_tn
@@ -312,28 +312,28 @@ def _get_built_tn_datagen_window(get_order_source_tn_function,
                         "ts": x["value"]["ts"]})
     )
     #
-    time_function = lambda x: x["ts"]
+    time_fun = lambda x: x["ts"]
     match window_dict["type"]:
         case "tumbling":
-            retention = lambda tn: tn.expire_tumbling(time_function,
+            retention = lambda tn: tn.expire_tumbling(time_fun,
                                                       window_dict["size"],
                                                       window_dict["allowed_lateness"])
         case "hopping":
-            retention = lambda tn: tn.expire_hopping(time_function,
+            retention = lambda tn: tn.expire_hopping(time_fun,
                                                      window_dict["size"],
                                                      window_dict["hop"],
                                                      window_dict["allowed_lateness"])
         case "cumulative":
-            retention = lambda tn: tn.expire_cumulative(time_function,
+            retention = lambda tn: tn.expire_cumulative(time_fun,
                                                         window_dict["size"],
                                                         window_dict["advance"],
                                                         window_dict["allowed_lateness"])
         case "sliding":
-            retention = lambda tn: tn.expire_sliding(time_function,
+            retention = lambda tn: tn.expire_sliding(time_fun,
                                                      window_dict["size"],
                                                      window_dict["allowed_lateness"])
         case "session":
-            retention = lambda tn: tn.expire_session(time_function,
+            retention = lambda tn: tn.expire_session(time_fun,
                                                      window_dict["max_session"],
                                                      window_dict["allowed_lateness"])
     #
@@ -386,63 +386,63 @@ def _get_built_tn_datagen_window(get_order_source_tn_function,
     match window_dict["type"]:
         case "tumbling":
             window_tn = join_2_tn.window_tumbling(window_dict["size"],
-                                                  time_function,
-                                                  by_function,
-                                                  agg_function,
+                                                  time_fun,
+                                                  by_fun,
+                                                  agg_fun,
                                                   agg_initial_any,
-                                                  projection_function,
-                                                  trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
+                                                  projection_fun,
+                                                  trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
         case "hopping":
             window_tn = join_2_tn.window_hopping(window_dict["size"],
                                                  window_dict["hop"],
-                                                 time_function,
-                                                 by_function,
-                                                 agg_function,
+                                                 time_fun,
+                                                 by_fun,
+                                                 agg_fun,
                                                  agg_initial_any,
-                                                 projection_function,
-                                                 trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
+                                                 projection_fun,
+                                                 trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
         case "cumulative":
             window_tn = join_2_tn.window_cumulative(window_dict["size"],
                                                     window_dict["advance"],
-                                                    time_function,
-                                                    by_function,
-                                                    agg_function,
+                                                    time_fun,
+                                                    by_fun,
+                                                    agg_fun,
                                                     agg_initial_any,
-                                                    projection_function,
-                                                    trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
+                                                    projection_fun,
+                                                    trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
         case "sliding":
             window_tn = join_2_tn.window_sliding(window_dict["size"],
-                                                 time_function,
-                                                 by_function,
-                                                 agg_function,
+                                                 time_fun,
+                                                 by_fun,
+                                                 agg_fun,
                                                  agg_initial_any,
-                                                 projection_function,
-                                                 trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
+                                                 projection_fun,
+                                                 trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
         case "session":
             window_tn = join_2_tn.window_session(window_dict["gap"],
-                                                 time_function,
-                                                 by_function,
-                                                 agg_function,
+                                                 time_fun,
+                                                 by_fun,
+                                                 agg_fun,
                                                  agg_initial_any,
-                                                 projection_function,
-                                                 trigger_projection_function=lambda l: {**l[0], "window_end": l[1]})
+                                                 projection_fun,
+                                                 trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
     #
     window_tn = window_tn.to_value()
     #
-    sink_tn = get_sink_tn_function(window_tn)
+    sink_tn = get_sink_tn_fun(window_tn)
     #
     built_tn = Tn.build(sink_tn)
     #
     return built_tn
 
-def get_built_tn_datagen_tumbling_window(get_order_source_tn_function,
-                                         get_customer_source_tn_function,
-                                         get_product_source_tn_function,
-                                         get_sink_tn_function):
-    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
-                                            get_customer_source_tn_function,
-                                            get_product_source_tn_function,
-                                            get_sink_tn_function,
+def get_built_tn_datagen_tumbling_window(get_order_source_tn_fun,
+                                         get_customer_source_tn_fun,
+                                         get_product_source_tn_fun,
+                                         get_sink_tn_fun):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_fun,
+                                            get_customer_source_tn_fun,
+                                            get_product_source_tn_fun,
+                                            get_sink_tn_fun,
                                             {"type": "tumbling",
                                              "size": (size_int := ts_step_int * default_batch_size_int),
                                              "allowed_lateness": size_int * 5}
@@ -450,14 +450,14 @@ def get_built_tn_datagen_tumbling_window(get_order_source_tn_function,
     #
     return built_tn
 
-def get_built_tn_datagen_hopping_window(get_order_source_tn_function,
-                                        get_customer_source_tn_function,
-                                        get_product_source_tn_function,
-                                        get_sink_tn_function):
-    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
-                                            get_customer_source_tn_function,
-                                            get_product_source_tn_function,
-                                            get_sink_tn_function,
+def get_built_tn_datagen_hopping_window(get_order_source_tn_fun,
+                                        get_customer_source_tn_fun,
+                                        get_product_source_tn_fun,
+                                        get_sink_tn_fun):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_fun,
+                                            get_customer_source_tn_fun,
+                                            get_product_source_tn_fun,
+                                            get_sink_tn_fun,
                                             {"type": "hopping",
                                              "size": (size_int := ts_step_int * default_batch_size_int),
                                              "hop": size_int // 5,
@@ -466,14 +466,14 @@ def get_built_tn_datagen_hopping_window(get_order_source_tn_function,
     #
     return built_tn
 
-def get_built_tn_datagen_cumulative_window(get_order_source_tn_function,
-                                           get_customer_source_tn_function,
-                                           get_product_source_tn_function,
-                                           get_sink_tn_function):
-    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
-                                            get_customer_source_tn_function,
-                                            get_product_source_tn_function,
-                                            get_sink_tn_function,
+def get_built_tn_datagen_cumulative_window(get_order_source_tn_fun,
+                                           get_customer_source_tn_fun,
+                                           get_product_source_tn_fun,
+                                           get_sink_tn_fun):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_fun,
+                                            get_customer_source_tn_fun,
+                                            get_product_source_tn_fun,
+                                            get_sink_tn_fun,
                                             {"type": "cumulative",
                                              "size": (size_int := ts_step_int * default_batch_size_int),
                                              "advance": size_int // 5,
@@ -482,14 +482,14 @@ def get_built_tn_datagen_cumulative_window(get_order_source_tn_function,
     #
     return built_tn
 
-def get_built_tn_datagen_sliding_window(get_order_source_tn_function,
-                                        get_customer_source_tn_function,
-                                        get_product_source_tn_function,
-                                        get_sink_tn_function):
-    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
-                                            get_customer_source_tn_function,
-                                            get_product_source_tn_function,
-                                            get_sink_tn_function,
+def get_built_tn_datagen_sliding_window(get_order_source_tn_fun,
+                                        get_customer_source_tn_fun,
+                                        get_product_source_tn_fun,
+                                        get_sink_tn_fun):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_fun,
+                                            get_customer_source_tn_fun,
+                                            get_product_source_tn_fun,
+                                            get_sink_tn_fun,
                                             {"type": "sliding",
                                              "size": (size_int := ts_step_int * default_batch_size_int),
                                              "allowed_lateness": size_int * 5}
@@ -497,14 +497,14 @@ def get_built_tn_datagen_sliding_window(get_order_source_tn_function,
     #
     return built_tn
 
-def get_built_tn_datagen_session_window(get_order_source_tn_function,
-                                        get_customer_source_tn_function,
-                                        get_product_source_tn_function,
-                                        get_sink_tn_function):
-    built_tn = _get_built_tn_datagen_window(get_order_source_tn_function,
-                                            get_customer_source_tn_function,
-                                            get_product_source_tn_function,
-                                            get_sink_tn_function,
+def get_built_tn_datagen_session_window(get_order_source_tn_fun,
+                                        get_customer_source_tn_fun,
+                                        get_product_source_tn_fun,
+                                        get_sink_tn_fun):
+    built_tn = _get_built_tn_datagen_window(get_order_source_tn_fun,
+                                            get_customer_source_tn_fun,
+                                            get_product_source_tn_fun,
+                                            get_sink_tn_fun,
                                             {"type": "session",
                                              "gap": (size_int := ts_step_int * default_batch_size_int),
                                              "max_session": (size_int := ts_step_int * default_batch_size_int * 2),
