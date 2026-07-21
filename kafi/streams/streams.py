@@ -2,6 +2,7 @@ import asyncio
 import cloudpickle
 import threading
 import traceback
+import uuid
 import zlib
 
 from kafi.helpers import get_millis, compress, decompress
@@ -13,31 +14,38 @@ default_checkpoint_interval_float = 1.0
 
 #
 
+streams_prefix_str = "streams_thread_"
+
+def create_name():
+    return f"{streams_prefix_str}{str(uuid.uuid4())}"
+
+#
+
 def start_streams_task(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
     stop_event = threading.Event()
     #
-    task = asyncio.create_task(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs))
+    task = asyncio.create_task(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs), name=create_name())
     #
-    async def _stop():
+    async def _stop_fun():
         print("Safely stopping streams...")
         stop_event.set()
         await task
         print("...done.")
     #
-    return _stop
+    return _stop_fun
 
 #
 
-def start_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
+def start_streams_thread(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
     """
     Entry point to run the stream processor running in a background daemon thread.
     Returns a stop function to handle a clean shutdown sequence.
     """
-    def _run(stop_event):
+    def _run_fun(stop_event):
         # Initializes and runs the main async entry point within the thread's independent event loop.
         asyncio.run(streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs))
     #
-    def _stop():
+    def _stop_fun():
         # Signals the async loops to stop and blocks until the worker thread exits cleanly.
         stop_event.set()
         print("Safely stopping streams...")
@@ -45,11 +53,11 @@ def start_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, chec
         print("...done.")
     #
     stop_event = threading.Event()
-    thread = threading.Thread(target=_run, args=[stop_event])
+    thread = threading.Thread(target=_run_fun, args=[stop_event])
     thread.daemon = True
     thread.start()
     #
-    return _stop
+    return _stop_fun
 
 #
 
@@ -57,6 +65,10 @@ async def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, chec
     """
     Provisions the sink producers and passes down its callbacks.
     """
+    #
+    if threading.current_thread() is not None:
+        threading.current_thread().name = create_name()
+    #
     sink_str_topic_dict_dict = get_sink_str_topic_dict_dict(built_tn)
     #
     sink_str_producer_dict = {}
@@ -270,7 +282,7 @@ async def streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, che
 
 class Streams(TopologyNode):
     @staticmethod
-    def source(source_str, storage, topic_str=None, **kwargs):
+    def source(storage, source_str, topic_str=None, **kwargs):
         tn = TopologyNode.source(source_str)
         tn.__class__ = Streams
         #
@@ -280,7 +292,7 @@ class Streams(TopologyNode):
         #
         return tn
     
-    def sink(self, sink_str, storage, topic_str=None, **kwargs):
+    def sink(self, storage, sink_str, topic_str=None, **kwargs):
         tn = super().sink(sink_str)
         #
         tn._topic_dict = {"storage": storage,
@@ -288,6 +300,33 @@ class Streams(TopologyNode):
                           "kwargs": kwargs}
         #
         return self
+
+    @staticmethod
+    def threads():
+        thread_list = threading.enumerate()
+        #
+        streams_thread_list = [thread for thread in thread_list if thread.name.startswith(streams_prefix_str)]
+        #
+        return streams_thread_list
+
+    @staticmethod
+    async def tasks():
+        task_set = asyncio.all_tasks()
+        #
+        streams_task_list = [task for task in task_set if task.get_name().startswith(streams_prefix_str)]
+        #
+        return streams_task_list
+    
+    @staticmethod
+    async def cancel_all_tasks():
+        streams_task_list = await Streams.tasks()
+        #
+        for streams_task in streams_task_list:
+            streams_task.cancel()
+        #
+        streams_task_list = await Streams.tasks()
+        #
+        return streams_task_list
 
 # Helpers
 

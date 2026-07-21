@@ -26,9 +26,9 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage.consume_batch_size(default_batch_size_int)
         sink_storage = source_storage
         #
-        built_tn = get_built_tn_datagen_1_join(lambda: Streams.source(click_source_str, source_storage),
-                                              lambda: Streams.source(customer_source_str, source_storage),
-                                              lambda x: x.sink(sink_str, sink_storage))
+        built_tn = get_built_tn_datagen_1_join(lambda: Streams.source(source_storage, click_source_str),
+                                              lambda: Streams.source(source_storage, customer_source_str),
+                                              lambda x: x.sink(sink_storage, sink_str))
         #
         self.go(built_tn,
                 {click_source_str: default_batch_size_int, customer_source_str: default_batch_size_int},
@@ -45,10 +45,10 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage.consume_batch_size(default_batch_size_int)
         sink_storage = source_storage
         #
-        built_tn = get_built_tn_datagen_2_joins(lambda: Streams.source(click_source_str, source_storage),
-                                               lambda: Streams.source(customer_source_str, source_storage),
-                                               lambda: Streams.source(product_source_str, source_storage),
-                                               lambda x: x.sink(sink_str, sink_storage))
+        built_tn = get_built_tn_datagen_2_joins(lambda: Streams.source(source_storage, click_source_str),
+                                               lambda: Streams.source(source_storage, customer_source_str),
+                                               lambda: Streams.source(source_storage, product_source_str),
+                                               lambda x: x.sink(sink_storage, sink_str))
         #
         self.go(built_tn,
                 {click_source_str: default_batch_size_int, customer_source_str: default_batch_size_int, product_source_str: default_batch_size_int},
@@ -66,11 +66,11 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage.consume_batch_size(default_batch_size_int)
         sink_storage = source_storage
         #
-        built_tn = get_built_tn_datagen_3_joins(lambda: Streams.source(click_source_str, source_storage),
-                                                lambda: Streams.source(customer_source_str, source_storage),
-                                                lambda: Streams.source(product_source_str, source_storage),
-                                                lambda: Streams.source(order_source_str, source_storage),
-                                                lambda x: x.sink(sink_str, sink_storage))
+        built_tn = get_built_tn_datagen_3_joins(lambda: Streams.source(source_storage, click_source_str),
+                                                lambda: Streams.source(source_storage, customer_source_str),
+                                                lambda: Streams.source(source_storage, product_source_str),
+                                                lambda: Streams.source(source_storage, order_source_str),
+                                                lambda x: x.sink(sink_storage, sink_str))
         #
         self.go(built_tn,
                 {click_source_str: default_batch_size_int, customer_source_str: default_batch_size_int, product_source_str: default_batch_size_int, order_source_str: default_batch_size_int},
@@ -84,8 +84,8 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage.consume_batch_size(default_batch_size_int)
         sink_storage = source_storage
         #
-        built_tn = get_built_tn_datagen_self_join_group_by(lambda: Streams.source(source_str, source_storage),
-                                                           lambda x: x.sink(sink_str, sink_storage))
+        built_tn = get_built_tn_datagen_self_join_group_by(lambda: Streams.source(source_storage, source_str),
+                                                           lambda x: x.sink(sink_storage, sink_str))
         #
         self.go(built_tn, {source_str: default_batch_size_int}, default_steps_int)
         #
@@ -99,8 +99,8 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage.consume_batch_size(default_batch_size_int)
         sink_storage = source_storage
         #
-        built_tn = get_built_tn_datagen_self_join_group_by_debezium(lambda: Streams.source(source_str, source_storage),
-                                                                    lambda x: x.sink(sink_str, sink_storage))
+        built_tn = get_built_tn_datagen_self_join_group_by_debezium(lambda: Streams.source(source_storage, source_str),
+                                                                    lambda x: x.sink(sink_storage, sink_str))
         #
         self.go(built_tn, {source_str: default_batch_size_int}, default_steps_int)
         #
@@ -117,10 +117,10 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage.consume_batch_size(default_batch_size_int)
         sink_storage = source_storage
         #
-        built_tn = get_built_tn_datagen_multiple_sinks(lambda: Streams.source(source_str, source_storage),
-                                                       lambda x: x.sink(sink_customer_a_h_str, sink_storage),
-                                                       lambda x: x.sink(sink_customer_i_q_str, sink_storage),
-                                                       lambda x: x.sink(sink_customer_r_z_str, sink_storage))
+        built_tn = get_built_tn_datagen_multiple_sinks(lambda: Streams.source(source_storage, source_str),
+                                                       lambda x: x.sink(sink_storage, sink_customer_a_h_str),
+                                                       lambda x: x.sink(sink_storage, sink_customer_i_q_str),
+                                                       lambda x: x.sink(sink_storage, sink_customer_r_z_str))
         #
         source_str_batch_size_int_dict = {source_str: default_batch_size_int}
         #
@@ -144,10 +144,10 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_storage.consume_batch_size(default_batch_size_int)
         sink_storage = source_storage
         #
-        built_tn = get_built_tn_fun(lambda: Streams.source(order_source_str, source_storage),
-                                         lambda: Streams.source(customer_source_str, source_storage),
-                                         lambda: Streams.source(product_source_str, source_storage),
-                                         lambda x: x.sink(sink_str, sink_storage))
+        built_tn = get_built_tn_fun(lambda: Streams.source(source_storage, order_source_str),
+                                    lambda: Streams.source(source_storage, customer_source_str),
+                                    lambda: Streams.source(source_storage, product_source_str),
+                                    lambda x: x.sink(sink_storage, sink_str))
         #
         source_str_batch_size_int_dict = {order_source_str: default_batch_size_int,
                                           customer_source_str: default_batch_size_int,
@@ -195,8 +195,8 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_topic_str = source_str + "_topic"
         sink_topic_str = sink_str + "_topic"
         #
-        built_tn = get_built_tn_jamie(lambda: Streams.source(source_str, source_storage, source_topic_str),
-                                      lambda x: x.sink(sink_str, sink_storage, sink_topic_str))
+        built_tn = get_built_tn_jamie(lambda: Streams.source(source_storage, source_str, source_topic_str),
+                                      lambda x: x.sink(sink_storage, sink_str, sink_topic_str))
         #
         source_str_batch_size_int_dict = {source_str: default_batch_size_int}
         #
@@ -217,8 +217,8 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         source_topic_str = source_str
         sink_topic_str = sink_str
         #
-        built_tn = get_built_tn_wc(lambda: Streams.source(source_str, source_storage, source_topic_str, value_type="str"),
-                                   lambda x: x.sink(sink_str, sink_storage, sink_topic_str))
+        built_tn = get_built_tn_wc(lambda: Streams.source(source_storage, source_str, source_topic_str, value_type="str"),
+                                   lambda x: x.sink(sink_storage, sink_str, sink_topic_str))
         #
         checkpoint_storage = source_storage
         checkpoint_topic_str = "wc_checkpoint"
