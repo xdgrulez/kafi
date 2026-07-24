@@ -137,7 +137,6 @@ class TopologyNode:
             lift1_nodeId = Lift1(f=__map_fun).connect(evaluator.circuit, (input_nodeId,))
             #
             tn._output_nodeId = lift1_nodeId
-
         #
         current_class = type(self)
         tn = current_class("_map_op", {self}, _build_fun, **kwargs)
@@ -980,9 +979,9 @@ class TopologyNode:
         def _build_fun(evaluator):
             tn._evaluator = evaluator
             #
-            input = Input(frontier=Antichain(dbsp_time(1))).connect(evaluator.circuit, ())
+            input_nodeId = Input(frontier=Antichain(dbsp_time(1))).connect(evaluator.circuit, ())
             #
-            tn._output_nodeId = input
+            tn._output_nodeId = input_nodeId
         #
         tn = TopologyNode(f"source_{source_str}", {}, _build_fun, **kwargs)
         tn._source_str = source_str
@@ -1023,7 +1022,6 @@ class TopologyNode:
         root_tn._sink_str_list = sink_str_list
         #
         return root_tn
-
 
     def _get_evaluator(self):
         evaluator = Evaluator(

@@ -67,7 +67,7 @@ class TestStreamsBase(TestKafkaBase):
                 #                
                 storage.recreate(topic_str)
             if checkpoint_storage is not None:
-                checkpoint_storage.recreate(checkpoint_topic_str)
+                checkpoint_storage.delete(checkpoint_topic_str)
         #
         for source_str, _ in source_str_topic_dict_dict.items():
             self.init_generate(source_str)
@@ -94,3 +94,5 @@ class TestStreamsBase(TestKafkaBase):
         self.source_str_input_r_list_dict = self.read_source_topics(source_str_topic_dict_dict)
         #
         self.sink_str_updated_r_list_dict = self.read_sink_topics(sink_str_topic_dict_dict)
+        #
+        return group_str
