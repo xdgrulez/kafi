@@ -91,7 +91,7 @@ class Streams(TopologyNode):
         if threading.current_thread() is not None:
             threading.current_thread().name = create_name()
         #
-        sink_str_topic_dict_dict = {sink_str: sink_streams._topic_dict for sink_str, sink_streams in built_tn.get_sink_nodes().items()}
+        sink_str_topic_dict_dict = built_tn.get_sink_str_topic_dict_dict()
         #
         sink_str_producer_dict = {}
         for sink_str, topic_dict in sink_str_topic_dict_dict.items():
@@ -170,7 +170,7 @@ class Streams(TopologyNode):
         #
         group_str = kwargs["group"] if "group" in kwargs else f"streams_{get_millis()}"
         #
-        source_str_topic_dict_dict = {source_str: source_streams._topic_dict for source_str, source_streams in built_tn.get_source_nodes().items()}
+        source_str_topic_dict_dict = built_tn.get_source_str_topic_dict_dict()
         #
         source_str_consumer_dict = {}
         for source_str, topic_dict in source_str_topic_dict_dict.items():
@@ -272,6 +272,16 @@ class Streams(TopologyNode):
                     consumer.close()
                 except Exception:
                     traceback.print_exc()
+    ###
+    # Sources/sinks helpers
+    ###
+
+    def get_source_str_topic_dict_dict(self):
+        return {source_str: source_streams._topic_dict for source_str, source_streams in self.get_source_nodes().items()}
+    
+    def get_sink_str_topic_dict_dict(self):
+        return {sink_str: sink_streams._topic_dict for sink_str, sink_streams in self.get_sink_nodes().items()}
+
     ###
     # Thread/task helpers
     ###

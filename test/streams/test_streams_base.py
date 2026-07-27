@@ -5,13 +5,13 @@ from streams.test_kafka_base import TestKafkaBase
 #
 
 from kafi.helpers import get_millis
-from kafi.streams.streams import start_streams_thread, get_source_str_topic_dict_dict, get_sink_str_topic_dict_dict
+from kafi.streams.streams import Streams
 
 #
 
 class TestStreamsBase(TestKafkaBase):
     def process(self, built_tn, checkpoint_storage, checkpoint_topic, **kwargs):
-        self.stop_fun = start_streams_thread(built_tn, checkpoint_storage, checkpoint_topic, **kwargs)
+        self.stop_fun = Streams.start_streams_thread(built_tn, checkpoint_storage, checkpoint_topic, **kwargs)
 
     #
 
@@ -36,8 +36,8 @@ class TestStreamsBase(TestKafkaBase):
         else:
             group_str = kwargs["group"]
         #
-        source_str_topic_dict_dict = get_source_str_topic_dict_dict(built_tn)
-        sink_str_topic_dict_dict = get_sink_str_topic_dict_dict(built_tn)
+        source_str_topic_dict_dict = built_tn.get_source_str_topic_dict_dict()
+        sink_str_topic_dict_dict = built_tn.get_sink_str_topic_dict_dict()
         #
         group_deleted_boolean = False
         if recreate_boolean:
