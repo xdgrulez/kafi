@@ -14,6 +14,8 @@ import sys
 import time
 import zstandard as zstd
 
+from tqdm.auto import tqdm
+
 #
 
 zstdCompressor = zstd.ZstdCompressor(level=3)
@@ -66,17 +68,17 @@ def get(url_str, headers_dict=None, payload_dict=None, auth_str_tuple=None, retr
     #
     if payload_dict is None:
         if debug_bool:
-            print(f"GET Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\n")
+            tqdm.write(f"GET Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\n")
         #
         response = session.get(url_str, headers=headers_dict, auth=auth_str_tuple)
     else:
         if debug_bool:
-            print(f"GET Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\nPayload: {payload_dict}")
+            tqdm.write(f"GET Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\nPayload: {payload_dict}")
         #
         response = session.get(url_str, headers=headers_dict, json=payload_dict, auth=auth_str_tuple)
     #
     if debug_bool:
-        print(f"GET Response\n-\n{response.text}\n")
+        tqdm.write(f"GET Response\n-\n{response.text}\n")
     #
     if is_json(response.text):
         response_dict = response.json()
@@ -97,12 +99,12 @@ def delete(url_str, headers_dict, auth_str_tuple=None, retries_int=10, debug_boo
     session = create_session(retries_int)
     #
     if debug_bool:
-        print(f"DELETE Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\n")
+        tqdm.write(f"DELETE Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\n")
     #
     response = session.delete(url_str, headers=headers_dict, auth=auth_str_tuple)
     #
     if debug_bool:
-        print(f"DELETE Response\n-\n{response.text}\n")
+        tqdm.write(f"DELETE Response\n-\n{response.text}\n")
     #
     if is_json(response.text):
         response_dict = response.json()
@@ -124,17 +126,17 @@ def post(url_str, headers_dict, payload_dict_or_generator, auth_str_tuple=None, 
     #
     if isinstance(payload_dict_or_generator, dict):
         if debug_bool:
-            print(f"POST Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\nPayload: {payload_dict_or_generator}\n")
+            tqdm.write(f"POST Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\nPayload: {payload_dict_or_generator}\n")
         #
         response = session.post(url_str, headers=headers_dict, json=payload_dict_or_generator, auth=auth_str_tuple)
     else:
         if debug_bool:
-            print(f"POST Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\nPayload: (generator)\n")
+            tqdm.write(f"POST Request\n-\nURL: {url_str}\nHeaders: {headers_dict}\nPayload: (generator)\n")
         #
         response = session.post(url_str, headers=headers_dict, data=payload_dict_or_generator, auth=auth_str_tuple)
     #
     if debug_bool:
-        print(f"POST Response\n-\n{response.text}\n")
+        tqdm.write(f"POST Response\n-\n{response.text}\n")
     #
     if is_json(response.text):
         response_dict = response.json()
@@ -299,34 +301,6 @@ def explode_normalize(df):
     df = reduce(explode, col_str_list, df)
     #
     return df
-
-
-def zip2(list1, list2):
-    i = 0
-    j = 0
-    zipped_list = []
- 
-    while True:
-        if len(list1) >= len(list2):
-            if i < len(list1):
-                zipped_list.append((list1[i], list2[j]))
-                i += 1
-                j += 1
-            else:
-                break
-            if j >= len(list2):
-                j = 0
-        else:
-            if j < len(list2):
-                zipped_list.append((list1[i], list2[j]))
-                i += 1
-                j += 1
-            else:
-                break
-            if i >= len(list1):
-                i = 0
-    
-    return zipped_list
 
 
 def s_id(payload_bytes):

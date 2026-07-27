@@ -17,6 +17,8 @@ cloudpickle==3.1.2
 msgpack==1.2.1
 pydbsp==2.1.0
 zstandard==0.25.0
+# other
+tqdm==4.70.0
 # build
 build
 hatchling

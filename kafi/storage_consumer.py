@@ -3,6 +3,8 @@ from kafi.helpers import get_millis
 
 import copy, sys
 
+from tqdm.auto import tqdm
+
 # Constants
 
 ALL_MESSAGES = -1
@@ -190,8 +192,8 @@ class StorageConsumer(Dechunker):
                 topic_str_partition_int_timestamp_int_dict_dict = {topic_str: {partition_int: timestamp_int for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}
                 topic_str_offsets_dict_dict = self.storage_obj.offsets_for_times(topic_str_list, topic_str_partition_int_timestamp_int_dict_dict, replace_not_found=True)
                 if self.storage_obj.verbose() > 0:
-                    print(f"Offsets for {ts_key_str} ({timestamp_int}):")
-                    print(topic_str_offsets_dict_dict)
+                    tqdm.write(f"Offsets for {ts_key_str} ({timestamp_int}):")
+                    tqdm.write(topic_str_offsets_dict_dict)
             else:
                 topic_str_offsets_dict_dict = {topic_str: {} for topic_str in topic_str_list}
         # Check for any negative offsets...
@@ -204,8 +206,6 @@ class StorageConsumer(Dechunker):
                 for partition_int, offset_int in offsets_dict.items():
                     if offset_int < 0:
                         topic_str_offsets_dict_dict[topic_str][partition_int] = partition_int_offset_int_tuple_dict[partition_int][1] + offset_int
-        #
-        # print(topic_str_offsets_dict_dict)
         #
         return topic_str_offsets_dict_dict
 

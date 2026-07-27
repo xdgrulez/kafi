@@ -1,5 +1,7 @@
 import re
 
+from tqdm.auto import tqdm
+
 from kafi.functional import Functional
 
 # Constants
@@ -66,29 +68,6 @@ class Shell(Functional):
 
     #
 
-    def diff_fun(self, topic1, storage2, topic2, diff_fun, n=ALL_MESSAGES, **kwargs):
-        def zip_foldl_fun(acc, message_dict1, message_dict2):
-            if diff_fun(message_dict1, message_dict2):
-                acc += [(message_dict1, message_dict2)]
-                #
-                if self.verbose() > 0:
-                    partition_int1 = message_dict1["partition"]
-                    offset_int1 = message_dict1["offset"]
-                    partition_int2 = message_dict2["partition"]
-                    offset_int2 = message_dict2["offset"]
-                    print(f"Found differing messages on 1) partition {partition_int1}, offset {offset_int1} and 2) partition {partition_int2}, offset {offset_int2}.")
-                #
-            return acc
-        #
-        return self.zip_foldl(topic1, storage2, topic2, zip_foldl_fun, [], n=n, **kwargs)
-    
-    def diff(self, topic1, storage2, topic2, n=ALL_MESSAGES, **kwargs):
-        def diff_fun(message_dict1, message_dict2):
-            return message_dict1["key"] != message_dict2["key"] or message_dict1["value"] != message_dict2["value"]
-        return self.diff_fun(topic1, storage2, topic2, diff_fun, n=n, **kwargs)
-
-    #
-
     def grep_fun(self, topic, match_fun, n=ALL_MESSAGES, matches=ALL_MESSAGES, **kwargs):
         def foldl_fun(acc, message_dict):
             (matching_message_dict_acc_list, matches_acc_int) = acc
@@ -96,7 +75,7 @@ class Shell(Functional):
                 if self.verbose() > 0:
                     partition_int = message_dict["partition"]
                     offset_int = message_dict["offset"]
-                    print(f"Found matching message on partition {partition_int}, offset {offset_int}.")
+                    tqdm.write(f"Found matching message on partition {partition_int}, offset {offset_int}.")
                 #
                 matching_message_dict_acc_list += [message_dict]
                 matches_acc_int += 1

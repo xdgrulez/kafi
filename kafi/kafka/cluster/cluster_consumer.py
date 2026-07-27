@@ -1,5 +1,7 @@
 from confluent_kafka import Consumer, TopicPartition
 
+from tqdm.auto import tqdm
+
 from kafi.kafka.kafka_consumer import KafkaConsumer
 
 # Constants
@@ -27,7 +29,7 @@ class ClusterConsumer(KafkaConsumer):
         #
         list_any_tuple = self.subscribe()
         if cluster_obj.verbose() > 0:
-            print(list_any_tuple)
+            tqdm.write(f"{list_any_tuple}")
 
     def __del__(self):
         self.close()

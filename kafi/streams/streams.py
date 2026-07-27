@@ -1,12 +1,15 @@
 import asyncio
 import cloudpickle
 import threading
-import traceback
+import logging
 import uuid
-import zlib
 
 from kafi.helpers import get_millis, compress, decompress
 from kafi.streams.topologynode import TopologyNode
+
+#
+
+logger = logging.getLogger(__name__)
 
 #
 
@@ -58,10 +61,10 @@ class Streams(TopologyNode):
         task = asyncio.create_task(Streams.streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs), name=create_name())
         #
         async def _stop_fun():
-            print("Safely stopping Streams...")
+            logger.info("Safely stopping Streams...")
             stop_event.set()
             await task
-            print("...done.")
+            logger.info("...done.")
         #
         return _stop_fun
 
@@ -74,9 +77,9 @@ class Streams(TopologyNode):
         #
         def _stop_fun():
             stop_event.set()
-            print("Safely stopping Streams...")
+            logger.info("Safely stopping Streams...")
             thread.join()
-            print("...done.")
+            logger.info("...done.")
         #
         stop_event = threading.Event()
         thread = threading.Thread(target=_run_fun, args=[stop_event])
@@ -127,34 +130,25 @@ class Streams(TopologyNode):
         #
         initial_time_int = get_millis()
         #
-        last_checkpoint_hash_int = None
-        #
         def save_checkpoint(source_str_offsets_dict_dict):
-            nonlocal last_checkpoint_hash_int
             checkpoint_dict = {"evaluator": built_tn._evaluator,
                                "offsets": source_str_offsets_dict_dict}
             uncompressed_checkpoint_bytes = cloudpickle.dumps(checkpoint_dict)
             compressed_checkpoint_bytes = compress(uncompressed_checkpoint_bytes)
-            checkpoint_hash_int = zlib.adler32(compressed_checkpoint_bytes)
             #
-            if checkpoint_hash_int != last_checkpoint_hash_int:
-                last_checkpoint_hash_int = checkpoint_hash_int
-                #
-                print("Saving checkpoint...")
-                chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else 1000
-                producer = checkpoint_storage.producer(checkpoint_topic_str, type="bytes", chunk_size_bytes=chunk_size_bytes_int, **kwargs)
-                producer.produce(compressed_checkpoint_bytes, key=built_tn.get_id())
-                producer.close()
-                print("...saving checkpoint done.")
+            logger.info("Saving checkpoint...")
+            chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else 1000
+            producer = checkpoint_storage.producer(checkpoint_topic_str, type="bytes", chunk_size_bytes=chunk_size_bytes_int, **kwargs)
+            producer.produce(compressed_checkpoint_bytes, key=built_tn.get_id())
+            producer.close()
+            logger.info("...saving checkpoint done (%d KB compressed, %d uncompressed).", len(compressed_checkpoint_bytes) / 1024, len(uncompressed_checkpoint_bytes) / 1024)
 
         def load_checkpoint(built_tn):
-            nonlocal last_checkpoint_hash_int
-            #
             checkpoint_group_str = group_str + checkpoint_suffix_str
             checkpoint_kwargs = kwargs.copy()
             checkpoint_kwargs["group"] = checkpoint_group_str
             #
-            print(f"Checkpoint consumer group offsets for topic {checkpoint_topic_str}: {checkpoint_storage.group_offsets(checkpoint_group_str).get(checkpoint_group_str, {}).get(checkpoint_topic_str, {})}")
+            logger.debug("Checkpoint consumer group ('%s') offsets for topic '%s': %s", checkpoint_group_str, checkpoint_topic_str, checkpoint_storage.group_offsets(checkpoint_group_str).get(checkpoint_group_str, {}).get(checkpoint_topic_str, {}))
             #
             m_list = checkpoint_storage.compact(checkpoint_topic_str, value_type="bytes", dechunk=True, **checkpoint_kwargs)
             #
@@ -162,17 +156,12 @@ class Streams(TopologyNode):
             if len(m_list) > 0:
                 compressed_checkpoint_bytes = m_list[0]["value"]
                 #
-                checkpoint_hash_int = zlib.adler32(compressed_checkpoint_bytes)
-                last_checkpoint_hash_int = checkpoint_hash_int
-                #
-                print("Loading checkpoint...")
+                logger.info("Loading checkpoint...")
                 uncompressed_checkpoint_bytes = decompress(compressed_checkpoint_bytes)
                 checkpoint_dict = cloudpickle.loads(uncompressed_checkpoint_bytes)
                 built_tn._evaluator = checkpoint_dict["evaluator"]
                 source_str_offsets_dict_dict = checkpoint_dict["offsets"]
-                print(f"source_str_offsets_dict_dict (2): {source_str_offsets_dict_dict}")
-
-                print("...loading checkpoint done.")
+                logger.info("...loading checkpoint done (%d KB compressed, %d uncompressed).", len(compressed_checkpoint_bytes) / 1024, len(uncompressed_checkpoint_bytes) / 1024)
             #
             return source_str_offsets_dict_dict
         #
@@ -189,7 +178,6 @@ class Streams(TopologyNode):
             else:
                 checkpoint_storage.create(checkpoint_topic_str)
         #
-        print(f"source_str_offsets_dict_dict: {source_str_offsets_dict_dict}")
         source_str_consumer_dict = {}
         for source_str, topic_dict in source_str_topic_dict_dict.items():
             storage = topic_dict["storage"]
@@ -198,11 +186,16 @@ class Streams(TopologyNode):
             #
             source_kwargs["group"] = group_str
             #
-            print(f"Source consumer group offsets for topic {topic_str}: {storage.group_offsets(group_str).get(group_str, {}).get(topic_str, {})}")
+            logger.debug("Source consumer group ('%s') offsets for topic '%s': %s", group_str, topic_str, storage.group_offsets(group_str).get(group_str, {}).get(topic_str, {}))
+            #
+            if checkpoint_storage is not None and source_kwargs.get("enable_auto_commit", storage.enable_auto_commit()):
+                logger.warning("Checkpointing enabled but enable_auto_commit is True for source '%s': checkpoint/offset consistency guarantee does not hold.", source_str)
+            #
             if source_str_offsets_dict_dict is not None:
                 if source_str in source_str_offsets_dict_dict:
                     source_kwargs["offsets"] = source_str_offsets_dict_dict[source_str]
-                    print(f"Source consumer group offsets for topic {topic_str} overridden by checkpoint offsets: {source_str_offsets_dict_dict[source_str]}")
+                    #
+                    logger.debug("Source consumer group offsets for topic '%s' overridden by checkpoint offsets: %s", source_str, source_str_offsets_dict_dict[source_str])
             #
             consumer = storage.consumer(topic_str, **source_kwargs)
             #
@@ -225,10 +218,13 @@ class Streams(TopologyNode):
                     m_list = await asyncio.to_thread(consumer.consume)
                     if m_list:
                         await source_str_m_list_tuple_queue.put((source_str, m_list))
-            except (KeyboardInterrupt, asyncio.CancelledError):
-                pass
             except Exception:
-                traceback.print_exc()
+                logger.exception("Error in consumer_task for source '%s'", source_str)
+                #
+                if stop_event is not None:
+                    stop_event.set()
+                #
+                raise
         #
         async def process():
             nonlocal initial_time_int
@@ -255,6 +251,7 @@ class Streams(TopologyNode):
                             if sink_m_list != []:
                                 await asyncio.to_thread(foreach_fun, sink_m_list)
                     except asyncio.TimeoutError:
+                        # Need to catch this if asyncio.wait_for is triggered (=waiting for inputs).
                         pass
                     #
                     if source_str_offsets_dict_dict == {}:
@@ -262,24 +259,25 @@ class Streams(TopologyNode):
                     else:
                         time_int = get_millis()
                         if checkpoint_storage is not None and (time_int - initial_time_int) > checkpoint_interval_float * 1000:
-                            print(f"source_str_offsets_dict_dict (3): {source_str_offsets_dict_dict}")
                             await asyncio.to_thread(save_checkpoint, source_str_offsets_dict_dict)
                             #
                             for source_str, offsets_dict in source_str_offsets_dict_dict.items():
                                 if offsets_dict:
                                     consumer = source_str_consumer_dict[source_str]
                                     consumer.commit(offsets_dict)
-                                    print(f"Committed {offsets_dict} for source {source_str}.")
+                                    logger.info("Committed %s for source %s.", offsets_dict, source_str)
                             #
                             source_str_offsets_dict_dict.clear()
                             initial_time_int = get_millis()
-            except KeyboardInterrupt:
-                pass
             except Exception:
-                traceback.print_exc()
+                logger.exception("Error in process task")
+                raise
             finally:
-                for (_, finally_fun) in sink_str_foreach_fun_finally_fun_tuple_dict.values():
-                    await asyncio.to_thread(finally_fun)
+                for sink_str, (_, finally_fun) in sink_str_foreach_fun_finally_fun_tuple_dict.items():
+                    try:
+                        await asyncio.to_thread(finally_fun)
+                    except Exception:
+                        logger.exception("Esception in finally_fun() for sink '%s'", sink_str)
         #
         try:
             async with asyncio.TaskGroup() as taskGroup:
@@ -292,7 +290,7 @@ class Streams(TopologyNode):
                 try:
                     consumer.close()
                 except Exception:
-                    traceback.print_exc()
+                    logger.exception("Exception in clean up.")
     ###
     # Sources/sinks helpers
     ###
