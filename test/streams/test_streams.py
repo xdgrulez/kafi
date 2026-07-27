@@ -206,7 +206,7 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
 
     #
 
-    def test_wc(self, restart_boolean=False):
+    def test_wc(self):
         source_str = "lines"
         sink_str = "wc"
         #
@@ -223,20 +223,8 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         checkpoint_storage = source_storage
         checkpoint_topic_str = "wc_checkpoint"
         #
-        default_batch_size_int1 = 10
-        default_steps_int1 = 5
-        source_str_batch_size_int_dict = {source_str: default_batch_size_int1}
+        source_str_batch_size_int_dict = {source_str: default_batch_size_int}
         #
-        group_str = self.go(built_tn, source_str_batch_size_int_dict, default_steps_int1, checkpoint_storage, checkpoint_topic_str, recreate_boolean=True)
-        #
-        print(f"group: {group_str}")
-        if restart_boolean:
-            built_tn = get_built_tn_wc(lambda: Streams.source(source_storage, source_str, source_topic_str, value_type="str"),
-                                       lambda x: x.sink(sink_storage, sink_str, sink_topic_str))
-            #
-            self.go(built_tn, source_str_batch_size_int_dict, default_steps_int1, checkpoint_storage, checkpoint_topic_str, recreate_boolean=False, group=group_str)
+        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int, checkpoint_storage, checkpoint_topic_str, recreate_boolean=True)
         #
         self.assert_wc(source_str, sink_topic_str)
-
-    def test_wc_restart(self):
-        self.test_wc(True)

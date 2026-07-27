@@ -109,9 +109,9 @@ class TestTopologyNode(TestTopologyNodeBase, TestGenerate, TestBase):
         product_source_str = "shoes"
         #
         built_tn = get_built_tn_fun(lambda: Tn.source(order_source_str),
-                                         lambda: Tn.source(customer_source_str),
-                                         lambda: Tn.source(product_source_str),          
-                                         lambda x: x.sink(sink_str))
+                                    lambda: Tn.source(customer_source_str),
+                                    lambda: Tn.source(product_source_str),          
+                                    lambda x: x.sink(sink_str))
         #
         self.process(built_tn,
                         {order_source_str: default_batch_size_int,

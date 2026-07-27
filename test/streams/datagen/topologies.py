@@ -330,8 +330,7 @@ def _get_built_tn_datagen_window(get_order_source_tn_fun,
                                                         window_dict["allowed_lateness"])
         case "sliding":
             retention = lambda tn: tn.expire_sliding(time_fun,
-                                                     window_dict["size"],
-                                                     window_dict["allowed_lateness"])
+                                                     window_dict["size"])
         case "session":
             retention = lambda tn: tn.expire_session(time_fun,
                                                      window_dict["max_session"],
@@ -491,8 +490,7 @@ def get_built_tn_datagen_sliding_window(get_order_source_tn_fun,
                                             get_product_source_tn_fun,
                                             get_sink_tn_fun,
                                             {"type": "sliding",
-                                             "size": (size_int := ts_step_int * default_batch_size_int),
-                                             "allowed_lateness": size_int * 5}
+                                             "size": ts_step_int * default_batch_size_int}
                                             )
     #
     return built_tn
