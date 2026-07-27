@@ -34,27 +34,30 @@ class ClusterConsumer(KafkaConsumer):
 
     #
 
-    def subscribe(self):
+    def subscribe(self, **kwargs):
         def on_assign(consumer, partitions):
             def set_offset(topicPartition):
-                if topicPartition.topic in self.topic_str_next_offsets_dict_dict:
-                    offsets = self.topic_str_next_offsets_dict_dict[topicPartition.topic]
-                    if topicPartition.partition in offsets:
-                        offset_int = offsets[topicPartition.partition]
-                        topicPartition.offset = offset_int
+                offsets = self.topic_str_next_offsets_dict_dict.get(topicPartition.topic, {})
+                if topicPartition.partition in offsets:
+                    topicPartition.offset = offsets[topicPartition.partition]
                 return topicPartition
             #
-            if self.topic_str_next_offsets_dict_dict is not None:
-                topicPartition_list = [set_offset(topicPartition) for topicPartition in partitions]
-                consumer.assign(topicPartition_list)
+            if self.topic_str_next_offsets_dict_dict:
+                partitions = [set_offset(topicPartition) for topicPartition in partitions]
+                # Only apply the offsets once (otherwise resets the offsets upon rebalancing...).
+                self.topic_str_next_offsets_dict_dict = None
+            #
             if self.topic_str_partition_int_list_dict is not None:
-                print(self.topic_str_partition_int_list_dict)
-                topicPartition_list = [topicPartition for topicPartition in partitions if topicPartition.partition in self.topic_str_partition_int_list_dict[topicPartition.topic]]
-                consumer.assign(topicPartition_list)
+                partitions = [topicPartition for topicPartition in partitions if topicPartition.partition in self.topic_str_partition_int_list_dict[topicPartition.topic]]
+            #
+            consumer.assign(partitions)
+        #
+        on_assign = kwargs["on_assign"] if "on_assign" in kwargs else on_assign
+        #
         self.consumer.subscribe(self.topic_str_list, on_assign=on_assign)
         #
         return self.topic_str_list, self.group_str
-    
+
     def unsubscribe(self):
         self.consumer.unsubscribe()
         #

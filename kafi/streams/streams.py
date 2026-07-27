@@ -15,6 +15,7 @@ default_checkpoint_interval_float = 1.0
 #
 
 streams_prefix_str = "streams_thread_"
+checkpoint_suffix_str = "_checkpoint"
 
 def create_name():
     return f"{streams_prefix_str}{str(uuid.uuid4())}"
@@ -128,9 +129,11 @@ class Streams(TopologyNode):
         #
         last_checkpoint_hash_int = None
         #
-        def save_checkpoint():
+        def save_checkpoint(source_str_offsets_dict_dict):
             nonlocal last_checkpoint_hash_int
-            uncompressed_checkpoint_bytes = cloudpickle.dumps(built_tn._evaluator)
+            checkpoint_dict = {"evaluator": built_tn._evaluator,
+                               "offsets": source_str_offsets_dict_dict}
+            uncompressed_checkpoint_bytes = cloudpickle.dumps(checkpoint_dict)
             compressed_checkpoint_bytes = compress(uncompressed_checkpoint_bytes)
             checkpoint_hash_int = zlib.adler32(compressed_checkpoint_bytes)
             #
@@ -147,15 +150,15 @@ class Streams(TopologyNode):
         def load_checkpoint(built_tn):
             nonlocal last_checkpoint_hash_int
             #
+            checkpoint_group_str = group_str + checkpoint_suffix_str
             checkpoint_kwargs = kwargs.copy()
-            group_str = checkpoint_kwargs.get("group", None)
-            if group_str is not None:
-                checkpoint_group_str = group_str + "_checkpoint"
-                checkpoint_kwargs["group"] = checkpoint_group_str
+            checkpoint_kwargs["group"] = checkpoint_group_str
             #
             print(f"Checkpoint consumer group offsets for topic {checkpoint_topic_str}: {checkpoint_storage.group_offsets(checkpoint_group_str).get(checkpoint_group_str, {}).get(checkpoint_topic_str, {})}")
             #
             m_list = checkpoint_storage.compact(checkpoint_topic_str, value_type="bytes", dechunk=True, **checkpoint_kwargs)
+            #
+            source_str_offsets_dict_dict = None
             if len(m_list) > 0:
                 compressed_checkpoint_bytes = m_list[0]["value"]
                 #
@@ -164,14 +167,29 @@ class Streams(TopologyNode):
                 #
                 print("Loading checkpoint...")
                 uncompressed_checkpoint_bytes = decompress(compressed_checkpoint_bytes)
-                evaluator = cloudpickle.loads(uncompressed_checkpoint_bytes)
-                built_tn._evaluator = evaluator
+                checkpoint_dict = cloudpickle.loads(uncompressed_checkpoint_bytes)
+                built_tn._evaluator = checkpoint_dict["evaluator"]
+                source_str_offsets_dict_dict = checkpoint_dict["offsets"]
+                print(f"source_str_offsets_dict_dict (2): {source_str_offsets_dict_dict}")
+
                 print("...loading checkpoint done.")
+            #
+            return source_str_offsets_dict_dict
         #
         group_str = kwargs["group"] if "group" in kwargs else f"streams_{get_millis()}"
         #
         source_str_topic_dict_dict = built_tn.get_source_str_topic_dict_dict()
         #
+        source_str_offsets_dict_dict = None
+        if checkpoint_storage is not None:
+            initial_time_int = get_millis()
+            #
+            if checkpoint_storage.exists(checkpoint_topic_str):
+                source_str_offsets_dict_dict = load_checkpoint(built_tn)
+            else:
+                checkpoint_storage.create(checkpoint_topic_str)
+        #
+        print(f"source_str_offsets_dict_dict: {source_str_offsets_dict_dict}")
         source_str_consumer_dict = {}
         for source_str, topic_dict in source_str_topic_dict_dict.items():
             storage = topic_dict["storage"]
@@ -181,6 +199,11 @@ class Streams(TopologyNode):
             source_kwargs["group"] = group_str
             #
             print(f"Source consumer group offsets for topic {topic_str}: {storage.group_offsets(group_str).get(group_str, {}).get(topic_str, {})}")
+            if source_str_offsets_dict_dict is not None:
+                if source_str in source_str_offsets_dict_dict:
+                    source_kwargs["offsets"] = source_str_offsets_dict_dict[source_str]
+                    print(f"Source consumer group offsets for topic {topic_str} overridden by checkpoint offsets: {source_str_offsets_dict_dict[source_str]}")
+            #
             consumer = storage.consumer(topic_str, **source_kwargs)
             #
             source_str_consumer_dict[source_str] = consumer
@@ -215,10 +238,11 @@ class Streams(TopologyNode):
                     try:
                         source_str, source_m_list = await asyncio.wait_for(source_str_m_list_tuple_queue.get(), timeout=1.0)
                         #
-                        for partition_int in range(partitions_int):
+                        source_partitions_int = source_str_partitions_int_dict[source_str]
+                        for partition_int in range(source_partitions_int):
                             offset_int = next((m["offset"] for m in reversed(source_m_list) if m["partition"] == partition_int), None)
                             if offset_int is not None:
-                                source_str_offsets_dict_dict.setdefault(source_str, {})[partition_int] = offset_int
+                                source_str_offsets_dict_dict.setdefault(source_str, {})[partition_int] = offset_int + 1
                         #
                         built_tn.push(source_str, source_m_list)
                         #
@@ -232,18 +256,23 @@ class Streams(TopologyNode):
                                 await asyncio.to_thread(foreach_fun, sink_m_list)
                     except asyncio.TimeoutError:
                         pass
-                    time_int = get_millis()
-                    if checkpoint_storage is not None and (time_int - initial_time_int) > checkpoint_interval_float * 1000:
-                        await asyncio.to_thread(save_checkpoint)
-                        #
-                        for source_str, offsets_dict in source_str_offsets_dict_dict.items():
-                            if offsets_dict:
-                                consumer = source_str_consumer_dict[source_str]
-                                consumer.commit(offsets_dict)
-                                print(f"Committed {offsets_dict} for source {source_str}.")
-                        #
-                        source_str_offsets_dict_dict.clear()
-                        initial_time_int = get_millis()
+                    #
+                    if source_str_offsets_dict_dict == {}:
+                        pass
+                    else:
+                        time_int = get_millis()
+                        if checkpoint_storage is not None and (time_int - initial_time_int) > checkpoint_interval_float * 1000:
+                            print(f"source_str_offsets_dict_dict (3): {source_str_offsets_dict_dict}")
+                            await asyncio.to_thread(save_checkpoint, source_str_offsets_dict_dict)
+                            #
+                            for source_str, offsets_dict in source_str_offsets_dict_dict.items():
+                                if offsets_dict:
+                                    consumer = source_str_consumer_dict[source_str]
+                                    consumer.commit(offsets_dict)
+                                    print(f"Committed {offsets_dict} for source {source_str}.")
+                            #
+                            source_str_offsets_dict_dict.clear()
+                            initial_time_int = get_millis()
             except KeyboardInterrupt:
                 pass
             except Exception:
@@ -251,14 +280,6 @@ class Streams(TopologyNode):
             finally:
                 for (_, finally_fun) in sink_str_foreach_fun_finally_fun_tuple_dict.values():
                     await asyncio.to_thread(finally_fun)
-        #
-        if checkpoint_storage is not None:
-            initial_time_int = get_millis()
-            #
-            if checkpoint_storage.exists(checkpoint_topic_str):
-                load_checkpoint(built_tn)
-            else:
-                checkpoint_storage.create(checkpoint_topic_str)
         #
         try:
             async with asyncio.TaskGroup() as taskGroup:

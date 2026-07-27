@@ -27,7 +27,7 @@ class RestProxyConsumer(KafkaConsumer):
 
     #
 
-    def subscribe(self):
+    def subscribe(self, **kwargs):
         (rest_proxy_url_str, auth_str_tuple) = self.storage_obj.get_url_str_auth_str_tuple_tuple()
         #
         url_str1 = f"{rest_proxy_url_str}/consumers/{self.group_str}"
