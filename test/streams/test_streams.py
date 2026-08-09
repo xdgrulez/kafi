@@ -9,7 +9,7 @@ from streams.wc.topologies import get_built_tn_wc
 #
 
 from kafi.kafi import Cluster
-from kafi.streams.streams import Streams
+from kafi.streams.streams_queue import Streams
 
 import cloudpickle
 

@@ -5,7 +5,7 @@ from streams.test_kafka_base import TestKafkaBase
 #
 
 from kafi.helpers import get_millis
-from kafi.streams.streams import Streams
+from kafi.streams.streams_queue import Streams
 
 #
 

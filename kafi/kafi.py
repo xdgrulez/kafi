@@ -5,4 +5,4 @@ from kafi.fs.local.local import *
 from kafi.fs.s3.s3 import *
 from kafi.helpers import *
 from kafi.streams.topologynode import *
-from kafi.streams.streams import *
+from kafi.streams.streams_queue import *
