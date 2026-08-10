@@ -57,62 +57,7 @@ class TopologyNode:
         self._reset_fun = None
 
     ###
-    # DBSP base operators
-    ###
-
-    def _integrate(self, **kwargs):
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = integrate_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("_integrate_op", {self}, _build_fun, **kwargs)
-        #
-        return tn
-
-    def _differentiate(self, **kwargs):
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = differentiate_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("_differentiate_op", {self}, _build_fun, **kwargs)
-        #
-        return tn
-
-    def _delay(self, **kwargs):
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            integrate_nodeId = Delay(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = integrate_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("_delay_op", {self}, _build_fun, **kwargs)
-        #
-        return tn
-
-    ###
-    # Relational operators
+    # Stateless operators
     ###
 
     # Map
@@ -179,27 +124,6 @@ class TopologyNode:
         #
         tn = self._map(_map_fun, **kwargs)
         tn._name_str = "_peek_op"
-        #
-        return tn
-
-    def from_value(self, **kwargs):
-        tn = self.map(lambda x: x["value"], **kwargs)
-        tn._name_str = "from_value_op"
-        #
-        return tn
-
-    def to_value(self, **kwargs):
-        tn = self.map(lambda x: {"value": x}, **kwargs)
-        tn._name_str = "to_value_op"
-        #
-        return tn
-
-    def _neg(self, **kwargs):
-        def _map_fun(r, w):
-            return r, -w
-        #
-        tn = self._map(_map_fun, **kwargs)
-        tn._name_str = "_neg_op"
         #
         return tn
 
@@ -270,6 +194,253 @@ class TopologyNode:
         #
         tn = self._filter(_filter_fun, **kwargs)
         tn._name_str = "filter_op"
+        #
+        return tn
+
+    def merge(self, other_tn, **kwargs):
+        def _build_fun(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            l_input_nodeId = self._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
+            #
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
+            #
+            tn._output_nodeId = lift2_add_nodeId
+        #
+        current_class = type(self)
+        tn = current_class("merge_op", {self, other_tn}, _build_fun, **kwargs)
+        #
+        return tn
+
+    def _neg(self, **kwargs):
+        def _map_fun(r, w):
+            return r, -w
+        #
+        tn = self._map(_map_fun, **kwargs)
+        tn._name_str = "_neg_op"
+        #
+        return tn
+
+    ###
+    # Stateful operators
+    ###
+
+    # Join
+
+    def join_equi(self, other_tn, left_select_fun, right_select_fun, projection_fun, **kwargs):
+        def _left_select_fun(left_packed_r):
+            left_r = tn._unpack_fun(left_packed_r)
+            return tn._pack_fun(left_select_fun(left_r))
+        #
+        def _right_select_fun(right_packed_r):
+            right_r = tn._unpack_fun(right_packed_r)
+            return tn._pack_fun(right_select_fun(right_r))
+        #
+        def _projection_fun(_, left_packed_r, right_packed_r):
+            left_r = tn._unpack_fun(left_packed_r)
+            right_r = tn._unpack_fun(right_packed_r)
+            return tn._pack_fun(projection_fun(left_r, right_r))
+        #
+        def _build_fun(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            l_g_idx = IndexedZSetAddition(g, _left_select_fun)
+            r_g_idx = IndexedZSetAddition(g, _right_select_fun)
+            #
+            l_input_nodeId = self._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
+            #
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftIndex_nodeId = LiftIndex(indexer=_left_select_fun).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId,))
+            r_liftIndex_nodeId = LiftIndex(indexer=_right_select_fun).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
+            indexedDeltaLiftedDeltaLiftedJoin_nodeId = IndexedDeltaLiftedDeltaLiftedJoin(
+                proj=_projection_fun,
+                group_a=l_g_idx,
+                group_b=r_g_idx,
+                out_group=g,
+            ).connect(evaluator.circuit, (l_liftIndex_nodeId, r_liftIndex_nodeId))
+            #
+            tn._output_nodeId = indexedDeltaLiftedDeltaLiftedJoin_nodeId
+        #
+        current_class = type(self)
+        tn = current_class("join_equi_op", {self, other_tn}, _build_fun, **kwargs)
+        #
+        return tn
+    
+    def join(self, other_tn, predicate_fun, projection_fun, **kwargs):
+        def _predicate_fun(left_packed_r, right_packed_r):
+            left_r = tn._unpack_fun(left_packed_r)
+            right_r = tn._unpack_fun(right_packed_r)
+            return predicate_fun(left_r, right_r)
+        #
+        def _projection_fun(left_packed_r, right_packed_r):
+            left_r = tn._unpack_fun(left_packed_r)
+            right_r = tn._unpack_fun(right_packed_r)
+            return tn._pack_fun(projection_fun(left_r, right_r))
+        #
+        def _build_fun(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            l_input_nodeId = self._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
+            #
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            deltaLiftedDeltaLiftedJoin_nodeId = DeltaLiftedDeltaLiftedJoin(
+                pred=_predicate_fun,
+                proj=_projection_fun,
+                group_a=g,
+                group_b=g,
+                out_group=g,
+            ).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
+            #
+            tn._output_nodeId = deltaLiftedDeltaLiftedJoin_nodeId
+        #
+        current_class = type(self)
+        tn = current_class("join_op", {self, other_tn}, _build_fun, **kwargs)
+        #
+        return tn
+
+    # Group By + Aggregation
+
+    def group_by_agg(self, by_fun, select_fun, agg_fun, agg_initial, projection_fun, **kwargs):
+        def _by_fun(packed_r):
+            r = tn._unpack_fun(packed_r)
+            return tn._pack_fun(by_fun(r))
+        #
+        def _select_fun(packed_r):
+            r = tn._unpack_fun(packed_r)
+            return tn._pack_fun(select_fun(r))
+        #
+        def _projection_fun(packed_key_any_packed_sum_any_tuple):
+            packed_key_any, packed_sum_any = packed_key_any_packed_sum_any_tuple
+            r = projection_fun(tn._unpack_fun(packed_key_any), tn._unpack_fun(packed_sum_any))
+            return tn._pack_fun(r)
+        #
+        def _agg_fun(packed_r_w_tuple_list):
+            packed_agg_any = _agg_initial
+            #
+            for packed_r, _ in packed_r_w_tuple_list:
+                packed_select_any = _select_fun(packed_r)
+                #
+                agg_any = tn._unpack_fun(packed_agg_any)
+                select_any = tn._unpack_fun(packed_select_any)
+                #
+                packed_agg_any = tn._pack_fun(agg_fun(agg_any, select_any))
+            #
+            return packed_agg_any
+        #
+        def _build_fun(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            g_idx = IndexedZSetAddition[str, str](g, _by_fun)
+            #
+            input_nodeId = self._output_nodeId
+            #
+            liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, input_nodeId)
+            liftLiftIndex_nodeId = LiftLiftIndex(indexer=_by_fun).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
+            deltaLiftedDeltaLiftedGroupBy_nodeId = DeltaLiftedDeltaLiftedGroupBy(
+                aggregate=_agg_fun,
+                group=g_idx,
+                out_group=g,
+            ).connect(evaluator.circuit, (liftLiftIndex_nodeId,))
+            liftProject_nodeId = LiftProject(f=_projection_fun).connect(evaluator.circuit, (deltaLiftedDeltaLiftedGroupBy_nodeId,))
+            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (liftProject_nodeId,))
+            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (integrate_nodeId,))
+            #
+            tn._output_nodeId = differentiate_nodeId
+        #
+        current_class = type(self)
+        tn = current_class("group_by_agg_op", {self}, _build_fun, **kwargs)
+        #
+        _agg_initial = tn._pack_fun(agg_initial)
+        #
+        return tn
+
+    def group_by_sum(self, by_fun, select_fun, projection_fun, sum_initial_any=0, **kwargs):
+        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: agg + x, sum_initial_any, projection_fun, **kwargs)
+        tn._name_str = "group_by_sum_op"
+        #
+        return tn
+
+    def group_by_max(self, by_fun, select_fun, projection_fun, max_initial_any=0, **kwargs):
+        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: max(agg, x), max_initial_any, projection_fun, **kwargs)
+        tn._name_str = "group_by_max_op"
+        #
+        return tn
+
+    def group_by_min(self, by_fun, select_fun, projection_fun, min_initial_any=0, **kwargs):
+        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: min(agg, x), min_initial_any, projection_fun, **kwargs)
+        tn._name_str = "group_by_min_op"
+        #
+        return tn
+
+    def group_by_avg(self, by_fun, select_fun, projection_fun, **kwargs):
+        def _agg_fun(agg, x):
+            sum_any, count_int = agg
+            return (sum_any + x, count_int + 1)
+        #
+        def _projection_fun(key_any, sum_count_tuple):
+            sum_any, count_int = sum_count_tuple
+            avg_any = sum_any / count_int if count_int != 0 else 0.0
+            return projection_fun(key_any, avg_any)
+        #
+        tn = self.group_by_agg(by_fun, select_fun, _agg_fun, (0, 0), _projection_fun, **kwargs)
+        tn._name_str = "group_by_avg_op"
+        #
+        return tn
+
+    def group_by_count(self, by_fun, projection_fun, **kwargs):
+        tn = self.group_by_sum(by_fun, lambda _: 1, projection_fun, **kwargs)
+        tn._name_str = "group_by_count_op"
+        #
+        return tn
+
+    # Aggregation
+
+    def agg(self, select_fun, agg_fun, agg_initial, projection_fun, **kwargs):
+        tn = self.group_by_agg(lambda _: 0, select_fun, agg_fun, agg_initial, lambda _, x: projection_fun(x), **kwargs)
+        tn._name_str = "agg_op"
+        #
+        return tn
+
+    def sum(self, select_fun, projection_fun=lambda x: x, sum_initial_any=0, **kwargs):
+        tn = self.agg(select_fun, lambda agg, x: agg + x, sum_initial_any, projection_fun, **kwargs)
+        tn._name_str = "sum_op"
+        #
+        return tn
+
+    def max(self, select_fun, projection_fun=lambda x: x, max_initial_any=0, **kwargs):
+        tn = self.agg(select_fun, lambda agg, x: max(agg, x), max_initial_any, projection_fun, **kwargs)
+        tn._name_str = "max_op"
+        #
+        return tn
+
+    def min(self, select_fun, projection_fun=lambda x: x, min_initial_any=0, **kwargs):
+        tn = self.agg(select_fun, lambda agg, x: min(agg, x), min_initial_any, projection_fun, **kwargs)
+        tn._name_str = "min_op"
+        #
+        return tn
+    
+    def avg(self, select_fun, projection_fun=lambda x: x, **kwargs):
+        tn = self.group_by_avg(lambda _: 0, select_fun, lambda _, x: projection_fun(x), **kwargs)
+        tn._name_str = "avg_op"
+        #
+        return tn
+
+    def count(self, projection_fun=lambda x: x, **kwargs):
+        tn = self.sum(lambda _: 1, projection_fun, **kwargs)
+        tn._name_str = "count_op"
         #
         return tn
 
@@ -346,223 +517,6 @@ class TopologyNode:
         #
         current_class = type(self)
         tn = current_class("diff_op", {self, other_tn}, _build_fun, **kwargs)
-        #
-        return tn
-    
-    # Join
-
-    def join(self, other_tn, predicate_fun, projection_fun, **kwargs):
-        def _predicate_fun(left_packed_r, right_packed_r):
-            left_r = tn._unpack_fun(left_packed_r)
-            right_r = tn._unpack_fun(right_packed_r)
-            return predicate_fun(left_r, right_r)
-        #
-        def _projection_fun(left_packed_r, right_packed_r):
-            left_r = tn._unpack_fun(left_packed_r)
-            right_r = tn._unpack_fun(right_packed_r)
-            return tn._pack_fun(projection_fun(left_r, right_r))
-        #
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
-            #
-            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
-            deltaLiftedDeltaLiftedJoin_nodeId = DeltaLiftedDeltaLiftedJoin(
-                pred=_predicate_fun,
-                proj=_projection_fun,
-                group_a=g,
-                group_b=g,
-                out_group=g,
-            ).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
-            #
-            tn._output_nodeId = deltaLiftedDeltaLiftedJoin_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("join_op", {self, other_tn}, _build_fun, **kwargs)
-        #
-        return tn
-
-    def join_equi(self, other_tn, left_select_fun, right_select_fun, projection_fun, **kwargs):
-        def _left_select_fun(left_packed_r):
-            left_r = tn._unpack_fun(left_packed_r)
-            return tn._pack_fun(left_select_fun(left_r))
-        #
-        def _right_select_fun(right_packed_r):
-            right_r = tn._unpack_fun(right_packed_r)
-            return tn._pack_fun(right_select_fun(right_r))
-        #
-        def _projection_fun(_, left_packed_r, right_packed_r):
-            left_r = tn._unpack_fun(left_packed_r)
-            right_r = tn._unpack_fun(right_packed_r)
-            return tn._pack_fun(projection_fun(left_r, right_r))
-        #
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            l_g_idx = IndexedZSetAddition(g, _left_select_fun)
-            r_g_idx = IndexedZSetAddition(g, _right_select_fun)
-            #
-            l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
-            #
-            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
-            l_liftIndex_nodeId = LiftIndex(indexer=_left_select_fun).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId,))
-            r_liftIndex_nodeId = LiftIndex(indexer=_right_select_fun).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
-            indexedDeltaLiftedDeltaLiftedJoin_nodeId = IndexedDeltaLiftedDeltaLiftedJoin(
-                proj=_projection_fun,
-                group_a=l_g_idx,
-                group_b=r_g_idx,
-                out_group=g,
-            ).connect(evaluator.circuit, (l_liftIndex_nodeId, r_liftIndex_nodeId))
-            #
-            tn._output_nodeId = indexedDeltaLiftedDeltaLiftedJoin_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("join_equi_op", {self, other_tn}, _build_fun, **kwargs)
-        #
-        return tn
-    
-    # Group By + Aggregation
-
-    def group_by_agg(self, by_fun, select_fun, agg_fun, agg_initial, projection_fun, **kwargs):
-        def _by_fun(packed_r):
-            r = tn._unpack_fun(packed_r)
-            return tn._pack_fun(by_fun(r))
-        #
-        def _select_fun(packed_r):
-            r = tn._unpack_fun(packed_r)
-            return tn._pack_fun(select_fun(r))
-        #
-        def _projection_fun(packed_key_any_packed_sum_any_tuple):
-            packed_key_any, packed_sum_any = packed_key_any_packed_sum_any_tuple
-            r = projection_fun(tn._unpack_fun(packed_key_any), tn._unpack_fun(packed_sum_any))
-            return tn._pack_fun(r)
-        #
-        def _agg_fun(packed_r_w_tuple_list):
-            packed_agg_any = _agg_initial
-            #
-            for packed_r, _ in packed_r_w_tuple_list:
-                packed_select_any = _select_fun(packed_r)
-                #
-                agg_any = tn._unpack_fun(packed_agg_any)
-                select_any = tn._unpack_fun(packed_select_any)
-                #
-                packed_agg_any = tn._pack_fun(agg_fun(agg_any, select_any))
-            #
-            return packed_agg_any
-        #
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            g_idx = IndexedZSetAddition[str, str](g, _by_fun)
-            #
-            input_nodeId = self._output_nodeId
-            #
-            liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, input_nodeId)
-            liftLiftIndex_nodeId = LiftLiftIndex(indexer=_by_fun).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
-            deltaLiftedDeltaLiftedGroupBy_nodeId = DeltaLiftedDeltaLiftedGroupBy(
-                aggregate=_agg_fun,
-                group=g_idx,
-                out_group=g,
-            ).connect(evaluator.circuit, (liftLiftIndex_nodeId,))
-            liftProject_nodeId = LiftProject(f=_projection_fun).connect(evaluator.circuit, (deltaLiftedDeltaLiftedGroupBy_nodeId,))
-            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (liftProject_nodeId,))
-            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (integrate_nodeId,))
-            #
-            tn._output_nodeId = differentiate_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("group_by_agg_op", {self}, _build_fun, **kwargs)
-        #
-        _agg_initial = tn._pack_fun(agg_initial)
-        #
-        return tn
-
-    def group_by_sum(self, by_fun, select_fun, projection_fun, sum_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: agg + x, sum_initial_any, projection_fun, **kwargs)
-        tn._name_str = "group_by_sum_op"
-        #
-        return tn
-
-    def group_by_max(self, by_fun, select_fun, projection_fun, max_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: max(agg, x), max_initial_any, projection_fun, **kwargs)
-        tn._name_str = "group_by_max_op"
-        #
-        return tn
-
-    def group_by_min(self, by_fun, select_fun, projection_fun, min_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: min(agg, x), min_initial_any, projection_fun, **kwargs)
-        tn._name_str = "group_by_min_op"
-        #
-        return tn
-
-    def group_by_count(self, by_fun, projection_fun, **kwargs):
-        tn = self.group_by_sum(by_fun, lambda _: 1, projection_fun, **kwargs)
-        tn._name_str = "group_by_count_op"
-        #
-        return tn
-
-    # Aggregation
-
-    def agg(self, select_fun, agg_fun, agg_initial, projection_fun, **kwargs):
-        tn = self.group_by_agg(lambda _: 0, select_fun, agg_fun, agg_initial, lambda _, x: projection_fun(x), **kwargs)
-        tn._name_str = "agg_op"
-        #
-        return tn
-
-    def sum(self, select_fun, projection_fun=lambda x: x, sum_initial_any=0, **kwargs):
-        tn = self.agg(select_fun, lambda agg, x: agg + x, sum_initial_any, projection_fun, **kwargs)
-        tn._name_str = "sum_op"
-        #
-        return tn
-
-    def max(self, select_fun, projection_fun=lambda x: x, max_initial_any=0, **kwargs):
-        tn = self.agg(select_fun, lambda agg, x: max(agg, x), max_initial_any, projection_fun, **kwargs)
-        tn._name_str = "max_op"
-        #
-        return tn
-
-    def min(self, select_fun, projection_fun=lambda x: x, min_initial_any=0, **kwargs):
-        tn = self.agg(select_fun, lambda agg, x: min(agg, x), min_initial_any, projection_fun, **kwargs)
-        tn._name_str = "min_op"
-        #
-        return tn
-
-    def count(self, projection_fun=lambda x: x, **kwargs):
-        tn = self.sum(lambda _: 1, projection_fun, **kwargs)
-        tn._name_str = "count_op"
-        #
-        return tn
-
-    ###
-    # Merge
-    ###
-
-    def merge(self, other_tn, **kwargs):
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
-            #
-            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
-            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
-            lift2_add_nodeId = Lift2(op=g.add).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId, r_liftStreamIntroduction_nodeId))
-            #
-            tn._output_nodeId = lift2_add_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("merge_op", {self, other_tn}, _build_fun, **kwargs)
         #
         return tn
 
@@ -961,6 +915,61 @@ class TopologyNode:
                                              **kwargs)
         #
         return trigger_tn
+
+    ###
+    # DBSP operators
+    ###
+
+    def _integrate(self, **kwargs):
+        def _build_fun(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = integrate_nodeId
+        #
+        current_class = type(self)
+        tn = current_class("_integrate_op", {self}, _build_fun, **kwargs)
+        #
+        return tn
+
+    def _differentiate(self, **kwargs):
+        def _build_fun(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = differentiate_nodeId
+        #
+        current_class = type(self)
+        tn = current_class("_differentiate_op", {self}, _build_fun, **kwargs)
+        #
+        return tn
+
+    def _delay(self, **kwargs):
+        def _build_fun(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            #
+            input_nodeId = self._output_nodeId
+            #
+            integrate_nodeId = Delay(group=g).connect(evaluator.circuit, (input_nodeId,))
+            #
+            tn._output_nodeId = integrate_nodeId
+        #
+        current_class = type(self)
+        tn = current_class("_delay_op", {self}, _build_fun, **kwargs)
+        #
+        return tn
 
     ###
     # Operator utils
