@@ -108,6 +108,9 @@ class Streams(TopologyNode):
 
     @staticmethod
     def streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
+        if not built_tn._sink_str_list:
+            raise Exception("No terminal sink.")
+        #
         checkpoint_topic_str = checkpoint_topic
         checkpoint_interval_float = checkpoint_interval
         #
