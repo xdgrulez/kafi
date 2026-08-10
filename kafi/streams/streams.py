@@ -49,7 +49,7 @@ class Streams(TopologyNode):
                           "topic": sink_str if topic_str is None else topic_str,
                           "kwargs": kwargs}
         #
-        return self
+        return tn
 
     #
     # Streams main methods

@@ -996,7 +996,7 @@ class TopologyNode:
     #
 
     @staticmethod
-    def _build_root_tn(*sink_tn_tuple):
+    def _build(*sink_tn_tuple):
         sink_str_sink_tn_tuple_list = [(sink_tn._sink_str, sink_tn) for sink_tn in sink_tn_tuple if sink_tn._sink_str is not None]
         if sink_str_sink_tn_tuple_list == []:
             if len(sink_tn_tuple) == 1:
@@ -1007,21 +1007,21 @@ class TopologyNode:
         head_sink_str_sink_tn_tuple, *tail_sink_str_sink_tn_tuple_list = sink_str_sink_tn_tuple_list
         #
         head_sink_str, head_sink_tn = head_sink_str_sink_tn_tuple
-        root_tn = head_sink_tn.map(lambda x: (head_sink_str, x))
-        root_tn._name_str = f"sink_{head_sink_str}"
+        built_tn = head_sink_tn.map(lambda x: (head_sink_str, x))
+        built_tn._name_str = f"sink_{head_sink_str}"
         #
         # We need this little factory to avoid unwanted variable shadowing for sink_str in the loop below.
         def get_map_fun(sink_str):
             return lambda x: (sink_str, x)
         #
-        for sink_str, sink_root_tn in tail_sink_str_sink_tn_tuple_list:
-            root_tn = root_tn.merge(sink_root_tn.map(get_map_fun(sink_str)))
-            root_tn._name_str = f"sink_{sink_str}"
+        for sink_str, sink_built_tn in tail_sink_str_sink_tn_tuple_list:
+            built_tn = built_tn.merge(sink_built_tn.map(get_map_fun(sink_str)))
+            built_tn._name_str = f"sink_{sink_str}"
         #
         sink_str_list = [sink_str for sink_str, _ in sink_str_sink_tn_tuple_list]
-        root_tn._sink_str_list = sink_str_list
+        built_tn._sink_str_list = sink_str_list
         #
-        return root_tn
+        return built_tn
 
     def _get_evaluator(self):
         evaluator = Evaluator(
@@ -1037,18 +1037,18 @@ class TopologyNode:
         if sink_tn_tuple is None:
             raise Exception("At least one sink node required.")
         #
-        root_tn = TopologyNode._build_root_tn(*sink_tn_tuple)
+        built_tn = TopologyNode._build(*sink_tn_tuple)
         #
         def _reset_fun():
-            evaluator = root_tn._get_evaluator()
+            evaluator = built_tn._get_evaluator()
             #
-            root_tn._foreach_bu(lambda tn: tn._build_fun(evaluator))
+            built_tn._foreach_bu(lambda tn: tn._build_fun(evaluator))
         #
         _reset_fun()
         #
-        root_tn._reset_fun = _reset_fun
+        built_tn._reset_fun = _reset_fun
         #
-        return root_tn
+        return built_tn
 
     def reset(self):
         if self._reset_fun is None:
@@ -1249,42 +1249,42 @@ class TopologyNode:
 
     #
 
-    def topology(self, include_ids=False, visited_tn_set=None):
-        if visited_tn_set is None:
-            visited_tn_set = set()
-        #
-        if self in visited_tn_set:
-            if include_ids:
-                return f"REF:{self._name_str}_{self._id_str}"
-            else:
-                return f"REF:{self._name_str}"
-        #       
-        visited_tn_set.add(self)
-        #        
-        include_ids_bool = include_ids
-        daughters_int = len(self._daughter_tn_set)
-        #
-        daughters_list = list(self._daughter_tn_set)
-        #
-        match daughters_int:
-            case 0:
-                if include_ids_bool:
-                    return f"{self._name_str}_{self._id_str}"
+    def topology(self, include_ids=False):
+        def _topology(tn, visited_tn_set):
+            if tn in visited_tn_set:
+                if include_ids:
+                    return f"REF:{tn._name_str}_{tn._id_str}"
                 else:
-                    return self._name_str
-            case 1:
-                daughter_str = daughters_list[0].topology(include_ids_bool, visited_tn_set)
-                if include_ids_bool:
-                    return f"{self._name_str}_{self._id_str}({daughter_str})"
-                else:
-                    return f"{self._name_str}({daughter_str})"
-            case 2:
-                d1_str = daughters_list[0].topology(include_ids_bool, visited_tn_set)
-                d2_str = daughters_list[1].topology(include_ids_bool, visited_tn_set)
-                if include_ids_bool:
-                    return f"{self._name_str}_{self._id_str}({d1_str}, {d2_str})"
-                else:
-                    return f"{self._name_str}({d1_str}, {d2_str})"
+                    return f"REF:{tn._name_str}"
+            #       
+            visited_tn_set.add(tn)
+            #        
+            include_ids_bool = include_ids
+            daughters_int = len(tn._daughter_tn_set)
+            #
+            daughters_list = list(tn._daughter_tn_set)
+            #
+            match daughters_int:
+                case 0:
+                    if include_ids_bool:
+                        return f"{tn._name_str}_{tn._id_str}"
+                    else:
+                        return tn._name_str
+                case 1:
+                    daughter_str = _topology(daughters_list[0], visited_tn_set)
+                    if include_ids_bool:
+                        return f"{tn._name_str}_{tn._id_str}({daughter_str})"
+                    else:
+                        return f"{tn._name_str}({daughter_str})"
+                case 2:
+                    daughter1_str = _topology(daughters_list[0], visited_tn_set)
+                    daughter2_str = _topology(daughters_list[1], visited_tn_set)
+                    if include_ids_bool:
+                        return f"{tn._name_str}_{tn._id_str}({daughter1_str}, {daughter2_str})"
+                    else:
+                        return f"{tn._name_str}({daughter1_str}, {daughter2_str})"
+        #
+        return _topology(self, set())
 
     def mermaid(self, include_ids=False):
         include_ids_bool = include_ids
