@@ -50,7 +50,7 @@ class Serializer(SchemaRegistry):
                     serializer_payload = json.loads(payload)
                 elif isinstance(payload, str):
                     serializer_payload = json.loads(payload)
-                elif isinstance(payload, dict):
+                else:
                     serializer_payload = payload
             except (json.JSONDecodeError, TypeError):
                 serializer_payload = payload
