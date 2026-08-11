@@ -114,7 +114,7 @@ class Streams(TopologyNode):
         checkpoint_topic_str = checkpoint_topic
         checkpoint_interval_float = checkpoint_interval
         #
-        step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda _: None
+        step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda b_tn, source_str_offsets_dict_dict: None
         #
         initial_time_int = get_millis()
         #
@@ -221,7 +221,7 @@ class Streams(TopologyNode):
                 #
                 sink_str_sink_m_list_dict = built_tn.latest()
                 #
-                step_fun(built_tn)
+                step_fun(built_tn, source_str_offsets_dict_dict)
                 #
                 for sink_str, (foreach_fun, _) in sink_str_foreach_fun_finally_fun_tuple_dict.items():
                     sink_m_list = sink_str_sink_m_list_dict.get(sink_str, [])
@@ -282,10 +282,22 @@ class Streams(TopologyNode):
     
     # Exclude the Storage object (_topic_dict["storage"]) from pickling.
     # Avoids: TypeError: cannot pickle 'AdminClient' object
+    # def __getstate__(self):
+    #     state = self.__dict__.copy()
+    #     if "_topic_dict" in state and state["_topic_dict"]:
+    #         topic_dict = state["_topic_dict"].copy()
+    #         topic_dict.pop("storage", None)
+    #         state["_topic_dict"] = topic_dict
+    #     return state
+
     def __getstate__(self):
         state = self.__dict__.copy()
+        #
+        state.pop("step_fun", None)
+        #
         if "_topic_dict" in state and state["_topic_dict"]:
             topic_dict = state["_topic_dict"].copy()
             topic_dict.pop("storage", None)
             state["_topic_dict"] = topic_dict
         return state
+    

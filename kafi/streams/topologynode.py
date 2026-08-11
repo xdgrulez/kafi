@@ -27,6 +27,8 @@ from collections import defaultdict
 
 import msgpack
 
+import cloudpickle
+
 #
 
 default_pack_fun = msgpack.packb
@@ -1255,6 +1257,10 @@ class TopologyNode:
         #
         return name_str_tn_dict
 
+    #
+
+    def size(self):
+        return len(cloudpickle.dumps(self._evaluator)) 
 
     #
 

@@ -68,6 +68,7 @@ class ClusterProducer(KafkaProducer):
                     pass
             #
             self.producer.produce(self.topic_str, message_dict["value"], message_dict["key"], partition=partition_int, timestamp=timestamp_int, headers=message_dict["headers"], on_delivery=self.on_delivery_fun)
+            self.producer.poll(0)
             #
             self.written_counter_int += 1
         #
