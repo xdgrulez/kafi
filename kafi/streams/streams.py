@@ -1,6 +1,7 @@
 import cloudpickle
 import copy
 import logging
+import sys
 import threading
 import uuid
 
@@ -114,7 +115,13 @@ class Streams(TopologyNode):
         checkpoint_topic_str = checkpoint_topic
         checkpoint_interval_float = checkpoint_interval
         #
-        step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda b_tn, source_str_offsets_dict_dict: None
+        outputs_int = 0
+        #
+        def progress_fun(b_tn, source_str_offsets_dict_dict, time_int):
+            sys.stdout.write(f"\rUptime: {(time_int - initial_time_int) / 1000:.3f}s, State size: {b_tn.size() / 1024:.2f} KB, Offsets: {source_str_offsets_dict_dict}, Outputs: {outputs_int}")
+            sys.stdout.flush()
+        #
+        step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda _b_tn, _source_str_offsets_dict_dict: None
         #
         initial_time_int = get_millis()
         #
@@ -227,8 +234,13 @@ class Streams(TopologyNode):
                     sink_m_list = sink_str_sink_m_list_dict.get(sink_str, [])
                     if sink_m_list != []:
                         foreach_fun(sink_m_list)
+                        #
+                        outputs_int += len(sink_m_list)
                 #
                 time_int = get_millis()
+                #
+                if kwargs.get("progress", False):
+                    progress_fun(built_tn, source_str_offsets_dict_dict, time_int)
                 #
                 if source_str_offsets_dict_dict and source_str_offsets_dict_dict != last_committed_source_str_offsets_dict_dict:
                     if checkpoint_storage is not None and (time_int - initial_time_int) > checkpoint_interval_float * 1000:
