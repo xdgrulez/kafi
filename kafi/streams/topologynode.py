@@ -1257,10 +1257,32 @@ class TopologyNode:
         #
         return name_str_tn_dict
 
+    ###
+    # State
+    ###
+
+    def get_state(self):
+        return self._evaluator
+
+    def set_state(self, evaluator):
+        self._evaluator = evaluator
+
     #
 
-    def size(self):
-        return len(cloudpickle.dumps(self._evaluator)) 
+    def serialize_state(self):
+        serialized_state_bytes = cloudpickle.dumps(self.get_state())
+        #
+        return serialized_state_bytes
+
+    def load_state(self, serialized_state_bytes):
+        evaluator = cloudpickle.loads(serialized_state_bytes)
+        #
+        self.set_state(evaluator)
+
+    #
+
+    def get_state_size(self):
+        return len(cloudpickle.dumps(self.get_state()))
 
     #
 

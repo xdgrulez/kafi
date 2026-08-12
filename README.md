@@ -28,13 +28,13 @@ And, on, top, stream processing becomes cheaper and strongly consistent, not jus
 
 Kafi Streams consists of two parts:
 
-## [Kafi](docs/kafi.ipynb)
+## [Kafi](docs/kafi/kafi.ipynb)
 
 A shell-like Kafka interface for writing producers, consumers, or doing administrative tasks like backups. The old part. 
 
 Presented e.g. at [Current 2023 San Jose](https://www.confluent.io/events/current/2023/kash-py-how-to-make-your-data-scientists-love-real-time-1/), [Current 2024 Austin](https://current.confluent.io/2024-sessions/your-swiss-army-knife-for-kafka-based-applications) ([Jupyter notebook](https://github.com/xdgrulez/cur24)) and [Current 2025 Bangalore](https://current.confluent.io/post-conference-videos-2025/kafka-superpowers-for-your-jupyter-notebook-and-python-bng25) ([Jupyter notebook](https://github.com/xdgrulez/cur25blr)).
 
-## [Streams](docs/streams.ipynb)
+## [Streams](docs/streams/streams.ipynb)
 
 10x simpler complex stateful stream processing based on pydbsp in the spirit of Kafka Streams. The new part.
 

@@ -1,9 +1,10 @@
-import cloudpickle
 import copy
 import logging
 import sys
 import threading
 import uuid
+
+import cloudpickle
 
 from kafi.helpers import get_millis, compress, decompress
 from kafi.streams.topologynode import TopologyNode
@@ -117,26 +118,26 @@ class Streams(TopologyNode):
         #
         outputs_int = 0
         #
-        def progress_fun(b_tn, source_str_offsets_dict_dict, time_int):
-            sys.stdout.write(f"\rUptime: {(time_int - initial_time_int) / 1000:.3f}s, State size: {b_tn.size() / 1024:.2f} KB, Source offsets: {source_str_offsets_dict_dict}, Sink outputs: {outputs_int}")
+        def progress_fun(built_tn, source_str_offsets_dict_dict, time_int):
+            sys.stdout.write(f"\rUptime: {(time_int - initial_time_int) / 1000:.3f}s, State size: {built_tn.get_state_size() / 1024:.2f} KB, Source offsets: {source_str_offsets_dict_dict}, Sink outputs: {outputs_int}")
             sys.stdout.flush()
         #
-        step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda _b_tn, _source_str_offsets_dict_dict: None
+        step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda _built_tn, _source_str_offsets_dict_dict: None
         #
         initial_time_int = get_millis()
         #
         def save_checkpoint(source_str_offsets_dict_dict):
-            checkpoint_dict = {"evaluator": built_tn._evaluator,
+            checkpoint_dict = {"state": built_tn.get_state(),
                                "offsets": source_str_offsets_dict_dict}
-            uncompressed_checkpoint_bytes = cloudpickle.dumps(checkpoint_dict)
-            compressed_checkpoint_bytes = compress(uncompressed_checkpoint_bytes)
+            checkpoint_dict_bytes = cloudpickle.dumps(checkpoint_dict)
+            compressed_checkpoint_dict_bytes = compress(checkpoint_dict_bytes)
             #
             logger.info("Saving checkpoint...")
             chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else 1000
             producer = checkpoint_storage.producer(checkpoint_topic_str, type="bytes", chunk_size_bytes=chunk_size_bytes_int, **kwargs)
-            producer.produce(compressed_checkpoint_bytes, key=built_tn.get_id())
+            producer.produce(compressed_checkpoint_dict_bytes, key=built_tn.get_id())
             producer.close()
-            logger.info("...saving checkpoint done (%d KB compressed, %d uncompressed).", len(compressed_checkpoint_bytes) / 1024, len(uncompressed_checkpoint_bytes) / 1024)
+            logger.info("...saving checkpoint done (%d KB compressed, %d uncompressed).", len(compressed_checkpoint_dict_bytes) / 1024, len(checkpoint_dict_bytes) / 1024)
         #
         def load_checkpoint(built_tn):
             checkpoint_group_str = group_str + checkpoint_suffix_str
@@ -149,14 +150,14 @@ class Streams(TopologyNode):
             #
             source_str_offsets_dict_dict = None
             if len(m_list) > 0:
-                compressed_checkpoint_bytes = m_list[0]["value"]
+                compressed_checkpoint_dict_bytes = m_list[0]["value"]
                 #
                 logger.info("Loading checkpoint...")
-                uncompressed_checkpoint_bytes = decompress(compressed_checkpoint_bytes)
-                checkpoint_dict = cloudpickle.loads(uncompressed_checkpoint_bytes)
-                built_tn._evaluator = checkpoint_dict["evaluator"]
+                checkpoint_dict_bytes = decompress(compressed_checkpoint_dict_bytes)
+                checkpoint_dict = cloudpickle.loads(checkpoint_dict_bytes)
+                built_tn.set_state(checkpoint_dict["state"])
                 source_str_offsets_dict_dict = checkpoint_dict["offsets"]
-                logger.info("...loading checkpoint done (%d KB compressed, %d uncompressed).", len(compressed_checkpoint_bytes) / 1024, len(uncompressed_checkpoint_bytes) / 1024)
+                logger.info("...loading checkpoint done (%d KB compressed, %d uncompressed).", len(compressed_checkpoint_dict_bytes) / 1024, len(checkpoint_dict_bytes) / 1024)
             #
             return source_str_offsets_dict_dict
         #
