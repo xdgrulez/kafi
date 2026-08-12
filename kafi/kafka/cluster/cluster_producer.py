@@ -1,6 +1,8 @@
-from confluent_kafka import Producer
+from confluent_kafka import Producer, TopicPartition
 
 from kafi.kafka.kafka_producer import KafkaProducer
+
+from kafi.helpers import get_millis
 
 # Constants
 
@@ -76,3 +78,46 @@ class ClusterProducer(KafkaProducer):
             self.flush()
         #
         return self.written_counter_int
+
+    #
+
+    def init_transactions(self, **kwargs):
+        timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
+        #
+        self.producer.init_transactions(timeout_float)
+        #
+        return self.topic_str
+
+    def begin_transaction(self, **kwargs):
+        self.producer.begin_transaction()
+        #
+        return self.topic_str
+
+    def commit_transaction(self, **kwargs):
+        timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
+        #
+        self.producer.commit_transaction(timeout_float)
+        #
+        return self.topic_str
+
+    def abort_transaction(self, **kwargs):
+        timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
+        #
+        self.producer.abort_transaction(timeout_float)
+        #
+        return self.topic_str
+
+    def send_offsets_to_transaction(self, consumer, offsets, **kwargs):
+        timeout_float = kwargs["timeout"] if "timeout" in kwargs else -1.0
+        #
+        str_or_int = list(offsets.keys())[0]
+        if isinstance(str_or_int, str):
+            topic_str_offsets_dict_dict = offsets
+        elif isinstance(str_or_int, int):
+            topic_str_offsets_dict_dict = {self.topic_str: offsets}
+        #
+        offsets_topicPartition_list = [TopicPartition(topic_str, partition_int, offset_int) for topic_str, offsets in topic_str_offsets_dict_dict.items() for partition_int, offset_int in offsets.items()]
+        #
+        self.producer.send_offsets_to_transaction(offsets_topicPartition_list, consumer.consumer_group_metadata(), timeout_float)
+        #
+        return topic_str_offsets_dict_dict

@@ -12,6 +12,7 @@ kafi:
   consume.batch.size: 1000
   consumer.group.prefix: ""
   enable.auto.commit: false
+  isolation.level: read_committed
   session.timeout.ms: 45000
   block.num.retries: 10
   block.interval: 0.5

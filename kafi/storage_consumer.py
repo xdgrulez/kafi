@@ -61,6 +61,8 @@ class StorageConsumer(Dechunker):
         #
         self.enable_auto_commit_bool = kwargs["enable_auto_commit"] if "enable_auto_commit" in kwargs else storage_obj.enable_auto_commit()
         #
+        self.isolation_level_str = kwargs["isolation.level"] if "isolation.level" in kwargs else storage_obj.isolation_level()
+        #
         self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict = {}
         #
         super().__init__(storage_obj.schema_registry_config_dict, **kwargs)

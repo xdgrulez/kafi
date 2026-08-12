@@ -67,6 +67,16 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         else:
             self.commit_after_processing(bool(self.kafi_config_dict["commit.after.processing"]))
         #
+        if "isolation.level" not in self.kafi_config_dict:
+            self.isolation_level("read_committed")
+        else:
+            self.isolation_level(str(self.kafi_config_dict["isolation.level"]))
+        #
+        if "transactional.id.prefix" not in self.kafi_config_dict:
+            self.transactional_id_prefix("")
+        else:
+            self.transactional_id_prefix(str(self.kafi_config_dict["transactional.id.prefix"]))
+        #
         if "key.type" not in self.kafi_config_dict:
             self.key_type("str")
         else:
@@ -112,6 +122,12 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
     def commit_after_processing(self, new_value=None): # bool
         return self.get_set_config("commit.after.processing", new_value)
+
+    def isolation_level(self, new_value=None): # str
+        return self.get_set_config("isolation.level", new_value)
+
+    def transactional_id_prefix(self, new_value=None): # str
+        return self.get_set_config("transactional.id.prefix", new_value)
 
     def key_type(self, new_value=None): # str
         return self.get_set_config("key.type", new_value)
