@@ -156,9 +156,9 @@ class TopologyNode:
 
     def flatmap(self, flatmap_fun, **kwargs):
         def _flatmap_fun(r, w):
-            out_r_list = flatmap_fun(r)
+            out_r_set = flatmap_fun(r)
             #
-            return [(out_r, w) for out_r in out_r_list]
+            return [(out_r, w) for out_r in out_r_set]
         #
         tn = self._flatmap(_flatmap_fun, **kwargs)
         tn._name_str = "flatmap_op"
@@ -1176,6 +1176,13 @@ class TopologyNode:
                     message_dict_list.append(message_dict1)
         #
         return message_dict_list
+
+    #
+
+    def process(self, source_str_input_any_list_dict_or_source_str, input_any_list=None, gc=True):
+        self.push(source_str_input_any_list_dict_or_source_str, input_any_list)
+        #
+        return self.latest(gc)
 
     ###
     # Helpers
