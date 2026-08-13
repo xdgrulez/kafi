@@ -32,3 +32,11 @@ class Test(TestSingleStorageBase):
 
     def test_compaction(self):
         pass
+
+    #
+
+    def test_transaction_commit(self):
+        pass
+
+    def test_transaction_abort(self):
+        pass

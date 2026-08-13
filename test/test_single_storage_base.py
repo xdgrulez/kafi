@@ -1943,3 +1943,103 @@ class TestSingleStorageBase(unittest.TestCase):
         for value_dict in self.value_snack_dict_list:
             name_str = value_dict["name"]
             self.assertEqual(name_str_value_dict_dict[name_str], value_dict)
+
+    def test_transaction_commit(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        s.enable_auto_commit(False)
+        s.commit_after_processing(False)
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str)
+        #
+        transactional_id_str = f"test_transactional_id_{get_millis()}"
+        producer = s.producer(topic_str, value_type="str", config={"transactional.id": transactional_id_str})
+        producer.init_transactions()
+        producer.begin_transaction()
+        producer.produce("message 1")
+        producer.produce("message 2")
+        #
+        s.isolation_level("read_committed")
+        group_str = self.create_test_group_name()
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
+        message_dict_list = consumer.consume()
+        consumer.close()
+        #
+        self.assertEqual(len(message_dict_list), 0)
+        #
+        s.isolation_level("read_uncommitted")
+        group_str = self.create_test_group_name()
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
+        message_dict_list = consumer.consume()
+        consumer.close()
+        #
+        self.assertEqual(len(message_dict_list), 2)
+        self.assertEqual(message_dict_list[0]["value"], "message 1")
+        self.assertEqual(message_dict_list[1]["value"], "message 2")
+        #
+        producer.commit_transaction()
+        producer.close()
+        #
+        s.isolation_level("read_committed")
+        group_str = self.create_test_group_name()
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
+        message_dict_list = consumer.consume()
+        consumer.close()
+        #
+        self.assertEqual(len(message_dict_list), 2)
+        self.assertEqual(message_dict_list[0]["value"], "message 1")
+        self.assertEqual(message_dict_list[1]["value"], "message 2")
+        #
+        s.isolation_level("read_uncommitted")
+        group_str = self.create_test_group_name()
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
+        message_dict_list = consumer.consume()
+        consumer.close()
+        #
+        self.assertEqual(len(message_dict_list), 2)
+        self.assertEqual(message_dict_list[0]["value"], "message 1")
+        self.assertEqual(message_dict_list[1]["value"], "message 2")
+
+    def test_transaction_abort(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        s.enable_auto_commit(False)
+        s.commit_after_processing(False)
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str)
+        #
+        transactional_id_str = f"test_transactional_id_{get_millis()}"
+        producer = s.producer(topic_str, value_type="str", config={"transactional.id": transactional_id_str})
+        producer.init_transactions()
+        producer.begin_transaction()
+        producer.produce("message 1")
+        producer.produce("message 2")
+        producer.flush()
+        producer.abort_transaction()
+        producer.close()
+        #
+        s.isolation_level("read_committed")
+        group_str = self.create_test_group_name()
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
+        message_dict_list = consumer.consume()
+        consumer.close()
+        #
+        self.assertEqual(len(message_dict_list), 0)
+        #
+        s.isolation_level("read_uncommitted")
+        group_str = self.create_test_group_name()
+        consumer = s.consumer(topic_str, group=group_str, value_type="str")
+        message_dict_list = consumer.consume()
+        consumer.close()
+        #
+        self.assertEqual(len(message_dict_list), 2)
+        self.assertEqual(message_dict_list[0]["value"], "message 1")
+        self.assertEqual(message_dict_list[1]["value"], "message 2")

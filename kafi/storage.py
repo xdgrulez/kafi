@@ -68,7 +68,7 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
             self.commit_after_processing(bool(self.kafi_config_dict["commit.after.processing"]))
         #
         if "isolation.level" not in self.kafi_config_dict:
-            self.isolation_level("read_committed")
+            self.isolation_level("read_uncommitted")
         else:
             self.isolation_level(str(self.kafi_config_dict["isolation.level"]))
         #

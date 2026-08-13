@@ -64,3 +64,9 @@ class Test(TestSingleStorageBase):
 
     def test_chunking_key(self):
         pass
+
+    def test_transaction_commit(self):
+        pass
+
+    def test_transaction_abort(self):
+        pass

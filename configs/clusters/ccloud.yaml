@@ -20,7 +20,7 @@ kafi:
   consume.batch.size: 1000
   consumer.group.prefix: ""
   enable.auto.commit: false
-  isolation.level: read_committed
+  isolation.level: read_uncommitted
   session.timeout.ms: 45000
   auto.offset.reset: earliest
   progress.num.messages: 1000

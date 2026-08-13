@@ -4,7 +4,6 @@ import sys
 import threading
 import uuid
 
-import msgpack
 import cloudpickle
 
 from kafi.helpers import get_millis, compress, decompress
@@ -59,9 +58,11 @@ class Streams(TopologyNode):
     #
 
     @staticmethod
-    def start_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, transactions=False, **kwargs):
+    def start_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
         def _run_fun(stop_event):
-            Streams.streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, transactions=transactions, **kwargs)
+            logger.info("Starting Streams...")
+            #
+            Streams.streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs)
         #
         def _stop_fun():
             stop_event.set()
@@ -79,9 +80,7 @@ class Streams(TopologyNode):
     #
 
     @staticmethod 
-    def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, exactly_once=False, **kwargs):
-        exactly_once_bool = exactly_once
-        #
+    def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
         if threading.current_thread() is not None:
             threading.current_thread().name = create_name()
         #
@@ -92,6 +91,11 @@ class Streams(TopologyNode):
         sink_str_topic_dict_dict = built_tn.get_sink_str_topic_dict_dict()
         if len(sink_str_topic_dict_dict) == 0:
             raise Exception("No sink.")
+        #
+        if not built_tn._sink_str_list:
+            raise Exception("Sink is not terminal.")
+        #
+
         #
         sink_str_producer_dict = {}
         for sink_str, topic_dict in sink_str_topic_dict_dict.items():
@@ -112,61 +116,16 @@ class Streams(TopologyNode):
             producer = sink_str_producer_dict[sink_str]
             return producer.close
         #
-        if exactly_once_bool:
-            source_storage_id_set = {topic_dict["storage"].get_id() for _, topic_dict in source_str_topic_dict_dict.items()}
-            sink_storage_id_set = {topic_dict["storage"].get_id() for _, topic_dict in sink_str_topic_dict_dict.items()}
-            #
-            source_and_sink_storage_id_set = source_storage_id_set.union(sink_storage_id_set)
-            #
-            if len(source_and_sink_storage_id_set) > 1:
-                raise Exception("Exactly-once is only supported if all sources and sinks are on the same Kafka cluster.")
-            #
-            storage = list(source_str_topic_dict_dict.values()).get(0, {}).get("storage", None)
-            if not storage.__class__.__name__ == "Cluster":
-                raise Exception("Exactly once is only supported for Cluster storages.")
-            #
-            sink_kwargs_bytes_set = {msgpack.packb(topic_dict["kwargs"]) for _, topic_dict in sink_str_topic_dict_dict.items()}
-            #
-            if len(sink_kwargs_bytes_set) > 1:
-                raise Exception("Exactly-once is only supported if all sinks use the same kwargs.")
-            #
-            sink_kwargs = list(sink_str_topic_dict_dict.values())[0]["kwargs"]
-            if "transactional.id" not in sink_kwargs.get("config", {}):
-                sink_kwargs.setdefault("config", {})["transactional.id"] = storage.transactional_id_prefix() + str(get_millis())
-            #
-            producer = storage.producer(topic_str, **sink_kwargs)
-            sink_str_producer_dict = {sink_str: producer for sink_str, _ in sink_str_producer_dict.items()}
-            #
-            begin_transaction_fun = producer.begin_transaction
-            #
-            send_offsets_to_transaction_fun = producer.send_offsets_to_transaction
-            #
-            commit_transaction_fun = producer.commit_transaction
-            #
-            abort_transaction_fun = producer.abort_transaction
-            #
-            transaction_fun_tuple = (begin_transaction_fun, send_offsets_to_transaction_fun, commit_transaction_fun, abort_transaction_fun)
-        else:
-            transaction_fun_tuple = None
-        #
         sink_str_foreach_fun_finally_fun_tuple_dict = {sink_str: (get_foreach_fun(sink_str), get_finally_fun(sink_str)) for sink_str, _ in sink_str_topic_dict_dict.items()}
         #
-        Streams.streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, transaction_fun_tuple=transaction_fun_tuple, **kwargs)
+        Streams.streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs)
 
     #
 
     @staticmethod
-    def streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, transaction_fun_tuple=None, **kwargs):
+    def streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
         checkpoint_topic_str = checkpoint_topic
         checkpoint_interval_float = checkpoint_interval
-        #
-        begin_transaction_fun = transaction_fun_tuple[0] if transaction_fun_tuple is not None else lambda: None
-        send_offsets_to_transaction_fun = transaction_fun_tuple[1] if transaction_fun_tuple is not None else lambda _1, _2: None
-        commit_transaction_fun = transaction_fun_tuple[2] if transaction_fun_tuple is not None else lambda: None
-        abort_transaction_fun = transaction_fun_tuple[3] if transaction_fun_tuple is not None else lambda: None
-        #
-        if not built_tn._sink_str_list:
-            raise Exception("No terminal sink.")
         #
         outputs_int = 0
         #
@@ -174,7 +133,7 @@ class Streams(TopologyNode):
             sys.stdout.write(f"\rUptime: {(time_int - initial_time_int) / 1000:.3f}s, State size: {built_tn.get_state_size() / 1024:.2f} KB, Source offsets: {source_str_offsets_dict_dict}, Sink outputs: {outputs_int}")
             sys.stdout.flush()
         #
-        step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda _built_tn, _source_str_offsets_dict_dict: None
+        step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda _1, _2: None
         #
         initial_time_int = get_millis()
         #
@@ -283,44 +242,33 @@ class Streams(TopologyNode):
                 #
                 step_fun(built_tn, source_str_offsets_dict_dict)
                 #
-                try:
-                    begin_transaction_fun()
-                    #
-                    for sink_str, (foreach_fun, _) in sink_str_foreach_fun_finally_fun_tuple_dict.items():
-                        sink_m_list = sink_str_sink_m_list_dict.get(sink_str, [])
-                        if sink_m_list != []:
-                            foreach_fun(sink_m_list, source_str_consumer_dict, source_str_offsets_dict_dict)
-                            #
-                            outputs_int += len(sink_m_list)
-                    #
-                    time_int = get_millis()
-                    #
-                    if kwargs.get("progress", False):
-                        progress_fun(built_tn, source_str_offsets_dict_dict, time_int)
-                    #
-                    if source_str_offsets_dict_dict and source_str_offsets_dict_dict != last_committed_source_str_offsets_dict_dict:
-                        if checkpoint_storage is not None and (time_int - initial_time_int) > checkpoint_interval_float * 1000:
-                            save_checkpoint(source_str_offsets_dict_dict)
-                    #
-                    for source_str, offsets_dict in source_str_offsets_dict_dict.items():
-                        if offsets_dict:
-                            consumer = source_str_consumer_dict[source_str]
-                            #
-                            send_offsets_to_transaction_fun(consumer, {source_str: offsets_dict})
-                            #
-                            if transaction_fun_tuple is None:
+                for sink_str, (foreach_fun, _) in sink_str_foreach_fun_finally_fun_tuple_dict.items():
+                    sink_m_list = sink_str_sink_m_list_dict.get(sink_str, [])
+                    if sink_m_list != []:
+                        foreach_fun(sink_m_list)
+                        #
+                        outputs_int += len(sink_m_list)
+                #
+                time_int = get_millis()
+                #
+                if kwargs.get("progress", False):
+                    progress_fun(built_tn, source_str_offsets_dict_dict, time_int)
+                #
+                if source_str_offsets_dict_dict and source_str_offsets_dict_dict != last_committed_source_str_offsets_dict_dict:
+                    if checkpoint_storage is not None and (time_int - initial_time_int) > checkpoint_interval_float * 1000:
+                        save_checkpoint(source_str_offsets_dict_dict)
+                        #
+                        for source_str, offsets_dict in source_str_offsets_dict_dict.items():
+                            if offsets_dict:
+                                consumer = source_str_consumer_dict[source_str]
+                                #
                                 consumer.commit(offsets_dict)
-                            #
-                            logger.info("Committed %s for source %s.", offsets_dict, source_str)
-                    #
-                    commit_transaction_fun()
-                    #
-                    last_committed_source_str_offsets_dict_dict = copy.deepcopy(source_str_offsets_dict_dict)
-                    #
-                    initial_time_int = get_millis()
-                except Exception:
-                    abort_transaction_fun()
-                    raise
+                                #
+                                logger.info("Committed %s for source %s.", offsets_dict, source_str)
+                #
+                last_committed_source_str_offsets_dict_dict = copy.deepcopy(source_str_offsets_dict_dict)
+                #
+                initial_time_int = get_millis()
         except Exception:
             logger.exception("Exception in streams loop")
             raise
@@ -329,7 +277,7 @@ class Streams(TopologyNode):
                 try:
                     finally_fun()
                 except Exception:
-                    logger.exception("Esception in finally_fun() for sink '%s'", sink_str)
+                    logger.exception("Exception in finally_fun() for sink '%s'", sink_str)
             #
             for consumer in source_str_consumer_dict.values():
                 try:
@@ -358,15 +306,9 @@ class Streams(TopologyNode):
         #
         return streams_thread_list
     
-    # Exclude the Storage object (_topic_dict["storage"]) from pickling.
-    # Avoids: TypeError: cannot pickle 'AdminClient' object
-    # def __getstate__(self):
-    #     state = self.__dict__.copy()
-    #     if "_topic_dict" in state and state["_topic_dict"]:
-    #         topic_dict = state["_topic_dict"].copy()
-    #         topic_dict.pop("storage", None)
-    #         state["_topic_dict"] = topic_dict
-    #     return state
+    ###
+    # Cloudpickle
+    ###
 
     def __getstate__(self):
         state = self.__dict__.copy()
