@@ -101,28 +101,28 @@ class TopologyNode:
         #
         return tn
 
-    def peek(self, description_str=None, peek_fun=None, **kwargs):
+    def peek(self, prefix_str=None, peek_fun=None, **kwargs):
         def map_fun(r):
             peek_fun(r)
             #
             return r
         #
         if peek_fun is None:
-            peek_fun = lambda x: print(x) if description_str is None else print(f"{description_str}: {x}")
+            peek_fun = lambda x: print(x) if prefix_str is None else print(f"{prefix_str}: {x}")
         #
         tn = self.map(map_fun, **kwargs)
         tn._name_str = "peek_op"
         #
         return tn
 
-    def _peek(self, description_str=None, _peek_fun=None, **kwargs):
+    def _peek(self, prefix_str=None, _peek_fun=None, **kwargs):
         def _map_fun(r, w):
             _peek_fun(r, w)
             #
             return r, w
         #
         if _peek_fun is None:
-            _peek_fun = lambda x, y: print((x, y)) if description_str is None else print(f"{description_str}: {(x, y)}")
+            _peek_fun = lambda x, y: print((x, y)) if prefix_str is None else print(f"{prefix_str}: {(x, y)}")
         #
         tn = self._map(_map_fun, **kwargs)
         tn._name_str = "_peek_op"
@@ -199,14 +199,14 @@ class TopologyNode:
         #
         return tn
 
-    def merge(self, other_tn, **kwargs):
+    def merge(self, right_tn, **kwargs):
         def _build_fun(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
             #
             l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
+            r_input_nodeId = right_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
@@ -215,7 +215,7 @@ class TopologyNode:
             tn._output_nodeId = lift2_add_nodeId
         #
         current_class = type(self)
-        tn = current_class("merge_op", {self, other_tn}, _build_fun, **kwargs)
+        tn = current_class("merge_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
 
@@ -234,7 +234,7 @@ class TopologyNode:
 
     # Join
 
-    def join_equi(self, other_tn, left_select_fun, right_select_fun, projection_fun, **kwargs):
+    def join_equi(self, right_tn, left_select_fun, right_select_fun, project_fun, **kwargs):
         def _left_select_fun(left_packed_r):
             left_r = tn._unpack_fun(left_packed_r)
             return tn._pack_fun(left_select_fun(left_r))
@@ -243,10 +243,10 @@ class TopologyNode:
             right_r = tn._unpack_fun(right_packed_r)
             return tn._pack_fun(right_select_fun(right_r))
         #
-        def _projection_fun(_, left_packed_r, right_packed_r):
+        def _project_fun(_, left_packed_r, right_packed_r):
             left_r = tn._unpack_fun(left_packed_r)
             right_r = tn._unpack_fun(right_packed_r)
-            return tn._pack_fun(projection_fun(left_r, right_r))
+            return tn._pack_fun(project_fun(left_r, right_r))
         #
         def _build_fun(evaluator):
             tn._evaluator = evaluator
@@ -256,14 +256,14 @@ class TopologyNode:
             r_g_idx = IndexedZSetAddition(g, _right_select_fun)
             #
             l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
+            r_input_nodeId = right_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             l_liftIndex_nodeId = LiftIndex(indexer=_left_select_fun).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId,))
             r_liftIndex_nodeId = LiftIndex(indexer=_right_select_fun).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
             indexedDeltaLiftedDeltaLiftedJoin_nodeId = IndexedDeltaLiftedDeltaLiftedJoin(
-                proj=_projection_fun,
+                proj=_project_fun,
                 group_a=l_g_idx,
                 group_b=r_g_idx,
                 out_group=g,
@@ -272,20 +272,20 @@ class TopologyNode:
             tn._output_nodeId = indexedDeltaLiftedDeltaLiftedJoin_nodeId
         #
         current_class = type(self)
-        tn = current_class("join_equi_op", {self, other_tn}, _build_fun, **kwargs)
+        tn = current_class("join_equi_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
     
-    def join(self, other_tn, predicate_fun, projection_fun, **kwargs):
+    def join(self, right_tn, predicate_fun, project_fun, **kwargs):
         def _predicate_fun(left_packed_r, right_packed_r):
             left_r = tn._unpack_fun(left_packed_r)
             right_r = tn._unpack_fun(right_packed_r)
             return predicate_fun(left_r, right_r)
         #
-        def _projection_fun(left_packed_r, right_packed_r):
+        def _project_fun(left_packed_r, right_packed_r):
             left_r = tn._unpack_fun(left_packed_r)
             right_r = tn._unpack_fun(right_packed_r)
-            return tn._pack_fun(projection_fun(left_r, right_r))
+            return tn._pack_fun(project_fun(left_r, right_r))
         #
         def _build_fun(evaluator):
             tn._evaluator = evaluator
@@ -293,13 +293,13 @@ class TopologyNode:
             g = ZSetAddition()
             #
             l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
+            r_input_nodeId = right_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
             deltaLiftedDeltaLiftedJoin_nodeId = DeltaLiftedDeltaLiftedJoin(
                 pred=_predicate_fun,
-                proj=_projection_fun,
+                proj=_project_fun,
                 group_a=g,
                 group_b=g,
                 out_group=g,
@@ -308,13 +308,13 @@ class TopologyNode:
             tn._output_nodeId = deltaLiftedDeltaLiftedJoin_nodeId
         #
         current_class = type(self)
-        tn = current_class("join_op", {self, other_tn}, _build_fun, **kwargs)
+        tn = current_class("join_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
 
     # Group By + Aggregation
 
-    def group_by_agg(self, by_fun, select_fun, agg_fun, agg_initial, projection_fun, **kwargs):
+    def group_by_agg(self, by_fun, select_fun, agg_fun, agg_initial, project_fun, **kwargs):
         def _by_fun(packed_r):
             r = tn._unpack_fun(packed_r)
             return tn._pack_fun(by_fun(r))
@@ -323,9 +323,9 @@ class TopologyNode:
             r = tn._unpack_fun(packed_r)
             return tn._pack_fun(select_fun(r))
         #
-        def _projection_fun(packed_key_any_packed_sum_any_tuple):
+        def _project_fun(packed_key_any_packed_sum_any_tuple):
             packed_key_any, packed_sum_any = packed_key_any_packed_sum_any_tuple
-            r = projection_fun(tn._unpack_fun(packed_key_any), tn._unpack_fun(packed_sum_any))
+            r = project_fun(tn._unpack_fun(packed_key_any), tn._unpack_fun(packed_sum_any))
             return tn._pack_fun(r)
         #
         def _agg_fun(packed_r_w_tuple_list):
@@ -356,7 +356,7 @@ class TopologyNode:
                 group=g_idx,
                 out_group=g,
             ).connect(evaluator.circuit, (liftLiftIndex_nodeId,))
-            liftProject_nodeId = LiftProject(f=_projection_fun).connect(evaluator.circuit, (deltaLiftedDeltaLiftedGroupBy_nodeId,))
+            liftProject_nodeId = LiftProject(f=_project_fun).connect(evaluator.circuit, (deltaLiftedDeltaLiftedGroupBy_nodeId,))
             integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (liftProject_nodeId,))
             differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (integrate_nodeId,))
             #
@@ -369,79 +369,79 @@ class TopologyNode:
         #
         return tn
 
-    def group_by_sum(self, by_fun, select_fun, projection_fun, sum_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: agg + x, sum_initial_any, projection_fun, **kwargs)
+    def group_by_sum(self, by_fun, select_fun, project_fun, sum_initial_any=0, **kwargs):
+        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: agg + x, sum_initial_any, project_fun, **kwargs)
         tn._name_str = "group_by_sum_op"
         #
         return tn
 
-    def group_by_max(self, by_fun, select_fun, projection_fun, max_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: max(agg, x), max_initial_any, projection_fun, **kwargs)
+    def group_by_max(self, by_fun, select_fun, project_fun, max_initial_any=0, **kwargs):
+        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: max(agg, x), max_initial_any, project_fun, **kwargs)
         tn._name_str = "group_by_max_op"
         #
         return tn
 
-    def group_by_min(self, by_fun, select_fun, projection_fun, min_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: min(agg, x), min_initial_any, projection_fun, **kwargs)
+    def group_by_min(self, by_fun, select_fun, project_fun, min_initial_any=0, **kwargs):
+        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: min(agg, x), min_initial_any, project_fun, **kwargs)
         tn._name_str = "group_by_min_op"
         #
         return tn
 
-    def group_by_avg(self, by_fun, select_fun, projection_fun, **kwargs):
+    def group_by_avg(self, by_fun, select_fun, project_fun, **kwargs):
         def _agg_fun(agg, x):
             sum_any, count_int = agg
             return (sum_any + x, count_int + 1)
         #
-        def _projection_fun(key_any, sum_count_tuple):
+        def _project_fun(key_any, sum_count_tuple):
             sum_any, count_int = sum_count_tuple
             avg_any = sum_any / count_int if count_int != 0 else 0.0
-            return projection_fun(key_any, avg_any)
+            return project_fun(key_any, avg_any)
         #
-        tn = self.group_by_agg(by_fun, select_fun, _agg_fun, (0, 0), _projection_fun, **kwargs)
+        tn = self.group_by_agg(by_fun, select_fun, _agg_fun, (0, 0), _project_fun, **kwargs)
         tn._name_str = "group_by_avg_op"
         #
         return tn
 
-    def group_by_count(self, by_fun, projection_fun, **kwargs):
-        tn = self.group_by_sum(by_fun, lambda _: 1, projection_fun, **kwargs)
+    def group_by_count(self, by_fun, project_fun, **kwargs):
+        tn = self.group_by_sum(by_fun, lambda _: 1, project_fun, **kwargs)
         tn._name_str = "group_by_count_op"
         #
         return tn
 
     # Aggregation
 
-    def agg(self, select_fun, agg_fun, agg_initial, projection_fun, **kwargs):
-        tn = self.group_by_agg(lambda _: 0, select_fun, agg_fun, agg_initial, lambda _, x: projection_fun(x), **kwargs)
+    def agg(self, select_fun, agg_fun, agg_initial, project_fun, **kwargs):
+        tn = self.group_by_agg(lambda _: 0, select_fun, agg_fun, agg_initial, lambda _, x: project_fun(x), **kwargs)
         tn._name_str = "agg_op"
         #
         return tn
 
-    def sum(self, select_fun, projection_fun=lambda x: x, sum_initial_any=0, **kwargs):
-        tn = self.agg(select_fun, lambda agg, x: agg + x, sum_initial_any, projection_fun, **kwargs)
+    def sum(self, select_fun, project_fun=lambda x: x, sum_initial_any=0, **kwargs):
+        tn = self.agg(select_fun, lambda agg, x: agg + x, sum_initial_any, project_fun, **kwargs)
         tn._name_str = "sum_op"
         #
         return tn
 
-    def max(self, select_fun, projection_fun=lambda x: x, max_initial_any=0, **kwargs):
-        tn = self.agg(select_fun, lambda agg, x: max(agg, x), max_initial_any, projection_fun, **kwargs)
+    def max(self, select_fun, project_fun=lambda x: x, max_initial_any=0, **kwargs):
+        tn = self.agg(select_fun, lambda agg, x: max(agg, x), max_initial_any, project_fun, **kwargs)
         tn._name_str = "max_op"
         #
         return tn
 
-    def min(self, select_fun, projection_fun=lambda x: x, min_initial_any=0, **kwargs):
-        tn = self.agg(select_fun, lambda agg, x: min(agg, x), min_initial_any, projection_fun, **kwargs)
+    def min(self, select_fun, project_fun=lambda x: x, min_initial_any=0, **kwargs):
+        tn = self.agg(select_fun, lambda agg, x: min(agg, x), min_initial_any, project_fun, **kwargs)
         tn._name_str = "min_op"
         #
         return tn
     
-    def avg(self, select_fun, projection_fun=lambda x: x, **kwargs):
-        tn = self.group_by_avg(lambda _: 0, select_fun, lambda _, x: projection_fun(x), **kwargs)
+    def avg(self, select_fun, project_fun=lambda x: x, **kwargs):
+        tn = self.group_by_avg(lambda _: 0, select_fun, lambda _, x: project_fun(x), **kwargs)
         tn._name_str = "avg_op"
         #
         return tn
 
-    def count(self, projection_fun=lambda x: x, **kwargs):
-        tn = self.sum(lambda _: 1, projection_fun, **kwargs)
+    def count(self, project_fun=lambda x: x, **kwargs):
+        tn = self.sum(lambda _: 1, project_fun, **kwargs)
         tn._name_str = "count_op"
         #
         return tn
@@ -468,14 +468,14 @@ class TopologyNode:
 
     # Union
 
-    def union(self, other_tn, **kwargs):
+    def union(self, right_tn, **kwargs):
         def _build_fun(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
             #
             l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
+            r_input_nodeId = right_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
@@ -486,28 +486,28 @@ class TopologyNode:
             tn._output_nodeId = integrate_nodeId
         #
         current_class = type(self)
-        tn = current_class("union_op", {self, other_tn}, _build_fun, **kwargs)
+        tn = current_class("union_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
 
     # Intersect
 
-    def intersect(self, other_tn, **kwargs):
-        tn = self.join(other_tn, lambda l, r: l == r, lambda l, _: l, **kwargs)
+    def intersect(self, right_tn, **kwargs):
+        tn = self.join(right_tn, lambda l, r: l == r, lambda l, _: l, **kwargs)
         tn._name_str = "intersect_op"
         #
         return tn
 
     # Minus
 
-    def minus(self, other_tn, **kwargs):
+    def minus(self, right_tn, **kwargs):
         def _build_fun(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
             #
             l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
+            r_input_nodeId = right_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
@@ -518,7 +518,7 @@ class TopologyNode:
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
         current_class = type(self)
-        tn = current_class("diff_op", {self, other_tn}, _build_fun, **kwargs)
+        tn = current_class("diff_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
 
@@ -526,7 +526,7 @@ class TopologyNode:
     # Time Windows - Expiry
     ###
 
-    def expire(self, time_fun, expiry_fun, projection_fun=lambda x: x[0], **kwargs):
+    def expire(self, time_fun, expiry_fun, project_fun=lambda x: x[0], **kwargs):
         input_plus_expiry_tn = (
             self
             .map(lambda x: (x, expiry_fun(time_fun(x))), **kwargs)
@@ -601,20 +601,20 @@ class TopologyNode:
         current_class = type(self)
         tn = current_class("expire_op", {input_plus_expiry_tn}, _build_fun, **kwargs)
         #
-        return tn.map(projection_fun, **kwargs)
+        return tn.map(project_fun, **kwargs)
 
     ###
     # Time Windows - Trigger
     ###
 
-    def trigger(self, time_tn, time_fun, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], positive_only=True, **kwargs):
+    def trigger(self, time_tn, time_fun, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], positive_only=True, **kwargs):
         positive_only_boolean = positive_only
         #
         trigger_tn = (
             self
             .join(time_tn.max(time_fun),
                   lambda r_end_ts_int_tuple, latest_ts_int: trigger_fun(r_end_ts_int_tuple, latest_ts_int),
-                  lambda r_end_ts_int_tuple, _: projection_fun(r_end_ts_int_tuple),
+                  lambda r_end_ts_int_tuple, _: project_fun(r_end_ts_int_tuple),
                   **kwargs)
         )
         trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if positive_only_boolean else trigger_tn
@@ -673,8 +673,8 @@ class TopologyNode:
     # Time Windows - Group By + Agg
     ###
 
-    def _group_by_agg_aligned(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, projection_fun, **kwargs):
-        _projection_fun = lambda by_r_end_ts_int_tuple, agg_r: (projection_fun(by_r_end_ts_int_tuple[0], agg_r), by_r_end_ts_int_tuple[1])
+    def _group_by_agg_aligned(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, project_fun, **kwargs):
+        _project_fun = lambda by_r_end_ts_int_tuple, agg_r: (project_fun(by_r_end_ts_int_tuple[0], agg_r), by_r_end_ts_int_tuple[1])
         #
         tn = (
             self
@@ -684,7 +684,7 @@ class TopologyNode:
                 lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0],
                 agg_fun,
                 agg_initial,
-                _projection_fun,
+                _project_fun,
                 **kwargs)
         )
         #
@@ -692,7 +692,7 @@ class TopologyNode:
     
     #
 
-    def _group_by_agg_sliding(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, projection_fun, **kwargs):
+    def _group_by_agg_sliding(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, project_fun, **kwargs):
         tn = (
             self
             .map(lambda r: (r, assign_fun(time_fun(r))[0]))
@@ -702,7 +702,7 @@ class TopologyNode:
                           (agg_fun(agg_r_end_ts_int_tuple[0], r_end_ts_int_tuple[0]), min(agg_r_end_ts_int_tuple[1], r_end_ts_int_tuple[1]) if agg_r_end_ts_int_tuple[1] > 0 else r_end_ts_int_tuple[1]),
                           (agg_initial, 0),
                           lambda by, agg_r_end_ts_int_tuple: 
-                          (projection_fun(by, agg_r_end_ts_int_tuple[0]), agg_r_end_ts_int_tuple[1]),
+                          (project_fun(by, agg_r_end_ts_int_tuple[0]), agg_r_end_ts_int_tuple[1]),
                           **kwargs)
         )
         #
@@ -710,7 +710,7 @@ class TopologyNode:
 
     #
 
-    def _group_by_agg_session(self, gap_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, **kwargs):
+    def _group_by_agg_session(self, gap_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, **kwargs):
         def insert_session(r, session_dict_list):
             ts_int = time_fun(r)
             #
@@ -755,7 +755,7 @@ class TopologyNode:
             return session_dict_list
         #
         def _flatmap_fun(by_any_agg_any_session_end_ts_int_tuple_list):
-            return [(projection_fun(by_any_agg_any_session_end_ts_int_tuple_list[0], agg_any_session_end_ts_int_tuple[0]), agg_any_session_end_ts_int_tuple[1])
+            return [(project_fun(by_any_agg_any_session_end_ts_int_tuple_list[0], agg_any_session_end_ts_int_tuple[0]), agg_any_session_end_ts_int_tuple[1])
                     for agg_any_session_end_ts_int_tuple in by_any_agg_any_session_end_ts_int_tuple_list[1]]
         #
         tn = (
@@ -818,7 +818,7 @@ class TopologyNode:
     # Time Windows - {Group By, Trigger}
     ###
 
-    def _window_aligned(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def _window_aligned(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_aligned(assign_fun,
@@ -826,14 +826,14 @@ class TopologyNode:
                                    by_fun,
                                    agg_fun,
                                    agg_initial,
-                                   projection_fun,
+                                   project_fun,
                                    **kwargs)
         )
         #
         trigger_tn = group_by_agg_tn.trigger(self,
                                              time_fun,
                                              trigger_fun,
-                                             trigger_projection_fun,
+                                             trigger_project_fun,
                                              trigger_positive_only,
                                              **kwargs)
         #
@@ -841,45 +841,45 @@ class TopologyNode:
 
     #
 
-    def window_tumbling(self, size_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_tumbling(self, size_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_tumbling(size_int),
                                     time_fun,
                                     by_fun,
                                     agg_fun,
                                     agg_initial,
-                                    projection_fun,
-                                    trigger_projection_fun,
+                                    project_fun,
+                                    trigger_project_fun,
                                     trigger_fun,
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_hopping(self, size_int, hop_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_hopping(self, size_int, hop_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_hopping(size_int, hop_int),
                                     time_fun,
                                     by_fun,
                                     agg_fun,
                                     agg_initial,
-                                    projection_fun,
-                                    trigger_projection_fun,
+                                    project_fun,
+                                    trigger_project_fun,
                                     trigger_fun,
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_cumulative(self, size_int, advance_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_cumulative(self, size_int, advance_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_cumulative(size_int, advance_int),
                                     time_fun,
                                     by_fun,
                                     agg_fun,
                                     agg_initial,
-                                    projection_fun,
-                                    trigger_projection_fun,
+                                    project_fun,
+                                    trigger_project_fun,
                                     trigger_fun,
                                     trigger_positive_only,
                                     **kwargs)
 
     #
 
-    def window_sliding(self, size_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_positive_only=True, **kwargs):
+    def window_sliding(self, size_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_positive_only=True, **kwargs):
         trigger_positive_only_boolean = trigger_positive_only
         #
         group_by_agg_tn = self._group_by_agg_sliding(TopologyNode._assign_sliding(size_int),
@@ -887,9 +887,9 @@ class TopologyNode:
                                                      by_fun,
                                                      agg_fun,
                                                      agg_initial,
-                                                     projection_fun,
+                                                     project_fun,
                                                      **kwargs)
-        trigger_tn = group_by_agg_tn.map(trigger_projection_fun)
+        trigger_tn = group_by_agg_tn.map(trigger_project_fun)
         #
         trigger_tn = trigger_tn._filter(lambda _, w: w > 0) if trigger_positive_only_boolean else trigger_tn
         #
@@ -897,7 +897,7 @@ class TopologyNode:
     
     #
 
-    def window_session(self, gap_int, time_fun, by_fun, agg_fun, agg_initial, projection_fun, trigger_projection_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_session(self, gap_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_session(gap_int,
@@ -905,14 +905,14 @@ class TopologyNode:
                                    by_fun, 
                                    agg_fun,
                                    agg_initial,
-                                   projection_fun,
+                                   project_fun,
                                    **kwargs)
         )
         #
         trigger_tn = group_by_agg_tn.trigger(self,
                                              time_fun,
                                              trigger_fun,
-                                             trigger_projection_fun,
+                                             trigger_project_fun,
                                              trigger_positive_only,
                                              **kwargs)
         #
