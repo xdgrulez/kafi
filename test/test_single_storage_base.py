@@ -1944,6 +1944,37 @@ class TestSingleStorageBase(unittest.TestCase):
             name_str = value_dict["name"]
             self.assertEqual(name_str_value_dict_dict[name_str], value_dict)
 
+    def test_chunking_incomplete(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        s.enable_auto_commit(False)
+        s.commit_after_processing(True)
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str, partitions=1)
+        #
+        chunk_size_bytes_int = 10
+        producer = s.producer(topic_str, chunk_size_bytes=chunk_size_bytes_int, value_type="str")
+        large_message = "A" * 50
+        producer.produce([large_message])
+        producer.close()
+        #
+        n_chunks_int = s.l(topic_str)[topic_str]
+        self.assertGreater(n_chunks_int, 1)
+        #
+        if s.__class__.__name__ == "Cluster":
+            s.delete_records({topic_str: {0: 1}})
+            time.sleep(1)
+            #
+            n_chunks_after_delete = s.l(topic_str)[topic_str]
+            self.assertEqual(n_chunks_after_delete, n_chunks_int - 1)
+        #
+        message_dict_list = s.cat(topic_str, value_type="str", dechunk=True, consumer_timeout=2.0)
+        self.assertEqual(len(message_dict_list), 0)
+
     def test_transaction_commit(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return

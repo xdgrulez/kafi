@@ -118,6 +118,8 @@ class ClusterConsumer(KafkaConsumer):
                 topic_str_offsets_dict_dict = offsets
             elif isinstance(str_or_int, int):
                 topic_str_offsets_dict_dict = {topic_str: offsets for topic_str in self.topic_str_list}
+            else:
+                raise Exception("Invalid offsets.")
             #
             offsets_topicPartition_list = [TopicPartition(topic_str, partition_int, offset_int) for topic_str, offsets in topic_str_offsets_dict_dict.items() for partition_int, offset_int in offsets.items()]
             #

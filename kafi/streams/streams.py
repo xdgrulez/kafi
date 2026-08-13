@@ -161,13 +161,18 @@ class Streams(TopologyNode):
             #
             source_str_offsets_dict_dict = None
             if len(m_list) > 0:
-                compressed_checkpoint_dict_bytes = m_list[0]["value"]
+                checkpoint_m = m_list[-1]
+                compressed_checkpoint_dict_bytes = checkpoint_m["value"]
                 #
                 logger.info("Loading checkpoint...")
                 checkpoint_dict_bytes = decompress(compressed_checkpoint_dict_bytes)
                 checkpoint_dict = cloudpickle.loads(checkpoint_dict_bytes)
                 built_tn.set_state(checkpoint_dict["state"])
                 source_str_offsets_dict_dict = checkpoint_dict["offsets"]
+                #
+                checkpoint_offsets = {checkpoint_topic_str: {"partition": checkpoint_m["partition"], "offset": checkpoint_m["offset"] + 1}}
+                checkpoint_storage.commit(checkpoint_offsets)
+                #
                 logger.info("...loading checkpoint done (%d KB compressed, %d uncompressed).", len(compressed_checkpoint_dict_bytes) / 1024, len(checkpoint_dict_bytes) / 1024)
             #
             return source_str_offsets_dict_dict
@@ -180,7 +185,13 @@ class Streams(TopologyNode):
         if checkpoint_storage is not None:
             initial_time_int = get_millis()
             #
+            checkpoint_storage.enable_auto_commit(False)
+            checkpoint_storage.commit_after_processing(False)
+            #
             if checkpoint_storage.exists(checkpoint_topic_str):
+                if checkpoint_storage.partitions(checkpoint_topic_str)[checkpoint_topic_str] > 1:
+                    raise Exception("The checkpoint topic must have only one partition.")
+                #
                 source_str_offsets_dict_dict = load_checkpoint(built_tn)
             else:
                 checkpoint_storage.create(checkpoint_topic_str)

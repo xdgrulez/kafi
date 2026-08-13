@@ -59,12 +59,12 @@ class Dechunker(Deserializer):
                     headers_str_bytes_tuple_list = list(headers_str_bytes_dict.items())
                     #
                     message_dict2 = {"value": dechunked_value_bytes,
-                                        "key": key_bytes,
-                                        "headers": headers_str_bytes_tuple_list,
-                                        "timestamp": message_dict["timestamp"],
-                                        "partition": message_dict["partition"],
-                                        "offset": message_dict["offset"],
-                                        "topic": message_dict["topic"]}
+                                     "key": key_bytes,
+                                     "headers": headers_str_bytes_tuple_list,
+                                     "timestamp": message_dict["timestamp"],
+                                     "partition": message_dict["partition"],
+                                     "offset": message_dict["offset"],
+                                     "topic": message_dict["topic"]}
                     message_dict_list1.append(message_dict2)
                     #
                     # Clean up the chunks dictionary.
