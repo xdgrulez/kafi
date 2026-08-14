@@ -1281,15 +1281,15 @@ class TopologyNode:
 
     #
 
-    def save_state(self):
-        serialized_state_bytes = cloudpickle.dumps(self.get_state())
-        #
-        return serialized_state_bytes
-
     def load_state(self, serialized_state_bytes):
         evaluator = cloudpickle.loads(serialized_state_bytes)
         #
         self.set_state(evaluator)
+
+    def save_state(self):
+        serialized_state_bytes = cloudpickle.dumps(self.get_state())
+        #
+        return serialized_state_bytes
 
     #
 
