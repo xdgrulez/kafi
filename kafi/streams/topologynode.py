@@ -130,6 +130,15 @@ class TopologyNode:
         #
         return tn
 
+    def _neg(self, **kwargs):
+        def _map_fun(r, w):
+            return r, -w
+        #
+        tn = self._map(_map_fun, **kwargs)
+        tn._name_str = "_neg_op"
+        #
+        return tn
+
     # Flatmap
 
     def _flatmap(self, _flatmap_fun, **kwargs):
@@ -159,7 +168,7 @@ class TopologyNode:
         def _flatmap_fun(r, w):
             out_r_set = flatmap_fun(r)
             #
-            return [(out_r, w) for out_r in out_r_set]
+            return {(out_r, w) for out_r in out_r_set}
         #
         tn = self._flatmap(_flatmap_fun, **kwargs)
         tn._name_str = "flatmap_op"
@@ -217,15 +226,6 @@ class TopologyNode:
         #
         current_class = type(self)
         tn = current_class("merge_op", {self, other_tn}, _build_fun, **kwargs)
-        #
-        return tn
-
-    def _neg(self, **kwargs):
-        def _map_fun(r, w):
-            return r, -w
-        #
-        tn = self._map(_map_fun, **kwargs)
-        tn._name_str = "_neg_op"
         #
         return tn
 
@@ -501,14 +501,14 @@ class TopologyNode:
 
     # Minus
 
-    def minus(self, other_tn, **kwargs):
+    def minus(self, right_tn, **kwargs):
         def _build_fun(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
             #
             l_input_nodeId = self._output_nodeId
-            r_input_nodeId = other_tn._output_nodeId
+            r_input_nodeId = right_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
@@ -519,7 +519,7 @@ class TopologyNode:
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
         current_class = type(self)
-        tn = current_class("diff_op", {self, other_tn}, _build_fun, **kwargs)
+        tn = current_class("diff_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
 
@@ -965,9 +965,9 @@ class TopologyNode:
             #
             input_nodeId = self._output_nodeId
             #
-            integrate_nodeId = Delay(group=g).connect(evaluator.circuit, (input_nodeId,))
+            delay_nodeId = Delay(group=g).connect(evaluator.circuit, (input_nodeId,))
             #
-            tn._output_nodeId = integrate_nodeId
+            tn._output_nodeId = delay_nodeId
         #
         current_class = type(self)
         tn = current_class("_delay_op", {self}, _build_fun, **kwargs)
@@ -1116,6 +1116,8 @@ class TopologyNode:
     
     def to_zSet(self, to_zSet_fun):
         self._to_zSet_fun = to_zSet_fun
+        #
+        return self
     
     # Output
 
@@ -1142,6 +1144,8 @@ class TopologyNode:
      
     def from_zSet(self, from_zSet_fun):
         self._from_zSet_fun = from_zSet_fun
+        #
+        return self
             
     @staticmethod
     def _to_records(unpacked_r_w_tuple_list):
