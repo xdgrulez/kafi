@@ -12,8 +12,8 @@ ALL_MESSAGES = -1
 
 class Shell(Functional):
     def cat(self, topic, n=ALL_MESSAGES, map_fun=lambda x: x, **kwargs):
-        (message_dict_list, _) = self.map(topic, map_fun, n, **kwargs)
-        return message_dict_list
+        (m_list, _) = self.map(topic, map_fun, n, **kwargs)
+        return m_list
 
     def head(self, topic, n=10, **kwargs):
         return self.cat(topic, n, **kwargs)
@@ -22,16 +22,16 @@ class Shell(Functional):
         topic_str = topic
         n_int = n
         #
-        def map_fun(message_dict):
-            return message_dict
+        def map_fun(m):
+            return m
         #
         partitions_int = self.partitions(topic_str)[topic_str]
         # watermarks_dict = self.watermarks(topic_str)[topic_str]
         offsets_dict = {partition_int: -n_int for partition_int in range(partitions_int)}
         kwargs["offsets"] = offsets_dict
         #
-        (message_dict_list, _) = self.map(topic, map_fun, n, **kwargs)
-        return message_dict_list
+        (m_list, _) = self.map(topic, map_fun, n, **kwargs)
+        return m_list
 
     #
 
@@ -44,18 +44,18 @@ class Shell(Functional):
     #
 
     def wc(self, topic, **kwargs):
-        def foldl_fun(acc, message_dict):
-            if message_dict["key"] is None:
+        def foldl_fun(acc, m):
+            if m["key"] is None:
                 key_str = ""
             else:
-                key_str = str(message_dict["key"])
+                key_str = str(m["key"])
             num_words_key_int = 0 if key_str == "" else len(key_str.split(" "))
             num_bytes_key_int = len(key_str)
             #
-            if message_dict["value"] is None:
+            if m["value"] is None:
                 value_str = ""
             else:
-                value_str = str(message_dict["value"])
+                value_str = str(m["value"])
             num_words_value_int = len(value_str.split(" "))
             num_bytes_value_int = len(value_str)
             #
@@ -69,33 +69,33 @@ class Shell(Functional):
     #
 
     def grep_fun(self, topic, match_fun, n=ALL_MESSAGES, matches=ALL_MESSAGES, **kwargs):
-        def foldl_fun(acc, message_dict):
-            (matching_message_dict_acc_list, matches_acc_int) = acc
-            if match_fun(message_dict):
+        def foldl_fun(acc, m):
+            (matching_m_acc_list, matches_acc_int) = acc
+            if match_fun(m):
                 if self.verbose() > 0:
-                    partition_int = message_dict["partition"]
-                    offset_int = message_dict["offset"]
+                    partition_int = m["partition"]
+                    offset_int = m["offset"]
                     tqdm.write(f"Found matching message on partition {partition_int}, offset {offset_int}.")
                 #
-                matching_message_dict_acc_list += [message_dict]
+                matching_m_acc_list += [m]
                 matches_acc_int += 1
                 if matches_int != -1 and matches_acc_int >= matches_int:
                     raise Exception(f"Stopped after {matches_int} matches.")
-                return (matching_message_dict_acc_list, matches_acc_int)
+                return (matching_m_acc_list, matches_acc_int)
             else:
-                return (matching_message_dict_acc_list, matches_acc_int)
+                return (matching_m_acc_list, matches_acc_int)
         #
         matches_int = matches
         #
-        ((matching_message_dict_list, _), message_counter_int) = self.foldl(topic, foldl_fun, ([], 0), n=n, **kwargs)
+        ((matching_m_list, _), message_counter_int) = self.foldl(topic, foldl_fun, ([], 0), n=n, **kwargs)
         #
-        return matching_message_dict_list, len(matching_message_dict_list), message_counter_int
+        return matching_m_list, len(matching_m_list), message_counter_int
 
     def grep(self, topic, re_pattern_str, n=ALL_MESSAGES, results=ALL_MESSAGES, **kwargs):
-        def match_fun(message_dict):
+        def match_fun(m):
             pattern = re.compile(re_pattern_str)
-            key_str = str(message_dict["key"])
-            value_str = str(message_dict["value"])
+            key_str = str(m["key"])
+            value_str = str(m["value"])
             return pattern.match(key_str) is not None or pattern.match(value_str) is not None
         #
         return self.grep_fun(topic, match_fun, n=n, results=results, **kwargs)

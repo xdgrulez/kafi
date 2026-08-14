@@ -91,10 +91,10 @@ class ClusterConsumer(KafkaConsumer):
         #
         message_list = self.consumer.consume(n_int, self.storage_obj.consume_timeout())
         #
-        message_dict_list = []
+        m_list = []
         for message in message_list:
             if message.error() is None:
-                message_dict = {"topic": message.topic(),
+                m = {"topic": message.topic(),
                                 "headers": message.headers(),
                                 "partition": message.partition(),
                                 "offset": message.offset(),
@@ -103,9 +103,9 @@ class ClusterConsumer(KafkaConsumer):
                                 "value": message.value()}
             else:
                 raise Exception(f"Error consuming topic(s) {self.topic_str_list}: {message.error().str()}, topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}")
-            message_dict_list.append(message_dict)
+            m_list.append(m)
         #
-        return message_dict_list
+        return m_list
 
     #
 

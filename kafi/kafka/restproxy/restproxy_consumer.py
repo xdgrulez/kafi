@@ -143,13 +143,13 @@ class RestProxyConsumer(KafkaConsumer):
                     return decoded_bytes.decode(encoding="utf-8")
 
         #
-        message_dict_list = []
+        m_list = []
         for _ in range(0, self.storage_obj.consume_num_attempts()):
             response_dict = get(url_str, headers_dict, auth_str_tuple=auth_str_tuple, retries_int=self.storage_obj.requests_num_retries(), debug_bool=self.storage_obj.verbose() >= 2)
             #
-            message_dict_list += [{"headers": None, "topic": rest_message_dict["topic"], "partition": rest_message_dict["partition"], "offset": rest_message_dict["offset"], "timestamp": None, "key": decode(rest_message_dict["key"], True), "value": decode(rest_message_dict["value"], False)} for rest_message_dict in response_dict]
+            m_list += [{"headers": None, "topic": rest_m["topic"], "partition": rest_m["partition"], "offset": rest_m["offset"], "timestamp": None, "key": decode(rest_m["key"], True), "value": decode(rest_m["value"], False)} for rest_m in response_dict]
         #
-        return message_dict_list
+        return m_list
 
     #
 

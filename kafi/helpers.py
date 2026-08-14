@@ -335,10 +335,10 @@ def set_value(d, key_str_list, any):
 
 # Partitioners
 
-def default_partitioner(message_dict, counter_int, partitions_int, projection_fun=lambda x: x["key"]):
-    partition_int = message_dict["partition"]
+def default_partitioner(m, counter_int, partitions_int, projection_fun=lambda x: x["key"]):
+    partition_int = m["partition"]
     if partition_int == RD_KAFKA_PARTITION_UA:
-        bytes = projection_fun(message_dict)
+        bytes = projection_fun(m)
         #
         if bytes is None:
             partition_int = counter_int
@@ -353,8 +353,8 @@ def default_partitioner(message_dict, counter_int, partitions_int, projection_fu
 
 # Chunking
 
-def message_dict_chunk_key_to_key(message_dict):
-    chunk_key_bytes = message_dict["key"]
+def m_chunk_key_to_key(m):
+    chunk_key_bytes = m["key"]
     key_bytes = chunk_key_to_key(chunk_key_bytes)
     return key_bytes
 

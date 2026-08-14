@@ -42,7 +42,7 @@ class FSConsumer(StorageConsumer):
         auto_offset_reset_str = self.consumer_config_dict["auto.offset.reset"]
         #
         rel_file_str_list = []
-        message_dict_list = []
+        m_list = []
         message_counter_int = 0
         # Consume the topics sequentially. TODO: Do it in parallel?
         for topic_str in self.topic_str_list:
@@ -110,10 +110,10 @@ class FSConsumer(StorageConsumer):
                 message_bytes_list = messages_bytes.split(b"\n")[:-1]
                 #
                 for message_bytes in message_bytes_list:
-                    message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
+                    m = ast.literal_eval(message_bytes.decode("utf-8"))
                     #
-                    partition_int = message_dict["partition"]
-                    offset_int = message_dict["offset"]
+                    partition_int = m["partition"]
+                    offset_int = m["offset"]
                     self.topic_str_next_offsets_dict_dict[topic_str][partition_int] = offset_int + 1
                     if self.enable_auto_commit_bool:
                         # Commit immediately after reading the message if enable.auto.commit == True
@@ -126,7 +126,7 @@ class FSConsumer(StorageConsumer):
                             break
                     #
                     if offset_int >= start_offsets_dict[partition_int]:
-                        message_dict_list.append(message_dict)
+                        m_list.append(m)
                         #
                         message_counter_int += 1
                     #
@@ -141,7 +141,7 @@ class FSConsumer(StorageConsumer):
                         break_bool = True
                         break
         #
-        return message_dict_list
+        return m_list
 
     #
 

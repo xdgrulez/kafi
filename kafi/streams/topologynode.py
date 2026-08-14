@@ -1,6 +1,7 @@
-from pydbsp.progress import Feedback as ProgressFeedback
+import sys
 from types import SimpleNamespace
 
+from pydbsp.progress import Feedback as ProgressFeedback
 
 from pydbsp.circuit import Circuit
 from pydbsp.compute import ComputeCtx
@@ -199,14 +200,14 @@ class TopologyNode:
         #
         return tn
 
-    def merge(self, right_tn, **kwargs):
+    def merge(self, other_tn, **kwargs):
         def _build_fun(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
             #
             l_input_nodeId = self._output_nodeId
-            r_input_nodeId = right_tn._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
@@ -215,7 +216,7 @@ class TopologyNode:
             tn._output_nodeId = lift2_add_nodeId
         #
         current_class = type(self)
-        tn = current_class("merge_op", {self, right_tn}, _build_fun, **kwargs)
+        tn = current_class("merge_op", {self, other_tn}, _build_fun, **kwargs)
         #
         return tn
 
@@ -234,14 +235,14 @@ class TopologyNode:
 
     # Join
 
-    def join_equi(self, right_tn, left_select_fun, right_select_fun, project_fun, **kwargs):
-        def _left_select_fun(left_packed_r):
+    def join_equi(self, right_tn, left_key_fun, right_key_fun, project_fun, **kwargs):
+        def _left_key_fun(left_packed_r):
             left_r = tn._unpack_fun(left_packed_r)
-            return tn._pack_fun(left_select_fun(left_r))
+            return tn._pack_fun(left_key_fun(left_r))
         #
-        def _right_select_fun(right_packed_r):
+        def _right_key_fun(right_packed_r):
             right_r = tn._unpack_fun(right_packed_r)
-            return tn._pack_fun(right_select_fun(right_r))
+            return tn._pack_fun(right_key_fun(right_r))
         #
         def _project_fun(_, left_packed_r, right_packed_r):
             left_r = tn._unpack_fun(left_packed_r)
@@ -252,16 +253,16 @@ class TopologyNode:
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
-            l_g_idx = IndexedZSetAddition(g, _left_select_fun)
-            r_g_idx = IndexedZSetAddition(g, _right_select_fun)
+            l_g_idx = IndexedZSetAddition(g, _left_key_fun)
+            r_g_idx = IndexedZSetAddition(g, _right_key_fun)
             #
             l_input_nodeId = self._output_nodeId
             r_input_nodeId = right_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
-            l_liftIndex_nodeId = LiftIndex(indexer=_left_select_fun).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId,))
-            r_liftIndex_nodeId = LiftIndex(indexer=_right_select_fun).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
+            l_liftIndex_nodeId = LiftIndex(indexer=_left_key_fun).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId,))
+            r_liftIndex_nodeId = LiftIndex(indexer=_right_key_fun).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
             indexedDeltaLiftedDeltaLiftedJoin_nodeId = IndexedDeltaLiftedDeltaLiftedJoin(
                 proj=_project_fun,
                 group_a=l_g_idx,
@@ -314,25 +315,20 @@ class TopologyNode:
 
     # Group By + Aggregation
 
-    def group_by_agg(self, by_fun, select_fun, agg_fun, agg_initial, project_fun, **kwargs):
-        def _by_fun(packed_r):
+    def group_by_agg(self, key_fun, value_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+        def _key_fun(packed_r):
             r = tn._unpack_fun(packed_r)
-            return tn._pack_fun(by_fun(r))
+            return tn._pack_fun(key_fun(r))
         #
-        def _select_fun(packed_r):
+        def _value_fun(packed_r):
             r = tn._unpack_fun(packed_r)
-            return tn._pack_fun(select_fun(r))
-        #
-        def _project_fun(packed_key_any_packed_sum_any_tuple):
-            packed_key_any, packed_sum_any = packed_key_any_packed_sum_any_tuple
-            r = project_fun(tn._unpack_fun(packed_key_any), tn._unpack_fun(packed_sum_any))
-            return tn._pack_fun(r)
+            return tn._pack_fun(value_fun(r))
         #
         def _agg_fun(packed_r_w_tuple_list):
             packed_agg_any = _agg_initial
             #
             for packed_r, _ in packed_r_w_tuple_list:
-                packed_select_any = _select_fun(packed_r)
+                packed_select_any = _value_fun(packed_r)
                 #
                 agg_any = tn._unpack_fun(packed_agg_any)
                 select_any = tn._unpack_fun(packed_select_any)
@@ -341,16 +337,21 @@ class TopologyNode:
             #
             return packed_agg_any
         #
+        def _project_fun(packed_key_any_packed_sum_any_tuple):
+            packed_key_any, packed_sum_any = packed_key_any_packed_sum_any_tuple
+            r = project_fun(tn._unpack_fun(packed_key_any), tn._unpack_fun(packed_sum_any))
+            return tn._pack_fun(r)
+        #
         def _build_fun(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
-            g_idx = IndexedZSetAddition[str, str](g, _by_fun)
+            g_idx = IndexedZSetAddition[str, str](g, _key_fun)
             #
             input_nodeId = self._output_nodeId
             #
             liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, input_nodeId)
-            liftLiftIndex_nodeId = LiftLiftIndex(indexer=_by_fun).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
+            liftLiftIndex_nodeId = LiftLiftIndex(indexer=_key_fun).connect(evaluator.circuit, (liftStreamIntroduction_nodeId,))
             deltaLiftedDeltaLiftedGroupBy_nodeId = DeltaLiftedDeltaLiftedGroupBy(
                 aggregate=_agg_fun,
                 group=g_idx,
@@ -365,82 +366,82 @@ class TopologyNode:
         current_class = type(self)
         tn = current_class("group_by_agg_op", {self}, _build_fun, **kwargs)
         #
-        _agg_initial = tn._pack_fun(agg_initial)
+        _agg_initial = tn._pack_fun(agg_initial_any)
         #
         return tn
 
-    def group_by_sum(self, by_fun, select_fun, project_fun, sum_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: agg + x, sum_initial_any, project_fun, **kwargs)
+    def group_by_sum(self, key_fun, value_fun, project_fun, sum_initial_any=0, **kwargs):
+        tn = self.group_by_agg(key_fun, value_fun, lambda agg_any, value_any: agg_any + value_any, sum_initial_any, project_fun, **kwargs)
         tn._name_str = "group_by_sum_op"
         #
         return tn
 
-    def group_by_max(self, by_fun, select_fun, project_fun, max_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: max(agg, x), max_initial_any, project_fun, **kwargs)
+    def group_by_max(self, key_fun, value_fun, project_fun, max_initial_any=0, **kwargs):
+        tn = self.group_by_agg(key_fun, value_fun, lambda agg_any, value_any: max(agg_any, value_any), max_initial_any, project_fun, **kwargs)
         tn._name_str = "group_by_max_op"
         #
         return tn
 
-    def group_by_min(self, by_fun, select_fun, project_fun, min_initial_any=0, **kwargs):
-        tn = self.group_by_agg(by_fun, select_fun, lambda agg, x: min(agg, x), min_initial_any, project_fun, **kwargs)
+    def group_by_min(self, key_fun, value_fun, project_fun, min_initial_any=sys.maxsize, **kwargs):
+        tn = self.group_by_agg(key_fun, value_fun, lambda agg_any, value_any: min(agg_any, value_any), min_initial_any, project_fun, **kwargs)
         tn._name_str = "group_by_min_op"
         #
         return tn
 
-    def group_by_avg(self, by_fun, select_fun, project_fun, **kwargs):
-        def _agg_fun(agg, x):
-            sum_any, count_int = agg
-            return (sum_any + x, count_int + 1)
+    def group_by_avg(self, key_fun, value_fun, project_fun, **kwargs):
+        def _agg_fun(agg_tuple, any):
+            sum_any, count_int = agg_tuple
+            return (sum_any + any, count_int + 1)
         #
         def _project_fun(key_any, sum_count_tuple):
             sum_any, count_int = sum_count_tuple
             avg_any = sum_any / count_int if count_int != 0 else 0.0
             return project_fun(key_any, avg_any)
         #
-        tn = self.group_by_agg(by_fun, select_fun, _agg_fun, (0, 0), _project_fun, **kwargs)
+        tn = self.group_by_agg(key_fun, value_fun, _agg_fun, (0, 0), _project_fun, **kwargs)
         tn._name_str = "group_by_avg_op"
         #
         return tn
 
-    def group_by_count(self, by_fun, project_fun, **kwargs):
-        tn = self.group_by_sum(by_fun, lambda _: 1, project_fun, **kwargs)
+    def group_by_count(self, key_fun, project_fun, **kwargs):
+        tn = self.group_by_sum(key_fun, lambda _: 1, project_fun, **kwargs)
         tn._name_str = "group_by_count_op"
         #
         return tn
 
     # Aggregation
 
-    def agg(self, select_fun, agg_fun, agg_initial, project_fun, **kwargs):
-        tn = self.group_by_agg(lambda _: 0, select_fun, agg_fun, agg_initial, lambda _, x: project_fun(x), **kwargs)
+    def agg(self, value_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+        tn = self.group_by_agg(lambda _: 0, value_fun, agg_fun, agg_initial_any, lambda _, value_any: project_fun(value_any), **kwargs)
         tn._name_str = "agg_op"
         #
         return tn
 
-    def sum(self, select_fun, project_fun=lambda x: x, sum_initial_any=0, **kwargs):
-        tn = self.agg(select_fun, lambda agg, x: agg + x, sum_initial_any, project_fun, **kwargs)
+    def sum(self, value_fun, project_fun=lambda agg_any: agg_any, sum_initial_any=0, **kwargs):
+        tn = self.agg(value_fun, lambda agg_any, value_any: agg_any + value_any, sum_initial_any, project_fun, **kwargs)
         tn._name_str = "sum_op"
         #
         return tn
 
-    def max(self, select_fun, project_fun=lambda x: x, max_initial_any=0, **kwargs):
-        tn = self.agg(select_fun, lambda agg, x: max(agg, x), max_initial_any, project_fun, **kwargs)
+    def max(self, value_fun, project_fun=lambda agg_any: agg_any, max_initial_any=0, **kwargs):
+        tn = self.agg(value_fun, lambda agg_any, value_any: max(agg_any, value_any), max_initial_any, project_fun, **kwargs)
         tn._name_str = "max_op"
         #
         return tn
 
-    def min(self, select_fun, project_fun=lambda x: x, min_initial_any=0, **kwargs):
-        tn = self.agg(select_fun, lambda agg, x: min(agg, x), min_initial_any, project_fun, **kwargs)
+    def min(self, value_fun, project_fun=lambda agg_any: agg_any, min_initial_any=sys.maxsize, **kwargs):
+        tn = self.agg(value_fun, lambda agg_any, value_any: min(agg_any, value_any), min_initial_any, project_fun, **kwargs)
         tn._name_str = "min_op"
         #
         return tn
     
-    def avg(self, select_fun, project_fun=lambda x: x, **kwargs):
-        tn = self.group_by_avg(lambda _: 0, select_fun, lambda _, x: project_fun(x), **kwargs)
+    def avg(self, value_fun, project_fun=lambda agg_any: agg_any, **kwargs):
+        tn = self.group_by_avg(lambda _: 0, value_fun, lambda _, agg_any: project_fun(agg_any), **kwargs)
         tn._name_str = "avg_op"
         #
         return tn
 
-    def count(self, project_fun=lambda x: x, **kwargs):
+    def count(self, project_fun=lambda agg_any: agg_any, **kwargs):
         tn = self.sum(lambda _: 1, project_fun, **kwargs)
         tn._name_str = "count_op"
         #
@@ -468,14 +469,14 @@ class TopologyNode:
 
     # Union
 
-    def union(self, right_tn, **kwargs):
+    def union(self, other_tn, **kwargs):
         def _build_fun(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
             #
             l_input_nodeId = self._output_nodeId
-            r_input_nodeId = right_tn._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
@@ -486,28 +487,28 @@ class TopologyNode:
             tn._output_nodeId = integrate_nodeId
         #
         current_class = type(self)
-        tn = current_class("union_op", {self, right_tn}, _build_fun, **kwargs)
+        tn = current_class("union_op", {self, other_tn}, _build_fun, **kwargs)
         #
         return tn
 
     # Intersect
 
-    def intersect(self, right_tn, **kwargs):
-        tn = self.join(right_tn, lambda l, r: l == r, lambda l, _: l, **kwargs)
+    def intersect(self, other_tn, **kwargs):
+        tn = self.join(other_tn, lambda l, r: l == r, lambda l, _: l, **kwargs)
         tn._name_str = "intersect_op"
         #
         return tn
 
     # Minus
 
-    def minus(self, right_tn, **kwargs):
+    def minus(self, other_tn, **kwargs):
         def _build_fun(evaluator):
             tn._evaluator = evaluator
             #
             g = ZSetAddition()
             #
             l_input_nodeId = self._output_nodeId
-            r_input_nodeId = right_tn._output_nodeId
+            r_input_nodeId = other_tn._output_nodeId
             #
             l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
             r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
@@ -518,7 +519,7 @@ class TopologyNode:
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
         current_class = type(self)
-        tn = current_class("diff_op", {self, right_tn}, _build_fun, **kwargs)
+        tn = current_class("diff_op", {self, other_tn}, _build_fun, **kwargs)
         #
         return tn
 
@@ -673,14 +674,14 @@ class TopologyNode:
     # Time Windows - Group By + Agg
     ###
 
-    def _group_by_agg_aligned(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, project_fun, **kwargs):
+    def _group_by_agg_aligned(self, assign_fun, time_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
         _project_fun = lambda by_r_end_ts_int_tuple, agg_r: (project_fun(by_r_end_ts_int_tuple[0], agg_r), by_r_end_ts_int_tuple[1])
         #
         tn = (
             self
             .flatmap(lambda r: [(r, end_ts_int) for end_ts_int in assign_fun(time_fun(r))], **kwargs)
             .group_by_agg(
-                lambda r_end_ts_int_tuple: (by_fun(r_end_ts_int_tuple[0]), r_end_ts_int_tuple[1]),
+                lambda r_end_ts_int_tuple: (key_fun(r_end_ts_int_tuple[0]), r_end_ts_int_tuple[1]),
                 lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0],
                 agg_fun,
                 agg_initial,
@@ -692,11 +693,11 @@ class TopologyNode:
     
     #
 
-    def _group_by_agg_sliding(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, project_fun, **kwargs):
+    def _group_by_agg_sliding(self, assign_fun, time_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
         tn = (
             self
             .map(lambda r: (r, assign_fun(time_fun(r))[0]))
-            .group_by_agg(lambda r_end_ts_int_tuple: by_fun(r_end_ts_int_tuple[0]),
+            .group_by_agg(lambda r_end_ts_int_tuple: key_fun(r_end_ts_int_tuple[0]),
                           lambda r_end_ts_int_tuple: r_end_ts_int_tuple,
                           lambda agg_r_end_ts_int_tuple, r_end_ts_int_tuple: 
                           (agg_fun(agg_r_end_ts_int_tuple[0], r_end_ts_int_tuple[0]), min(agg_r_end_ts_int_tuple[1], r_end_ts_int_tuple[1]) if agg_r_end_ts_int_tuple[1] > 0 else r_end_ts_int_tuple[1]),
@@ -710,7 +711,7 @@ class TopologyNode:
 
     #
 
-    def _group_by_agg_session(self, gap_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, **kwargs):
+    def _group_by_agg_session(self, gap_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
         def insert_session(r, session_dict_list):
             ts_int = time_fun(r)
             #
@@ -761,7 +762,7 @@ class TopologyNode:
         tn = (
             self
             .group_by_agg(
-                by_fun,
+                key_fun,
                 lambda r: r,
                 lambda agg, r:
                 {"sessions": (session_dict_list := insert_session(r, agg.get("sessions", []))),
@@ -818,12 +819,12 @@ class TopologyNode:
     # Time Windows - {Group By, Trigger}
     ###
 
-    def _window_aligned(self, assign_fun, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def _window_aligned(self, assign_fun, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_aligned(assign_fun,
                                    time_fun,
-                                   by_fun,
+                                   key_fun,
                                    agg_fun,
                                    agg_initial,
                                    project_fun,
@@ -841,10 +842,10 @@ class TopologyNode:
 
     #
 
-    def window_tumbling(self, size_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_tumbling(self, size_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_tumbling(size_int),
                                     time_fun,
-                                    by_fun,
+                                    key_fun,
                                     agg_fun,
                                     agg_initial,
                                     project_fun,
@@ -853,10 +854,10 @@ class TopologyNode:
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_hopping(self, size_int, hop_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_hopping(self, size_int, hop_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_hopping(size_int, hop_int),
                                     time_fun,
-                                    by_fun,
+                                    key_fun,
                                     agg_fun,
                                     agg_initial,
                                     project_fun,
@@ -865,10 +866,10 @@ class TopologyNode:
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_cumulative(self, size_int, advance_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_cumulative(self, size_int, advance_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_cumulative(size_int, advance_int),
                                     time_fun,
-                                    by_fun,
+                                    key_fun,
                                     agg_fun,
                                     agg_initial,
                                     project_fun,
@@ -879,12 +880,12 @@ class TopologyNode:
 
     #
 
-    def window_sliding(self, size_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_positive_only=True, **kwargs):
+    def window_sliding(self, size_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_positive_only=True, **kwargs):
         trigger_positive_only_boolean = trigger_positive_only
         #
         group_by_agg_tn = self._group_by_agg_sliding(TopologyNode._assign_sliding(size_int),
                                                      time_fun,
-                                                     by_fun,
+                                                     key_fun,
                                                      agg_fun,
                                                      agg_initial,
                                                      project_fun,
@@ -897,12 +898,12 @@ class TopologyNode:
     
     #
 
-    def window_session(self, gap_int, time_fun, by_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_session(self, gap_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_session(gap_int,
                                    time_fun,
-                                   by_fun, 
+                                   key_fun, 
                                    agg_fun,
                                    agg_initial,
                                    project_fun,
@@ -1099,17 +1100,17 @@ class TopologyNode:
         return zSet
 
     @staticmethod
-    def from_debezium(message_dict_list, pack_fun):
+    def from_debezium(m_list, pack_fun):
         inner_dict = {}
-        for message_dict in message_dict_list:
-            if message_dict["value"]["op"] in ["c", "u"]:
-                message_dict1 = copy.deepcopy(message_dict)
-                message_dict1["value"] = message_dict["value"]["after"]
-                inner_dict[pack_fun(message_dict1)] = 1
-            elif message_dict["value"]["op"] == "d":
-                message_dict1 = copy.deepcopy(message_dict)
-                message_dict1["value"] = message_dict["value"]["before"]
-                inner_dict[pack_fun(message_dict1)] = -1
+        for m in m_list:
+            if m["value"]["op"] in ["c", "u"]:
+                m1 = copy.deepcopy(m)
+                m1["value"] = m["value"]["after"]
+                inner_dict[pack_fun(m1)] = 1
+            elif m["value"]["op"] == "d":
+                m1 = copy.deepcopy(m)
+                m1["value"] = m["value"]["before"]
+                inner_dict[pack_fun(m1)] = -1
         #
         return ZSet(inner_dict)
     
@@ -1158,24 +1159,24 @@ class TopologyNode:
 
     @staticmethod
     def to_debezium(unpacked_r_w_tuple_list):
-        message_dict_list = []
-        for message_dict, w in unpacked_r_w_tuple_list:
+        m_list = []
+        for m, w in unpacked_r_w_tuple_list:
             if w > 0:
                 for _ in range(w):
-                    message_dict1 = copy.deepcopy(message_dict)
-                    message_dict1["value"]["before"] = None
-                    message_dict1["value"]["after"] = message_dict["value"]
-                    message_dict1["value"]["op"] = "c"
-                    message_dict_list.append(message_dict1)
+                    m1 = copy.deepcopy(m)
+                    m1["value"]["before"] = None
+                    m1["value"]["after"] = m["value"]
+                    m1["value"]["op"] = "c"
+                    m_list.append(m1)
             elif w < 0:
                 for _ in range(-w):
-                    message_dict1 = copy.deepcopy(message_dict)
-                    message_dict1["value"]["before"] = message_dict["value"]
-                    message_dict1["value"]["after"] = None
-                    message_dict1["value"]["op"] = "d"
-                    message_dict_list.append(message_dict1)
+                    m1 = copy.deepcopy(m)
+                    m1["value"]["before"] = m["value"]
+                    m1["value"]["after"] = None
+                    m1["value"]["op"] = "d"
+                    m_list.append(m1)
         #
-        return message_dict_list
+        return m_list
 
     #
 

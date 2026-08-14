@@ -12,9 +12,9 @@ ALL_MESSAGES = -1
 class Pandas(Functional):
     def topic_to_df(self, topic, n=ALL_MESSAGES, **kwargs):
         #
-        def foldl_fun(acc, message_dict):
-            # df = pd.DataFrame.from_records([message_dict["value"]])
-            df = pd.json_normalize(message_dict["value"])
+        def foldl_fun(acc, m):
+            # df = pd.DataFrame.from_records([m["value"]])
+            df = pd.json_normalize(m["value"])
             if "explode" in kwargs and kwargs["explode"] == True:
                 df = explode_normalize(df)
             #

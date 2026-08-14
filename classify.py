@@ -13,10 +13,10 @@ def get_fear_index(text_str):
                 break
     return fear_index_int
 
-def map_fun(message_dict):
-    fear_index_int = get_fear_index(message_dict["value"]["text"])
-    message_dict["value"]["sentiment"] = {"model": "finbert", "score": fear_index_int}
-    return message_dict
+def map_fun(m):
+    fear_index_int = get_fear_index(m["value"]["text"])
+    m["value"]["sentiment"] = {"model": "finbert", "score": fear_index_int}
+    return m
 
 c = Cluster("local")
 c.consume_timeout(-1)

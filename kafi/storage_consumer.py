@@ -107,20 +107,20 @@ class StorageConsumer(Dechunker):
                 return self.deserialize(payload_bytes, type_str, topic_str, headers_dict, key_bool)
         #
         while True:
-            message_dict_list1 = self.consume_impl(n=consume_batch_size_int, **kwargs)
-            if not message_dict_list1:
+            m_list1 = self.consume_impl(n=consume_batch_size_int, **kwargs)
+            if not m_list1:
                 break
             #
             # Dechunk if necessary/enabled.
             if dechunk_bool:
-                message_dict_list2 = self.dechunk(message_dict_list1)
+                m_list2 = self.dechunk(m_list1)
             else:
-                message_dict_list2 = message_dict_list1
+                m_list2 = m_list1
             #
-            for message_dict in message_dict_list2:
-                topic_str = message_dict["topic"]
-                partition_int = message_dict["partition"]
-                offset_int = message_dict["offset"]
+            for m in m_list2:
+                topic_str = m["topic"]
+                partition_int = m["partition"]
+                offset_int = m["offset"]
                 #
                 offsets_dict = topic_str_offsets_dict_dict[topic_str]
                 #
@@ -130,20 +130,20 @@ class StorageConsumer(Dechunker):
                 if offset_int > end_offsets_dict[partition_int]:
                     continue
                 #
-                headers_str_bytes_tuple_list = message_dict["headers"]
-                message_dict1 = {"value": deserialize(message_dict["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, headers_dict=None if not headers_str_bytes_tuple_list else dict(headers_str_bytes_tuple_list), key_bool=False),
-                                 "key": deserialize(message_dict["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, headers_dict=None if not headers_str_bytes_tuple_list else dict(headers_str_bytes_tuple_list), key_bool=True),
+                headers_str_bytes_tuple_list = m["headers"]
+                m1 = {"value": deserialize(m["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, headers_dict=None if not headers_str_bytes_tuple_list else dict(headers_str_bytes_tuple_list), key_bool=False),
+                                 "key": deserialize(m["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, headers_dict=None if not headers_str_bytes_tuple_list else dict(headers_str_bytes_tuple_list), key_bool=True),
                                  "headers": headers_str_bytes_tuple_list,
-                                 "timestamp": message_dict["timestamp"],
-                                 "partition": message_dict["partition"],
-                                 "offset": message_dict["offset"],
-                                 "topic": message_dict["topic"]}
+                                 "timestamp": m["timestamp"],
+                                 "partition": m["partition"],
+                                 "offset": m["offset"],
+                                 "topic": m["topic"]}
                 #
-                if break_fun(acc, message_dict1):
+                if break_fun(acc, m1):
                     break_bool = True
                     break
                 #
-                acc = foldl_fun(acc, message_dict1)
+                acc = foldl_fun(acc, m1)
                 message_counter_int += 1
                 #
                 end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
@@ -166,10 +166,10 @@ class StorageConsumer(Dechunker):
     #
 
     def consume(self, n=ALL_MESSAGES, **kwargs):
-        def foldl_fun(message_dict_list, message_dict):
-            message_dict_list.append(message_dict)
+        def foldl_fun(m_list, m):
+            m_list.append(m)
             #
-            return message_dict_list
+            return m_list
         #
         n_int = n
         if n_int == ALL_MESSAGES:

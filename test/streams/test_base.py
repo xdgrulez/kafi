@@ -70,29 +70,29 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         function_str = sys._getframe().f_code.co_name
         print(f"Asserting {function_str}...")
         #
-        message_dict_list = self.source_str_input_r_list_dict[order_source_str]
+        m_list = self.source_str_input_r_list_dict[order_source_str]
         product_id_str_product_id_str_tuple_customer_id_set_dict = defaultdict(set)
         #
-        for message_dict1 in message_dict_list:
-            value_dict1 = message_dict1["value"]
-            for message_dict2 in message_dict_list:
-                value_dict2 = message_dict2["value"]
+        for m1 in m_list:
+            value_dict1 = m1["value"]
+            for m2 in m_list:
+                value_dict2 = m2["value"]
                 if value_dict1["product_id"] < value_dict2["product_id"] and value_dict1["customer_id"] == value_dict2["customer_id"]:
                     product_id_str_product_id_str_tuple_customer_id_set_dict[(value_dict1["product_id"], value_dict2["product_id"])].add(value_dict1["customer_id"])
         #
         json_str_set1 = set([json.dumps({"product_id_1": product_id_str_product_id_str_tuple[0], "product_id_2": product_id_str_product_id_str_tuple[1], "cross_purchases": len(customer_id_set)}) for product_id_str_product_id_str_tuple, customer_id_set in product_id_str_product_id_str_tuple_customer_id_set_dict.items()])
         #
         updated_r_list = self.sink_str_updated_r_list_dict[self_join_group_by_sink_str]
-        json_str_set2 = set([json.dumps(message_dict["value"]) for message_dict in updated_r_list])
+        json_str_set2 = set([json.dumps(m["value"]) for m in updated_r_list])
         self.assertTrue(json_str_set1.issubset(json_str_set2))
     
     def assert_datagen_self_join_group_by_debezium(self, order_source_str, self_join_group_by_debezium_sink_str):
         function_str = sys._getframe().f_code.co_name
         print(f"Asserting {function_str}...")
         #
-        message_dict_list = self.source_str_input_r_list_dict[order_source_str]
-        created_value_dict_list = [message_dict["value"]["after"] for message_dict in message_dict_list if message_dict["value"]["op"] == "c"]
-        deleted_value_dict_list = [message_dict["value"]["before"] for message_dict in message_dict_list if message_dict["value"]["op"] == "d"]
+        m_list = self.source_str_input_r_list_dict[order_source_str]
+        created_value_dict_list = [m["value"]["after"] for m in m_list if m["value"]["op"] == "c"]
+        deleted_value_dict_list = [m["value"]["before"] for m in m_list if m["value"]["op"] == "d"]
         diff_value_dict_list = [value_dict for value_dict in created_value_dict_list if value_dict not in deleted_value_dict_list]
         #
         product_id_str_product_id_str_tuple_customer_id_set_dict = defaultdict(set)
@@ -105,8 +105,8 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         json_str_set1 = set([json.dumps({"product_id_1": product_id_str_product_id_str_tuple[0], "product_id_2": product_id_str_product_id_str_tuple[1], "cross_purchases": len(customer_id_set)}) for product_id_str_product_id_str_tuple, customer_id_set in product_id_str_product_id_str_tuple_customer_id_set_dict.items()])
         #
         updated_r_list = self.sink_str_updated_r_list_dict[self_join_group_by_debezium_sink_str]
-        created_value_dict_list1 = [message_dict["value"]["after"] for message_dict in updated_r_list if message_dict["value"]["op"] == "c"]
-        deleted_value_dict_list1 = [message_dict["value"]["before"] for message_dict in updated_r_list if message_dict["value"]["op"] == "d"]
+        created_value_dict_list1 = [m["value"]["after"] for m in updated_r_list if m["value"]["op"] == "c"]
+        deleted_value_dict_list1 = [m["value"]["before"] for m in updated_r_list if m["value"]["op"] == "d"]
         diff_value_dict_list1 = [value_dict for value_dict in created_value_dict_list1 if value_dict not in deleted_value_dict_list1]
         json_str_set2 = set([json.dumps(value_dict) for value_dict in diff_value_dict_list1])
         #
@@ -118,14 +118,14 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         function_str = sys._getframe().f_code.co_name
         print(f"Asserting {function_str}...")
         #
-        for message_dict in self.sink_str_updated_r_list_dict[sink_customer_a_h_str]:
-            self.assertTrue(message_dict["value"]["last_name"][0].lower() >= "A".lower() and message_dict["value"]["last_name"][0].lower() <= "H".lower())
+        for m in self.sink_str_updated_r_list_dict[sink_customer_a_h_str]:
+            self.assertTrue(m["value"]["last_name"][0].lower() >= "A".lower() and m["value"]["last_name"][0].lower() <= "H".lower())
         #
-        for message_dict in self.sink_str_updated_r_list_dict[sink_customer_i_q_str]:
-            self.assertTrue(message_dict["value"]["last_name"][0].lower() >= "I".lower() and message_dict["value"]["last_name"][0].lower() <= "Q".lower())
+        for m in self.sink_str_updated_r_list_dict[sink_customer_i_q_str]:
+            self.assertTrue(m["value"]["last_name"][0].lower() >= "I".lower() and m["value"]["last_name"][0].lower() <= "Q".lower())
         #
-        for message_dict in self.sink_str_updated_r_list_dict[sink_customer_r_z_str]:
-            self.assertTrue(message_dict["value"]["last_name"][0].lower() >= "R".lower() and message_dict["value"]["last_name"][0].lower() <= "Z".lower())
+        for m in self.sink_str_updated_r_list_dict[sink_customer_r_z_str]:
+            self.assertTrue(m["value"]["last_name"][0].lower() >= "R".lower() and m["value"]["last_name"][0].lower() <= "Z".lower())
         #
         print("...done.")
 
@@ -157,16 +157,16 @@ class TestBase(unittest.IsolatedAsyncioTestCase):
         print(f"Asserting {function_str}...")
         #
         input_word_str_count_int_dict = {}
-        for message_dict in self.source_str_input_r_list_dict[line_source_str]:
-            line_str = message_dict["value"]
+        for m in self.source_str_input_r_list_dict[line_source_str]:
+            line_str = m["value"]
             word_str_list = line_str.split()
             for word_str in word_str_list:
                 input_word_str_count_int_dict[word_str] = input_word_str_count_int_dict.get(word_str, 0) + 1
         #
         output_word_str_count_int_dict = {}
-        for message_dict in self.sink_str_updated_r_list_dict[sink_str]:
-            word_str = message_dict["value"]["word"]
-            count_int = message_dict["value"]["count"]
+        for m in self.sink_str_updated_r_list_dict[sink_str]:
+            word_str = m["value"]["word"]
+            count_int = m["value"]["count"]
             output_word_str_count_int_dict[word_str] = count_int
         #
         self.assertEqual(input_word_str_count_int_dict, output_word_str_count_int_dict)

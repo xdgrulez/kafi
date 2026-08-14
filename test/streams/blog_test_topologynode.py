@@ -5,10 +5,10 @@ from kafi.streams.topologynode import TopologyNode as Tn
 t1 = "employees"
 t2 = "salaries"
 #
-employee_message_dict_list = [{"key": "0", "value": {"id": 0, "name": "kristjan"}},
+employee_m_list = [{"key": "0", "value": {"id": 0, "name": "kristjan"}},
                             {"key": "1", "value": {"id": 1, "name": "mark"}},
                             {"key": "2", "value": {"id": 2, "name": "mike"}}]
-salary_message_dict_list = [{"key": "2", "value": {"id": 2, "salary": 40000}},
+salary_m_list = [{"key": "2", "value": {"id": 2, "salary": 40000}},
                             {"key": "0", "value": {"id": 0, "salary": 38750}},
                             {"key": "1", "value": {"id": 1, "salary": 50000}}]
 #
@@ -35,8 +35,8 @@ def get_root_tn():
 #
 root_tn = get_root_tn()
 #
-root_tn.push(t1, employee_message_dict_list)
-root_tn.push(t2, salary_message_dict_list)
+root_tn.push(t1, employee_m_list)
+root_tn.push(t2, salary_m_list)
 #
 x = root_tn.step()
 print(x)

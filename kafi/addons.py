@@ -9,45 +9,45 @@ ALL_MESSAGES = -1
 
 #
 
-def default_projection_fun(message_dict1, message_dict2):
-    message_dict = dict(message_dict1)
-    message_dict["value"] = message_dict1["value"] | message_dict2["value"]
-    return message_dict
+def default_projection_fun(m1, m2):
+    m = dict(m1)
+    m["value"] = m1["value"] | m2["value"]
+    return m
 #
 
 class AddOns(Functional):
     def compact(self, topic, n=ALL_MESSAGES, **kwargs):
-        def foldl_fun(acc, message_dict):
-            key_hash_int_message_dict_dict = acc
+        def foldl_fun(acc, m):
+            key_hash_int_m_dict = acc
             #
-            key = message_dict["key"]
-            value = message_dict["value"]
+            key = m["key"]
+            value = m["value"]
             #
             if key is not None:
                 key_hash_int = hash(str(key))
                 if value is None:
-                    if key_hash_int in key_hash_int_message_dict_dict:
-                        del key_hash_int_message_dict_dict[key_hash_int]
+                    if key_hash_int in key_hash_int_m_dict:
+                        del key_hash_int_m_dict[key_hash_int]
                 else:
-                    key_hash_int_message_dict_dict[key_hash_int] = message_dict
+                    key_hash_int_m_dict[key_hash_int] = m
             #
-            return key_hash_int_message_dict_dict
+            return key_hash_int_m_dict
         #
 
-        (key_hash_int_message_dict_dict, _) = self.foldl(topic, foldl_fun, {}, n, **kwargs)
+        (key_hash_int_m_dict, _) = self.foldl(topic, foldl_fun, {}, n, **kwargs)
         #
-        message_dict_list = list(key_hash_int_message_dict_dict.values())
+        m_list = list(key_hash_int_m_dict.values())
         #
-        return message_dict_list
+        return m_list
 
     def compact_to(self, topic, target_storage, target_topic, n=ALL_MESSAGES, **kwargs):
         source_kwargs = copy_kwargs("source", **kwargs)
         target_kwargs = copy_kwargs("target", **kwargs)
         #
-        message_dict_list = self.compact(topic, n, **source_kwargs)
+        m_list = self.compact(topic, n, **source_kwargs)
         #
         target_producer = target_storage.producer(target_topic, **target_kwargs)
-        key_bytes_list_value_bytes_list_tuple = target_producer.produce_list(message_dict_list, **target_kwargs)
+        key_bytes_list_value_bytes_list_tuple = target_producer.produce_list(m_list, **target_kwargs)
         target_producer.close()
         #
         return key_bytes_list_value_bytes_list_tuple
@@ -57,12 +57,12 @@ class AddOns(Functional):
     def repeat(self, topic_str, n=1, **kwargs):
         n_int = n
         #
-        message_dict_list = self.tail(topic_str, type="bytes", n=n_int, **kwargs)
+        m_list = self.tail(topic_str, type="bytes", n=n_int, **kwargs)
         pr = self.producer(topic_str, type="bytes", **kwargs)
-        pr.produce_list(message_dict_list, **kwargs)
+        pr.produce_list(m_list, **kwargs)
         pr.close()
         #
-        return message_dict_list
+        return m_list
 
     #
 
@@ -156,12 +156,12 @@ class AddOns(Functional):
     #
 
     def message_size(self, topic_str, **kwargs):
-        def agg(partition_int_offset_int_size_int_tuple_dict_dict, message_dict):
-            partition_int = message_dict["partition"]
-            offset_int = message_dict["offset"]
-            key_bytes = message_dict["key"]
+        def agg(partition_int_offset_int_size_int_tuple_dict_dict, m):
+            partition_int = m["partition"]
+            offset_int = m["offset"]
+            key_bytes = m["key"]
             key_size_int = 0 if key_bytes is None else len(key_bytes)
-            value_bytes = message_dict["value"]
+            value_bytes = m["value"]
             value_size_int = 0 if value_bytes is None else len(value_bytes)
             #
             if partition_int not in partition_int_offset_int_size_int_tuple_dict_dict:
@@ -210,8 +210,8 @@ class AddOns(Functional):
     def collect_value_set(self, topic_str, **kwargs):
         value_json_str_set = set()
         #
-        def collect(message_dict):
-            value_json_str = json.dumps(message_dict["value"])
+        def collect(m):
+            value_json_str = json.dumps(m["value"])
             value_json_str_set.add(value_json_str)
         #
         self.foreach(topic_str, foreach_fun=collect, **kwargs)

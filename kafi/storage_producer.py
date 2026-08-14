@@ -39,7 +39,7 @@ class StorageProducer(Chunker):
     #   * support for self.keep_partitions_bool, self.keep_timestamps_bool and self.keep_headers_bool
     #.  * serialization (except for kafka/RestProxy)
     #   * extensions (e.g. chunking, encryption)
-    def produce_list(self, message_dict_list, **kwargs):
+    def produce_list(self, m_list, **kwargs):
         #
         def serialize(payload, key_bool):
             # Do not serialize if this is a RestProxyProducer object (serialization takes place later on the REST Proxy). 
@@ -48,15 +48,15 @@ class StorageProducer(Chunker):
             else:
                 return self.serialize(payload, key_bool)
         #
-        message_dict_list1 = [{"value": serialize(message_dict["value"], False),
-                               "key": serialize(message_dict["key"] if "key" in message_dict else None, True),
-                               "partition": message_dict["partition"] if "partition" in message_dict and self.keep_partitions_bool else RD_KAFKA_PARTITION_UA,
-                               "timestamp": message_dict["timestamp"] if "timestamp" in message_dict and self.keep_timestamps_bool else CURRENT_TIME,
-                               "headers": self.storage_obj.headers_to_headers_str_bytes_tuple_list(message_dict["headers"]) if "headers" in message_dict and self.keep_headers_bool else None} for message_dict in message_dict_list]
+        m_list1 = [{"value": serialize(m["value"], False),
+                               "key": serialize(m["key"] if "key" in m else None, True),
+                               "partition": m["partition"] if "partition" in m and self.keep_partitions_bool else RD_KAFKA_PARTITION_UA,
+                               "timestamp": m["timestamp"] if "timestamp" in m and self.keep_timestamps_bool else CURRENT_TIME,
+                               "headers": self.storage_obj.headers_to_headers_str_bytes_tuple_list(m["headers"]) if "headers" in m and self.keep_headers_bool else None} for m in m_list]
         #
-        message_dict_list2 = self.chunk(message_dict_list1)
+        m_list2 = self.chunk(m_list1)
         #
-        return self.produce_impl(message_dict_list2, **kwargs)
+        return self.produce_impl(m_list2, **kwargs)
 
     # Syntactic sugar for produce_list() (including headers).
     def produce(self, value, **kwargs):
@@ -76,7 +76,7 @@ class StorageProducer(Chunker):
         headers_list = headers if isinstance(headers, list) and all(self.storage_obj.is_headers(headers1) for headers1 in headers) and len(headers) == len(value_list) else [headers for _ in value_list]
         headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         #
-        message_dict_list = [{"value": value,
+        m_list = [{"value": value,
                               "key": key,
                               "partition": partition_int,
                               "timestamp": timestamp,
@@ -87,7 +87,7 @@ class StorageProducer(Chunker):
         self.keep_timestamps_bool = True
         self.keep_headers_bool = True
         #
-        return self.produce_list(message_dict_list, **kwargs)
+        return self.produce_list(m_list, **kwargs)
 
     # Helpers
 

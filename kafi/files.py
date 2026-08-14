@@ -23,10 +23,10 @@ class Files(Pandas):
             raise Exception("Only \".csv\", \".json\", \".parquet\", \".xlsx\", \".xml\" and \".bytes\" supported.")
         #
         if suffix_str == ".bytes":
-            message_dict_list = self.cat(topic, n, type="bytes", **kwargs)
+            m_list = self.cat(topic, n, type="bytes", **kwargs)
             data_bytes = b""
-            for message_dict in message_dict_list:
-                value_bytes = message_dict["value"]
+            for m in m_list:
+                value_bytes = m["value"]
                 data_bytes += value_bytes + b"\n"
         else:
             df = self.topic_to_df(topic, n, **kwargs)

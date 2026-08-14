@@ -52,24 +52,24 @@ class ClusterProducer(KafkaProducer):
 
     #
 
-    def produce_impl(self, message_dict_list, **kwargs):
+    def produce_impl(self, m_list, **kwargs):
         flush_bool = kwargs["flush"] if "flush" in kwargs else False
         #
         counter_int = 0
-        for message_dict in message_dict_list:
-            timestamp = message_dict["timestamp"]
+        for m in m_list:
+            timestamp = m["timestamp"]
             timestamp_int = timestamp[1] if isinstance(timestamp, tuple) else timestamp
             #
-            partition_int = message_dict["partition"]
+            partition_int = m["partition"]
             if partition_int == RD_KAFKA_PARTITION_UA:
                 if self.partitioner_fun is not None:
                     # Use the custom partitioner function for the partitioning.
-                    partition_int = self.partitioner_fun(message_dict, counter_int, self.partitions_int, self.projection_fun)
+                    partition_int = self.partitioner_fun(m, counter_int, self.partitions_int, self.projection_fun)
                 else:
                     # Let confluent-kafka Proxy do the partitioning if no custom partitioner function is specified.
                     pass
             #
-            self.producer.produce(self.topic_str, message_dict["value"], message_dict["key"], partition=partition_int, timestamp=timestamp_int, headers=message_dict["headers"], on_delivery=self.on_delivery_fun)
+            self.producer.produce(self.topic_str, m["value"], m["key"], partition=partition_int, timestamp=timestamp_int, headers=m["headers"], on_delivery=self.on_delivery_fun)
             self.producer.poll(0)
             #
             self.written_counter_int += 1

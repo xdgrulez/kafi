@@ -16,12 +16,12 @@ class TestKafkaBase:
                     #
                     batch_size_int = source_str_batch_size_int_dict[source_str]
                     #
-                    message_dict_list = self.generate(source_str, batch_size_int)
+                    m_list = self.generate(source_str, batch_size_int)
                     #
                     producer = storage.producer(topic_str, **kwargs)
-                    producer.produce_list(message_dict_list)
+                    producer.produce_list(m_list)
                     #
-                    messages_int = len(message_dict_list)
+                    messages_int = len(m_list)
                     topic_str_messages_int_dict[topic_str] += messages_int
                     print(f"Produced {messages_int} messages to topic {topic_str} ({topic_str_messages_int_dict[topic_str]}/{steps_int * batch_size_int}).")
                     #
@@ -38,8 +38,8 @@ class TestKafkaBase:
             #
             print(f"Reading {source_or_sink_str} topic {topic_str}...")
             kwargs["group"] = f"test_{get_millis()}"
-            message_dict_list = storage.cat(topic_str, **kwargs)
-            source_str_input_r_list_dict[source_str] = message_dict_list
+            m_list = storage.cat(topic_str, **kwargs)
+            source_str_input_r_list_dict[source_str] = m_list
             print("...done.")
         #
         return source_str_input_r_list_dict

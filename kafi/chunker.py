@@ -1,7 +1,7 @@
 import uuid
 
 from kafi.serializer import Serializer
-from kafi.helpers import message_dict_chunk_key_to_key, default_partitioner, key_to_chunk_key, split_bytes
+from kafi.helpers import m_chunk_key_to_key, default_partitioner, key_to_chunk_key, split_bytes
 
 #
 
@@ -15,23 +15,23 @@ class Chunker(Serializer):
         #
         if self.chunk_size_bytes_int > 0:
             self.partitioner_fun = default_partitioner
-            self.projection_fun = message_dict_chunk_key_to_key
+            self.projection_fun = m_chunk_key_to_key
         #
         super().__init__(schema_registry_config_dict, **kwargs)
 
 
     #
 
-    def chunk(self, message_dict_list):
-        message_dict_list1 = []
+    def chunk(self, m_list):
+        m_list1 = []
         if self.chunk_size_bytes_int > 0:
-            for message_dict in message_dict_list:
-                value_bytes = message_dict["value"]
+            for m in m_list:
+                value_bytes = m["value"]
                 #
                 if len(value_bytes) > self.chunk_size_bytes_int:
                     chunk_value_bytes_list = split_bytes(value_bytes, self.chunk_size_bytes_int)
                     #
-                    headers_str_bytes_tuple_list = message_dict["headers"]
+                    headers_str_bytes_tuple_list = m["headers"]
                     if headers_str_bytes_tuple_list is None:
                         headers_str_bytes_tuple_list = []
                     headers_str_bytes_dict = dict(headers_str_bytes_tuple_list)
@@ -43,21 +43,21 @@ class Chunker(Serializer):
                         if self.value_type_str in ["avro", "jsonschema", "json_sr", "pb", "protobuf"] and chunk_int > 0:
                             chunk_value_bytes = value_bytes[0:5] + chunk_value_bytes
                         #
-                        chunk_key_bytes = key_to_chunk_key(message_dict["key"], chunk_int)
+                        chunk_key_bytes = key_to_chunk_key(m["key"], chunk_int)
                         #
                         headers_str_bytes_dict["kafi_chunk_number"] = chunk_int.to_bytes(32, byteorder="big")
                         #
                         chunk_headers_str_bytes_tuple_list = list(headers_str_bytes_dict.items())
                         #
-                        message_dict1 = {"value": chunk_value_bytes,
+                        m1 = {"value": chunk_value_bytes,
                                          "key": chunk_key_bytes,
-                                         "partition": message_dict["partition"],
-                                         "timestamp": message_dict["timestamp"],
+                                         "partition": m["partition"],
+                                         "timestamp": m["timestamp"],
                                          "headers": chunk_headers_str_bytes_tuple_list}
-                        message_dict_list1.append(message_dict1)
+                        m_list1.append(m1)
                 else:
-                    message_dict_list1 = message_dict_list
+                    m_list1 = m_list
         else:
-            message_dict_list1 = message_dict_list
+            m_list1 = m_list
         #
-        return message_dict_list1
+        return m_list1

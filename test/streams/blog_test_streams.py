@@ -16,23 +16,23 @@ c.retouch(t2, partitions=2)
 c.retouch(t3)
 c.retouch(t4)
 #
-employee_message_dict_list = [{"key": "0", "value": {"id": 0, "name": "kristjan"}},
+employee_m_list = [{"key": "0", "value": {"id": 0, "name": "kristjan"}},
                             {"key": "1", "value": {"id": 1, "name": "mark"}},
                             {"key": "2", "value": {"id": 2, "name": "mike"}}]
-salary_message_dict_list = [{"key": "2", "value": {"id": 2, "salary": 40000}},
+salary_m_list = [{"key": "2", "value": {"id": 2, "salary": 40000}},
                             {"key": "0", "value": {"id": 0, "salary": 38750}},
                             {"key": "1", "value": {"id": 1, "salary": 50000}}]
 #
 pr = c.producer(t1)
 partition_int = 0
-for x in employee_message_dict_list:
+for x in employee_m_list:
     pr.produce(x["value"], key=x["key"], partition=partition_int)
     partition_int = 1 if partition_int == 0 else 0
 pr.close()
 #
 pr = c.producer(t2)
 partition_int = 0
-for x in salary_message_dict_list:
+for x in salary_m_list:
     pr.produce(x["value"], key=x["key"], partition=partition_int)
     partition_int = 1 if partition_int == 0 else 0
 pr.close()

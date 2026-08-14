@@ -118,10 +118,10 @@ class FSAdmin(StorageAdmin):
                     message_bytes_list = messages_bytes.split(b"\n")[:-1]
                     #
                     for message_bytes in message_bytes_list:
-                        message_dict = ast.literal_eval(message_bytes.decode("utf-8"))
+                        m = ast.literal_eval(message_bytes.decode("utf-8"))
                         #
-                        if message_dict["timestamp"][1] >= offsets_dict[partition_int]:
-                            offsets_dict[partition_int] = message_dict["offset"]
+                        if m["timestamp"][1] >= offsets_dict[partition_int]:
+                            offsets_dict[partition_int] = m["offset"]
                             break
         #
         if replace_not_found_bool:

@@ -353,9 +353,9 @@ class TestSingleStorageBase(unittest.TestCase):
         consumer = s.consumer(topic_str, group=group_str, type="str")
         group_str_topic_str_offsets_dict_dict_dict = s.group_offsets(group_str, {topic_str: {0: 2}})
         self.assertEqual(group_str_topic_str_offsets_dict_dict_dict, {group_str: {topic_str: {0: 2}}})
-        [message_dict] = consumer.consume(n=1)
+        [m] = consumer.consume(n=1)
         consumer.commit()
-        self.assertEqual(message_dict["value"], "message 3")
+        self.assertEqual(m["value"], "message 3")
         #
         consumer.close()
 
@@ -494,12 +494,12 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, value_type="str")
-        message_dict_list = consumer.consume(n=2)
+        m_list = consumer.consume(n=2)
         consumer.close()
-        message0_timestamp_int = message_dict_list[0]["timestamp"][1]
-        # message0_offset_int = message_dict_list[0]["offset"]
-        message1_timestamp_int = message_dict_list[1]["timestamp"][1]
-        message1_offset_int = message_dict_list[1]["offset"]
+        message0_timestamp_int = m_list[0]["timestamp"][1]
+        # message0_offset_int = m_list[0]["offset"]
+        message1_timestamp_int = m_list[1]["timestamp"][1]
+        message1_offset_int = m_list[1]["offset"]
         #
         topic_str_offsets_dict_dict1 = s.offsets_for_times(topic_str, {0: message1_timestamp_int})
         found_message1_offset_int1 = topic_str_offsets_dict_dict1[topic_str][0]
@@ -597,9 +597,9 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str = self.create_test_group_name()
         # Upon consume, the type "str" triggers the conversion into a string, and "bytes" into bytes.
         consumer = s.consumer(topic_str, group=group_str, key_type="str", value_type="bytes")
-        message_dict_list = consumer.consume(n=3)
-        key_str_list = [message_dict["key"] for message_dict in message_dict_list]
-        value_bytes_list = [message_dict["value"] for message_dict in message_dict_list]
+        m_list = consumer.consume(n=3)
+        key_str_list = [m["key"] for m in m_list]
+        value_bytes_list = [m["value"] for m in m_list]
         self.assertEqual(key_str_list, self.key_snack_str_list)
         self.assertEqual(value_bytes_list, self.value_snack_bytes_list)
         consumer.close()
@@ -621,9 +621,9 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str = self.create_test_group_name()
         # Upon consume, the type "json" triggers the conversion into a dictionary, and "str" into a string.
         consumer = s.consumer(topic_str, group=group_str, key_type="json", value_type="json")
-        message_dict_list = consumer.consume(n=3)
-        key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
-        value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
+        m_list = consumer.consume(n=3)
+        key_dict_list = [m["key"] for m in m_list]
+        value_dict_list = [m["value"] for m in m_list]
         self.assertEqual(key_dict_list, self.key_snack_dict_list)
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
@@ -645,9 +645,9 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str = self.create_test_group_name()
         # Upon consume, the type "avro" triggers the conversion into a dictionary.
         consumer = s.consumer(topic_str, group=group_str, key_type="avro", value_type="avro")
-        message_dict_list = consumer.consume(n=3)
-        key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
-        value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
+        m_list = consumer.consume(n=3)
+        key_dict_list = [m["key"] for m in m_list]
+        value_dict_list = [m["value"] for m in m_list]
         self.assertEqual(key_dict_list, self.key_snack_dict_list)
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
@@ -669,9 +669,9 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str = self.create_test_group_name()
         # Upon consume, the types "json" and "jsonschema" (alias = "json_sr") trigger the conversion into a dictionary.
         consumer = s.consumer(topic_str, group=group_str, key_type="json_sr", value_type="json_sr", deser_conf={"validate": False})
-        message_dict_list = consumer.consume(n=3)
-        key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
-        value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
+        m_list = consumer.consume(n=3)
+        key_dict_list = [m["key"] for m in m_list]
+        value_dict_list = [m["value"] for m in m_list]
         self.assertEqual(key_dict_list, self.key_snack_dict_list)
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
@@ -693,9 +693,9 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str = self.create_test_group_name()
         # Upon consume, the types "json" and "jsonschema" (alias = "json_sr") trigger the conversion into a dictionary.
         consumer = s.consumer(topic_str, group=group_str, key_type="json_sr", value_type="json_sr", deser_conf={"validate": False})
-        message_dict_list = consumer.consume(n=3)
-        key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
-        value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
+        m_list = consumer.consume(n=3)
+        key_dict_list = [m["key"] for m in m_list]
+        value_dict_list = [m["value"] for m in m_list]
         self.assertEqual(key_dict_list, self.key_no_dict_snack_str_list)
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
@@ -717,9 +717,9 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str = self.create_test_group_name()
         # Upon consume, the type "protobuf" (alias = "pb") triggers the conversion into a dictionary.
         consumer = s.consumer(topic_str, group=group_str, key_type="pb", value_type="protobuf")
-        message_dict_list = consumer.consume(n=3)
-        key_dict_list = [message_dict["key"] for message_dict in message_dict_list]
-        value_dict_list = [message_dict["value"] for message_dict in message_dict_list]
+        m_list = consumer.consume(n=3)
+        key_dict_list = [m["key"] for m in m_list]
+        value_dict_list = [m["value"] for m in m_list]
         self.assertEqual(key_dict_list, self.key_snack_dict_list)
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
@@ -766,28 +766,28 @@ class TestSingleStorageBase(unittest.TestCase):
         # Positive offsets.
         group_str1 = self.create_test_group_name()
         consumer1 = s.consumer(topic_str, group=group_str1, value_type="str", offsets={0: 2, 2: 3})
-        message_dict_list1 = consumer1.consume(n=1)
-        self.assertEqual(len(message_dict_list1), 1)
-        self.assertEqual(message_dict_list1[0]["value"], "message 3")
+        m_list1 = consumer1.consume(n=1)
+        self.assertEqual(len(m_list1), 1)
+        self.assertEqual(m_list1[0]["value"], "message 3")
         consumer1.close()
         # Negative offsets (from the current high watermark).
         group_str2 = self.create_test_group_name()
         consumer2 = s.consumer(topic_str, group=group_str2, value_type="str", offsets={0: -2, 2: 3})
-        message_dict_list2 = consumer2.consume(n=2)
-        self.assertEqual(len(message_dict_list2), 2)
-        self.assertEqual(message_dict_list2[0]["value"], "message 2")
-        self.assertEqual(message_dict_list2[1]["value"], "message 3")
+        m_list2 = consumer2.consume(n=2)
+        self.assertEqual(len(m_list2), 2)
+        self.assertEqual(m_list2[0]["value"], "message 2")
+        self.assertEqual(m_list2[1]["value"], "message 3")
         consumer2.close()
         # Negative n (read n messages from the end of the topic).
         group_str3 = self.create_test_group_name()
         consumer3 = s.consumer(topic_str, group=group_str3, value_type="str")
-        message_dict_list3 = consumer3.consume(last_n=4)
-        self.assertEqual(len(message_dict_list3), 4)
-        sorted_message_dict_list3 = sorted(message_dict_list3, key=lambda x: x["timestamp"])
-        self.assertEqual(sorted_message_dict_list3[0]["value"], "message 2")
-        self.assertEqual(sorted_message_dict_list3[1]["value"], "message 3")
-        self.assertEqual(sorted_message_dict_list3[2]["value"], "message 5")
-        self.assertEqual(sorted_message_dict_list3[3]["value"], "message 6")
+        m_list3 = consumer3.consume(last_n=4)
+        self.assertEqual(len(m_list3), 4)
+        sorted_m_list3 = sorted(m_list3, key=lambda x: x["timestamp"])
+        self.assertEqual(sorted_m_list3[0]["value"], "message 2")
+        self.assertEqual(sorted_m_list3[1]["value"], "message 3")
+        self.assertEqual(sorted_m_list3[2]["value"], "message 5")
+        self.assertEqual(sorted_m_list3[3]["value"], "message 6")
         consumer3.close()
 
     def test_commit(self):
@@ -858,14 +858,14 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(n_int1, 3)
         #
         self.counter_int = 0
-        def map_fun(message_dict):
+        def map_fun(m):
             if self.counter_int == 2:
                 self.counter_int += 1
                 raise Exception("Error...")
             #
             self.counter_int += 1
             #
-            return message_dict
+            return m
 
         topic_str2 = self.create_test_topic_name()
         s.create(topic_str2)
@@ -885,9 +885,9 @@ class TestSingleStorageBase(unittest.TestCase):
         # self.assertEqual(n_int2, 3)
         #
         group_str2 = self.create_test_group_name()
-        message_dict_list = s.cat(topic_str1, group=group_str2, value_type="str", n=3)
-        self.assertEqual(3, len(message_dict_list))
-        value_str_list = [message_dict["value"] for message_dict in message_dict_list]
+        m_list = s.cat(topic_str1, group=group_str2, value_type="str", n=3)
+        self.assertEqual(3, len(m_list))
+        value_str_list = [m["value"] for m in m_list]
         self.assertEqual(value_str_list, self.value_snack_str_list)
 
     def test_offsets_cache(self):
@@ -911,22 +911,22 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         group_str1 = self.create_test_group_name()
         c1 = s.consumer(topic_str1, group=group_str1, partitions={topic_str1: [0]})
-        message_dict_list1 = c1.consume(1)
-        self.assertEqual(0, message_dict_list1[0]["partition"])
-        self.assertEqual(0, message_dict_list1[0]["offset"])
-        self.assertEqual(self.value_snack_dict_list[0], message_dict_list1[0]["value"])
-        message_dict_list2 = c1.consume(1)
-        self.assertEqual(0, message_dict_list2[0]["partition"])
-        self.assertEqual(1, message_dict_list2[0]["offset"])
-        self.assertEqual(self.value_snack_dict_list[1], message_dict_list2[0]["value"])
+        m_list1 = c1.consume(1)
+        self.assertEqual(0, m_list1[0]["partition"])
+        self.assertEqual(0, m_list1[0]["offset"])
+        self.assertEqual(self.value_snack_dict_list[0], m_list1[0]["value"])
+        m_list2 = c1.consume(1)
+        self.assertEqual(0, m_list2[0]["partition"])
+        self.assertEqual(1, m_list2[0]["offset"])
+        self.assertEqual(self.value_snack_dict_list[1], m_list2[0]["value"])
         c1.close()
         #
         group_str1 = self.create_test_group_name()
         c2 = s.consumer(topic_str1, group=group_str1, partitions={topic_str1: [1]})
-        message_dict_list3 = c2.consume(1)
-        self.assertEqual(1, message_dict_list3[0]["partition"])
-        self.assertEqual(0, message_dict_list3[0]["offset"])
-        self.assertEqual(self.value_snack_dict_list[2], message_dict_list3[0]["value"])
+        m_list3 = c2.consume(1)
+        self.assertEqual(1, m_list3[0]["partition"])
+        self.assertEqual(0, m_list3[0]["offset"])
+        self.assertEqual(self.value_snack_dict_list[2], m_list3[0]["value"])
         c2.close()
 
     def test_compaction(self):
@@ -978,10 +978,10 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(s.topics(topic_str1, size=True, partitions=True)[topic_str1]["size"], 6)
         #
         group_str1 = self.create_test_group_name()
-        message_dict_list1 = s.compact(topic_str1, group=group_str1, type="json")
-        self.assertEqual(3, len(message_dict_list1))
-        key_dict_list = [message_dict["key"] for message_dict in message_dict_list1]
-        value_dict_list = [message_dict["value"] for message_dict in message_dict_list1]
+        m_list1 = s.compact(topic_str1, group=group_str1, type="json")
+        self.assertEqual(3, len(m_list1))
+        key_dict_list = [m["key"] for m in m_list1]
+        value_dict_list = [m["value"] for m in m_list1]
         self.assertEqual(key_dict_list, self.key_snack_dict_list)
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
         #
@@ -990,10 +990,10 @@ class TestSingleStorageBase(unittest.TestCase):
         group_str2 = self.create_test_group_name()
         s.compact_to(topic_str1, s, topic_str2, group=group_str2, type="json")
         group_str3 = self.create_test_group_name()
-        message_dict_list2 = s.cat(topic_str2, group=group_str3, type="json")
-        self.assertEqual(3, len(message_dict_list2))
-        key_dict_list = [message_dict["key"] for message_dict in message_dict_list2]
-        value_dict_list = [message_dict["value"] for message_dict in message_dict_list2]
+        m_list2 = s.cat(topic_str2, group=group_str3, type="json")
+        self.assertEqual(3, len(m_list2))
+        key_dict_list = [m["key"] for m in m_list2]
+        value_dict_list = [m["value"] for m in m_list2]
         self.assertEqual(key_dict_list, self.key_snack_dict_list)
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
 
@@ -1016,8 +1016,8 @@ class TestSingleStorageBase(unittest.TestCase):
     #     self.assertEqual(len(self.value_snack_dict_list), n_int1)
     #     #
     #     group_str1 = self.create_test_group_name()
-    #     message_dict_list1 = s.cat(topic_str1, group=group_str1)
-    #     value_dict_list1 = [message_dict["value"] for message_dict in message_dict_list1]
+    #     m_list1 = s.cat(topic_str1, group=group_str1)
+    #     value_dict_list1 = [m["value"] for m in m_list1]
     #     self.assertEqual(self.value_snack_dict_list, value_dict_list1)
     #     #
     #     #
@@ -1038,9 +1038,9 @@ class TestSingleStorageBase(unittest.TestCase):
     #     self.assertEqual(n_chunks_int, n_int2)
     #     # Automatically join these chunked messages back to their original form.
     #     group_str2 = self.create_test_group_name()
-    #     message_dict_list2 = s.cat(topic_str2, group=group_str2)
-    #     self.assertEqual(len(self.value_snack_dict_list), len(message_dict_list2))
-    #     value_dict_list2 = [message_dict["value"] for message_dict in message_dict_list2]
+    #     m_list2 = s.cat(topic_str2, group=group_str2)
+    #     self.assertEqual(len(self.value_snack_dict_list), len(m_list2))
+    #     value_dict_list2 = [m["value"] for m in m_list2]
     #     self.assertEqual(self.value_snack_dict_list, value_dict_list2)
 
     #
@@ -1125,19 +1125,19 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        message_dict_list1 = s.cat(topic_str, group=group_str1, type="str")
-        self.assertEqual(3, len(message_dict_list1))
-        value_str_list1 = [message_dict["value"] for message_dict in message_dict_list1]
+        m_list1 = s.cat(topic_str, group=group_str1, type="str")
+        self.assertEqual(3, len(m_list1))
+        value_str_list1 = [m["value"] for m in m_list1]
         self.assertEqual(value_str_list1, self.value_snack_str_list)
         #
         if not s.__class__.__name__ == "RestProxy":
-            self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
+            self.assertEqual(m_list1[0]["headers"], self.headers_str_bytes_tuple_list)
             #
             group_str2 = self.create_test_group_name()
-            message_dict_list2 = s.cat(topic_str, group=group_str2, type="str", offsets={0:1}, n=1)
-            self.assertEqual(1, len(message_dict_list2))
-            self.assertEqual(message_dict_list2[0]["value"], self.value_snack_str_list[1])
-            self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
+            m_list2 = s.cat(topic_str, group=group_str2, type="str", offsets={0:1}, n=1)
+            self.assertEqual(1, len(m_list2))
+            self.assertEqual(m_list2[0]["value"], self.value_snack_str_list[1])
+            self.assertEqual(m_list2[0]["headers"], self.headers_str_bytes_tuple_list)
 
     def test_cat_from_to_offsets_diff(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -1145,8 +1145,8 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         s = self.get_storage()
         #
-        def get_partition_int_message_dict_list_dict(message_dict_list):
-            return {0: [message_dict for message_dict in message_dict_list if message_dict["partition"] == 0], 1: [message_dict for message_dict in message_dict_list if message_dict["partition"] == 1]}
+        def get_partition_int_m_list_dict(m_list):
+            return {0: [m for m in m_list if m["partition"] == 0], 1: [m for m in m_list if m["partition"] == 1]}
         # Produce five messages to a topic with two partitions.
         # 0: snack[0],               snack[1],               snack[2]
         #    0                       1                       2
@@ -1169,33 +1169,33 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         # Read only the messages from the second to the fourth using the offsets.
         group_str5 = self.create_test_group_name()
-        message_dict_list5 = s.cat(topic_str, group=group_str5, type="str", offsets={topic_str: {0: 1, 1: 0}}, end_offsets={topic_str: {0: 1, 1: 1}})
-        self.assertEqual(3, len(message_dict_list5))
-        partition_int_message_dict_list_dict5 = get_partition_int_message_dict_list_dict(message_dict_list5)
-        self.assertEqual(partition_int_message_dict_list_dict5[0][0]["value"], self.value_snack_str_list[1])
-        self.assertEqual(partition_int_message_dict_list_dict5[1][0]["value"], self.snack_countries_str_list[0])
-        self.assertEqual(partition_int_message_dict_list_dict5[1][1]["value"], self.snack_countries_str_list[1])
+        m_list5 = s.cat(topic_str, group=group_str5, type="str", offsets={topic_str: {0: 1, 1: 0}}, end_offsets={topic_str: {0: 1, 1: 1}})
+        self.assertEqual(3, len(m_list5))
+        partition_int_m_list_dict5 = get_partition_int_m_list_dict(m_list5)
+        self.assertEqual(partition_int_m_list_dict5[0][0]["value"], self.value_snack_str_list[1])
+        self.assertEqual(partition_int_m_list_dict5[1][0]["value"], self.snack_countries_str_list[0])
+        self.assertEqual(partition_int_m_list_dict5[1][1]["value"], self.snack_countries_str_list[1])
         # Read only the messages from the third to the end of the topic using the offsets.
         group_str6 = self.create_test_group_name()
-        message_dict_list6 = s.cat(topic_str, group=group_str6, type="str", offsets={0: 1, 1: 1})
-        self.assertEqual(3, len(message_dict_list6))
-        partition_int_message_dict_list_dict6 = get_partition_int_message_dict_list_dict(message_dict_list6)
-        self.assertEqual(partition_int_message_dict_list_dict6[0][0]["value"], self.value_snack_str_list[1])
-        self.assertEqual(partition_int_message_dict_list_dict6[0][1]["value"], self.value_snack_str_list[2])
-        self.assertEqual(partition_int_message_dict_list_dict6[1][0]["value"], self.snack_countries_str_list[1])
+        m_list6 = s.cat(topic_str, group=group_str6, type="str", offsets={0: 1, 1: 1})
+        self.assertEqual(3, len(m_list6))
+        partition_int_m_list_dict6 = get_partition_int_m_list_dict(m_list6)
+        self.assertEqual(partition_int_m_list_dict6[0][0]["value"], self.value_snack_str_list[1])
+        self.assertEqual(partition_int_m_list_dict6[0][1]["value"], self.value_snack_str_list[2])
+        self.assertEqual(partition_int_m_list_dict6[1][0]["value"], self.snack_countries_str_list[1])
         # Skip the rest of the test for RestProxy (requires offsets_for_times() not available in the REST Proxy API).
         if s.__class__.__name__ == "RestProxy":
             return
         #
         # Read the messages.
         group_str1 = self.create_test_group_name()
-        message_dict_list1 = s.cat(topic_str, group=group_str1, type="str")
-        self.assertEqual(5, len(message_dict_list1))
+        m_list1 = s.cat(topic_str, group=group_str1, type="str")
+        self.assertEqual(5, len(m_list1))
         # Get dictionary mapping partitions to timestamps.
         partition_int_ts_int_list_dict = {0: [], 1: []}
-        for message_dict in message_dict_list1:
-            partition_int = message_dict["partition"]
-            ts_int = message_dict["timestamp"][1]
+        for m in m_list1:
+            partition_int = m["partition"]
+            ts_int = m["timestamp"][1]
             #
             partition_int_ts_int_list_dict[partition_int].append(ts_int)
         #
@@ -1212,39 +1212,39 @@ class TestSingleStorageBase(unittest.TestCase):
         n_int2 = s.offsets_diff(topic_str, ts=ts_int0, end_ts=ts_int4)[topic_str]
         self.assertEqual(5, n_int2)
         #
-        message_dict_list2 = s.cat(topic_str, group=group_str2, type="str", ts=ts_int0, end_ts=ts_int4)
-        self.assertEqual(5, len(message_dict_list2))
-        partition_int_message_dict_list_dict2 = get_partition_int_message_dict_list_dict(message_dict_list2)
-        self.assertEqual(partition_int_message_dict_list_dict2[0][0]["value"], self.value_snack_str_list[0])
-        self.assertEqual(partition_int_message_dict_list_dict2[0][1]["value"], self.value_snack_str_list[1])
-        self.assertEqual(partition_int_message_dict_list_dict2[0][2]["value"], self.value_snack_str_list[2])
-        self.assertEqual(partition_int_message_dict_list_dict2[1][0]["value"], self.snack_countries_str_list[0])
-        self.assertEqual(partition_int_message_dict_list_dict2[1][1]["value"], self.snack_countries_str_list[1])
+        m_list2 = s.cat(topic_str, group=group_str2, type="str", ts=ts_int0, end_ts=ts_int4)
+        self.assertEqual(5, len(m_list2))
+        partition_int_m_list_dict2 = get_partition_int_m_list_dict(m_list2)
+        self.assertEqual(partition_int_m_list_dict2[0][0]["value"], self.value_snack_str_list[0])
+        self.assertEqual(partition_int_m_list_dict2[0][1]["value"], self.value_snack_str_list[1])
+        self.assertEqual(partition_int_m_list_dict2[0][2]["value"], self.value_snack_str_list[2])
+        self.assertEqual(partition_int_m_list_dict2[1][0]["value"], self.snack_countries_str_list[0])
+        self.assertEqual(partition_int_m_list_dict2[1][1]["value"], self.snack_countries_str_list[1])
         # Read the messages from the timestamp of the second to the timestamp of the fourth message (we also get the fifth from partition 0).
         group_str3 = self.create_test_group_name()
         # s.verbose(1)
         n_int3 = s.offsets_diff(topic_str, ts=ts_int1, end_ts=ts_int3)[topic_str]
         self.assertEqual(4, n_int3)
         #
-        message_dict_list3 = s.cat(topic_str, group=group_str3, type="str", ts=ts_int1, end_ts=ts_int3)
-        self.assertEqual(4, len(message_dict_list3))
-        partition_int_message_dict_list_dict3 = get_partition_int_message_dict_list_dict(message_dict_list3)
-        self.assertEqual(partition_int_message_dict_list_dict3[0][0]["value"], self.value_snack_str_list[1])
-        self.assertEqual(partition_int_message_dict_list_dict3[0][1]["value"], self.value_snack_str_list[2])
-        self.assertEqual(partition_int_message_dict_list_dict3[1][0]["value"], self.snack_countries_str_list[0])
-        self.assertEqual(partition_int_message_dict_list_dict3[1][1]["value"], self.snack_countries_str_list[1])
+        m_list3 = s.cat(topic_str, group=group_str3, type="str", ts=ts_int1, end_ts=ts_int3)
+        self.assertEqual(4, len(m_list3))
+        partition_int_m_list_dict3 = get_partition_int_m_list_dict(m_list3)
+        self.assertEqual(partition_int_m_list_dict3[0][0]["value"], self.value_snack_str_list[1])
+        self.assertEqual(partition_int_m_list_dict3[0][1]["value"], self.value_snack_str_list[2])
+        self.assertEqual(partition_int_m_list_dict3[1][0]["value"], self.snack_countries_str_list[0])
+        self.assertEqual(partition_int_m_list_dict3[1][1]["value"], self.snack_countries_str_list[1])
         # Read the messages from the timestamp of the second to the timestamp of the third message (we also get the fourth on partition 1).
         group_str4 = self.create_test_group_name()
         # s.verbose(1)
         n_int4 = s.offsets_diff(topic_str, ts=ts_int1, end_ts=ts_int2)[topic_str]
         self.assertEqual(3, n_int4)
         #
-        message_dict_list4 = s.cat(topic_str, group=group_str4, type="str", ts=ts_int1, end_ts=ts_int2)
-        self.assertEqual(3, len(message_dict_list4))
-        partition_int_message_dict_list_dict4 = get_partition_int_message_dict_list_dict(message_dict_list4)
-        self.assertEqual(partition_int_message_dict_list_dict4[0][0]["value"], self.value_snack_str_list[1])
-        self.assertEqual(partition_int_message_dict_list_dict4[1][0]["value"], self.snack_countries_str_list[0])
-        self.assertEqual(partition_int_message_dict_list_dict4[1][1]["value"], self.snack_countries_str_list[1])
+        m_list4 = s.cat(topic_str, group=group_str4, type="str", ts=ts_int1, end_ts=ts_int2)
+        self.assertEqual(3, len(m_list4))
+        partition_int_m_list_dict4 = get_partition_int_m_list_dict(m_list4)
+        self.assertEqual(partition_int_m_list_dict4[0][0]["value"], self.value_snack_str_list[1])
+        self.assertEqual(partition_int_m_list_dict4[1][0]["value"], self.snack_countries_str_list[0])
+        self.assertEqual(partition_int_m_list_dict4[1][1]["value"], self.snack_countries_str_list[1])
 
     # Shell.head -> Shell.cat
     def test_head(self):
@@ -1260,13 +1260,13 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        message_dict_list1 = s.head(topic_str, group=group_str1, type="json", n=3)
-        self.assertEqual(3, len(message_dict_list1))
-        value_dict_list1 = [message_dict["value"] for message_dict in message_dict_list1]
+        m_list1 = s.head(topic_str, group=group_str1, type="json", n=3)
+        self.assertEqual(3, len(m_list1))
+        value_dict_list1 = [m["value"] for m in m_list1]
         self.assertEqual(value_dict_list1, self.value_snack_dict_list)
         #
         if not s.__class__.__name__ == "RestProxy":
-            self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
+            self.assertEqual(m_list1[0]["headers"], self.headers_str_bytes_tuple_list)
 
     # Shell.tail -> Functional.map -> Functional.flatmap -> Functional.foldl -> ClusterConsumer.consumer/KafkaConsumer.foldl/ClusterConsumer.close -> ClusterConsumer.consume
     def test_tail(self):
@@ -1282,12 +1282,12 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str1 = self.create_test_group_name()
-        message_dict_list1 = s.tail(topic_str, group=group_str1, type="json", n=1)
-        self.assertEqual(1, len(message_dict_list1))
-        self.assertEqual(message_dict_list1[0]["value"], self.value_snack_dict_list[2])
+        m_list1 = s.tail(topic_str, group=group_str1, type="json", n=1)
+        self.assertEqual(1, len(m_list1))
+        self.assertEqual(m_list1[0]["value"], self.value_snack_dict_list[2])
         #
         if not s.__class__.__name__ == "RestProxy":
-            self.assertEqual(message_dict_list1[0]["headers"], self.headers_str_bytes_tuple_list)
+            self.assertEqual(m_list1[0]["headers"], self.headers_str_bytes_tuple_list)
 
     # Shell.cp -> Functional.map_to -> Functional.flatmap_to -> ClusterConsumer.producer/Functional.foldl/ClusterConsumer.close -> ClusterConsumer.consumer/KafkaConsumer.foldl/ClusterConsumer.close -> ClusterConsumer.consume
     def test_cp(self):
@@ -1307,9 +1307,9 @@ class TestSingleStorageBase(unittest.TestCase):
         topic_str2 = self.create_test_topic_name()
         s.create(topic_str2)
         #
-        def map_ish(message_dict):
-            message_dict["value"]["colour"] += "ish"
-            return message_dict
+        def map_ish(m):
+            m["value"]["colour"] += "ish"
+            return m
         #
         group_str1 = self.create_test_group_name()
         (consume_n_int, written_n_int) = s.cp(topic_str1, s, topic_str2, group=group_str1, source_type="json", target_type="json", produce_batch_size=2, map_fun=map_ish, n=3)
@@ -1318,17 +1318,17 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         if not s.__class__.__name__ == "RestProxy":
             group_str2 = self.create_test_group_name()
-            message_dict_list2 = s.cat(topic_str2, group=group_str2, type="json", n=1)
-            self.assertEqual(1, len(message_dict_list2))
-            self.assertEqual(message_dict_list2[0]["value"], self.value_snack_ish_dict_list[0])
-            self.assertEqual(message_dict_list2[0]["headers"], self.headers_str_bytes_tuple_list)
+            m_list2 = s.cat(topic_str2, group=group_str2, type="json", n=1)
+            self.assertEqual(1, len(m_list2))
+            self.assertEqual(m_list2[0]["value"], self.value_snack_ish_dict_list[0])
+            self.assertEqual(m_list2[0]["headers"], self.headers_str_bytes_tuple_list)
         # test that the consumer does not consume too many messages (the former bug occurred when: n % consumer_batch_size > 0, n > consumer_batch_size * 2, source topic length > n (e.g. source topic length = 100000, n = 42700, consumer_batch_size = 1000))
         topic_str3 = self.create_test_topic_name()
         s.create(topic_str3)
         #
-        def flatmap_ish(message_dict):
-            message_dict["value"]["colour"] += "ish"
-            return [message_dict]
+        def flatmap_ish(m):
+            m["value"]["colour"] += "ish"
+            return [m]
         #
         group_str2 = self.create_test_group_name()
         (consume_n_int1, written_n_int1) = s.cp(topic_str1, s, topic_str3, group=group_str2, source_type="json", target_type="json", consume_batch_size=3, flatmap_fun=flatmap_ish, n=7)
@@ -1369,7 +1369,7 @@ class TestSingleStorageBase(unittest.TestCase):
         #
         colour_str_list = []
         group_str = self.create_test_group_name()
-        s.foreach(topic_str, group=group_str, foreach_fun=lambda message_dict: colour_str_list.append(message_dict["value"]["colour"]), type="json")
+        s.foreach(topic_str, group=group_str, foreach_fun=lambda m: colour_str_list.append(m["value"]["colour"]), type="json")
         self.assertEqual("brown", colour_str_list[0])
         self.assertEqual("white", colour_str_list[1])
         self.assertEqual("chocolate", colour_str_list[2])
@@ -1387,8 +1387,8 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         group_str = self.create_test_group_name()
-        (message_dict_list, message_counter_int) = s.filter(topic_str, group=group_str, filter_fun=lambda message_dict: message_dict["value"]["calories"] > 100, type="json")
-        self.assertEqual(2, len(message_dict_list))
+        (m_list, message_counter_int) = s.filter(topic_str, group=group_str, filter_fun=lambda m: m["value"]["calories"] > 100, type="json")
+        self.assertEqual(2, len(m_list))
         self.assertEqual(3, message_counter_int)
 
     def test_filter_to(self):
@@ -1407,15 +1407,15 @@ class TestSingleStorageBase(unittest.TestCase):
         s.create(topic_str2)
         #
         group_str1 = self.create_test_group_name()
-        (consume_n_int, written_n_int) = s.filter_to(topic_str1, s, topic_str2, group=group_str1, filter_fun=lambda message_dict: message_dict["value"]["calories"] > 100, source_type="json", target_type="json")
+        (consume_n_int, written_n_int) = s.filter_to(topic_str1, s, topic_str2, group=group_str1, filter_fun=lambda m: m["value"]["calories"] > 100, source_type="json", target_type="json")
         self.assertEqual(3, consume_n_int)
         self.assertEqual(2, written_n_int)
         #
         group_str2 = self.create_test_group_name()
-        message_dict_list = s.cat(topic_str2, group=group_str2, type="json", n=2)
-        self.assertEqual(2, len(message_dict_list))
-        self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
-        self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
+        m_list = s.cat(topic_str2, group=group_str2, type="json", n=2)
+        self.assertEqual(2, len(m_list))
+        self.assertEqual(500.0, m_list[0]["value"]["calories"])
+        self.assertEqual(260.0, m_list[1]["value"]["calories"])
 
     # Schema Registry
 
@@ -1667,11 +1667,11 @@ class TestSingleStorageBase(unittest.TestCase):
         s.df_to_topic(df, topic_str2)
         #
         group_str2 = self.create_test_group_name()
-        message_dict_list = s.cat(topic_str2, group=group_str2, n=3, type="json")
-        self.assertEqual(3, len(message_dict_list))
-        self.assertEqual(500.0, message_dict_list[0]["value"]["calories"])
-        self.assertEqual(260.0, message_dict_list[1]["value"]["calories"])
-        self.assertEqual(80.0, message_dict_list[2]["value"]["calories"])
+        m_list = s.cat(topic_str2, group=group_str2, n=3, type="json")
+        self.assertEqual(3, len(m_list))
+        self.assertEqual(500.0, m_list[0]["value"]["calories"])
+        self.assertEqual(260.0, m_list[1]["value"]["calories"])
+        self.assertEqual(80.0, m_list[2]["value"]["calories"])
 
     def test_explode(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -1729,25 +1729,25 @@ class TestSingleStorageBase(unittest.TestCase):
         n_int = s.watermarks(topic_str)[topic_str][0][1]
         self.assertTrue(n_int, 4)
         #
-        message_dict_list = s.cat(topic_str, type="bytes", n=4)
-        self.assertEqual(message_dict_list[2]["key"], message_dict_list[3]["key"])
-        self.assertEqual(message_dict_list[2]["value"], message_dict_list[3]["value"])
+        m_list = s.cat(topic_str, type="bytes", n=4)
+        self.assertEqual(m_list[2]["key"], m_list[3]["key"])
+        self.assertEqual(m_list[2]["value"], m_list[3]["value"])
         if not s.__class__.__name__ == "RestProxy":
-            self.assertEqual(message_dict_list[2]["headers"], message_dict_list[3]["headers"])
+            self.assertEqual(m_list[2]["headers"], m_list[3]["headers"])
         #
         s.repeat(topic_str, 2, keep_headers=False)
         #
         n_int = s.watermarks(topic_str)[topic_str][0][1]
         self.assertTrue(n_int, 6)
         #
-        message_dict_list = s.cat(topic_str, type="bytes", n=6)
-        self.assertEqual(message_dict_list[2]["key"], message_dict_list[4]["key"])
-        self.assertEqual(message_dict_list[3]["key"], message_dict_list[5]["key"])
-        self.assertEqual(message_dict_list[2]["value"], message_dict_list[4]["value"])
-        self.assertEqual(message_dict_list[3]["value"], message_dict_list[5]["value"])
+        m_list = s.cat(topic_str, type="bytes", n=6)
+        self.assertEqual(m_list[2]["key"], m_list[4]["key"])
+        self.assertEqual(m_list[3]["key"], m_list[5]["key"])
+        self.assertEqual(m_list[2]["value"], m_list[4]["value"])
+        self.assertEqual(m_list[3]["value"], m_list[5]["value"])
         if not s.__class__.__name__ == "RestProxy":
-            self.assertNotEqual(message_dict_list[2]["headers"], message_dict_list[4]["headers"])
-            self.assertNotEqual(message_dict_list[3]["headers"], message_dict_list[5]["headers"])
+            self.assertNotEqual(m_list[2]["headers"], m_list[4]["headers"])
+            self.assertNotEqual(m_list[3]["headers"], m_list[5]["headers"])
 
     def test_recreate(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -1832,11 +1832,11 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(partition_1_offset_int2, 2)
         self.assertEqual(partition_2_offset_int2, 2)
         # Read the topic with consumer group 2.
-        message_dict_list = s.cat(topic_str, group=group_str2, type="json", n=3)
-        self.assertEqual(len(message_dict_list), 3)
-        self.assertTrue(message_dict_list[0]["value"]["country"] == "Australia")
-        self.assertTrue(message_dict_list[1]["value"]["country"] == "Australia")
-        self.assertTrue(message_dict_list[2]["value"]["country"] == "Australia")
+        m_list = s.cat(topic_str, group=group_str2, type="json", n=3)
+        self.assertEqual(len(m_list), 3)
+        self.assertTrue(m_list[0]["value"]["country"] == "Australia")
+        self.assertTrue(m_list[1]["value"]["country"] == "Australia")
+        self.assertTrue(m_list[2]["value"]["country"] == "Australia")
 
     def test_chunking_json(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -1856,13 +1856,13 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         number_of_chunks_int = sum([math.ceil(len(producer.serialize(value_snack_str, False)) / chunk_size_bytes_int) for value_snack_str in self.value_snack_str_list])
-        message_dict_list1 = s.cat(topic_str, type="bytes", dechunk=False)
-        self.assertEqual(len(message_dict_list1), number_of_chunks_int)
+        m_list1 = s.cat(topic_str, type="bytes", dechunk=False)
+        self.assertEqual(len(m_list1), number_of_chunks_int)
         #
-        message_dict_list2 = s.cat(topic_str, dechunk=True)
-        self.assertEqual(len(message_dict_list2), len(self.value_snack_str_list))
-        for message_dict, value_snack_dict in zip(message_dict_list2, self.value_snack_dict_list):
-            self.assertEqual(message_dict["value"], value_snack_dict)
+        m_list2 = s.cat(topic_str, dechunk=True)
+        self.assertEqual(len(m_list2), len(self.value_snack_str_list))
+        for m, value_snack_dict in zip(m_list2, self.value_snack_dict_list):
+            self.assertEqual(m["value"], value_snack_dict)
 
     def test_chunking_jsonschema(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -1887,13 +1887,13 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         number_of_chunks_int = sum([math.ceil(len(producer.serialize(value_snack_str, False)) / chunk_size_bytes_int) for value_snack_str in self.value_snack_str_list])
-        message_dict_list1 = s.cat(topic_str, value_type="bytes", dechunk=False)
-        self.assertEqual(len(message_dict_list1), number_of_chunks_int)
+        m_list1 = s.cat(topic_str, value_type="bytes", dechunk=False)
+        self.assertEqual(len(m_list1), number_of_chunks_int)
         #
-        message_dict_list2 = s.cat(topic_str, value_type="jsonschema", dechunk=True)
-        self.assertEqual(len(message_dict_list2), len(self.value_snack_str_list))
-        for message_dict, value_snack_dict in zip(message_dict_list2, self.value_snack_dict_list):
-            self.assertEqual(message_dict["value"], value_snack_dict)
+        m_list2 = s.cat(topic_str, value_type="jsonschema", dechunk=True)
+        self.assertEqual(len(m_list2), len(self.value_snack_str_list))
+        for m, value_snack_dict in zip(m_list2, self.value_snack_dict_list):
+            self.assertEqual(m["value"], value_snack_dict)
 
     def test_chunking_key(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -1912,11 +1912,11 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.produce(self.value_snack_str_list, key=self.key_snack_bytes_list)
         producer.close()
         # Check whether the chunk keys of the messages have all landed on the same partition.
-        message_dict_list1 = s.cat(topic_str, type="bytes", dechunk=False)
+        m_list1 = s.cat(topic_str, type="bytes", dechunk=False)
         partition_int_key_str_set_dict = {}
-        for message_dict in message_dict_list1:
-            partition_int = message_dict["partition"]
-            chunk_key_bytes = message_dict["key"]
+        for m in m_list1:
+            partition_int = m["partition"]
+            chunk_key_bytes = m["key"]
             key_str = json.loads(chunk_key_to_key(chunk_key_bytes))["key"]
             #
             if partition_int in partition_int_key_str_set_dict:
@@ -1933,12 +1933,12 @@ class TestSingleStorageBase(unittest.TestCase):
         print(key_str_list)
         self.assertEqual(len(key_str_list), len(self.key_snack_bytes_list))
         #
-        message_dict_list2 = s.cat(topic_str, value_type="json", dechunk=True)
-        self.assertEqual(len(message_dict_list2), len(self.value_snack_str_list))
+        m_list2 = s.cat(topic_str, value_type="json", dechunk=True)
+        self.assertEqual(len(m_list2), len(self.value_snack_str_list))
         name_str_value_dict_dict = {}
-        for message_dict in message_dict_list2:
-            name_str = message_dict["value"]["name"]
-            value_dict = message_dict["value"]
+        for m in m_list2:
+            name_str = m["value"]["name"]
+            value_dict = m["value"]
             name_str_value_dict_dict[name_str] = value_dict
         for value_dict in self.value_snack_dict_list:
             name_str = value_dict["name"]
@@ -1972,8 +1972,8 @@ class TestSingleStorageBase(unittest.TestCase):
             n_chunks_after_delete = s.l(topic_str)[topic_str]
             self.assertEqual(n_chunks_after_delete, n_chunks_int - 1)
         #
-        message_dict_list = s.cat(topic_str, value_type="str", dechunk=True, consumer_timeout=2.0)
-        self.assertEqual(len(message_dict_list), 0)
+        m_list = s.cat(topic_str, value_type="str", dechunk=True, consumer_timeout=2.0)
+        self.assertEqual(len(m_list), 0)
 
     def test_transaction_commit(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -1997,20 +1997,20 @@ class TestSingleStorageBase(unittest.TestCase):
         s.isolation_level("read_committed")
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, value_type="str")
-        message_dict_list = consumer.consume()
+        m_list = consumer.consume()
         consumer.close()
         #
-        self.assertEqual(len(message_dict_list), 0)
+        self.assertEqual(len(m_list), 0)
         #
         s.isolation_level("read_uncommitted")
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, value_type="str")
-        message_dict_list = consumer.consume()
+        m_list = consumer.consume()
         consumer.close()
         #
-        self.assertEqual(len(message_dict_list), 2)
-        self.assertEqual(message_dict_list[0]["value"], "message 1")
-        self.assertEqual(message_dict_list[1]["value"], "message 2")
+        self.assertEqual(len(m_list), 2)
+        self.assertEqual(m_list[0]["value"], "message 1")
+        self.assertEqual(m_list[1]["value"], "message 2")
         #
         producer.commit_transaction()
         producer.close()
@@ -2018,22 +2018,22 @@ class TestSingleStorageBase(unittest.TestCase):
         s.isolation_level("read_committed")
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, value_type="str")
-        message_dict_list = consumer.consume()
+        m_list = consumer.consume()
         consumer.close()
         #
-        self.assertEqual(len(message_dict_list), 2)
-        self.assertEqual(message_dict_list[0]["value"], "message 1")
-        self.assertEqual(message_dict_list[1]["value"], "message 2")
+        self.assertEqual(len(m_list), 2)
+        self.assertEqual(m_list[0]["value"], "message 1")
+        self.assertEqual(m_list[1]["value"], "message 2")
         #
         s.isolation_level("read_uncommitted")
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, value_type="str")
-        message_dict_list = consumer.consume()
+        m_list = consumer.consume()
         consumer.close()
         #
-        self.assertEqual(len(message_dict_list), 2)
-        self.assertEqual(message_dict_list[0]["value"], "message 1")
-        self.assertEqual(message_dict_list[1]["value"], "message 2")
+        self.assertEqual(len(m_list), 2)
+        self.assertEqual(m_list[0]["value"], "message 1")
+        self.assertEqual(m_list[1]["value"], "message 2")
 
     def test_transaction_abort(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -2060,17 +2060,17 @@ class TestSingleStorageBase(unittest.TestCase):
         s.isolation_level("read_committed")
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, value_type="str")
-        message_dict_list = consumer.consume()
+        m_list = consumer.consume()
         consumer.close()
         #
-        self.assertEqual(len(message_dict_list), 0)
+        self.assertEqual(len(m_list), 0)
         #
         s.isolation_level("read_uncommitted")
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, value_type="str")
-        message_dict_list = consumer.consume()
+        m_list = consumer.consume()
         consumer.close()
         #
-        self.assertEqual(len(message_dict_list), 2)
-        self.assertEqual(message_dict_list[0]["value"], "message 1")
-        self.assertEqual(message_dict_list[1]["value"], "message 2")
+        self.assertEqual(len(m_list), 2)
+        self.assertEqual(m_list[0]["value"], "message 1")
+        self.assertEqual(m_list[1]["value"], "message 2")
