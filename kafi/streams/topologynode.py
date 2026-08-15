@@ -109,7 +109,7 @@ class TopologyNode:
             return r
         #
         if peek_fun is None:
-            peek_fun = lambda x: print(x) if prefix_str is None else print(f"{prefix_str}: {x}")
+            peek_fun = lambda r: print(r) if prefix_str is None else print(f"{prefix_str}: {r}")
         #
         tn = self.map(map_fun, **kwargs)
         tn._name_str = "peek_op"
@@ -123,7 +123,7 @@ class TopologyNode:
             return r, w
         #
         if _peek_fun is None:
-            _peek_fun = lambda x, y: print((x, y)) if prefix_str is None else print(f"{prefix_str}: {(x, y)}")
+            _peek_fun = lambda r, w: print((r, w)) if prefix_str is None else print(f"{prefix_str}: {(r, w)}")
         #
         tn = self._map(_map_fun, **kwargs)
         tn._name_str = "_peek_op"
@@ -527,10 +527,10 @@ class TopologyNode:
     # Time Windows - Expiry
     ###
 
-    def expire(self, time_fun, expiry_fun, project_fun=lambda x: x[0], **kwargs):
+    def expire(self, ts_fun, expiry_fun, project_fun=lambda r_ts_tuple: r_ts_tuple[0], **kwargs):
         input_plus_expiry_tn = (
             self
-            .map(lambda x: (x, expiry_fun(time_fun(x))), **kwargs)
+            .map(lambda r: (r, expiry_fun(ts_fun(r))), **kwargs)
         )
         #
         def _build_fun(evaluator):
@@ -542,7 +542,7 @@ class TopologyNode:
             #
             def _ts_fun(packed_r):
                 r, _ = tn._unpack_fun(packed_r)
-                return time_fun(r)
+                return ts_fun(r)
             #
             def _expiry_fun(packed_r):
                 _, expiry_int = tn._unpack_fun(packed_r)
@@ -608,12 +608,12 @@ class TopologyNode:
     # Time Windows - Trigger
     ###
 
-    def trigger(self, time_tn, time_fun, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], positive_only=True, **kwargs):
+    def trigger(self, time_tn, ts_fun, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], positive_only=True, **kwargs):
         positive_only_boolean = positive_only
         #
         trigger_tn = (
             self
-            .join(time_tn.max(time_fun),
+            .join(time_tn.max(ts_fun),
                   lambda r_end_ts_int_tuple, latest_ts_int: trigger_fun(r_end_ts_int_tuple, latest_ts_int),
                   lambda r_end_ts_int_tuple, _: project_fun(r_end_ts_int_tuple),
                   **kwargs)
@@ -674,12 +674,12 @@ class TopologyNode:
     # Time Windows - Group By + Agg
     ###
 
-    def _group_by_agg_aligned(self, assign_fun, time_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
+    def _group_by_agg_aligned(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
         _project_fun = lambda by_r_end_ts_int_tuple, agg_r: (project_fun(by_r_end_ts_int_tuple[0], agg_r), by_r_end_ts_int_tuple[1])
         #
         tn = (
             self
-            .flatmap(lambda r: [(r, end_ts_int) for end_ts_int in assign_fun(time_fun(r))], **kwargs)
+            .flatmap(lambda r: [(r, end_ts_int) for end_ts_int in assign_fun(ts_fun(r))], **kwargs)
             .group_by_agg(
                 lambda r_end_ts_int_tuple: (key_fun(r_end_ts_int_tuple[0]), r_end_ts_int_tuple[1]),
                 lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0],
@@ -693,10 +693,10 @@ class TopologyNode:
     
     #
 
-    def _group_by_agg_sliding(self, assign_fun, time_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
+    def _group_by_agg_sliding(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
         tn = (
             self
-            .map(lambda r: (r, assign_fun(time_fun(r))[0]))
+            .map(lambda r: (r, assign_fun(ts_fun(r))[0]))
             .group_by_agg(lambda r_end_ts_int_tuple: key_fun(r_end_ts_int_tuple[0]),
                           lambda r_end_ts_int_tuple: r_end_ts_int_tuple,
                           lambda agg_r_end_ts_int_tuple, r_end_ts_int_tuple: 
@@ -711,9 +711,9 @@ class TopologyNode:
 
     #
 
-    def _group_by_agg_session(self, gap_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
+    def _group_by_agg_session(self, gap_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
         def insert_session(r, session_dict_list):
-            ts_int = time_fun(r)
+            ts_int = ts_fun(r)
             #
             left_session_dict = next((session_dict 
                                       for session_dict in session_dict_list 
@@ -735,7 +735,7 @@ class TopologyNode:
                     left_session_dict["start"] = min(left_session_dict["start"], right_session_dict["start"])
                     left_session_dict["last_ts"] = max(left_session_dict["last_ts"], right_session_dict["last_ts"])
                     #
-                    left_session_dict["records"].sort(key=time_fun)
+                    left_session_dict["records"].sort(key=ts_fun)
                     #                    
                     agg_any = agg_initial.copy()
                     for r in left_session_dict["records"]:
@@ -779,51 +779,51 @@ class TopologyNode:
     # Time Windows - Expiry
     ###
 
-    def _expire_window(self, time_fun, assign_fun, allowed_lateness_int=0, **kwargs):
-        return self.expire(time_fun,
-                              lambda r: max(assign_fun(r)) + allowed_lateness_int,
-                              **kwargs)
+    def _expire_window(self, ts_fun, assign_fun, allowed_lateness_int=0, **kwargs):
+        return self.expire(ts_fun,
+                           lambda r: max(assign_fun(r)) + allowed_lateness_int,
+                           **kwargs)
     
     #
 
-    def expire_tumbling(self, time_fun, size_int, allowed_lateness_int=0, **kwargs):
-        return self._expire_window(time_fun,
-                                     TopologyNode._assign_tumbling(size_int),
-                                     allowed_lateness_int,
-                                     **kwargs)
+    def expire_tumbling(self, ts_fun, size_int, allowed_lateness_int=0, **kwargs):
+        return self._expire_window(ts_fun,
+                                   TopologyNode._assign_tumbling(size_int),
+                                   allowed_lateness_int,
+                                   **kwargs)
 
-    def expire_hopping(self, time_fun, size_int, hop_int, allowed_lateness_int=0, **kwargs):
-        return self._expire_window(time_fun,
-                                     TopologyNode._assign_hopping(size_int, hop_int),
-                                     allowed_lateness_int,
-                                     **kwargs)
+    def expire_hopping(self, ts_fun, size_int, hop_int, allowed_lateness_int=0, **kwargs):
+        return self._expire_window(ts_fun,
+                                   TopologyNode._assign_hopping(size_int, hop_int),
+                                   allowed_lateness_int,
+                                   **kwargs)
 
-    def expire_cumulative(self, time_fun, size_int, advance_int, allowed_lateness_int=0, **kwargs):
-        return self._expire_window(time_fun,
-                                     TopologyNode._assign_cumulative(size_int, advance_int),
-                                     allowed_lateness_int,
-                                     **kwargs)
+    def expire_cumulative(self, ts_fun, size_int, advance_int, allowed_lateness_int=0, **kwargs):
+        return self._expire_window(ts_fun,
+                                   TopologyNode._assign_cumulative(size_int, advance_int),
+                                   allowed_lateness_int,
+                                   **kwargs)
     
-    def expire_sliding(self, time_fun, size_int, **kwargs):
-        return self._expire_window(time_fun,
-                                     TopologyNode._assign_sliding(size_int),
-                                     **kwargs)
+    def expire_sliding(self, ts_fun, size_int, **kwargs):
+        return self._expire_window(ts_fun,
+                                   TopologyNode._assign_sliding(size_int),
+                                   **kwargs)
 
-    def expire_session(self, time_fun, max_session_int, allowed_lateness_int=0, **kwargs):
-        return self._expire_window(time_fun,
-                                     TopologyNode._assign_session(max_session_int),
-                                     allowed_lateness_int,
-                                     **kwargs)
+    def expire_session(self, ts_fun, max_session_int, allowed_lateness_int=0, **kwargs):
+        return self._expire_window(ts_fun,
+                                   TopologyNode._assign_session(max_session_int),
+                                   allowed_lateness_int,
+                                   **kwargs)
 
     ###
     # Time Windows - {Group By, Trigger}
     ###
 
-    def _window_aligned(self, assign_fun, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def _window_aligned(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_aligned(assign_fun,
-                                   time_fun,
+                                   ts_fun,
                                    key_fun,
                                    agg_fun,
                                    agg_initial,
@@ -832,7 +832,7 @@ class TopologyNode:
         )
         #
         trigger_tn = group_by_agg_tn.trigger(self,
-                                             time_fun,
+                                             ts_fun,
                                              trigger_fun,
                                              trigger_project_fun,
                                              trigger_positive_only,
@@ -842,9 +842,9 @@ class TopologyNode:
 
     #
 
-    def window_tumbling(self, size_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_tumbling(self, size_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_tumbling(size_int),
-                                    time_fun,
+                                    ts_fun,
                                     key_fun,
                                     agg_fun,
                                     agg_initial,
@@ -854,9 +854,9 @@ class TopologyNode:
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_hopping(self, size_int, hop_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_hopping(self, size_int, hop_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_hopping(size_int, hop_int),
-                                    time_fun,
+                                    ts_fun,
                                     key_fun,
                                     agg_fun,
                                     agg_initial,
@@ -866,9 +866,9 @@ class TopologyNode:
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_cumulative(self, size_int, advance_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_cumulative(self, size_int, advance_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_cumulative(size_int, advance_int),
-                                    time_fun,
+                                    ts_fun,
                                     key_fun,
                                     agg_fun,
                                     agg_initial,
@@ -880,11 +880,11 @@ class TopologyNode:
 
     #
 
-    def window_sliding(self, size_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_positive_only=True, **kwargs):
+    def window_sliding(self, size_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_positive_only=True, **kwargs):
         trigger_positive_only_boolean = trigger_positive_only
         #
         group_by_agg_tn = self._group_by_agg_sliding(TopologyNode._assign_sliding(size_int),
-                                                     time_fun,
+                                                     ts_fun,
                                                      key_fun,
                                                      agg_fun,
                                                      agg_initial,
@@ -898,11 +898,11 @@ class TopologyNode:
     
     #
 
-    def window_session(self, gap_int, time_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_session(self, gap_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_session(gap_int,
-                                   time_fun,
+                                   ts_fun,
                                    key_fun, 
                                    agg_fun,
                                    agg_initial,
@@ -911,7 +911,7 @@ class TopologyNode:
         )
         #
         trigger_tn = group_by_agg_tn.trigger(self,
-                                             time_fun,
+                                             ts_fun,
                                              trigger_fun,
                                              trigger_project_fun,
                                              trigger_positive_only,
@@ -964,12 +964,12 @@ class TopologyNode:
         head_sink_str_sink_tn_tuple, *tail_sink_str_sink_tn_tuple_list = sink_str_sink_tn_tuple_list
         #
         head_sink_str, head_sink_tn = head_sink_str_sink_tn_tuple
-        built_tn = head_sink_tn.map(lambda x: (head_sink_str, x))
+        built_tn = head_sink_tn.map(lambda r: (head_sink_str, r))
         built_tn._name_str = f"sink_{head_sink_str}"
         #
         # We need this little factory to avoid unwanted variable shadowing for sink_str in the loop below.
         def get_map_fun(sink_str):
-            return lambda x: (sink_str, x)
+            return lambda r: (sink_str, r)
         #
         for sink_str, sink_built_tn in tail_sink_str_sink_tn_tuple_list:
             built_tn = built_tn.merge(sink_built_tn.map(get_map_fun(sink_str)))

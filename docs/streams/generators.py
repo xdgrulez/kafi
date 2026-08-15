@@ -2,10 +2,9 @@ import random, time
 
 from faker import Faker
 
-customers_int = 100
-
-class ClickGenerator:
-    def __init__(self):
+class ClickGenerator():
+    def __init__(self, customers_int=100):
+        self.customers_int = customers_int
         self.ts_int = int(time.time() * 1000)
         self.ts_step_int = 100
         self.customer_id_int = 0
@@ -15,9 +14,9 @@ class ClickGenerator:
         for _ in range(n):
             m = {
                 "key": None,
-                "value": {"customer_id": random.randint(0, customers_int - 1),
-                        "view_time": random.randint(10, 120),
-                        "ts": self.ts_int},
+                "value": {"customer_id": random.randint(0, self.customers_int - 1),
+                          "view_time": random.randint(10, 120),
+                          "ts": self.ts_int},
             }
             #
             self.ts_int += self.ts_step_int
@@ -27,18 +26,19 @@ class ClickGenerator:
         return m_list
 
 class CustomerGenerator:
-    def __init__(self):
+    def __init__(self, customers_int=100):
+        self.customers_int = customers_int
         self.customer_id_int = 0
         self.customer_id_int_name_str_dict = {}
         fake = Faker()
-        for customer_id_int in range(customers_int):
+        for customer_id_int in range(self.customers_int):
             name_str = fake.name()
             self.customer_id_int_name_str_dict[customer_id_int] = name_str
 
     def generate(self, n=1):
         m_list = []
         for _ in range(n):
-            customer_id_int = random.randint(0, customers_int - 1)
+            customer_id_int = random.randint(0, self.customers_int - 1)
             #
             m = {
                 "key": str(customer_id_int),
