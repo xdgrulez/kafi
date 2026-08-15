@@ -524,7 +524,7 @@ class TopologyNode:
         return tn
 
     ###
-    # Time Windows - Expiry
+    # Expiry
     ###
 
     def expire(self, ts_fun, expiry_fun, project_fun=lambda r_ts_tuple: r_ts_tuple[0], **kwargs):
@@ -605,24 +605,6 @@ class TopologyNode:
         return tn.map(project_fun, **kwargs)
 
     ###
-    # Time Windows - Trigger
-    ###
-
-    def trigger(self, time_tn, ts_fun, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], positive_only=True, **kwargs):
-        positive_only_boolean = positive_only
-        #
-        trigger_tn = (
-            self
-            .join(time_tn.max(ts_fun),
-                  lambda r_end_ts_int_tuple, latest_ts_int: trigger_fun(r_end_ts_int_tuple, latest_ts_int),
-                  lambda r_end_ts_int_tuple, _: project_fun(r_end_ts_int_tuple),
-                  **kwargs)
-        )
-        trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if positive_only_boolean else trigger_tn
-        #
-        return trigger_tn
-
-    ###
     # Time Windows - Assign end of window(s) for a timestamp
     ###
 
@@ -671,123 +653,19 @@ class TopologyNode:
         return _assign_fun
 
     ###
-    # Time Windows - Group By + Agg
+    # Timw Windows - Expiry
     ###
 
-    def _group_by_agg_aligned(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
-        _project_fun = lambda by_r_end_ts_int_tuple, agg_r: (project_fun(by_r_end_ts_int_tuple[0], agg_r), by_r_end_ts_int_tuple[1])
-        #
-        tn = (
-            self
-            .flatmap(lambda r: [(r, end_ts_int) for end_ts_int in assign_fun(ts_fun(r))], **kwargs)
-            .group_by_agg(
-                lambda r_end_ts_int_tuple: (key_fun(r_end_ts_int_tuple[0]), r_end_ts_int_tuple[1]),
-                lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0],
-                agg_fun,
-                agg_initial,
-                _project_fun,
-                **kwargs)
-        )
-        #
-        return tn
-    
-    #
-
-    def _group_by_agg_sliding(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
-        tn = (
-            self
-            .map(lambda r: (r, assign_fun(ts_fun(r))[0]))
-            .group_by_agg(lambda r_end_ts_int_tuple: key_fun(r_end_ts_int_tuple[0]),
-                          lambda r_end_ts_int_tuple: r_end_ts_int_tuple,
-                          lambda agg_r_end_ts_int_tuple, r_end_ts_int_tuple: 
-                          (agg_fun(agg_r_end_ts_int_tuple[0], r_end_ts_int_tuple[0]), min(agg_r_end_ts_int_tuple[1], r_end_ts_int_tuple[1]) if agg_r_end_ts_int_tuple[1] > 0 else r_end_ts_int_tuple[1]),
-                          (agg_initial, 0),
-                          lambda by, agg_r_end_ts_int_tuple: 
-                          (project_fun(by, agg_r_end_ts_int_tuple[0]), agg_r_end_ts_int_tuple[1]),
-                          **kwargs)
-        )
-        #
-        return tn
-
-    #
-
-    def _group_by_agg_session(self, gap_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, **kwargs):
-        def insert_session(r, session_dict_list):
-            ts_int = ts_fun(r)
-            #
-            left_session_dict = next((session_dict 
-                                      for session_dict in session_dict_list 
-                                      if session_dict["start"] - gap_int <= ts_int <= session_dict["last_ts"] + gap_int), None)
-            #
-            if left_session_dict:
-                left_session_dict["records"].append(r)
-                left_session_dict["start"] = min(left_session_dict["start"], ts_int)
-                left_session_dict["last_ts"] = max(left_session_dict["last_ts"], ts_int)
-                left_session_dict["agg"] = agg_fun(left_session_dict["agg"], r)
-                #
-                right_session_dict = next((session_dict 
-                                           for session_dict in session_dict_list 
-                                           if session_dict != left_session_dict 
-                                           and session_dict["start"] - gap_int <= left_session_dict["last_ts"] + gap_int 
-                                           and left_session_dict["start"] - gap_int <= session_dict["last_ts"]), None)
-                if right_session_dict:
-                    left_session_dict["records"].extend(right_session_dict["records"])
-                    left_session_dict["start"] = min(left_session_dict["start"], right_session_dict["start"])
-                    left_session_dict["last_ts"] = max(left_session_dict["last_ts"], right_session_dict["last_ts"])
-                    #
-                    left_session_dict["records"].sort(key=ts_fun)
-                    #                    
-                    agg_any = agg_initial.copy()
-                    for r in left_session_dict["records"]:
-                        agg_any = agg_fun(agg_any, r)
-                    left_session_dict["agg"] = agg_any
-                    #
-                    session_dict_list.remove(right_session_dict)
-            else:
-                session_dict_list.append({
-                    "start": ts_int,
-                    "last_ts": ts_int,
-                    "records": [r],
-                    "agg": agg_fun(agg_initial.copy(), r)
-                })
-            #
-            session_dict_list.sort(key=lambda session_dict: session_dict["start"])
-            #
-            return session_dict_list
-        #
-        def _flatmap_fun(by_any_agg_any_session_end_ts_int_tuple_list):
-            return [(project_fun(by_any_agg_any_session_end_ts_int_tuple_list[0], agg_any_session_end_ts_int_tuple[0]), agg_any_session_end_ts_int_tuple[1])
-                    for agg_any_session_end_ts_int_tuple in by_any_agg_any_session_end_ts_int_tuple_list[1]]
-        #
-        tn = (
-            self
-            .group_by_agg(
-                key_fun,
-                lambda r: r,
-                lambda agg, r:
-                {"sessions": (session_dict_list := insert_session(r, agg.get("sessions", []))),
-                 "output": [(session_dict["agg"], session_dict["last_ts"] + gap_int) for session_dict in session_dict_list]},
-                {"sessions": [], "output": []},
-                lambda by, agg_r: (by, agg_r["output"]),
-                **kwargs
-            )
-            .flatmap(_flatmap_fun, **kwargs)
-        )
-        return tn
-
-    ###
-    # Time Windows - Expiry
-    ###
-
-    def _expire_window(self, ts_fun, assign_fun, allowed_lateness_int=0, **kwargs):
+    def _expire_window(self, ts_fun, size_int, assign_fun, allowed_lateness_int=0, **kwargs):
         return self.expire(ts_fun,
-                           lambda r: max(assign_fun(r)) + allowed_lateness_int,
+                           lambda ts: max(assign_fun(ts)) + size_int + allowed_lateness_int,
                            **kwargs)
     
     #
 
     def expire_tumbling(self, ts_fun, size_int, allowed_lateness_int=0, **kwargs):
         return self._expire_window(ts_fun,
+                                   size_int,
                                    TopologyNode._assign_tumbling(size_int),
                                    allowed_lateness_int,
                                    **kwargs)
@@ -816,17 +694,154 @@ class TopologyNode:
                                    **kwargs)
 
     ###
+    # Time Windows - Group By + Agg
+    ###
+
+    def _group_by_agg_aligned(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+        _project_fun = lambda by_r_end_ts_int_tuple, agg_r: (project_fun(by_r_end_ts_int_tuple[0], agg_r), by_r_end_ts_int_tuple[1])
+        #
+        tn = (
+            self
+            .flatmap(lambda r: [(r, end_ts_int) for end_ts_int in assign_fun(ts_fun(r))], **kwargs)
+            .group_by_agg(
+                lambda r_end_ts_int_tuple: (key_fun(r_end_ts_int_tuple[0]), r_end_ts_int_tuple[1]),
+                lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0],
+                agg_fun,
+                agg_initial_any,
+                _project_fun,
+                **kwargs)
+        )
+        #
+        return tn
+    
+    def group_by_agg_tumbling(self, size_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+        tn = (
+            self
+            ._group_by_agg_aligned(TopologyNode._assign_tumbling(size_int),
+                                   ts_fun,
+                                   key_fun,
+                                   agg_fun,
+                                   agg_initial_any,
+                                   project_fun,
+                                   **kwargs)
+        )
+        #
+        return tn
+
+    #
+
+    def _group_by_agg_sliding(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+        tn = (
+            self
+            .map(lambda r: (r, assign_fun(ts_fun(r))[0]))
+            .group_by_agg(lambda r_end_ts_int_tuple: key_fun(r_end_ts_int_tuple[0]),
+                          lambda r_end_ts_int_tuple: r_end_ts_int_tuple,
+                          lambda agg_r_end_ts_int_tuple, r_end_ts_int_tuple: 
+                          (agg_fun(agg_r_end_ts_int_tuple[0], r_end_ts_int_tuple[0]), min(agg_r_end_ts_int_tuple[1], r_end_ts_int_tuple[1]) if agg_r_end_ts_int_tuple[1] > 0 else r_end_ts_int_tuple[1]),
+                          (agg_initial_any, 0),
+                          lambda by, agg_r_end_ts_int_tuple: 
+                          (project_fun(by, agg_r_end_ts_int_tuple[0]), agg_r_end_ts_int_tuple[1]),
+                          **kwargs)
+        )
+        #
+        return tn
+
+    #
+
+    def _group_by_agg_session(self, gap_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+        def insert_session(r, session_dict_list):
+            ts_int = ts_fun(r)
+            #
+            left_session_dict = next((session_dict 
+                                      for session_dict in session_dict_list 
+                                      if session_dict["start"] - gap_int <= ts_int <= session_dict["last_ts"] + gap_int), None)
+            #
+            if left_session_dict:
+                left_session_dict["records"].append(r)
+                left_session_dict["start"] = min(left_session_dict["start"], ts_int)
+                left_session_dict["last_ts"] = max(left_session_dict["last_ts"], ts_int)
+                left_session_dict["agg"] = agg_fun(left_session_dict["agg"], r)
+                #
+                right_session_dict = next((session_dict 
+                                           for session_dict in session_dict_list 
+                                           if session_dict != left_session_dict 
+                                           and session_dict["start"] - gap_int <= left_session_dict["last_ts"] + gap_int 
+                                           and left_session_dict["start"] - gap_int <= session_dict["last_ts"]), None)
+                if right_session_dict:
+                    left_session_dict["records"].extend(right_session_dict["records"])
+                    left_session_dict["start"] = min(left_session_dict["start"], right_session_dict["start"])
+                    left_session_dict["last_ts"] = max(left_session_dict["last_ts"], right_session_dict["last_ts"])
+                    #
+                    left_session_dict["records"].sort(key=ts_fun)
+                    #                    
+                    agg_any = agg_initial_any.copy()
+                    for r in left_session_dict["records"]:
+                        agg_any = agg_fun(agg_any, r)
+                    left_session_dict["agg"] = agg_any
+                    #
+                    session_dict_list.remove(right_session_dict)
+            else:
+                session_dict_list.append({
+                    "start": ts_int,
+                    "last_ts": ts_int,
+                    "records": [r],
+                    "agg": agg_fun(agg_initial_any.copy(), r)
+                })
+            #
+            session_dict_list.sort(key=lambda session_dict: session_dict["start"])
+            #
+            return session_dict_list
+        #
+        def _flatmap_fun(by_any_agg_any_session_end_ts_int_tuple_list):
+            return [(project_fun(by_any_agg_any_session_end_ts_int_tuple_list[0], agg_any_session_end_ts_int_tuple[0]), agg_any_session_end_ts_int_tuple[1])
+                    for agg_any_session_end_ts_int_tuple in by_any_agg_any_session_end_ts_int_tuple_list[1]]
+        #
+        tn = (
+            self
+            .group_by_agg(
+                key_fun,
+                lambda r: r,
+                lambda agg, r:
+                {"sessions": (session_dict_list := insert_session(r, agg.get("sessions", []))),
+                 "output": [(session_dict["agg"], session_dict["last_ts"] + gap_int) for session_dict in session_dict_list]},
+                {"sessions": [], "output": []},
+                lambda by, agg_r: (by, agg_r["output"]),
+                **kwargs
+            )
+            .flatmap(_flatmap_fun, **kwargs)
+        )
+        return tn
+
+    ###
+    # Time Windows - Trigger
+    ###
+
+    def trigger(self, time_tn, ts_fun, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], positive_only=True, **kwargs):
+        positive_only_boolean = positive_only
+        #
+        trigger_tn = (
+            self
+            .join(time_tn.max(ts_fun),
+                  lambda r_end_ts_int_tuple, latest_ts_int: trigger_fun(r_end_ts_int_tuple, latest_ts_int),
+                  lambda r_end_ts_int_tuple, _: project_fun(r_end_ts_int_tuple),
+                  **kwargs)
+        )
+        trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if positive_only_boolean else trigger_tn
+        #
+        return trigger_tn
+
+    ###
     # Time Windows - {Group By, Trigger}
     ###
 
-    def _window_aligned(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def _window_aligned(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_aligned(assign_fun,
                                    ts_fun,
                                    key_fun,
                                    agg_fun,
-                                   agg_initial,
+                                   agg_initial_any,
                                    project_fun,
                                    **kwargs)
         )
@@ -842,36 +857,36 @@ class TopologyNode:
 
     #
 
-    def window_tumbling(self, size_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_tumbling(self, size_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_tumbling(size_int),
                                     ts_fun,
                                     key_fun,
                                     agg_fun,
-                                    agg_initial,
+                                    agg_initial_any,
                                     project_fun,
                                     trigger_project_fun,
                                     trigger_fun,
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_hopping(self, size_int, hop_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_hopping(self, size_int, hop_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_hopping(size_int, hop_int),
                                     ts_fun,
                                     key_fun,
                                     agg_fun,
-                                    agg_initial,
+                                    agg_initial_any,
                                     project_fun,
                                     trigger_project_fun,
                                     trigger_fun,
                                     trigger_positive_only,
                                     **kwargs)
 
-    def window_cumulative(self, size_int, advance_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_cumulative(self, size_int, advance_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         return self._window_aligned(TopologyNode._assign_cumulative(size_int, advance_int),
                                     ts_fun,
                                     key_fun,
                                     agg_fun,
-                                    agg_initial,
+                                    agg_initial_any,
                                     project_fun,
                                     trigger_project_fun,
                                     trigger_fun,
@@ -880,14 +895,14 @@ class TopologyNode:
 
     #
 
-    def window_sliding(self, size_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_positive_only=True, **kwargs):
+    def window_sliding(self, size_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_positive_only=True, **kwargs):
         trigger_positive_only_boolean = trigger_positive_only
         #
         group_by_agg_tn = self._group_by_agg_sliding(TopologyNode._assign_sliding(size_int),
                                                      ts_fun,
                                                      key_fun,
                                                      agg_fun,
-                                                     agg_initial,
+                                                     agg_initial_any,
                                                      project_fun,
                                                      **kwargs)
         trigger_tn = group_by_agg_tn.map(trigger_project_fun)
@@ -898,14 +913,14 @@ class TopologyNode:
     
     #
 
-    def window_session(self, gap_int, ts_fun, key_fun, agg_fun, agg_initial, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def window_session(self, gap_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0], trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_session(gap_int,
                                    ts_fun,
                                    key_fun, 
                                    agg_fun,
-                                   agg_initial,
+                                   agg_initial_any,
                                    project_fun,
                                    **kwargs)
         )
