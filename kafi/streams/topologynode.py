@@ -168,7 +168,7 @@ class TopologyNode:
         def _flatmap_fun(r, w):
             out_r_set = flatmap_fun(r)
             #
-            return {(out_r, w) for out_r in out_r_set}
+            return [(out_r, w) for out_r in out_r_set]
         #
         tn = self._flatmap(_flatmap_fun, **kwargs)
         tn._name_str = "flatmap_op"
@@ -918,61 +918,6 @@ class TopologyNode:
                                              **kwargs)
         #
         return trigger_tn
-
-    ###
-    # DBSP operators
-    ###
-
-    def _integrate(self, **kwargs):
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = integrate_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("_integrate_op", {self}, _build_fun, **kwargs)
-        #
-        return tn
-
-    def _differentiate(self, **kwargs):
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = differentiate_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("_differentiate_op", {self}, _build_fun, **kwargs)
-        #
-        return tn
-
-    def _delay(self, **kwargs):
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            delay_nodeId = Delay(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = delay_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("_delay_op", {self}, _build_fun, **kwargs)
-        #
-        return tn
 
     ###
     # Operator utils
