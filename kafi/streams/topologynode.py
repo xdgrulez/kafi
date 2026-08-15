@@ -656,42 +656,50 @@ class TopologyNode:
     # Timw Windows - Expiry
     ###
 
-    def _expire_window(self, ts_fun, size_int, assign_fun, allowed_lateness_int=0, **kwargs):
-        return self.expire(ts_fun,
-                           lambda ts: max(assign_fun(ts)) + size_int + allowed_lateness_int,
-                           **kwargs)
-    
-    #
-
     def expire_tumbling(self, ts_fun, size_int, allowed_lateness_int=0, **kwargs):
-        return self._expire_window(ts_fun,
-                                   size_int,
-                                   TopologyNode._assign_tumbling(size_int),
-                                   allowed_lateness_int,
-                                   **kwargs)
+        _assign_fun = TopologyNode._assign_tumbling(size_int)
+        #
+        tn = self.expire(ts_fun,
+                           lambda ts: max(_assign_fun(ts)) + size_int + allowed_lateness_int,
+                           **kwargs)
+        #
+        return tn
 
     def expire_hopping(self, ts_fun, size_int, hop_int, allowed_lateness_int=0, **kwargs):
-        return self._expire_window(ts_fun,
-                                   TopologyNode._assign_hopping(size_int, hop_int),
-                                   allowed_lateness_int,
-                                   **kwargs)
+        _assign_fun = TopologyNode._assign_hopping(size_int, hop_int)
+        #
+        tn = self.expire(ts_fun,
+                         lambda ts: max(_assign_fun(ts)) + size_int + allowed_lateness_int,
+                         **kwargs)
+        #
+        return tn
 
     def expire_cumulative(self, ts_fun, size_int, advance_int, allowed_lateness_int=0, **kwargs):
-        return self._expire_window(ts_fun,
-                                   TopologyNode._assign_cumulative(size_int, advance_int),
-                                   allowed_lateness_int,
-                                   **kwargs)
+        _assign_fun = TopologyNode._assign_cumulative(size_int, advance_int)
+        #
+        tn = self.expire(ts_fun,
+                         lambda ts: max(_assign_fun(ts)) + size_int + allowed_lateness_int,
+                         **kwargs)
+        #
+        return tn
     
     def expire_sliding(self, ts_fun, size_int, **kwargs):
-        return self._expire_window(ts_fun,
-                                   TopologyNode._assign_sliding(size_int),
-                                   **kwargs)
+        _assign_fun = TopologyNode._assign_sliding(size_int)
+        #
+        tn = self.expire(ts_fun,
+                         lambda ts: max(_assign_fun(ts)) + size_int,
+                         **kwargs)
+        #
+        return tn
 
     def expire_session(self, ts_fun, max_session_int, allowed_lateness_int=0, **kwargs):
-        return self._expire_window(ts_fun,
-                                   TopologyNode._assign_session(max_session_int),
-                                   allowed_lateness_int,
-                                   **kwargs)
+        _assign_fun = TopologyNode._assign_session(max_session_int)
+        #
+        tn = self.expire(ts_fun,
+                         lambda ts: max(_assign_fun(ts)) + max_session_int + allowed_lateness_int,
+                         **kwargs)
+        #
+        return tn
 
     ###
     # Time Windows - Group By + Agg
