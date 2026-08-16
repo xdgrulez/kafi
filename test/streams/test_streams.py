@@ -226,3 +226,5 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         self.go(built_tn, source_str_batch_size_int_dict, default_steps_int, checkpoint_storage, checkpoint_topic_str, recreate_boolean=True)
         #
         self.assert_wc(source_str, sink_topic_str)
+
+
