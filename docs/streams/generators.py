@@ -1,13 +1,14 @@
-import random, time
+import random, time, uuid
 
 from faker import Faker
 
 class ClickGenerator():
-    def __init__(self, customers_int=100):
+    def __init__(self, customers_int=100, ts_int=int(time.time() * 1000), ts_step_int=100):
         self.customers_int = customers_int
-        self.ts_int = int(time.time() * 1000)
-        self.ts_step_int = 100
         self.customer_id_int = 0
+        #
+        self.ts_int = ts_int
+        self.ts_step_int = ts_step_int
 
     def generate(self, n=1):
         m_list = []
@@ -24,6 +25,8 @@ class ClickGenerator():
             m_list.append(m)
         #
         return m_list
+
+#
 
 class CustomerGenerator:
     def __init__(self, customers_int=100):
@@ -50,10 +53,30 @@ class CustomerGenerator:
         #
         return m_list
 
-# click_generator = ClickGenerator()
-# for _ in range(3):
-#     print(click_generator.generate())
+#
 
-# customer_generator = CustomerGenerator()
-# for _ in range(3):
-#     print(customer_generator.generate())
+class OrderGenerator:
+    def __init__(self, customers_int=10, ts_int=0, ts_step_int=1):
+        self.customers_int = customers_int
+        self.customer_id_int = 0
+        #
+        self.ts_int = ts_int
+        self.ts_step_int = ts_step_int
+
+    def generate(self, n=1):
+        m_list = []
+        for _ in range(n):
+            order_id_str = str(uuid.uuid4())
+            m = {
+                "key": order_id_str,
+                "value": {"order_id": order_id_str,
+                        "customer_id": random.randint(0, self.customers_int - 1),
+                        "price": random.randint(1, 10000) / 100,
+                        "ts": self.ts_int},
+            }
+            #
+            self.ts_int += self.ts_step_int
+            #
+            m_list.append(m)
+        #
+        return m

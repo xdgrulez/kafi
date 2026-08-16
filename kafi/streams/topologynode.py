@@ -610,18 +610,18 @@ class TopologyNode:
                 predecessor = chain.predecessor(t[0])
                 #
                 if predecessor is None:
-                    prev_zSet, prev_max_ts_int = g.identity(), NEG_INF
+                    prev_zSet, prev_max_ts = g.identity(), NEG_INF
                 else:
                     pred_t = (predecessor,) + t[1:]
-                    prev_zSet, prev_max_ts_int, _ = read_self(pred_t)
+                    prev_zSet, prev_max_ts, _ = read_self(pred_t)
                 #
                 input_zSet = read_input(t)
                 #
-                input_max_ts_int = max(
+                input_max_ts = max(
                     (_ts_fun(k) for k, w in input_zSet.items() if w > 0),
                     default=None,
                 )
-                max_ts_int = prev_max_ts_int if input_max_ts_int is None else max(prev_max_ts_int, input_max_ts_int)
+                max_ts = prev_max_ts if input_max_ts is None else max(prev_max_ts, input_max_ts)
                 #
                 merged_zSet = g.add(prev_zSet, input_zSet)
                 #                
@@ -631,7 +631,7 @@ class TopologyNode:
                 for k, w in merged_zSet.items():
                     if w == 0:
                         continue
-                    if _expiry_fun(k) >= max_ts_int:
+                    if _expiry_fun(k) >= max_ts:
                         new_state_dict[k] = w
                     else:
                         expired_dict[k] = -w
@@ -641,7 +641,7 @@ class TopologyNode:
                 #
                 delta_zSet = g.add(input_zSet, expired_zSet)
                 #
-                return new_state_zSet, max_ts_int, delta_zSet
+                return new_state_zSet, max_ts, delta_zSet
             #
             next_nodeId = evaluator.circuit.next_id()
             expire_nodeId = evaluator.circuit.add(
@@ -665,45 +665,45 @@ class TopologyNode:
 
     @staticmethod
     def _assign_tumbling(size_int):
-        def _assign_fun(ts_int):
-            return [(ts_int // size_int) * size_int + size_int]
+        def _assign_fun(ts):
+            return [(ts // size_int) * size_int + size_int]
         #
         return _assign_fun
 
     @staticmethod
     def _assign_hopping(size_int, hop_int):
-        def _assign_fun(ts_int):
-            first_end_ts_int = (ts_int // hop_int) * hop_int + hop_int
+        def _assign_fun(ts):
+            first_end_ts = (ts // hop_int) * hop_int + hop_int
             #
-            return [first_end_ts_int + i * hop_int
-                    for i in range(size_int // hop_int) if first_end_ts_int + i * hop_int >= size_int]
+            return [first_end_ts + i * hop_int
+                    for i in range(size_int // hop_int) if first_end_ts + i * hop_int >= size_int]
         #
         return _assign_fun
 
     @staticmethod
     def _assign_cumulative(size_int, advance_int):
-        def _assign_fun(ts_int):
-            cumulative_start_int = (ts_int // size_int) * size_int
-            first_step_end_ts_int = ((ts_int // advance_int) * advance_int) + advance_int
-            cumulative_end_ts_int = cumulative_start_int + size_int
+        def _assign_fun(ts):
+            cumulative_start_int = (ts // size_int) * size_int
+            first_step_end_ts = ((ts // advance_int) * advance_int) + advance_int
+            cumulative_end_ts = cumulative_start_int + size_int
             #
-            return [step_end_ts_int
-                    for step_end_ts_int in range(first_step_end_ts_int, cumulative_end_ts_int + advance_int, advance_int)
-                    if step_end_ts_int <= cumulative_end_ts_int]
+            return [step_end_ts
+                    for step_end_ts in range(first_step_end_ts, cumulative_end_ts + advance_int, advance_int)
+                    if step_end_ts <= cumulative_end_ts]
         #
         return _assign_fun
 
     @staticmethod
     def _assign_sliding(size_int):
-        def _assign_fun(ts_int):
-            return [ts_int + size_int]
+        def _assign_fun(ts):
+            return [ts + size_int]
         #
         return _assign_fun
 
     @staticmethod
     def _assign_session(max_session_int):
-        def _assign_fun(ts_int):
-            return [(ts_int // max_session_int) * max_session_int + max_session_int]
+        def _assign_fun(ts):
+            return [(ts // max_session_int) * max_session_int + max_session_int]
         #
         return _assign_fun
 
@@ -760,15 +760,15 @@ class TopologyNode:
     # Time Windows - Group By + Agg
     ###
 
-    def __group_by_agg_aligned(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
-        _project_fun = lambda by_r_end_ts_int_tuple, agg_r: (project_fun(by_r_end_ts_int_tuple[0], agg_r), by_r_end_ts_int_tuple[1])
+    def __group_by_agg_aligned(self, ts_fun, assign_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+        _project_fun = lambda by_r_end_ts_tuple, agg_r: (project_fun(by_r_end_ts_tuple[0], agg_r), by_r_end_ts_tuple[1])
         #
         tn = (
             self
-            .flatmap(lambda r: [(r, end_ts_int) for end_ts_int in assign_fun(ts_fun(r))], **kwargs)
+            .flatmap(lambda r: [(r, end_ts) for end_ts in assign_fun(ts_fun(r))], **kwargs)
             .group_by_agg(
-                lambda r_end_ts_int_tuple: (key_fun(r_end_ts_int_tuple[0]), r_end_ts_int_tuple[1]),
-                lambda r_end_ts_int_tuple: r_end_ts_int_tuple[0],
+                lambda r_end_ts_tuple: (key_fun(r_end_ts_tuple[0]), r_end_ts_tuple[1]),
+                lambda r_end_ts_tuple: r_end_ts_tuple[0],
                 agg_fun,
                 agg_initial_any,
                 _project_fun,
@@ -777,61 +777,61 @@ class TopologyNode:
         #
         return tn
     
-    def _group_by_agg_tumbling(self, size_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+    def _group_by_agg_tumbling(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
         tn = (
             self
-            .__group_by_agg_aligned(TopologyNode._assign_tumbling(size_int),
-                                   ts_fun,
-                                   key_fun,
-                                   agg_fun,
-                                   agg_initial_any,
-                                   project_fun,
-                                   **kwargs)
+            .__group_by_agg_aligned(ts_fun,
+                                    TopologyNode._assign_tumbling(size_int),
+                                    key_fun,
+                                    agg_fun,
+                                    agg_initial_any,
+                                    project_fun,
+                                    **kwargs)
         )
         #
         return tn
 
-    def _group_by_agg_hopping(self, size_int, hop_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+    def _group_by_agg_hopping(self, ts_fun, size_int, hop_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
         tn = (
             self
-            .__group_by_agg_aligned(TopologyNode._assign_hopping(size_int, hop_int),
-                                   ts_fun,
-                                   key_fun,
-                                   agg_fun,
-                                   agg_initial_any,
-                                   project_fun,
-                                   **kwargs)
+            .__group_by_agg_aligned(ts_fun,
+                                    TopologyNode._assign_hopping(size_int, hop_int),
+                                    key_fun,
+                                    agg_fun,
+                                    agg_initial_any,
+                                    project_fun,
+                                    **kwargs)
         )
         #
         return tn
 
-    def _group_by_agg_cumulative(self, size_int, advance_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+    def _group_by_agg_cumulative(self, ts_fun, size_int, advance_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
         tn = (
             self
-            .__group_by_agg_aligned(TopologyNode._assign_cumulative(size_int, advance_int),
-                                   ts_fun,
-                                   key_fun,
-                                   agg_fun,
-                                   agg_initial_any,
-                                   project_fun,
-                                   **kwargs)
+            .__group_by_agg_aligned(ts_fun,
+                                    TopologyNode._assign_cumulative(size_int, advance_int),
+                                    key_fun,
+                                    agg_fun,
+                                    agg_initial_any,
+                                    project_fun,
+                                    **kwargs)
         )
         #
         return tn
 
     #
 
-    def _group_by_agg_sliding(self, assign_fun, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+    def _group_by_agg_sliding(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
         tn = (
             self
-            .map(lambda r: (r, assign_fun(ts_fun(r))[0]))
-            .group_by_agg(lambda r_end_ts_int_tuple: key_fun(r_end_ts_int_tuple[0]),
-                          lambda r_end_ts_int_tuple: r_end_ts_int_tuple,
-                          lambda agg_r_end_ts_int_tuple, r_end_ts_int_tuple: 
-                          (agg_fun(agg_r_end_ts_int_tuple[0], r_end_ts_int_tuple[0]), min(agg_r_end_ts_int_tuple[1], r_end_ts_int_tuple[1]) if agg_r_end_ts_int_tuple[1] > 0 else r_end_ts_int_tuple[1]),
+            .map(lambda r: (r, TopologyNode.assign_sliding(size_int)(ts_fun(r))[0]))
+            .group_by_agg(lambda r_end_ts_tuple: key_fun(r_end_ts_tuple[0]),
+                          lambda r_end_ts_tuple: r_end_ts_tuple,
+                          lambda agg_r_end_ts_tuple, r_end_ts_tuple: 
+                          (agg_fun(agg_r_end_ts_tuple[0], r_end_ts_tuple[0]), min(agg_r_end_ts_tuple[1], r_end_ts_tuple[1]) if agg_r_end_ts_tuple[1] > 0 else r_end_ts_tuple[1]),
                           (agg_initial_any, 0),
-                          lambda by, agg_r_end_ts_int_tuple: 
-                          (project_fun(by, agg_r_end_ts_int_tuple[0]), agg_r_end_ts_int_tuple[1]),
+                          lambda by, agg_r_end_ts_tuple: 
+                          (project_fun(by, agg_r_end_ts_tuple[0]), agg_r_end_ts_tuple[1]),
                           **kwargs)
         )
         #
@@ -839,18 +839,18 @@ class TopologyNode:
 
     #
 
-    def _group_by_agg_session(self, gap_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+    def _group_by_agg_session(self, ts_fun, gap_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
         def insert_session(r, session_dict_list):
-            ts_int = ts_fun(r)
+            ts = ts_fun(r)
             #
             left_session_dict = next((session_dict 
                                       for session_dict in session_dict_list 
-                                      if session_dict["start"] - gap_int <= ts_int <= session_dict["last_ts"] + gap_int), None)
+                                      if session_dict["start"] - gap_int <= ts <= session_dict["last_ts"] + gap_int), None)
             #
             if left_session_dict:
                 left_session_dict["records"].append(r)
-                left_session_dict["start"] = min(left_session_dict["start"], ts_int)
-                left_session_dict["last_ts"] = max(left_session_dict["last_ts"], ts_int)
+                left_session_dict["start"] = min(left_session_dict["start"], ts)
+                left_session_dict["last_ts"] = max(left_session_dict["last_ts"], ts)
                 left_session_dict["agg"] = agg_fun(left_session_dict["agg"], r)
                 #
                 right_session_dict = next((session_dict 
@@ -873,8 +873,8 @@ class TopologyNode:
                     session_dict_list.remove(right_session_dict)
             else:
                 session_dict_list.append({
-                    "start": ts_int,
-                    "last_ts": ts_int,
+                    "start": ts,
+                    "last_ts": ts,
                     "records": [r],
                     "agg": agg_fun(agg_initial_any.copy(), r)
                 })
@@ -883,9 +883,9 @@ class TopologyNode:
             #
             return session_dict_list
         #
-        def _flatmap_fun(by_any_agg_any_session_end_ts_int_tuple_list):
-            return [(project_fun(by_any_agg_any_session_end_ts_int_tuple_list[0], agg_any_session_end_ts_int_tuple[0]), agg_any_session_end_ts_int_tuple[1])
-                    for agg_any_session_end_ts_int_tuple in by_any_agg_any_session_end_ts_int_tuple_list[1]]
+        def _flatmap_fun(by_any_agg_any_session_end_ts_tuple_list):
+            return [(project_fun(by_any_agg_any_session_end_ts_tuple_list[0], agg_any_session_end_ts_tuple[0]), agg_any_session_end_ts_tuple[1])
+                    for agg_any_session_end_ts_tuple in by_any_agg_any_session_end_ts_tuple_list[1]]
         #
         tn = (
             self
@@ -907,14 +907,14 @@ class TopologyNode:
     # Time Windows - Trigger
     ###
 
-    def _trigger(self, time_tn, ts_fun, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], project_fun=lambda r_end_ts_int_tuple: {**r_end_ts_int_tuple[0], "window_end": r_end_ts_int_tuple[1]}, positive_only=True, **kwargs):
+    def _trigger(self, time_tn, ts_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, positive_only=True, **kwargs):
         positive_only_boolean = positive_only
         #
         trigger_tn = (
             self
             .join(time_tn.max(ts_fun),
-                  lambda r_end_ts_int_tuple, latest_ts_int: trigger_fun(r_end_ts_int_tuple, latest_ts_int),
-                  lambda r_end_ts_int_tuple, _: project_fun(r_end_ts_int_tuple),
+                  lambda r_end_ts_tuple, latest_ts: trigger_fun(r_end_ts_tuple, latest_ts),
+                  lambda r_end_ts_tuple, _: project_fun(r_end_ts_tuple),
                   **kwargs)
         )
         trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if positive_only_boolean else trigger_tn
@@ -925,11 +925,35 @@ class TopologyNode:
     # Time Windows - {Group By, Trigger}
     ###
 
-    def group_by_agg_tumbling(self, size_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: {**r_end_ts_int_tuple[0], "window_end": r_end_ts_int_tuple[1]}, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def group_by_agg_tumbling(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
         group_by_agg_tn = (
             self
-            ._group_by_agg_tumbling(size_int,
-                                   ts_fun,
+            ._group_by_agg_tumbling(ts_fun,
+                                    size_int,
+                                    key_fun,
+                                    agg_fun,
+                                    agg_initial_any,
+                                    project_fun,
+                                    **kwargs)
+        )
+        #
+        trigger_tn = group_by_agg_tn._trigger(self,
+                                              ts_fun,
+                                              trigger_fun,
+                                              trigger_project_fun,
+                                              trigger_positive_only_bool,
+                                              **kwargs)
+        #
+        return trigger_tn
+
+    #
+
+    def group_by_agg_hopping(self, ts_fun, size_int, advance_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
+        group_by_agg_tn = (
+            self
+            ._group_by_agg_hopping(ts_fun,
+                                   size_int,
+                                   advance_int,
                                    key_fun,
                                    agg_fun,
                                    agg_initial_any,
@@ -938,69 +962,45 @@ class TopologyNode:
         )
         #
         trigger_tn = group_by_agg_tn._trigger(self,
-                                             ts_fun,
-                                             trigger_fun,
-                                             trigger_project_fun,
-                                             trigger_positive_only,
-                                             **kwargs)
+                                              ts_fun,
+                                              trigger_fun,
+                                              trigger_project_fun,
+                                              trigger_positive_only_bool,
+                                              **kwargs)
         #
         return trigger_tn
 
     #
 
-    def group_by_agg_hopping(self, size_int, advance_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: {**r_end_ts_int_tuple[0], "window_end": r_end_ts_int_tuple[1]}, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def group_by_agg_cumulative(self, ts_fun, size_int, advance_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
         group_by_agg_tn = (
             self
-            ._group_by_agg_hopping(size_int,
-                                  advance_int,
-                                  ts_fun,
-                                  key_fun,
-                                  agg_fun,
-                                  agg_initial_any,
-                                  project_fun,
-                                  **kwargs)
+            ._group_by_agg_cumulative(ts_fun,
+                                      size_int,
+                                      advance_int,
+                                      key_fun,
+                                      agg_fun,
+                                      agg_initial_any,
+                                      project_fun,
+                                      **kwargs)
         )
         #
         trigger_tn = group_by_agg_tn._trigger(self,
-                                             ts_fun,
-                                             trigger_fun,
-                                             trigger_project_fun,
-                                             trigger_positive_only,
-                                             **kwargs)
+                                              ts_fun,
+                                              trigger_fun,
+                                              trigger_project_fun,
+                                              trigger_positive_only_bool,
+                                              **kwargs)
         #
         return trigger_tn
 
     #
 
-    def group_by_agg_cumulative(self, size_int, advance_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: {**r_end_ts_int_tuple[0], "window_end": r_end_ts_int_tuple[1]}, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
-        group_by_agg_tn = (
-            self
-            ._group_by_agg_cumulative(size_int,
-                                     advance_int,
-                                     ts_fun,
-                                     key_fun,
-                                     agg_fun,
-                                     agg_initial_any,
-                                     project_fun,
-                                     **kwargs)
-        )
-        #
-        trigger_tn = group_by_agg_tn._trigger(self,
-                                             ts_fun,
-                                             trigger_fun,
-                                             trigger_project_fun,
-                                             trigger_positive_only,
-                                             **kwargs)
-        #
-        return trigger_tn
-
-    #
-
-    def group_by_agg_sliding(self, size_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: {**r_end_ts_int_tuple[0], "window_end": r_end_ts_int_tuple[1]}, trigger_positive_only=True, **kwargs):
+    def group_by_agg_sliding(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
         trigger_positive_only_boolean = trigger_positive_only
         #
-        group_by_agg_tn = self._group_by_agg_sliding(TopologyNode._assign_sliding(size_int),
-                                                     ts_fun,
+        group_by_agg_tn = self._group_by_agg_sliding(ts_fun,
+                                                     size_int,
                                                      key_fun,
                                                      agg_fun,
                                                      agg_initial_any,
@@ -1014,11 +1014,11 @@ class TopologyNode:
     
     #
 
-    def group_by_agg_session(self, gap_int, ts_fun, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_int_tuple: {**r_end_ts_int_tuple[0], "window_end": r_end_ts_int_tuple[1]}, trigger_fun=lambda r_end_ts_int_tuple, latest_ts_int: latest_ts_int >= r_end_ts_int_tuple[1], trigger_positive_only=True, **kwargs):
+    def group_by_agg_session(self, ts_fun, gap_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
         group_by_agg_tn = (
             self
-            ._group_by_agg_session(gap_int,
-                                   ts_fun,
+            ._group_by_agg_session(ts_fun,
+                                   gap_int,
                                    key_fun, 
                                    agg_fun,
                                    agg_initial_any,
@@ -1030,7 +1030,7 @@ class TopologyNode:
                                              ts_fun,
                                              trigger_fun,
                                              trigger_project_fun,
-                                             trigger_positive_only,
+                                             trigger_positive_only_bool,
                                              **kwargs)
         #
         return trigger_tn
