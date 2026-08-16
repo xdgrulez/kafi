@@ -824,7 +824,7 @@ class TopologyNode:
     def _group_by_agg_sliding(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
         tn = (
             self
-            .map(lambda r: (r, TopologyNode.assign_sliding(size_int)(ts_fun(r))[0]))
+            .map(lambda r: (r, TopologyNode._assign_sliding(size_int)(ts_fun(r))[0]))
             .group_by_agg(lambda r_end_ts_tuple: key_fun(r_end_ts_tuple[0]),
                           lambda r_end_ts_tuple: r_end_ts_tuple,
                           lambda agg_r_end_ts_tuple, r_end_ts_tuple: 
@@ -907,9 +907,7 @@ class TopologyNode:
     # Time Windows - Trigger
     ###
 
-    def _trigger(self, time_tn, ts_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, positive_only=True, **kwargs):
-        positive_only_boolean = positive_only
-        #
+    def _trigger(self, time_tn, ts_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, positive_only_bool=True, **kwargs):
         trigger_tn = (
             self
             .join(time_tn.max(ts_fun),
@@ -917,7 +915,7 @@ class TopologyNode:
                   lambda r_end_ts_tuple, _: project_fun(r_end_ts_tuple),
                   **kwargs)
         )
-        trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if positive_only_boolean else trigger_tn
+        trigger_tn = trigger_tn._filter(lambda _, w: w > 0, **kwargs) if positive_only_bool else trigger_tn
         #
         return trigger_tn
 
@@ -948,12 +946,12 @@ class TopologyNode:
 
     #
 
-    def group_by_agg_hopping(self, ts_fun, size_int, advance_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
+    def group_by_agg_hopping(self, ts_fun, size_int, hop_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_hopping(ts_fun,
                                    size_int,
-                                   advance_int,
+                                   hop_int,
                                    key_fun,
                                    agg_fun,
                                    agg_initial_any,
@@ -997,8 +995,6 @@ class TopologyNode:
     #
 
     def group_by_agg_sliding(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
-        trigger_positive_only_boolean = trigger_positive_only
-        #
         group_by_agg_tn = self._group_by_agg_sliding(ts_fun,
                                                      size_int,
                                                      key_fun,
@@ -1008,7 +1004,7 @@ class TopologyNode:
                                                      **kwargs)
         trigger_tn = group_by_agg_tn.map(trigger_project_fun)
         #
-        trigger_tn = trigger_tn._filter(lambda _, w: w > 0) if trigger_positive_only_boolean else trigger_tn
+        trigger_tn = trigger_tn._filter(lambda _, w: w > 0) if trigger_positive_only_bool else trigger_tn
         #
         return trigger_tn
     
@@ -1183,11 +1179,11 @@ class TopologyNode:
     # Output
 
     def latest(self, gc=True):
-        gc_boolean = gc
+        gc_bool = gc
         #
         zSet = self._evaluator.latest(self._output_nodeId)
         #
-        if gc_boolean:
+        if gc_bool:
             self._evaluator.compact()
         #
         unpacked_zSet = [(self._unpack_fun(packed_r), w) for packed_r, w in zSet.items()]
@@ -1195,14 +1191,14 @@ class TopologyNode:
         if self._sink_str_list is None:
             output_any = self._from_zSet_fun(unpacked_zSet)
         else:
-            sink_str_unpacked_r_w_tuple_list_dict = defaultdict(list)
+            sink_str_unpacked_r_w_tuple_list_dict = {sink_str: [] for sink_str in self._sink_str_list}
             for (sink_str, unpacked_r), w in unpacked_zSet:
                 sink_str_unpacked_r_w_tuple_list_dict[sink_str].append((unpacked_r, w))
             #
-            output_any = {sink_str: self._from_zSet_fun(unpacked_r_w_tuple_list) for sink_str, unpacked_r_w_tuple_list in sink_str_unpacked_r_w_tuple_list_dict.items()} 
+            output_any = {sink_str: self._from_zSet_fun(unpacked_r_w_tuple_list) for sink_str, unpacked_r_w_tuple_list in sink_str_unpacked_r_w_tuple_list_dict.items()}
         #
         return output_any
-     
+
     def from_zSet(self, from_zSet_fun):
         self._from_zSet_fun = from_zSet_fun
         #
