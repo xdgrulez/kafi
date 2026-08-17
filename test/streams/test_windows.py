@@ -14,7 +14,7 @@ class TestWindows(unittest.TestCase):
     #
 
     def test_tumbling(self):
-        size_int = self.order_generator.ts_step_int * 100
+        size_int = 100
         allowed_lateness_int = size_int * 2
         #
         order_source_tn = Tn.source(self.order_source_str)
@@ -117,7 +117,7 @@ class TestWindows(unittest.TestCase):
     #
 
     def test_hopping(self):
-        size_int = self.order_generator.ts_step_int * 100
+        size_int = 100
         hop_int = size_int // 2
         allowed_lateness_int = size_int * 2
         #
@@ -212,7 +212,7 @@ class TestWindows(unittest.TestCase):
     #
 
     def test_cumulative(self):
-        size_int = self.order_generator.ts_step_int * 100
+        size_int = 100
         advance_int = size_int // 5
         allowed_lateness_int = size_int * 2
         #
@@ -315,7 +315,7 @@ class TestWindows(unittest.TestCase):
     #
 
     def test_sliding(self):
-        size_int = self.order_generator.ts_step_int * 100
+        size_int = 100
         #
         order_source_tn = Tn.source(self.order_source_str)
         order_source_tn.to_zSet(Tn._from_records)
