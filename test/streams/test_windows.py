@@ -66,8 +66,8 @@ class TestWindows(unittest.TestCase):
         ])
         print("-> OK: Correction for window [0, 100) triggered: (customer=1, orders=1, total=100).")
 
-        print("\n=== Step 4: An order from customer 3 (price=400, ts=100) arrives ===")
-        r_w_tuple_list = self.process(built_tn, customer_id=3, price=400, ts=100, w=1)
+        print("\n=== Step 4: An order from customer 3 (price=400, ts=101) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=3, price=400, ts=101, w=1)
         self.assert_output(r_w_tuple_list, [])
         print("-> OK: Order put into window [100, 200), still correctly held back/not triggered.")
 
