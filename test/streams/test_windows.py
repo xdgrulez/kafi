@@ -111,7 +111,7 @@ class TestWindows(unittest.TestCase):
             ({"customer_id": 1, "orders": 1, "total_price": 50, "last_ts": 210, "window_end": 300}, -1),
             ({"customer_id": 3, "orders": 2, "total_price": 600, "last_ts": 150, "window_end": 200}, -1),
             ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 100}, -1)
-        ], True)
+        ])
         print("-> OK: Retraction for windows [0, 100), [100, 200), [200, 300) triggered. Window [300, 400) *quietly dropped* (customer=2, orders=1, total=60).")
 
         print("\n=== Step 11: An order from customer 1 (price=70, ts=130) arrives too late ===")
@@ -155,12 +155,12 @@ class TestWindows(unittest.TestCase):
         built_tn = Tn.build(sink_tn)
         built_tn.from_zSet(Tn._to_records)
         #
-        print("=== Step 1: An order from customer 1 (price=100, ts=10) arrives ===")
+        print("\n=== Step 1: An order from customer 1 (price=100, ts=10) arrives ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
         self.assert_output(r_w_tuple_list, [])
         print("-> OK")
 
-        print("=== Step 2: An order from customer 1 (price=200, ts=50) arrives ===")
+        print("\n=== Step 2: An order from customer 1 (price=200, ts=50) arrives ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=50, w=1)
         self.assert_output(r_w_tuple_list, [])
         print("-> OK")
@@ -254,33 +254,39 @@ class TestWindows(unittest.TestCase):
             .distinct()
         )
         #
-        sink_tn = order_tn.group_by_agg_hopping(
+        sink_tn = order_tn.group_by_agg_tumbling(
             ts_fun=lambda r: r["ts"],
             size_int=size_int,
-            hop_int=hop_int,
             key_fun=lambda r: r["customer_id"],
             agg_fun=lambda agg_r, r: {"orders": agg_r["orders"] + 1,
-                                    "total_price": agg_r["total_price"] + r["price"]},
-            agg_initial_any={"orders": 0, "total_price": 0},
+                                      "total_price": agg_r["total_price"] + r["price"],
+                                      "last_ts": max(agg_r["last_ts"], r["ts"])},
+            agg_initial_any={"orders": 0, "total_price": 0, "last_ts": 0},
             project_fun=lambda key_any, agg_r: {"customer_id": key_any,
                                                 "orders": agg_r["orders"],
-                                                "total_price": agg_r["total_price"]},
+                                                "total_price": agg_r["total_price"],
+                                                "last_ts": agg_r["last_ts"]},
             trigger_positive_only_bool=False
-        ).sink(self.sink_str)                                       
+        ).sink(self.sink_str)
         #
         built_tn = Tn.build(sink_tn)
-        built_tn.from_zSet(Tn._to_records)        
+        built_tn.from_zSet(Tn._to_records)
         #
-        print("=== Step 1: Two orders from customer 1 arrive (ts=10 falls into [0, 100); ts=60 falls into [0, 100) and [50, 150)) ===")
-        self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
-        self.process(built_tn, customer_id=1, price=200, ts=60, w=1)
+        print("\n=== Step 1: An orders from customer 1 arrives (price=100, ts=10) ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
+        self.assert_output(r_w_tuple_list, [])
         print("-> OK.")
 
-        print("\n=== Step 2: An order from customer 2 at ts=110 arrives ===")
+        print("\n=== Step 2: An orders from customer 1 arrives (price=200, ts=60) ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=60, w=1)
+        self.assert_output(r_w_tuple_list, [])
+        print("-> OK.")
+
+        print("\n=== Step 3: An order from customer 2 arrives (price=50, ts=110) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=110, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 100}, 1)
-        ])
+        ], True)
         print("-> OK: Window [0, 100) triggered: (customer=1, orders=2, total=300)")
 
         print("\n=== Step 3: Retraction for the window (50, 150) arrives ===")
