@@ -47,18 +47,20 @@ class TestWindows(unittest.TestCase):
         built_tn.from_zSet(Tn._to_records)
         #
         print("=== Step 1: An order from customer 1 (price=100, ts=10) arrives ===")
-        self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
+        self.assert_output(r_w_tuple_list, [])
         print("-> OK")
 
-        print("=== Step 1: An order from customer 1 (price=200, ts=50) arrives ===")
-        self.process(built_tn, customer_id=1, price=200, ts=50, w=1)
+        print("=== Step 2: An order from customer 1 (price=200, ts=50) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=50, w=1)
+        self.assert_output(r_w_tuple_list, [])
         print("-> OK")
 
         print("\n=== Step 3: An order from customer 2 (price=50, ts=105) arrives ===")
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=105, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 50, "window_end": 100}, 1)
-        ])
+        ], True)
         print("-> OK: Window [0, 100) triggered (orders=2, total=300).")
 
         print("\n=== Step 4: The order from customer 1 (price=200, ts=50) is retracted ===")
@@ -102,15 +104,132 @@ class TestWindows(unittest.TestCase):
         ])
         print("-> OK: Correction for window [100, 200) triggered: (customer=2, orders=2, total=90).")
 
-        print("\n=== Step 10: An order from customer 1 (price=70, ts=510) arrives ===")
-        r_w_tuple_list = self.process(built_tn, customer_id=1, price=70, ts=510, w=1)
+        print("\n=== Step 10: An order from customer 1 (price=70, ts=710) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=70, ts=710, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 100}, -1),
             ({"customer_id": 2, "orders": 2, "total_price": 90, "last_ts": 180, "window_end": 200}, -1),
+            ({"customer_id": 1, "orders": 1, "total_price": 50, "last_ts": 210, "window_end": 300}, -1),
             ({"customer_id": 3, "orders": 2, "total_price": 600, "last_ts": 150, "window_end": 200}, -1),
-            ({"customer_id": 2, "orders": 1, "total_price": 60, "last_ts": 330, "window_end": 400}, 1)
+            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 100}, -1)
+        ], True)
+        print("-> OK: Retraction for windows [0, 100), [100, 200), [200, 300) triggered. Window [300, 400) *quietly dropped* (customer=2, orders=1, total=60).")
+
+        print("\n=== Step 11: An order from customer 1 (price=70, ts=130) arrives too late ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=70, ts=130, w=1)
+        self.assert_output(r_w_tuple_list, [])
+        print("-> OK: Order arrived too late - no action.")
+
+    #
+
+    def test_tumbling_explicit_watermarks(self):
+        size_int = 100
+        allowed_lateness_int = size_int * 2
+        #
+        order_source_tn = Tn.source(self.order_source_str)
+        order_source_tn.to_zSet(Tn._from_records)
+        order_tn = (
+            order_source_tn
+            .map(lambda r: {"customer_id": r["value"]["customer_id"],
+                            "price": r["value"]["price"],
+                            "ts": r["value"]["ts"]})
+            .expire_tumbling(lambda r: r["ts"], size_int, allowed_lateness_int)
+            .distinct()
+        )
+        #
+        sink_tn = order_tn.group_by_agg_tumbling(
+            ts_fun=lambda r: r["ts"],
+            size_int=size_int,
+            key_fun=lambda r: r["customer_id"],
+            agg_fun=lambda agg_r, r: {"orders": agg_r["orders"] + 1,
+                                      "total_price": agg_r["total_price"] + r["price"],
+                                      "last_ts": max(agg_r["last_ts"], r["ts"])} if r["price"] != -1 else agg_r,
+            agg_initial_any={"orders": 0, "total_price": 0, "last_ts": 0},
+            project_fun=lambda key_any, agg_r: {"customer_id": key_any,
+                                                "orders": agg_r["orders"],
+                                                "total_price": agg_r["total_price"],
+                                                "last_ts": agg_r["last_ts"]},
+            trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1] and r_end_ts_tuple[0]["total_price"] > 0,
+            trigger_positive_only_bool=False
+        ).sink(self.sink_str)
+        #
+        built_tn = Tn.build(sink_tn)
+        built_tn.from_zSet(Tn._to_records)
+        #
+        print("=== Step 1: An order from customer 1 (price=100, ts=10) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
+        self.assert_output(r_w_tuple_list, [])
+        print("-> OK")
+
+        print("=== Step 2: An order from customer 1 (price=200, ts=50) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=50, w=1)
+        self.assert_output(r_w_tuple_list, [])
+        print("-> OK")
+
+        print("\n=== Step 3: An order from customer 2 (price=50, ts=105) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=105, w=1)
+        self.assert_output(r_w_tuple_list, [
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 50, "window_end": 100}, 1)
+        ], True)
+        print("-> OK: Window [0, 100) triggered (orders=2, total=300).")
+
+        print("\n=== Step 4: The order from customer 1 (price=200, ts=50) is retracted ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=50, w=-1)
+        self.assert_output(r_w_tuple_list, [
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 50, "window_end": 100}, -1),
+            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 100}, 1)
         ])
-        print("-> OK: Retraction for window [100, 200) triggered. Window (300, 400) triggered: (customer=2, orders=1, total=60).")
+        print("-> OK: Correction for window [0, 100) triggered: (customer=1, orders=1, total=100).")
+
+        print("\n=== Step 5: An order from customer 3 (price=400, ts=101) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=3, price=400, ts=101, w=1)
+        self.assert_output(r_w_tuple_list, [])
+        print("-> OK: Order put into window [100, 200), still correctly held back/not triggered.")
+
+        print("\n=== Step 6: Another order from customer 3 at 150 (price=200, ts=150) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=3, price=200, ts=150, w=1)
+        self.assert_output(r_w_tuple_list, [])
+        print("-> OK. Order put into window [100, 200), still correctly held back/not triggered.")
+
+        print("\n=== Step 7: Another order from customer 1 (price=50, ts=210) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=50, ts=210, w=1)
+        self.assert_output(r_w_tuple_list, [
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 105, "window_end": 200}, 1),
+            ({"customer_id": 3, "orders": 2, "total_price": 600, "last_ts": 150, "window_end": 200}, 1)
+        ])
+        print("-> OK: Window [100, 200) triggered (customer=2, orders=1, total=50), (customer=3, orders=2, total=600).")
+
+        print("\n=== Step 8: An order from customer 2 (price=60, ts=330) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=2, price=60, ts=330, w=1)
+        self.assert_output(r_w_tuple_list, [
+            ({"customer_id": 1, "orders": 1, "total_price": 50, "last_ts": 210, "window_end": 300}, 1)
+        ])
+        print("-> OK: Window [200, 300) triggered (customer=1, orders=1, total=50).")
+
+        print("\n=== Step 9: An order from customer 2 (price=40, ts=180) arrives late (but not too late) ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=2, price=40, ts=180, w=1)
+        self.assert_output(r_w_tuple_list, [
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 105, "window_end": 200}, -1),
+            ({"customer_id": 2, "orders": 2, "total_price": 90, "last_ts": 180, "window_end": 200}, 1)
+        ])
+        print("-> OK: Correction for window [100, 200) triggered: (customer=2, orders=2, total=90).")
+
+        print("\n=== Step 9.5: An explicit watermark from customer 1 (price=-1, ts=610) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=-1, ts=610, w=1)
+        self.assert_output(r_w_tuple_list, [
+            ({"customer_id": 2, "orders": 1, "total_price": 60, "last_ts": 330, "window_end": 400}, 1),
+            ({"customer_id": 2, "orders": 2, "total_price": 90, "last_ts": 180, "window_end": 200}, -1),
+            ({"customer_id": 1, "orders": 1, "total_price": 50, "last_ts": 210, "window_end": 300}, -1),
+            ({"customer_id": 3, "orders": 2, "total_price": 600, "last_ts": 150, "window_end": 200}, -1),
+            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 100}, -1)
+        ])
+        print("-> OK: Retraction for windows [0, 100), [100, 200), [200, 300) triggered. Window [300, 400) triggered (customer=2, orders=1, total=60).")
+
+        print("\n=== Step 10: An order from customer 1 (price=70, ts=710) arrives ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=70, ts=710, w=1)
+        self.assert_output(r_w_tuple_list, [
+            ({"customer_id": 2, "orders": 1, "total_price": 60, "last_ts": 330, "window_end": 400}, -1)
+        ])
+        print("-> OK: Retraction for window [300, 400) triggered.")
 
         print("\n=== Step 11: An order from customer 1 (price=70, ts=130) arrives too late ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=70, ts=130, w=1)
@@ -580,13 +699,17 @@ class TestWindows(unittest.TestCase):
         #
         return r_w_tuple_list
 
-    def assert_output(self, actual_r_w_tuple_list, expected_r_w_tuple_list):
+    def assert_output(self, actual_r_w_tuple_list, expected_r_w_tuple_list, print_bool=False):
         def sort_key(r_w_tuple):
             r, w = r_w_tuple
             return (r.get("window_end", 0), r.get("customer_id", 0), w)
         #
         actual_sorted_r_w_tuple_list = sorted(actual_r_w_tuple_list, key=sort_key)
         expected_sorted_r_w_tuple_list = sorted(expected_r_w_tuple_list, key=sort_key)
+        #
+        if print_bool:
+            for r_w_tuple in actual_r_w_tuple_list:
+                print(r_w_tuple)
         #
         self.assertEqual(actual_sorted_r_w_tuple_list,  expected_sorted_r_w_tuple_list)
 
