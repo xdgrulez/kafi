@@ -254,9 +254,10 @@ class TestWindows(unittest.TestCase):
             .distinct()
         )
         #
-        sink_tn = order_tn.group_by_agg_tumbling(
+        sink_tn = order_tn.group_by_agg_hopping(
             ts_fun=lambda r: r["ts"],
             size_int=size_int,
+            hop_int=hop_int,
             key_fun=lambda r: r["customer_id"],
             agg_fun=lambda agg_r, r: {"orders": agg_r["orders"] + 1,
                                       "total_price": agg_r["total_price"] + r["price"],
@@ -285,54 +286,54 @@ class TestWindows(unittest.TestCase):
         print("\n=== Step 3: An order from customer 2 arrives (price=50, ts=110) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=110, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 100}, 1)
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 60, "window_end": 100}, 1)
         ], True)
         print("-> OK: Window [0, 100) triggered: (customer=1, orders=2, total=300)")
 
-        print("\n=== Step 3: Retraction for the window (50, 150) arrives ===")
+        print("\n=== Step 4: Retraction for the window arrives (price=200, ts=60) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=60, w=-1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 100}, -1),
-            ({"customer_id": 1, "orders": 1, "total_price": 100, "window_end": 100}, 1)
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 60, "window_end": 100}, -1),
+            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 100}, 1)
         ])
         print("-> OK: Correction for window [0, 100) triggered: (customer=1, orders=1, total=100).")
 
-        print("\n=== Step 4: An order from customer 3 at arrives (price=99, ts=150) ===")
+        print("\n=== Step 5: An order from customer 3 at arrives (price=99, ts=150) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=3, price=99, ts=150, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 150}, 1)
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 110,"window_end": 150}, 1)
         ])
         print("-> OK: Window [50, 150) triggered: (customer=2, orders=2, total=50).")
 
-        print("\n=== Step 5: An order from customer 2 arrives (price=99, ts=250) ===")
+        print("\n=== Step 6: An order from customer 2 arrives (price=99, ts=250) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=90, ts=250, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 200}, 1),
-            ({"customer_id": 3, "orders": 1, "total_price": 99, "window_end": 200}, 1),
-            ({"customer_id": 3, "orders": 1, "total_price": 99, "window_end": 250}, 1)
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 110, "window_end": 200}, 1),
+            ({"customer_id": 3, "orders": 1, "total_price": 99, "last_ts": 150, "window_end": 200}, 1),
+            ({"customer_id": 3, "orders": 1, "total_price": 99, "last_ts": 150, "window_end": 250}, 1)
         ])
         print("-> OK: Windows [100, 200) and [150, 250) triggered.")
 
-        print("\n=== Step 6: An order for customer 3 (price=100, ts=170) arrives late (but not too late) ===")
+        print("\n=== Step 7: An order for customer 3 arrives too late (but not too late) (price=100, ts=170) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=3, price=100, ts=170, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 3, "orders": 1, "total_price": 99, "window_end": 200}, -1),
-            ({"customer_id": 3, "orders": 2, "total_price": 199, "window_end": 200}, 1),
-            ({"customer_id": 3, "orders": 1, "total_price": 99, "window_end": 250}, -1),
-            ({"customer_id": 3, "orders": 2, "total_price": 199, "window_end": 250}, 1)
+            ({"customer_id": 3, "orders": 2, "total_price": 199, "last_ts": 170, "window_end": 200}, 1),
+            ({"customer_id": 3, "orders": 2, "total_price": 199, "last_ts": 170, "window_end": 250}, 1),
+            ({"customer_id": 3, "orders": 1, "total_price": 99, "last_ts": 150, "window_end": 200}, -1),
+            ({"customer_id": 3, "orders": 1, "total_price": 99, "last_ts": 150, "window_end": 250}, -1)
         ])
         print("-> OK: Corrections for windows [100, 200) and [150, 250) triggered.")
 
-        print("\n=== Step 7: An order for customer 1 (price=10, ts=450) arrives ===")
+        print("\n=== Step 8: An order for customer 1 arrives (price=10, ts=450) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=10, ts=450, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 1, "total_price": 100, "window_end": 100}, -1),
-            ({"customer_id": 2, "orders": 1, "total_price": 90, "window_end": 300}, 1),
-            ({"customer_id": 2, "orders": 1, "total_price": 90, "window_end": 350}, 1)
+            ({"customer_id": 2, "orders": 1, "total_price": 90, "last_ts": 250, "window_end": 300}, 1),
+            ({"customer_id": 2, "orders": 1, "total_price": 90, "last_ts": 250, "window_end": 350}, 1),
+            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 100}, -1)
         ])
         print("-> OK: Window [0, 100) correctly expired; windows [200, 300) and [250, 300) correctly triggered.")
 
-        print("\n=== Step 8: An order from customer 1 (price=999, ts=20) arrives too late ===")
+        print("\n=== Step 9: An order from customer 1 (price=999, ts=20) arrives too late ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=999, ts=20, w=1)
         self.assert_output(r_w_tuple_list, [])
         print("-> OK: Order arrived too late - no action.")
@@ -361,11 +362,13 @@ class TestWindows(unittest.TestCase):
             advance_int=advance_int,
             key_fun=lambda r: r["customer_id"],
             agg_fun=lambda agg_r, r: {"orders": agg_r["orders"] + 1,
-                                    "total_price": agg_r["total_price"] + r["price"]},
-            agg_initial_any={"orders": 0, "total_price": 0},
+                                      "total_price": agg_r["total_price"] + r["price"],
+                                      "last_ts": max(agg_r["last_ts"], r["ts"])},
+            agg_initial_any={"orders": 0, "total_price": 0, "last_ts": 0},
             project_fun=lambda key_any, agg_r: {"customer_id": key_any,
                                                 "orders": agg_r["orders"],
-                                                "total_price": agg_r["total_price"]},
+                                                "total_price": agg_r["total_price"],
+                                                "last_ts": agg_r["last_ts"]},
                                                 trigger_positive_only_bool=False
         ).sink(self.sink_str)
         #
@@ -380,58 +383,55 @@ class TestWindows(unittest.TestCase):
         print("=== Step 2: Another order for customer 1 arrives (price=200, ts=30). Lands in [0, 40), [0, 60), [0, 80), [0, 100) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=30, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 1, "total_price": 100, "window_end": 20}, 1)
-        ])
+            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 20}, 1)
+        ], True)
         print("-> OK: Window [0, 20) triggered.")
 
         print("\n=== Step 3: An order for customer 2 arrives (price=50, ts=75). Lands in [60, 80), [80, 100) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=75, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 40}, 1),
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 60}, 1)
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 30, "window_end": 40}, 1),
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 30, "window_end": 60}, 1)
         ])
         print("-> OK: Windows [0, 40) and [0, 60) triggered.")
 
         print("\n=== Step 4: Another order from customer 1 (price=50, ts=15) arrives late (but not too late) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=50, ts=15, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 1, "total_price": 100, "window_end": 20}, -1),
-            ({"customer_id": 1, "orders": 2, "total_price": 150, "window_end": 20}, 1),
-            
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 40}, -1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 40}, 1),
-            
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 60}, -1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 60}, 1)
+            ({"customer_id": 1, "orders": 2, "total_price": 150, "last_ts": 15, "window_end": 20}, 1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30,"window_end": 40}, 1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30, "window_end": 60}, 1),
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 30, "window_end": 40}, -1),
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 30, "window_end": 60}, -1),
+            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 20}, -1)
         ])
         print("-> OK: Corrections for windows [0, 20), [0, 40) and [0, 60) triggered.")
 
         print("\n=== Step 5: Another order from customer 1 (price=500, ts=105) arrives ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=500, ts=105, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 80}, 1),
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 80}, 1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 100}, 1),
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 100}, 1)
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30, "window_end": 80}, 1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30, "window_end": 100}, 1),
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 100}, 1),
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 80}, 1)
         ])
         print("-> OK: Windows [0, 80) and [0, 100] triggered.")
 
         print("\n=== Step 6: Yet another order from customer 1 (price=10, ts=410) arrives ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=10, ts=410, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 2, "total_price": 150, "window_end": 20}, -1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 40}, -1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 60}, -1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 80}, -1),
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 80}, -1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 100}, -1),
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 100}, -1),
-            #    
-            ({"customer_id": 1, "orders": 1, "total_price": 500, "window_end": 120}, 1),
-            ({"customer_id": 1, "orders": 1, "total_price": 500, "window_end": 140}, 1),
-            ({"customer_id": 1, "orders": 1, "total_price": 500, "window_end": 160}, 1),
-            ({"customer_id": 1, "orders": 1, "total_price": 500, "window_end": 180}, 1),
-            ({"customer_id": 1, "orders": 1, "total_price": 500, "window_end": 200}, 1)
+            ({"customer_id": 1, "orders": 1, "total_price": 500, "last_ts": 105, "window_end": 120}, 1),
+            ({"customer_id": 1, "orders": 1, "total_price": 500, "last_ts": 105, "window_end": 140}, 1),
+            ({"customer_id": 1, "orders": 1, "total_price": 500, "last_ts": 105, "window_end": 160}, 1),
+            ({"customer_id": 1, "orders": 1, "total_price": 500, "last_ts": 105, "window_end": 180}, 1),
+            ({"customer_id": 1, "orders": 1, "total_price": 500, "last_ts": 105, "window_end": 200}, 1),
+            ({"customer_id": 1, "orders": 2, "total_price": 150, "last_ts": 15, "window_end": 20}, -1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30, "window_end": 40}, -1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30, "window_end": 60}, -1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30, "window_end": 80}, -1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30, "window_end": 100}, -1),
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 80}, -1),
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 100}, -1)
         ])
         print("-> OK: All windows until 200) triggered.")
 
@@ -460,11 +460,13 @@ class TestWindows(unittest.TestCase):
             size_int=size_int,
             key_fun=lambda r: r["customer_id"],
             agg_fun=lambda agg_r, r: {"orders": agg_r["orders"] + 1,
-                                    "total_price": agg_r["total_price"] + r["price"]},
-            agg_initial_any={"orders": 0, "total_price": 0},
+                                      "total_price": agg_r["total_price"] + r["price"],
+                                      "last_ts": max(agg_r["last_ts"], r["ts"])},
+            agg_initial_any={"orders": 0, "total_price": 0, "last_ts": 0},
             project_fun=lambda key_any, agg_r: {"customer_id": key_any,
                                                 "orders": agg_r["orders"],
-                                                "total_price": agg_r["total_price"]},
+                                                "total_price": agg_r["total_price"],
+                                                "last_ts": agg_r["last_ts"]},
             trigger_positive_only_bool=False
         ).sink(self.sink_str)
         #
@@ -474,41 +476,41 @@ class TestWindows(unittest.TestCase):
         print("=== Step 1: An order from customer 1 arrives (price=100, ts=10) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 1, "total_price": 100, "window_end": 110}, 1)
+            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 110}, 1)
         ])
         print("-> OK. Window [10, 110) triggered correctly.")
 
         print("\n=== Step 2: Another order from customer 1 arrives (price=200, ts=30) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=30, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({'customer_id': 1, 'orders': 1, 'total_price': 100, 'window_end': 110}, -1),
-            ({'customer_id': 1, 'orders': 2, 'total_price': 300, 'window_end': 110}, 1)]
-        )
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 30, "window_end": 110}, 1),
+            ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 110}, -1)
+        ])
         print("-> OK: Correction for window [10, 110) triggered correctly.")
 
         print("\n=== Step 3: An order from customer 2 arrives (price=50, ts=75) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=75, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 175}, 1)
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 175}, 1)
         ])
         print("-> OK: Window [75, 175) triggered correctly.")
 
         print("\n=== Step 4: Another order from customer 1 arrives late but still inside [10, 110) (price=50, ts=15) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=50, ts=15, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 110}, -1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 110}, 1)
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 30, "window_end": 110}, -1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30, "window_end": 110}, 1)
         ])
         print("-> OK: Window [10, 110) retracted correctly; window [15, 11ß) triggered correctly.")
 
         print("\n=== Step 5: Yet another order from customer 1 arrives (not inside [15, 115) (price=500, ts=200) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=500, ts=200, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({'customer_id': 1, 'orders': 3, 'total_price': 350, 'window_end': 110}, -1),
-            ({'customer_id': 2, 'orders': 1, 'total_price': 50, 'window_end': 175}, -1),
-            ({'customer_id': 1, 'orders': 1, 'total_price': 500, 'window_end': 300}, 1)
+            ({'customer_id': 1, 'orders': 3, 'total_price': 350, "last_ts": 30, 'window_end': 110}, -1),
+            ({'customer_id': 2, 'orders': 1, 'total_price': 50, "last_ts": 75, 'window_end': 175}, -1),
+            ({'customer_id': 1, 'orders': 1, 'total_price': 500, "last_ts": 200, 'window_end': 300}, 1)
         ])
-        print("-> OK: Old windows [15, 115) and [75, 175) retracted correctly; wew window [200, 300) triggered correctly.")
+        print("-> OK: Old windows [15, 115) and [75, 175) retracted correctly; new window [200, 300) triggered correctly.")
 
         print("\n=== Step 6: And yet another order from customer 1 arrives too late ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=999, ts=5, w=1)
@@ -539,11 +541,13 @@ class TestWindows(unittest.TestCase):
             gap_int=gap_int,
             key_fun=lambda r: r["customer_id"],
             agg_fun=lambda agg_r, r: {"orders": agg_r["orders"] + 1,           
-                                    "total_price": agg_r["total_price"] + r["price"]},
-            agg_initial_any={"orders": 0, "total_price": 0},
+                                      "total_price": agg_r["total_price"] + r["price"],
+                                      "last_ts": max(agg_r["last_ts"], r["ts"])},
+            agg_initial_any={"orders": 0, "total_price": 0, "last_ts": 0},
             project_fun=lambda key_any, agg_r: {"customer_id": key_any,
                                                 "orders": agg_r["orders"],
-                                                "total_price": agg_r["total_price"]},
+                                                "total_price": agg_r["total_price"],
+                                                "last_ts": agg_r["last_ts"]},
                                                 trigger_positive_only_bool=False
         ).sink(self.sink_str)
         #
@@ -563,39 +567,39 @@ class TestWindows(unittest.TestCase):
         print("\n=== Step 3: An order from customer 2 arrives (price=50, ts=75) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=75, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 45}, 1)
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 25, "window_end": 45}, 1)
         ])
         print("-> OK: Window [10, 45) triggered.")
 
         print("\n=== Step 4: Another order from customer 1 arrives (price=50, ts=15) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=50, ts=15, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 45}, -1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 45}, 1)
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 25, "window_end": 45}, -1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 25, "window_end": 45}, 1)
         ])
         print("-> OK: Correction for window [10, 45) triggered.")
 
         print("\n=== Step 5: Yet another order from customer 1 arrives (price=500, ts=200) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=500, ts=200, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 95}, 1)
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 95}, 1)
         ])
         print("-> OK: Window [75, 95) triggered.")
 
         print("\n=== Step 6: And yet another order from customer 1 arrives late but not too late (price=999, ts=1) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=999, ts=1, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 45}, -1),
-            ({"customer_id": 1, "orders": 4, "total_price": 1349, "window_end": 45}, 1)
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 25, "window_end": 45}, -1),
+            ({"customer_id": 1, "orders": 4, "total_price": 1349, "last_ts": 25, "window_end": 45}, 1)
         ])
         print("-> OK: Window [10, 45) retracted; New window [1, 45) triggered.")
 
         print("\n=== Step 7: Yet another order from customer 1 arrives (price=100, ts=300) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=100, ts=300, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 4, "total_price": 1349, "window_end": 45}, -1),
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 95}, -1),
-            ({"customer_id": 1, "orders": 1, "total_price": 500, "window_end": 220}, 1)
+            ({"customer_id": 1, "orders": 4, "total_price": 1349, "last_ts": 25, "window_end": 45}, -1),
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 95}, -1),
+            ({"customer_id": 1, "orders": 1, "total_price": 500, "last_ts": 200, "window_end": 220}, 1)
         ])
         print("-> OK: Windows [1, 45) and [75, 95) retracted; window [200, 220) triggered.")
 
@@ -628,11 +632,13 @@ class TestWindows(unittest.TestCase):
             gap_int=gap_int,
             key_fun=lambda r: r["customer_id"], 
             agg_fun=lambda agg_r, r: {"orders": agg_r["orders"] + 1,           
-                                    "total_price": agg_r["total_price"] + r["price"]},
-            agg_initial_any={"orders": 0, "total_price": 0},
+                                    "total_price": agg_r["total_price"] + r["price"],
+                                    "last_ts": max(agg_r["last_ts"], r["ts"])},
+            agg_initial_any={"orders": 0, "total_price": 0, "last_ts": 0},
             project_fun=lambda key_any, agg_r: {"customer_id": key_any,
                                                 "orders": agg_r["orders"],
-                                                "total_price": agg_r["total_price"]},
+                                                "total_price": agg_r["total_price"],
+                                                "last_ts": agg_r["last_ts"]},
             trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1] or r_end_ts_tuple[0]["total_price"] > 200, 
             trigger_positive_only_bool=False
         ).sink(self.sink_str)
@@ -648,7 +654,7 @@ class TestWindows(unittest.TestCase):
         print("\n=== Step 2: Another order from customer 1 arrives (price=200, ts=25) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=25, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({'customer_id': 1, 'orders': 2, 'total_price': 300, 'window_end': 45}, 1)
+            ({'customer_id': 1, 'orders': 2, 'total_price': 300, "last_ts": 25, 'window_end': 45}, 1)
         ])
         print("-> OK: Window [25, 45) - and already triggered since total_price >= 300.")
 
@@ -660,32 +666,32 @@ class TestWindows(unittest.TestCase):
         print("\n=== Step 4: Another order from customer 1 arrives (price=50, ts=15) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=50, ts=15, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 2, "total_price": 300, "window_end": 45}, -1),
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 45}, 1)
+            ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 25, "window_end": 45}, -1),
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 25, "window_end": 45}, 1)
         ])
         print("-> OK: Correction for window [10, 45) triggered.")
 
         print("\n=== Step 5: Yet another order from customer 1 arrives (price=500, ts=200) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=500, ts=200, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 95}, 1),
-            ({'customer_id': 1, 'orders': 1, 'total_price': 500, 'window_end': 220}, 1)
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 95}, 1),
+            ({'customer_id': 1, 'orders': 1, 'total_price': 500, "last_ts": 200, 'window_end': 220}, 1)
         ])
         print("-> OK: Windows [75, 95) and [200, 220) triggered (the latter has total price >=300).")
 
         print("\n=== Step 6: And yet another order from customer 1 arrives late but not too late (price=999, ts=1) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=999, ts=1, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "window_end": 45}, -1),
-            ({"customer_id": 1, "orders": 4, "total_price": 1349, "window_end": 45}, 1)
+            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 25, "window_end": 45}, -1),
+            ({"customer_id": 1, "orders": 4, "total_price": 1349, "last_ts": 25, "window_end": 45}, 1)
         ])
         print("-> OK: Window [10, 45) retracted; New window [1, 45) triggered.")
 
         print("\n=== Step 7: Yet another order from customer 1 arrives (price=100, ts=300) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=100, ts=300, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 4, "total_price": 1349, "window_end": 45}, -1),
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "window_end": 95}, -1),
+            ({"customer_id": 1, "orders": 4, "total_price": 1349, "last_ts": 25, "window_end": 45}, -1),
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 95}, -1),
         ])
         print("-> OK: Windows [1, 45) and [75, 95) retracted; window [200, 220) triggered.")
 
@@ -714,10 +720,10 @@ class TestWindows(unittest.TestCase):
         expected_sorted_r_w_tuple_list = sorted(expected_r_w_tuple_list, key=sort_key)
         #
         if print_bool:
-            for r_w_tuple in actual_r_w_tuple_list:
+            for r_w_tuple in actual_sorted_r_w_tuple_list:
                 print(r_w_tuple)
         #
-        self.assertEqual(actual_sorted_r_w_tuple_list,  expected_sorted_r_w_tuple_list)
+        self.assertEqual(actual_sorted_r_w_tuple_list, expected_sorted_r_w_tuple_list)
 
 #
 
