@@ -343,7 +343,7 @@ class TestWindows(unittest.TestCase):
 
     def test_cumulative(self):
         size_int = 100
-        advance_int = size_int // 5
+        step_int = size_int // 5
         allowed_lateness_int = size_int * 2
         #
         order_source_tn = Tn.source(self.order_source_str)
@@ -353,14 +353,14 @@ class TestWindows(unittest.TestCase):
             .map(lambda r: {"customer_id": r["value"]["customer_id"],
                             "price": r["value"]["price"],
                             "ts": r["value"]["ts"]})
-            .expire_cumulative(lambda r: r["ts"], size_int, advance_int, allowed_lateness_int)
+            .expire_cumulative(lambda r: r["ts"], size_int, step_int, allowed_lateness_int)
             .distinct()
         )
         #
         sink_tn = order_tn.group_by_agg_cumulative(
             ts_fun=lambda r: r["ts"],
             size_int=size_int,
-            advance_int=advance_int,
+            step_int=step_int,
             key_fun=lambda r: r["customer_id"],
             agg_fun=lambda agg_r, r: {"orders": agg_r["orders"] + 1,
                                       "total_price": agg_r["total_price"] + r["price"],
@@ -376,20 +376,20 @@ class TestWindows(unittest.TestCase):
         built_tn = Tn.build(sink_tn)
         built_tn.from_zSet(Tn._to_records)
         #
-        print("=== Step 1: An order for customer 1 arrives (price=100, ts=10). Lands in [0, 20), [0, 40), [0, 60), [0, 80), [0, 100) ===")
+        print("=== Step 1: An order for customer 1 arrives (price=100, ts=10) ===")
         # 
-        self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
         self.assert_output(r_w_tuple_list, [])
         print("-> OK.")
 
-        print("=== Step 2: Another order for customer 1 arrives (price=200, ts=30). Lands in [0, 40), [0, 60), [0, 80), [0, 100) ===")
+        print("=== Step 2: Another order for customer 1 arrives (price=200, ts=30) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=30, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 20}, 1)
         ])
         print("-> OK: Window [0, 20) triggered.")
 
-        print("\n=== Step 3: An order for customer 2 arrives (price=50, ts=75). Lands in [60, 80), [80, 100) ===")
+        print("\n=== Step 3: An order for customer 2 arrives (price=50, ts=75) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=75, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 30, "window_end": 40}, 1),
@@ -397,7 +397,7 @@ class TestWindows(unittest.TestCase):
         ])
         print("-> OK: Windows [0, 40) and [0, 60) triggered.")
 
-        print("\n=== Step 4: Another order from customer 1 (price=50, ts=15) arrives late (but not too late) ===")
+        print("\n=== Step 4: An out-of-order other from customer 1 (price=50, ts=15) arrives ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=50, ts=15, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 2, "total_price": 150, "last_ts": 15, "window_end": 20}, 1),
@@ -437,8 +437,8 @@ class TestWindows(unittest.TestCase):
         ])
         print("-> OK: All windows until 200) triggered.")
 
-        print("\n=== Step 7: Another order from customer 1 (price=999, ts=10) arrives too late ===")
-        r_w_tuple_list = self.process(built_tn, customer_id=1, price=999, ts=10, w=1)
+        print("\n=== Step 7: Another order from customer 1 (price=999, ts=5) arrives too late ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=999, ts=5, w=1)
         self.assert_output(r_w_tuple_list, [])
         print("-> OK: Order arrived too late - no action.")
 

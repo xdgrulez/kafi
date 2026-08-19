@@ -683,32 +683,14 @@ class TopologyNode:
         #
         return _assign_fun
 
-
-def _assign_cumulative(max_size_int, step_int):
-    def _assign_fun(ts):
-        # Epoche (0) ist automatisch die globale Referenz
-        cumulative_start_ts = (ts // max_size_int) * max_size_int
-        cumulative_end_ts = cumulative_start_ts + max_size_int
-        
-        # Erstes offenes Fenster berechnen
-        first_step_end_ts = (ts // step_int) * step_int + step_int
-        
-        # Alle verbleibenden Endzeiten des Zyklus
-        return [
-            step_end_ts
-            for step_end_ts in range(first_step_end_ts, cumulative_end_ts + step_int, step_int)
-            if step_end_ts <= cumulative_end_ts
-        ]
-    
-    return _assign_fun
     @staticmethod
-    def _assign_cumulative(start_ts, max_size_int, step_int):
+    def _assign_cumulative(size_int, step_int):
         def _assign_fun(ts):
-            cumulative_start_ts = (start_ts // max_size_int) * max_size_int
-            cumulative_end_ts = cumulative_start_ts + max_size_int
-            first_step_end_ts = (ts // step_int) * step_int + step_int
+            cumulative_start_ts = (ts // size_int) * size_int
+            cumulative_end_ts = cumulative_start_ts + size_int
             #
-            end_ts_list= [step_end_ts
+            first_step_end_ts = (ts // step_int) * step_int + step_int
+            end_ts_list = [step_end_ts
                           for step_end_ts in range(first_step_end_ts, cumulative_end_ts + step_int, step_int)
                           if step_end_ts <= cumulative_end_ts]
             print(end_ts_list)
@@ -761,8 +743,8 @@ def _assign_cumulative(max_size_int, step_int):
         #
         return tn
 
-    def expire_cumulative(self, ts_fun, size_int, advance_int, allowed_lateness_int=0, **kwargs):
-        _assign_fun = TopologyNode._assign_cumulative(size_int, advance_int)
+    def expire_cumulative(self, ts_fun, size_int, step_int, allowed_lateness_int=0, **kwargs):
+        _assign_fun = TopologyNode._assign_cumulative(size_int, step_int)
         #
         buffer_int = size_int
         #
@@ -840,11 +822,11 @@ def _assign_cumulative(max_size_int, step_int):
         #
         return tn
 
-    def _group_by_agg_cumulative(self, ts_fun, size_int, advance_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+    def _group_by_agg_cumulative(self, ts_fun, size_int, step_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
         tn = (
             self
             .__group_by_agg_aligned(ts_fun,
-                                    TopologyNode._assign_cumulative(size_int, advance_int),
+                                    TopologyNode._assign_cumulative(size_int, step_int),
                                     key_fun,
                                     agg_fun,
                                     agg_initial_any,
@@ -1005,12 +987,12 @@ def _assign_cumulative(max_size_int, step_int):
 
     #
 
-    def group_by_agg_cumulative(self, ts_fun, size_int, advance_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
+    def group_by_agg_cumulative(self, ts_fun, size_int, step_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
         group_by_agg_tn = (
             self
             ._group_by_agg_cumulative(ts_fun,
                                       size_int,
-                                      advance_int,
+                                      step_int,
                                       key_fun,
                                       agg_fun,
                                       agg_initial_any,
