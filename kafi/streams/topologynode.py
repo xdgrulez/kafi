@@ -683,16 +683,35 @@ class TopologyNode:
         #
         return _assign_fun
 
+
+def _assign_cumulative(max_size_int, step_int):
+    def _assign_fun(ts):
+        # Epoche (0) ist automatisch die globale Referenz
+        cumulative_start_ts = (ts // max_size_int) * max_size_int
+        cumulative_end_ts = cumulative_start_ts + max_size_int
+        
+        # Erstes offenes Fenster berechnen
+        first_step_end_ts = (ts // step_int) * step_int + step_int
+        
+        # Alle verbleibenden Endzeiten des Zyklus
+        return [
+            step_end_ts
+            for step_end_ts in range(first_step_end_ts, cumulative_end_ts + step_int, step_int)
+            if step_end_ts <= cumulative_end_ts
+        ]
+    
+    return _assign_fun
     @staticmethod
-    def _assign_cumulative(size_int, advance_int):
+    def _assign_cumulative(start_ts, max_size_int, step_int):
         def _assign_fun(ts):
-            cumulative_start_int = (ts // size_int) * size_int
-            first_step_end_ts = ((ts // advance_int) * advance_int) + advance_int
-            cumulative_end_ts = cumulative_start_int + size_int
+            cumulative_start_ts = (start_ts // max_size_int) * max_size_int
+            cumulative_end_ts = cumulative_start_ts + max_size_int
+            first_step_end_ts = (ts // step_int) * step_int + step_int
             #
             end_ts_list= [step_end_ts
-                          for step_end_ts in range(first_step_end_ts, cumulative_end_ts + advance_int, advance_int)
+                          for step_end_ts in range(first_step_end_ts, cumulative_end_ts + step_int, step_int)
                           if step_end_ts <= cumulative_end_ts]
+            print(end_ts_list)
             #
             return end_ts_list
         #

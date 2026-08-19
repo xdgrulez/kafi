@@ -60,7 +60,7 @@ class TestWindows(unittest.TestCase):
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=105, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 50, "window_end": 100}, 1)
-        ], True)
+        ])
         print("-> OK: Window [0, 100) triggered (orders=2, total=300).")
 
         print("\n=== Step 4: The order from customer 1 (price=200, ts=50) is retracted ===")
@@ -169,7 +169,7 @@ class TestWindows(unittest.TestCase):
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=105, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 50, "window_end": 100}, 1)
-        ], True)
+        ])
         print("-> OK: Window [0, 100) triggered (orders=2, total=300).")
 
         print("\n=== Step 4: The order from customer 1 (price=200, ts=50) is retracted ===")
@@ -379,13 +379,14 @@ class TestWindows(unittest.TestCase):
         print("=== Step 1: An order for customer 1 arrives (price=100, ts=10). Lands in [0, 20), [0, 40), [0, 60), [0, 80), [0, 100) ===")
         # 
         self.process(built_tn, customer_id=1, price=100, ts=10, w=1)
+        self.assert_output(r_w_tuple_list, [])
         print("-> OK.")
 
         print("=== Step 2: Another order for customer 1 arrives (price=200, ts=30). Lands in [0, 40), [0, 60), [0, 80), [0, 100) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=30, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 20}, 1)
-        ], True)
+        ])
         print("-> OK: Window [0, 20) triggered.")
 
         print("\n=== Step 3: An order for customer 2 arrives (price=50, ts=75). Lands in [60, 80), [80, 100) ===")
