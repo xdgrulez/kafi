@@ -305,8 +305,8 @@ class TestWindows(unittest.TestCase):
         ])
         print("-> OK: Window [50, 150) triggered.")
 
-        print("\n=== Step 6: An order from customer 2 arrives (price=99, ts=250) ===")
-        r_w_tuple_list = self.process(built_tn, customer_id=2, price=90, ts=250, w=1)
+        print("\n=== Step 6: An order from customer 2 arrives (price=67, ts=250) ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=2, price=67, ts=250, w=1)
         print(r_w_tuple_list)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 105, "window_end": 200}, 1),
@@ -328,8 +328,8 @@ class TestWindows(unittest.TestCase):
         print("\n=== Step 8: An order for customer 1 arrives (price=10, ts=450) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=10, ts=450, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 2, "orders": 1, "total_price": 90, "last_ts": 250, "window_end": 300}, 1),
-            ({"customer_id": 2, "orders": 1, "total_price": 90, "last_ts": 250, "window_end": 350}, 1),
+            ({"customer_id": 2, "orders": 1, "total_price": 67, "last_ts": 250, "window_end": 300}, 1),
+            ({"customer_id": 2, "orders": 1, "total_price": 67, "last_ts": 250, "window_end": 350}, 1),
             ({"customer_id": 1, "orders": 1, "total_price": 100, "last_ts": 10, "window_end": 100}, -1)
         ])
         print("-> OK: Window [0, 100) correctly expired; windows [200, 300) and [250, 300) triggered.")

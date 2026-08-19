@@ -49,10 +49,10 @@ class StorageProducer(Chunker):
                 return self.serialize(payload, key_bool)
         #
         m_list1 = [{"value": serialize(m["value"], False),
-                               "key": serialize(m["key"] if "key" in m else None, True),
-                               "partition": m["partition"] if "partition" in m and self.keep_partitions_bool else RD_KAFKA_PARTITION_UA,
-                               "timestamp": m["timestamp"] if "timestamp" in m and self.keep_timestamps_bool else CURRENT_TIME,
-                               "headers": self.storage_obj.headers_to_headers_str_bytes_tuple_list(m["headers"]) if "headers" in m and self.keep_headers_bool else None} for m in m_list]
+                    "key": serialize(m["key"] if "key" in m else None, True),
+                    "partition": m["partition"] if "partition" in m and self.keep_partitions_bool else RD_KAFKA_PARTITION_UA,
+                    "timestamp": m["timestamp"] if "timestamp" in m and self.keep_timestamps_bool else CURRENT_TIME,
+                    "headers": self.storage_obj.headers_to_headers_str_bytes_tuple_list(m["headers"]) if "headers" in m and self.keep_headers_bool else None} for m in m_list]
         #
         m_list2 = self.chunk(m_list1)
         #
@@ -77,11 +77,11 @@ class StorageProducer(Chunker):
         headers_str_bytes_tuple_list_list = [self.storage_obj.headers_to_headers_str_bytes_tuple_list(headers) for headers in headers_list]
         #
         m_list = [{"value": value,
-                              "key": key,
-                              "partition": partition_int,
-                              "timestamp": timestamp,
-                              "headers": headers_str_bytes_tuple_list}
-                              for value, key, partition_int, timestamp, headers_str_bytes_tuple_list in zip(value_list, key_list, partition_int_list, timestamp_list, headers_str_bytes_tuple_list_list)]
+                   "key": key,
+                   "partition": partition_int,
+                   "timestamp": timestamp,
+                   "headers": headers_str_bytes_tuple_list}
+                   for value, key, partition_int, timestamp, headers_str_bytes_tuple_list in zip(value_list, key_list, partition_int_list, timestamp_list, headers_str_bytes_tuple_list_list)]
         #
         self.keep_partitions_bool = True
         self.keep_timestamps_bool = True

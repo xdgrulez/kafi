@@ -16,33 +16,18 @@ from kafi.helpers import to_bytes
 
 class Serializer(SchemaRegistry):
     def __init__(self, schema_registry_config_dict, **kwargs):
-        self.ser_to_dict = kwargs["ser_to_dict"] if "ser_to_dict" in kwargs else None
-        self.ser_conf = kwargs["ser_conf"] if "ser_conf" in kwargs else None
-        self.ser_rule_conf = kwargs["ser_rule_conf"] if "ser_rule_conf" in kwargs else None
-        self.ser_rule_registry = kwargs["ser_rule_registry"] if "ser_rule_registry" in kwargs else None
-        self.ser_json_encode = kwargs["ser_json_encode"] if "ser_json_encode" in kwargs else None
-        #
         super().__init__(schema_registry_config_dict)
-
-
-    def serialize(self, payload, key_bool, normalize_schemas=False):
-        type_str = self.key_type_str if key_bool else self.value_type_str
-        schema_str_or_dict = self.key_schema_str_or_dict if key_bool else self.value_schema_str_or_dict
-        schema_id_int = self.key_schema_id_int if key_bool else self.value_schema_id_int
-        messageField = MessageField.KEY if key_bool else MessageField.VALUE
         #
-        def get_schema_str():
-            if schema_str_or_dict is None:
-                if schema_id_int is None:
-                    raise Exception("Please provide a schema or schema ID for the " + ("key" if key_bool else "value") + ".")
-                schema_str = self.schemaRegistryClient.get_schema(schema_id_int)
-            else:
-                if isinstance(schema_str_or_dict, str):
-                    schema_str = schema_str_or_dict
-                elif isinstance(schema_str_or_dict, dict):
-                    schema_str = json.dumps(schema_str_or_dict)
-            #
-            return schema_str
+        self.get_configs_from_kwargs(**kwargs)
+        #
+        self.key_serializer = self.get_serializer(True)
+        self.value_serializer = self.get_serializer(False)
+
+
+    def serialize(self, payload, key_bool):
+        type_str = self.key_type_str if key_bool else self.value_type_str
+        messageField = MessageField.KEY if key_bool else MessageField.VALUE
+        serializer = self.key_serializer if key_bool else self.value_serializer
         #
         def payload_to_serializer_payload():
             try:
@@ -63,26 +48,17 @@ class Serializer(SchemaRegistry):
             if type_str.lower() in ["bytes", "str", "string", "json"]:
                 serialized_payload_bytes = to_bytes(payload)
             elif type_str.lower() == "avro":
-                schema = get_schema_str()
-                avroSerializer = AvroSerializer(self.schemaRegistryClient, schema, self.ser_to_dict, self.ser_conf, self.ser_rule_conf, self.ser_rule_registry)
                 payload_dict = payload_to_serializer_payload()
-                serialized_payload_bytes = avroSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
+                serialized_payload_bytes = serializer(payload_dict, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() in ["jsonschema", "json_sr"]:
                 payload_dict = payload_to_serializer_payload()
-                schema = get_schema_str()
-                jSONSerializer = JSONSerializer(schema, self.schemaRegistryClient, self.ser_to_dict, self.ser_conf, self.ser_rule_conf, self.ser_rule_registry, self.ser_json_encode)
-                serialized_payload_bytes = jSONSerializer(payload_dict, SerializationContext(self.topic_str, messageField))
+                serialized_payload_bytes = serializer(payload_dict, SerializationContext(self.topic_str, messageField))
             elif type_str.lower() in ["pb", "protobuf"]:
-                schema = get_schema_str()
-                generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
-                # Prevent: RuntimeError: ProtobufSerializer: the 'use.deprecated.format' configuration property must be explicitly set due to backward incompatibility with older confluent-kafka-python Protobuf producers and consumers. See the release notes for more details
-                if self.ser_conf is None:
-                    self.ser_conf = {"use.deprecated.format": False}
-                protobufSerializer = ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistryClient, self.ser_conf, self.ser_rule_conf, self.ser_rule_registry)
+                generalizedProtocolMessageType = self.key_generalizedProtocolMessageType if key_bool else self.value_generalizedProtocolMessageType
                 payload_dict = payload_to_serializer_payload()
                 protobuf_message = generalizedProtocolMessageType()
                 ParseDict(payload_dict, protobuf_message)
-                serialized_payload_bytes = protobufSerializer(protobuf_message, SerializationContext(self.topic_str, messageField))
+                serialized_payload_bytes = serializer(protobuf_message, SerializationContext(self.topic_str, messageField))
             else:
                 raise Exception("Only \"bytes\", \"str\", \"json\", \"avro\", \"protobuf\" (\"pb\") and \"jsonschema\" (\"json_sr\") supported.")
         #
@@ -121,3 +97,120 @@ class Serializer(SchemaRegistry):
         schema_name_str = list(schema_module.DESCRIPTOR.message_types_by_name.keys())[0]
         generalizedProtocolMessageType = getattr(schema_module, schema_name_str)
         return generalizedProtocolMessageType
+
+    #
+
+    def get_serializer(self, key_bool):
+        type_str = self.key_type_str if key_bool else self.value_type_str
+        schema_str_or_dict = self.key_schema_str_or_dict if key_bool else self.value_schema_str_or_dict
+        schema_id_int = self.key_schema_id_int if key_bool else self.value_schema_id_int
+        #
+        ser_to_dict = self.key_ser_to_dict if key_bool else self.value_ser_to_dict
+        ser_conf = self.key_ser_conf if key_bool else self.value_ser_conf
+        ser_rule_conf = self.key_ser_rule_conf if key_bool else self.value_ser_rule_conf
+        ser_rule_registry = self.key_ser_rule_registry if key_bool else self.value_ser_rule_registry
+        ser_json_encode = self.key_ser_json_encode if key_bool else self.value_ser_json_encode
+        normalize_schemas = self.key_normalize_schemas if key_bool else self.value_normalize_schemas
+        #
+        def get_schema_str():
+            if schema_str_or_dict is None:
+                if schema_id_int is None:
+                    raise Exception("Please provide a schema or schema ID for the " + ("key" if key_bool else "value") + ".")
+                schema_str = self.schemaRegistryClient.get_schema(schema_id_int)
+            else:
+                if isinstance(schema_str_or_dict, str):
+                    schema_str = schema_str_or_dict
+                elif isinstance(schema_str_or_dict, dict):
+                    schema_str = json.dumps(schema_str_or_dict)
+            #
+            return schema_str
+        #
+        if type_str.lower() in ["bytes", "str", "string", "json"]:
+            return None
+        elif type_str.lower() == "avro":
+            schema = get_schema_str()
+            #
+            return AvroSerializer(self.schemaRegistryClient, schema, ser_to_dict, ser_conf, ser_rule_conf, ser_rule_registry)
+        elif type_str.lower() in ["jsonschema", "json_sr"]:
+            schema = get_schema_str()
+            #
+            return JSONSerializer(schema, self.schemaRegistryClient, ser_to_dict, ser_conf, ser_rule_conf, ser_rule_registry, ser_json_encode)
+        elif type_str.lower() in ["pb", "protobuf"]:
+            schema = get_schema_str()
+            generalizedProtocolMessageType = self.schema_str_to_generalizedProtocolMessageType(schema, self.topic_str, key_bool, normalize_schemas)
+            #
+            if key_bool:
+                self.key_generalizedProtocolMessageType = generalizedProtocolMessageType
+            else:
+                self.value_generalizedProtocolMessageType = generalizedProtocolMessageType
+            #
+            # Prevent: RuntimeError: ProtobufSerializer: the 'use.deprecated.format' configuration property must be explicitly set due to backward incompatibility with older confluent-kafka-python Protobuf producers and consumers. See the release notes for more details
+            if ser_conf is None:
+                ser_conf = {"use.deprecated.format": False}
+            #
+            return ProtobufSerializer(generalizedProtocolMessageType, self.schemaRegistryClient, ser_conf, ser_rule_conf, ser_rule_registry)
+        else:
+            raise Exception("Only \"bytes\", \"str\", \"json\", \"avro\", \"protobuf\" (\"pb\") and \"jsonschema\" (\"json_sr\") supported.")
+
+    #
+
+    def get_configs_from_kwargs(self, **kwargs):
+        self.key_ser_to_dict = None
+        self.value_ser_to_dict = None
+        if "ser_to_dict" in kwargs:
+            self.key_ser_to_dict = kwargs["ser_to_dict"]
+            self.value_ser_to_dict = kwargs["ser_to_dict"]
+        if "key_ser_to_dict" in kwargs:
+            self.key_ser_to_dict = kwargs["key_ser_to_dict"]
+        if "value_ser_to_dict" in kwargs:
+            self.value_ser_to_dict = kwargs["value_ser_to_dict"]
+        #
+        self.key_ser_conf = None
+        self.value_ser_conf = None
+        if "ser_conf" in kwargs:
+            self.key_ser_conf = kwargs["ser_conf"]
+            self.value_ser_conf = kwargs["ser_conf"]
+        if "key_ser_conf" in kwargs:
+            self.key_ser_conf = kwargs["key_ser_conf"]
+        if "value_ser_conf" in kwargs:
+            self.value_ser_conf = kwargs["value_ser_conf"]
+        #
+        self.key_ser_rule_conf = None
+        self.value_ser_rule_conf = None
+        if "ser_rule_conf" in kwargs:
+            self.key_ser_rule_conf = kwargs["ser_rule_conf"]
+            self.value_ser_rule_conf = kwargs["ser_rule_conf"]
+        if "key_ser_rule_conf" in kwargs:
+            self.key_ser_rule_conf = kwargs["key_ser_rule_conf"]
+        if "value_ser_rule_conf" in kwargs:
+            self.value_ser_rule_conf = kwargs["value_ser_rule_conf"]
+        #
+        self.key_ser_rule_registry = None
+        self.value_ser_rule_registry = None
+        if "ser_rule_registry" in kwargs:
+            self.key_ser_rule_registry = kwargs["ser_rule_registry"]
+            self.value_ser_rule_registry = kwargs["ser_rule_registry"]
+        if "key_ser_rule_registry" in kwargs:
+            self.key_ser_rule_registry = kwargs["key_ser_rule_registry"]
+        if "value_ser_rule_registry" in kwargs:
+            self.value_ser_rule_registry = kwargs["value_ser_rule_registry"]
+        #
+        self.key_ser_json_encode = None
+        self.value_ser_json_encode = None
+        if "ser_json_encode" in kwargs:
+            self.key_ser_json_encode = kwargs["ser_json_encode"]
+            self.value_ser_json_encode = kwargs["ser_json_encode"]
+        if "key_ser_json_encode" in kwargs:
+            self.key_ser_json_encode = kwargs["key_ser_json_encode"]
+        if "value_ser_json_encode" in kwargs:
+            self.value_ser_json_encode = kwargs["value_ser_json_encode"]
+        #
+        self.key_normalize_schemas = False
+        self.value_normalize_schemas = False
+        if "normalize_schemas" in kwargs:
+            self.key_normalize_schemas = kwargs["normalize_schemas"]
+            self.value_normalize_schemas = kwargs["normalize_schemas"]
+        if "key_normalize_schemas" in kwargs:
+            self.key_normalize_schemas = kwargs["key_normalize_schemas"]
+        if "value_normalize_schemas" in kwargs:
+            self.value_normalize_schemas = kwargs["value_normalize_schemas"]

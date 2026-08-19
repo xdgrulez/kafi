@@ -724,8 +724,10 @@ class TopologyNode:
     def expire_tumbling(self, ts_fun, size_int, allowed_lateness_int=0, **kwargs):
         _assign_fun = TopologyNode._assign_tumbling(size_int)
         #
+        buffer_int = size_int
+        #
         tn = self.expire(ts_fun,
-                        lambda ts: max(_assign_fun(ts)) + size_int + allowed_lateness_int,
+                        lambda ts: max(_assign_fun(ts)) + buffer_int + allowed_lateness_int,
                          **kwargs)
         #
         return tn
@@ -733,8 +735,10 @@ class TopologyNode:
     def expire_hopping(self, ts_fun, size_int, hop_int, allowed_lateness_int=0, **kwargs):
         _assign_fun = TopologyNode._assign_hopping(size_int, hop_int)
         #
+        buffer_int = size_int
+        #
         tn = self.expire(ts_fun,
-                         lambda ts: max(_assign_fun(ts)) + size_int + allowed_lateness_int,
+                         lambda ts: max(_assign_fun(ts)) + buffer_int + allowed_lateness_int,
                          **kwargs)
         #
         return tn
@@ -742,8 +746,10 @@ class TopologyNode:
     def expire_cumulative(self, ts_fun, size_int, advance_int, allowed_lateness_int=0, **kwargs):
         _assign_fun = TopologyNode._assign_cumulative(size_int, advance_int)
         #
+        buffer_int = size_int
+        #
         tn = self.expire(ts_fun,
-                         lambda ts: max(_assign_fun(ts)) + size_int + allowed_lateness_int,
+                         lambda ts: max(_assign_fun(ts)) + buffer_int + allowed_lateness_int,
                          **kwargs)
         #
         return tn
