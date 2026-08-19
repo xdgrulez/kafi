@@ -679,7 +679,6 @@ class TopologyNode:
             #
             end_ts_list = [first_end_ts + i * hop_int for i in range(size_int // hop_int) if first_end_ts + i * hop_int >= size_int]
             #
-            print(end_ts_list)
             return end_ts_list
         #
         return _assign_fun
@@ -753,6 +752,7 @@ class TopologyNode:
                          **kwargs)
         #
         return tn
+
     
     def expire_sliding(self, ts_fun, size_int, **kwargs):
         _assign_fun = TopologyNode._assign_sliding(size_int)
