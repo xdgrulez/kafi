@@ -280,12 +280,11 @@ class TestWindows(unittest.TestCase):
 
         print("\n=== Step 2: An order from customer 1 arrives (price=200, ts=50) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=200, ts=50, w=1)
-        print(r_w_tuple_list)
         self.assert_output(r_w_tuple_list, [])
         print("-> OK.")
 
-        print("\n=== Step 3: An order from customer 2 arrives (price=50, ts=110) ===")
-        r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=110, w=1)
+        print("\n=== Step 3: An order from customer 2 arrives (price=50, ts=105) ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=2, price=50, ts=105, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 50, "window_end": 100}, 1)
         ])
@@ -302,14 +301,15 @@ class TestWindows(unittest.TestCase):
         print("\n=== Step 5: An order from customer 3 at arrives (price=99, ts=150) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=3, price=99, ts=150, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 110,"window_end": 150}, 1)
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 105,"window_end": 150}, 1)
         ])
         print("-> OK: Window [50, 150) triggered.")
 
         print("\n=== Step 6: An order from customer 2 arrives (price=99, ts=250) ===")
         r_w_tuple_list = self.process(built_tn, customer_id=2, price=90, ts=250, w=1)
+        print(r_w_tuple_list)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 110, "window_end": 200}, 1),
+            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 105, "window_end": 200}, 1),
             ({"customer_id": 3, "orders": 1, "total_price": 99, "last_ts": 150, "window_end": 200}, 1),
             ({"customer_id": 3, "orders": 1, "total_price": 99, "last_ts": 150, "window_end": 250}, 1)
         ])

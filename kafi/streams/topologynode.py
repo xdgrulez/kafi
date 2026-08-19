@@ -679,6 +679,7 @@ class TopologyNode:
             #
             end_ts_list = [first_end_ts + i * hop_int for i in range(size_int // hop_int) if first_end_ts + i * hop_int >= size_int]
             #
+            print(end_ts_list)
             return end_ts_list
         #
         return _assign_fun
