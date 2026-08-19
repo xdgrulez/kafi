@@ -666,7 +666,9 @@ class TopologyNode:
     @staticmethod
     def _assign_tumbling(size_int):
         def _assign_fun(ts):
-            return [(ts // size_int) * size_int + size_int]
+            end_ts_list = [(ts // size_int) * size_int + size_int]
+            #
+            return end_ts_list
         #
         return _assign_fun
 
@@ -675,8 +677,9 @@ class TopologyNode:
         def _assign_fun(ts):
             first_end_ts = (ts // hop_int) * hop_int + hop_int
             #
-            return [first_end_ts + i * hop_int
-                    for i in range(size_int // hop_int) if first_end_ts + i * hop_int >= size_int]
+            end_ts_list = [first_end_ts + i * hop_int for i in range(size_int // hop_int) if first_end_ts + i * hop_int >= size_int]
+            #
+            return end_ts_list
         #
         return _assign_fun
 
@@ -687,23 +690,29 @@ class TopologyNode:
             first_step_end_ts = ((ts // advance_int) * advance_int) + advance_int
             cumulative_end_ts = cumulative_start_int + size_int
             #
-            return [step_end_ts
-                    for step_end_ts in range(first_step_end_ts, cumulative_end_ts + advance_int, advance_int)
-                    if step_end_ts <= cumulative_end_ts]
+            end_ts_list= [step_end_ts
+                          for step_end_ts in range(first_step_end_ts, cumulative_end_ts + advance_int, advance_int)
+                          if step_end_ts <= cumulative_end_ts]
+            #
+            return end_ts_list
         #
         return _assign_fun
 
     @staticmethod
     def _assign_sliding(size_int):
         def _assign_fun(ts):
-            return [ts + size_int]
+            end_ts_list = [ts + size_int]
+            #
+            return end_ts_list
         #
         return _assign_fun
 
     @staticmethod
     def _assign_session(max_session_int):
         def _assign_fun(ts):
-            return [(ts // max_session_int) * max_session_int + max_session_int]
+            end_ts_list = [(ts // max_session_int) * max_session_int + max_session_int]
+            #
+            return end_ts_list
         #
         return _assign_fun
 
