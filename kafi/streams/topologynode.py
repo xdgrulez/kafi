@@ -693,7 +693,6 @@ class TopologyNode:
             end_ts_list = [step_end_ts
                           for step_end_ts in range(first_step_end_ts, cumulative_end_ts + step_int, step_int)
                           if step_end_ts <= cumulative_end_ts]
-            print(end_ts_list)
             #
             return end_ts_list
         #
@@ -838,21 +837,63 @@ class TopologyNode:
 
     #
 
-    def _group_by_agg_sliding(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+    def _group_by_agg_sliding_v2(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+        def insert_record(r, acc):
+            tx = ts_fun(r)
+            tx_str = str(tx)
+            records_list = acc["records"]
+            windows_dict = acc["windows"]
+            #
+            records_list.append(r)
+            #
+            for start_str, wd in windows_dict.items():
+                start = int(start_str)
+                if start <= tx < start + size_int:
+                    wd["records"].append(r)
+                    wd["agg"] = agg_fun(wd["agg"], r)
+            #
+            if tx_str not in windows_dict:
+                member_r_list = [rr for rr in records_list if tx <= ts_fun(rr) < tx + size_int]
+                agg_any = agg_initial_any
+                for rr in member_r_list:
+                    agg_any = agg_fun(agg_any, rr)
+                windows_dict[tx_str] = {"records": member_r_list, "agg": agg_any}
+            #
+            return {"records": records_list, "windows": windows_dict}
+        #
+        def _flatmap_fun(by_acc_tuple):
+            by_any, acc = by_acc_tuple
+            return [(project_fun(by_any, wd["agg"]), int(start_str) + size_int) for start_str, wd in acc["windows"].items()]
+        #
         tn = (
             self
-            .map(lambda r: (r, TopologyNode._assign_sliding(size_int)(ts_fun(r))[0]))
-            .group_by_agg(lambda r_end_ts_tuple: key_fun(r_end_ts_tuple[0]),
-                          lambda r_end_ts_tuple: r_end_ts_tuple,
-                          lambda agg_r_end_ts_tuple, r_end_ts_tuple: 
-                          (agg_fun(agg_r_end_ts_tuple[0], r_end_ts_tuple[0]), min(agg_r_end_ts_tuple[1], r_end_ts_tuple[1]) if agg_r_end_ts_tuple[1] > 0 else r_end_ts_tuple[1]),
-                          (agg_initial_any, 0),
-                          lambda by, agg_r_end_ts_tuple: 
-                          (project_fun(by, agg_r_end_ts_tuple[0]), agg_r_end_ts_tuple[1]),
-                          **kwargs)
+            .group_by_agg(
+                key_fun,
+                lambda r: r,
+                lambda acc, r: insert_record(r, acc),
+                {"records": [], "windows": {}},
+                lambda by_any, acc: (by_any, acc),
+                **kwargs
+            )
+            .flatmap(_flatmap_fun, **kwargs)
         )
-        #
         return tn
+
+    # def _group_by_agg_sliding(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+    #     tn = (
+    #         self
+    #         .map(lambda r: (r, TopologyNode._assign_sliding(size_int)(ts_fun(r))[0]))
+    #         .group_by_agg(lambda r_end_ts_tuple: key_fun(r_end_ts_tuple[0]),
+    #                       lambda r_end_ts_tuple: r_end_ts_tuple,
+    #                       lambda agg_r_end_ts_tuple, r_end_ts_tuple: 
+    #                       (agg_fun(agg_r_end_ts_tuple[0], r_end_ts_tuple[0]), min(agg_r_end_ts_tuple[1], r_end_ts_tuple[1]) if agg_r_end_ts_tuple[1] > 0 else r_end_ts_tuple[1]),
+    #                       (agg_initial_any, 0),
+    #                       lambda by, agg_r_end_ts_tuple: 
+    #                       (project_fun(by, agg_r_end_ts_tuple[0]), agg_r_end_ts_tuple[1]),
+    #                       **kwargs)
+    #     )
+    #     #
+    #     return tn
 
     #
 
