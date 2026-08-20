@@ -24,7 +24,6 @@ from pydbsp.storage import DictStorage
 from pydbsp.zset import ZSet, ZSetAddition
 
 import copy, uuid
-from collections import defaultdict
 
 import msgpack
 
@@ -33,7 +32,7 @@ import cloudpickle
 #
 
 default_pack_fun = msgpack.packb
-default_unpack_fun = msgpack.unpackb
+default_unpack_fun = lambda x: msgpack.unpackb(x, strict_map_key=False)
 
 #
 
@@ -837,63 +836,45 @@ class TopologyNode:
 
     #
 
-    def _group_by_agg_sliding_v2(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
-        def insert_record(r, acc):
-            tx = ts_fun(r)
-            tx_str = str(tx)
-            records_list = acc["records"]
-            windows_dict = acc["windows"]
+    def _group_by_agg_sliding(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
+        def insert_record(agg_r, r):
+            ts = ts_fun(r)
+            r_list = agg_r["candidates"]
+            windows_dict = agg_r["windows"]
             #
-            records_list.append(r)
+            r_list.append(r)
             #
-            for start_str, wd in windows_dict.items():
-                start = int(start_str)
-                if start <= tx < start + size_int:
-                    wd["records"].append(r)
-                    wd["agg"] = agg_fun(wd["agg"], r)
+            for start_ts, window_dict in windows_dict.items():
+                if start_ts <= ts < start_ts + size_int:
+                    window_dict["members"].append(r)
+                    window_dict["agg"] = agg_fun(window_dict["agg"], r)
             #
-            if tx_str not in windows_dict:
-                member_r_list = [rr for rr in records_list if tx <= ts_fun(rr) < tx + size_int]
+            if ts not in windows_dict:
+                member_r_list = [r for r in r_list if ts <= ts_fun(r) < ts + size_int]
                 agg_any = agg_initial_any
-                for rr in member_r_list:
-                    agg_any = agg_fun(agg_any, rr)
-                windows_dict[tx_str] = {"records": member_r_list, "agg": agg_any}
+                for member_r in member_r_list:
+                    agg_any = agg_fun(agg_any, member_r)
+                windows_dict[ts] = {"members": member_r_list, "agg": agg_any}
             #
-            return {"records": records_list, "windows": windows_dict}
+            return {"candidates": r_list, "windows": windows_dict}
         #
-        def _flatmap_fun(by_acc_tuple):
-            by_any, acc = by_acc_tuple
-            return [(project_fun(by_any, wd["agg"]), int(start_str) + size_int) for start_str, wd in acc["windows"].items()]
+        def _flatmap_fun(key_any_agg_r_tuple):
+            key_any, agg_r = key_any_agg_r_tuple
+            return [(project_fun(key_any, wd["agg"]), int(start_str) + size_int) for start_str, wd in agg_r["windows"].items()]
         #
         tn = (
             self
             .group_by_agg(
                 key_fun,
                 lambda r: r,
-                lambda acc, r: insert_record(r, acc),
-                {"records": [], "windows": {}},
-                lambda by_any, acc: (by_any, acc),
+                insert_record,
+                {"candidates": [], "windows": {}},
+                lambda key_any, agg_r: (key_any, agg_r),
                 **kwargs
             )
             .flatmap(_flatmap_fun, **kwargs)
         )
         return tn
-
-    # def _group_by_agg_sliding(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
-    #     tn = (
-    #         self
-    #         .map(lambda r: (r, TopologyNode._assign_sliding(size_int)(ts_fun(r))[0]))
-    #         .group_by_agg(lambda r_end_ts_tuple: key_fun(r_end_ts_tuple[0]),
-    #                       lambda r_end_ts_tuple: r_end_ts_tuple,
-    #                       lambda agg_r_end_ts_tuple, r_end_ts_tuple: 
-    #                       (agg_fun(agg_r_end_ts_tuple[0], r_end_ts_tuple[0]), min(agg_r_end_ts_tuple[1], r_end_ts_tuple[1]) if agg_r_end_ts_tuple[1] > 0 else r_end_ts_tuple[1]),
-    #                       (agg_initial_any, 0),
-    #                       lambda by, agg_r_end_ts_tuple: 
-    #                       (project_fun(by, agg_r_end_ts_tuple[0]), agg_r_end_ts_tuple[1]),
-    #                       **kwargs)
-    #     )
-    #     #
-    #     return tn
 
     #
 
@@ -941,17 +922,17 @@ class TopologyNode:
             #
             return session_dict_list
         #
-        def _flatmap_fun(by_any_agg_any_session_end_ts_tuple_list):
-            return [(project_fun(by_any_agg_any_session_end_ts_tuple_list[0], agg_any_session_end_ts_tuple[0]), agg_any_session_end_ts_tuple[1])
-                    for agg_any_session_end_ts_tuple in by_any_agg_any_session_end_ts_tuple_list[1]]
+        def _flatmap_fun(key_any_agg_any_session_end_ts_tuple_list):
+            return [(project_fun(key_any_agg_any_session_end_ts_tuple_list[0], agg_any_session_end_ts_tuple[0]), agg_any_session_end_ts_tuple[1])
+                    for agg_any_session_end_ts_tuple in key_any_agg_any_session_end_ts_tuple_list[1]]
         #
         tn = (
             self
             .group_by_agg(
                 key_fun,
                 lambda r: r,
-                lambda agg, r:
-                {"sessions": (session_dict_list := insert_session(r, agg.get("sessions", []))),
+                lambda agg_r, r:
+                {"sessions": (session_dict_list := insert_session(r, agg_r.get("sessions", []))),
                  "output": [(session_dict["agg"], session_dict["last_ts"] + gap_int) for session_dict in session_dict_list]},
                 {"sessions": [], "output": []},
                 lambda by, agg_r: (by, agg_r["output"]),
