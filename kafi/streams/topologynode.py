@@ -753,11 +753,11 @@ class TopologyNode:
         return tn
 
     
-    def expire_sliding(self, ts_fun, size_int, **kwargs):
+    def expire_sliding(self, ts_fun, size_int, allowed_lateness_int, **kwargs):
         _assign_fun = TopologyNode._assign_sliding(size_int)
         #
         tn = self.expire(ts_fun,
-                         lambda ts: max(_assign_fun(ts)),
+                         lambda ts: max(_assign_fun(ts)) + allowed_lateness_int,
                          **kwargs)
         #
         return tn

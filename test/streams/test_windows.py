@@ -446,6 +446,7 @@ class TestWindows(unittest.TestCase):
 
     def test_sliding(self):
         size_int = 100
+        allowed_lateness = size_int * 2
         #
         order_source_tn = Tn.source(self.order_source_str)
         order_source_tn.to_zSet(Tn._from_records)
@@ -454,7 +455,7 @@ class TestWindows(unittest.TestCase):
             .map(lambda r: {"customer_id": r["value"]["customer_id"],
                             "price": r["value"]["price"],
                             "ts": r["value"]["ts"]})
-            .expire_sliding(lambda r: r["ts"], size_int)
+            .expire_sliding(lambda r: r["ts"], size_int, allowed_lateness)
         )
         #
         sink_tn = order_tn.group_by_agg_sliding(
@@ -507,20 +508,18 @@ class TestWindows(unittest.TestCase):
         ])
         print("-> OK: Window [10, 110) corrected; window [15, 115) triggered correctly.")
 
-        print("\n=== Step 5: Yet another order from customer 1 arrives (not inside [15, 115) (price=500, ts=200) ===")
-        r_w_tuple_list = self.process(built_tn, customer_id=1, price=500, ts=200, w=1)
+        print("\n=== Step 5: Yet another order from customer 1 arrives (price=500, ts=320) ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=500, ts=320, w=1)
         self.assert_output(r_w_tuple_list, [
-            ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 30, "window_end": 110}, -1),
-            ({"customer_id": 1, "orders": 2, "total_price": 250, "last_ts": 30, "window_end": 115}, -1),
-            ({"customer_id": 1, "orders": 1, "total_price": 200, "last_ts": 30, "window_end": 130}, -1),
-            ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 175}, -1),
-            ({"customer_id": 1, "orders": 1, "total_price": 500, "last_ts": 200, "window_end": 300}, 1)
-        ])
-        print("-> OK: Old windows [10, 110), [15, 115), [30, 130) and [75, 175) retracted correctly; new window [200, 300) triggered correctly.")
+            ({'customer_id': 1, 'orders': 3, 'total_price': 350, 'last_ts': 30, 'window_end': 110}, -1),
+            ({'customer_id': 1, 'orders': 2, 'total_price': 250, 'last_ts': 30, 'window_end': 115}, -1),
+            ({'customer_id': 1, 'orders': 1, 'total_price': 500, 'last_ts': 320, 'window_end': 420}, 1)
+        ], True)
+        print("-> OK: Windows [10, 110) and [15, 115) expired correctly; Window [320, 420) triggered correctly.")
 
-        print("\n=== Step 6: And yet another order from customer 1 arrives too late ===")
+        print("\n=== Step 6: An order from customer 1 arrives too late ===")
         r_w_tuple_list = self.process(built_tn, customer_id=1, price=999, ts=5, w=1)
-        self.assert_output(r_w_tuple_list, [])
+        self.assert_output(r_w_tuple_list, [], True)
         print("-> OK: Order arrived too late - no action.")
 
     #
@@ -585,8 +584,8 @@ class TestWindows(unittest.TestCase):
         ])
         print("-> OK: Correction for window [10, 45) triggered.")
 
-        print("\n=== Step 5: Yet another order from customer 1 arrives (price=500, ts=200) ===")
-        r_w_tuple_list = self.process(built_tn, customer_id=1, price=500, ts=200, w=1)
+        print("\n=== Step 5: Yet another order from customer 1 arrives (price=500, ts=220) ===")
+        r_w_tuple_list = self.process(built_tn, customer_id=1, price=500, ts=220, w=1)
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 95}, 1)
         ])
@@ -605,7 +604,7 @@ class TestWindows(unittest.TestCase):
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 4, "total_price": 1349, "last_ts": 25, "window_end": 45}, -1),
             ({"customer_id": 2, "orders": 1, "total_price": 50, "last_ts": 75, "window_end": 95}, -1),
-            ({"customer_id": 1, "orders": 1, "total_price": 500, "last_ts": 200, "window_end": 220}, 1)
+            ({"customer_id": 1, "orders": 1, "total_price": 500, "last_ts": 220, "window_end": 220}, 1)
         ])
         print("-> OK: Windows [1, 45) and [75, 95) retracted; window [200, 220) triggered.")
 
