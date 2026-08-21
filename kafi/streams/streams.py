@@ -23,7 +23,10 @@ streams_prefix_str = "streams_thread_"
 checkpoint_suffix_str = "_checkpoint"
 
 def create_name():
-    """Generate a unique thread name for this Streams instance."""
+    """Generate a unique thread name for this Streams instance.
+    
+    Returns:
+        str: the unique thread name"""
     return f"{streams_prefix_str}{str(uuid.uuid4())}"
 
 #
@@ -42,7 +45,9 @@ class Streams(TopologyNode):
             storage: storage backend implementing producer()/consumer() (e.g. Kafka)
             source_str: name of the input source
             topic_str: topic name on storage; defaults to source_str
-            **kwargs: passed to storage.consumer() at runtime"""
+            **kwargs: passed to storage.consumer() at runtime
+        Returns:
+            tn: the newly created source topology node"""
         tn = TopologyNode.source(source_str)
         tn.__class__ = Streams
         #
@@ -53,13 +58,15 @@ class Streams(TopologyNode):
         return tn
     
     def sink(self, storage, sink_str, topic_str=None, **kwargs):
-        """Create a sink node backed by a storage topic.
+        """Mark a topology node as a sink backed by a topic.
 
         Args:
             storage: storage backend implementing producer()/consumer() (e.g. Kafka)
             sink_str: name of the output sink
             topic_str: topic name on storage; defaults to sink_str
-            **kwargs: passed to storage.producer() at runtime"""
+            **kwargs: passed to storage.producer() at runtime
+        Returns:
+            tn: the marked topology node"""
         tn = super().sink(sink_str)
         #
         tn._topic_dict = {"storage": storage,
@@ -81,7 +88,9 @@ class Streams(TopologyNode):
             checkpoint_storage: storage backend for checkpoints, or None to disable checkpointing
             checkpoint_topic: topic name used to store checkpoints
             checkpoint_interval: seconds between checkpoints
-            **kwargs: passed through to streams()"""
+            **kwargs: passed through to streams()
+        Returns:
+            stop_fun: None -> None function to stop the Streams processing thread"""
         def _run_fun(stop_event):
             logger.info("Starting Streams...")
             #
@@ -342,11 +351,17 @@ class Streams(TopologyNode):
     ###
 
     def get_source_str_topic_dict_dict(self):
-        """Topic config per source, keyed by source name."""
+        """Topic config per source, keyed by source name.
+        
+        Returns:
+            source_str_topic_dict_dict: a dictionary mapping source names to their corresponding topic dictionaries"""
         return {source_str: source_streams._topic_dict for source_str, source_streams in self.get_source_nodes().items()}
     
     def get_sink_str_topic_dict_dict(self):
-        """Topic config per sink, keyed by sink name."""
+        """Topic config per sink, keyed by sink name.
+        
+        Returns:
+            sink_str_topic_dict_dict: a dictionary mapping sink names to their corresponding topic dictionaries"""
         return {sink_str: sink_streams._topic_dict for sink_str, sink_streams in self.get_sink_nodes().items()}
 
     ###
@@ -355,7 +370,10 @@ class Streams(TopologyNode):
 
     @staticmethod
     def threads():
-        """All currently running Streams background threads."""
+        """All currently running Streams background threads.
+        
+        Returns:
+            streams_thread_list: the list of currently running Streams threads"""
         thread_list = threading.enumerate()
         #
         streams_thread_list = [thread for thread in thread_list if thread.name.startswith(streams_prefix_str)]
@@ -367,7 +385,10 @@ class Streams(TopologyNode):
     ###
 
     def __getstate__(self):
-        """Cloudpickle hook: drop unpicklable state (storage, step_fun) before serializing."""
+        """Cloudpickle hook: drop unpicklable state (storage, step_fun) before serializing.
+        
+        Returns:
+            state: the picklable state"""
         state = self.__dict__.copy()
         #
         state.pop("step_fun", None)
@@ -376,4 +397,5 @@ class Streams(TopologyNode):
             topic_dict = state["_topic_dict"].copy()
             topic_dict.pop("storage", None)
             state["_topic_dict"] = topic_dict
+        #
         return state
