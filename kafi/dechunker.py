@@ -5,6 +5,11 @@ from kafi.helpers import chunk_key_to_key
 
 class Dechunker(Deserializer):
     def __init__(self, schema_registry_config_dict, **kwargs):
+        """Initialize the in-progress chunk-reassembly buffer.
+
+        Args:
+            schema_registry_config_dict: schema.registry.url etc., passed through to Deserializer
+            **kwargs: passed through to Deserializer"""
         # Dictionary mapping chunked message IDs to chunk numbers to chunk value_bytes (to reconstruct chunked messages).
         self.chunks_dict = {}
         #
@@ -13,6 +18,10 @@ class Dechunker(Deserializer):
     #
 
     def dechunk(self, m_list):
+        """Reassemble chunked messages, buffering partial chunks until complete; passes non-chunked messages through.
+
+        Args:
+            m_list: messages to dechunk (some may carry chunking headers, most won't)"""
         m_list1 = []
         for m in m_list:
             topic_str = m["topic"]

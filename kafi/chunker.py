@@ -7,6 +7,11 @@ from kafi.helpers import m_chunk_key_to_key, default_partitioner, key_to_chunk_k
 
 class Chunker(Serializer):
     def __init__(self, schema_registry_config_dict, **kwargs):
+        """Configure chunking (splitting oversized values across multiple messages) from kwargs.
+
+        Args:
+            schema_registry_config_dict: schema.registry.url etc., passed through to Serializer
+            **kwargs: "chunk_size_bytes" enables chunking above that size; -1 (default) disables it"""
         self.chunk_size_bytes_int = kwargs["chunk_size_bytes"] if "chunk_size_bytes" in kwargs else -1
         if self.chunk_size_bytes_int == 0:
             raise Exception("Chunk size is zero.")
@@ -23,6 +28,10 @@ class Chunker(Serializer):
     #
 
     def chunk(self, m_list):
+        """Split any oversized message value into multiple chunk messages, tagged with chunking headers.
+
+        Args:
+            m_list: messages to chunk (already serialized to bytes)"""
         m_list1 = []
         if self.chunk_size_bytes_int > 0:
             for m in m_list:

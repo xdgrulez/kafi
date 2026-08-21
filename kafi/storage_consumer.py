@@ -99,12 +99,12 @@ class StorageConsumer(Dechunker):
         acc = initial_acc
         break_bool = False
         #
-        def deserialize(payload_bytes, type_str, topic_str, headers_dict, key_bool):
+        def deserialize(payload_bytes, type_str, topic_str, key_bool):
             # Do not deserialize if this is a RestProxyConsumer object (deserialization has already taken place on the REST Proxy). 
             if self.__class__.__name__ == "RestProxyConsumer":
                 return payload_bytes
             else:
-                return self.deserialize(payload_bytes, type_str, topic_str, headers_dict, key_bool)
+                return self.deserialize(payload_bytes, type_str, topic_str, key_bool)
         #
         while True:
             m_list1 = self.consume_impl(n=consume_batch_size_int, **kwargs)
@@ -131,8 +131,8 @@ class StorageConsumer(Dechunker):
                     continue
                 #
                 headers_str_bytes_tuple_list = m["headers"]
-                m1 = {"value": deserialize(m["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, headers_dict=None if not headers_str_bytes_tuple_list else dict(headers_str_bytes_tuple_list), key_bool=False),
-                                 "key": deserialize(m["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, headers_dict=None if not headers_str_bytes_tuple_list else dict(headers_str_bytes_tuple_list), key_bool=True),
+                m1 = {"value": deserialize(m["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, key_bool=False),
+                                 "key": deserialize(m["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=True),
                                  "headers": headers_str_bytes_tuple_list,
                                  "timestamp": m["timestamp"],
                                  "partition": m["partition"],

@@ -1,5 +1,3 @@
-import json
-
 from kafi.functional import Functional
 from kafi.helpers import copy_kwargs
 
@@ -9,14 +7,14 @@ ALL_MESSAGES = -1
 
 #
 
-def default_projection_fun(m1, m2):
-    m = dict(m1)
-    m["value"] = m1["value"] | m2["value"]
-    return m
-#
-
 class AddOns(Functional):
     def compact(self, topic, n=ALL_MESSAGES, **kwargs):
+        """Consume up to n messages and keep only the latest value per key (tombstones remove the key).
+
+        Args:
+            topic: topic name
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to foldl()"""
         def foldl_fun(acc, m):
             key_hash_int_m_dict = acc
             #
@@ -41,6 +39,14 @@ class AddOns(Functional):
         return m_list
 
     def compact_to(self, topic, target_storage, target_topic, n=ALL_MESSAGES, **kwargs):
+        """Compact a topic and produce the result to a target topic.
+
+        Args:
+            topic: source topic name
+            target_storage: storage to produce results to
+            target_topic: target topic name
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: source_*/target_*-prefixed kwargs, split via copy_kwargs()"""
         source_kwargs = copy_kwargs("source", **kwargs)
         target_kwargs = copy_kwargs("target", **kwargs)
         #
@@ -55,6 +61,12 @@ class AddOns(Functional):
     #
 
     def repeat(self, topic_str, n=1, **kwargs):
+        """Re-produce the last n messages of a topic back onto itself.
+
+        Args:
+            topic_str: topic name
+            n: number of trailing messages to re-produce
+            **kwargs: passed to tail()/producer()"""
         n_int = n
         #
         m_list = self.tail(topic_str, type="bytes", n=n_int, **kwargs)
@@ -67,6 +79,13 @@ class AddOns(Functional):
     #
 
     def recreate(self, pattern, partitions=None, config={}, **kwargs):
+        """Delete and re-create topic(s), preserving (or overriding) partitions/config.
+
+        Args:
+            pattern: glob pattern(s) or explicit topic name(s)
+            partitions: new partition count; None to keep the existing count (or 1 for new topics)
+            config: topic config overrides to apply on top of the existing config
+            **kwargs: passed to create()"""
         pattern_str_or_str_list = pattern
         #
         topic_str_list = self.admin.list_topics(pattern_str_or_str_list)
@@ -110,6 +129,13 @@ class AddOns(Functional):
     #
 
     def cp_group_offsets(self, pattern, source_group, target_storage, target_group):
+        """Copy a consumer group's committed offsets to another group (on possibly another storage).
+
+        Args:
+            pattern: glob pattern(s) matching topic names
+            source_group: consumer group to copy offsets from
+            target_storage: storage the target group lives on
+            target_group: consumer group to copy offsets to"""
         source_group_str = source_group
         target_group_str = target_group
         #
@@ -131,6 +157,13 @@ class AddOns(Functional):
     #
 
     def offsets_diff(self, pattern, ts, end_ts, **kwargs):
+        """Number of messages per topic between two timestamps.
+
+        Args:
+            pattern: glob pattern(s) matching topic names
+            ts: start timestamp (ms)
+            end_ts: end timestamp (ms), must be >= ts
+            **kwargs: passed to partitions()/offsets_for_times()"""
         ts_int = ts
         end_ts_int = end_ts
         #
@@ -156,6 +189,11 @@ class AddOns(Functional):
     #
 
     def message_size(self, topic_str, **kwargs):
+        """Per-message (key, value) byte sizes, keyed by partition and offset.
+
+        Args:
+            topic_str: topic name
+            **kwargs: passed to foldl()"""
         def agg(partition_int_offset_int_size_int_tuple_dict_dict, m):
             partition_int = m["partition"]
             offset_int = m["offset"]
@@ -174,6 +212,11 @@ class AddOns(Functional):
         return partition_int_offset_int_size_int_tuple_dict_dict, n_int
     
     def message_size_stats(self, topic_str, **kwargs):
+        """Aggregate message-size statistics (total, average, max, min) for a topic.
+
+        Args:
+            topic_str: topic name
+            **kwargs: passed to message_size()"""
         partition_int_offset_int_size_int_tuple_dict_dict, n_int = self.message_size(topic_str, **kwargs)
         #
         total_size_int = 0
@@ -205,15 +248,3 @@ class AddOns(Functional):
         stats_dict = {"messages": n_int, "total_size": total_size_int, "average_size": total_size_int/n_int, "max_size": max_dict, "min_size": min_dict}
         #
         return stats_dict
-
-
-    def collect_value_set(self, topic_str, **kwargs):
-        value_json_str_set = set()
-        #
-        def collect(m):
-            value_json_str = json.dumps(m["value"])
-            value_json_str_set.add(value_json_str)
-        #
-        self.foreach(topic_str, foreach_fun=collect, **kwargs)
-        #
-        return value_json_str_set

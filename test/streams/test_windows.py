@@ -580,7 +580,7 @@ class TestWindows(unittest.TestCase):
         self.assert_output(r_w_tuple_list, [
             ({"customer_id": 1, "orders": 2, "total_price": 300, "last_ts": 25, "window_end": 45}, -1),
             ({"customer_id": 1, "orders": 3, "total_price": 350, "last_ts": 25, "window_end": 45}, 1)
-        ])
+        ], True)
         print("-> OK: Correction for window [10, 45) triggered.")
 
         print("\n=== Step 5: Yet another order from customer 1 arrives (price=500, ts=220) ===")
