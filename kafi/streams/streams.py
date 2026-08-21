@@ -105,6 +105,7 @@ class Streams(TopologyNode):
         stop_event = threading.Event()
         thread = threading.Thread(target=_run_fun, args=[stop_event])
         thread.daemon = True
+        thread.name = create_name()
         thread.start()
         #
         return _stop_fun
@@ -122,9 +123,6 @@ class Streams(TopologyNode):
             checkpoint_interval: seconds between checkpoints
             stop_event: threading.Event that stops the loop once set
             **kwargs: passed through to storage.producer()/consumer()"""
-        if threading.current_thread() is not None:
-            threading.current_thread().name = create_name()
-        #
         source_str_topic_dict_dict = built_tn.get_source_str_topic_dict_dict()
         if len(source_str_topic_dict_dict) == 0:
             raise Exception("No source.")
