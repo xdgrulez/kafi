@@ -7,6 +7,12 @@ RD_KAFKA_PARTITION_UA = -1
 
 class StorageProducer(Chunker):
     def __init__(self, storage_obj, topic, **kwargs):
+        """Resolve key/value types, schemas, and produce-time flags for a new producer.
+
+        Args:
+            storage_obj: owning storage instance
+            topic: target topic name
+            **kwargs: type/key_type/value_type, key_schema(_id)/value_schema(_id), keep_partitions, keep_timestamps, keep_headers"""
         self.storage_obj = storage_obj
         #
         self.topic_str = topic
@@ -40,6 +46,11 @@ class StorageProducer(Chunker):
     #.  * serialization (except for kafka/RestProxy)
     #   * extensions (e.g. chunking, encryption)
     def produce_list(self, m_list, **kwargs):
+        """Serialize, chunk, and produce a list of messages.
+
+        Args:
+            m_list: messages to produce; each a dict with value and optionally key/partition/timestamp/headers
+            **kwargs: passed to produce_impl()"""
         #
         def serialize(payload, key_bool):
             # Do not serialize if this is a RestProxyProducer object (serialization takes place later on the REST Proxy). 
@@ -60,6 +71,11 @@ class StorageProducer(Chunker):
 
     # Syntactic sugar for produce_list() (including headers).
     def produce(self, value, **kwargs):
+        """Syntactic sugar over produce_list() for one or more values with matching key/partition/timestamp/headers.
+
+        Args:
+            value: a single value, or a list of values to produce
+            **kwargs: "key", "partition", "timestamp", "headers" (each a single value or a list matching value's length)"""
         key = kwargs["key"] if "key" in kwargs else None
         partition = kwargs["partition"] if "partition" in kwargs else RD_KAFKA_PARTITION_UA
         timestamp = kwargs["timestamp"] if "timestamp" in kwargs else CURRENT_TIME
@@ -92,6 +108,10 @@ class StorageProducer(Chunker):
     # Helpers
 
     def get_key_value_schema_tuple(self, **kwargs):
+        """Resolve (key_schema, value_schema, key_schema_id, value_schema_id) from kwargs.
+
+        Args:
+            **kwargs: optionally containing key_schema, value_schema, key_schema_id, value_schema_id"""
         key_schema_str_or_dict = kwargs["key_schema"] if "key_schema" in kwargs else None
         value_schema_str_or_dict = kwargs["value_schema"] if "value_schema" in kwargs else None
         #

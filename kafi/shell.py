@@ -12,13 +12,32 @@ ALL_MESSAGES = -1
 
 class Shell(Functional):
     def cat(self, topic, n=ALL_MESSAGES, map_fun=lambda x: x, **kwargs):
+        """Consume up to n messages of a topic, optionally transformed, as a list.
+
+        Args:
+            topic: topic name
+            n: max messages to consume; ALL_MESSAGES for no limit
+            map_fun: m -> result, applied to each message
+            **kwargs: passed to map()"""
         (m_list, _) = self.map(topic, map_fun, n, **kwargs)
         return m_list
 
     def head(self, topic, n=10, **kwargs):
+        """First n messages of a topic (from the start, or from configured offsets).
+
+        Args:
+            topic: topic name
+            n: number of messages
+            **kwargs: passed to cat()"""
         return self.cat(topic, n, **kwargs)
 
     def tail(self, topic, n=10, **kwargs):
+        """Last n messages of a topic (per partition, via negative offsets).
+
+        Args:
+            topic: topic name
+            n: number of trailing messages per partition
+            **kwargs: passed to map()"""
         topic_str = topic
         n_int = n
         #
@@ -36,6 +55,16 @@ class Shell(Functional):
     #
 
     def cp(self, source_topic, target_storage, target_topic, map_fun=lambda x: x, n=ALL_MESSAGES, flatmap_fun=None, **kwargs):
+        """Copy (optionally transforming/expanding) messages from one topic to another, possibly cross-storage.
+
+        Args:
+            source_topic: source topic name
+            target_storage: storage to produce results to
+            target_topic: target topic name
+            map_fun: m -> result, used if flatmap_fun is not given
+            n: max messages to consume; ALL_MESSAGES for no limit
+            flatmap_fun: m -> list of results; if given, takes precedence over map_fun
+            **kwargs: passed to map_to()/flatmap_to()"""
         if flatmap_fun is not None:
             return self.flatmap_to(source_topic, target_storage, target_topic, flatmap_fun, n, **kwargs)
         else:
@@ -44,6 +73,11 @@ class Shell(Functional):
     #
 
     def wc(self, topic, **kwargs):
+        """Word/byte counts across a topic's keys and values.
+
+        Args:
+            topic: topic name
+            **kwargs: passed to foldl()"""
         def foldl_fun(acc, m):
             if m["key"] is None:
                 key_str = ""
@@ -69,6 +103,14 @@ class Shell(Functional):
     #
 
     def grep_fun(self, topic, match_fun, n=ALL_MESSAGES, matches=ALL_MESSAGES, **kwargs):
+        """Collect messages matching an arbitrary predicate, stopping early after enough matches.
+
+        Args:
+            topic: topic name
+            match_fun: m -> bool
+            n: max messages to consume; ALL_MESSAGES for no limit
+            matches: stop after this many matches; ALL_MESSAGES for no limit
+            **kwargs: passed to foldl()"""
         def foldl_fun(acc, m):
             (matching_m_acc_list, matches_acc_int) = acc
             if match_fun(m):
@@ -92,6 +134,14 @@ class Shell(Functional):
         return matching_m_list, len(matching_m_list), message_counter_int
 
     def grep(self, topic, re_pattern_str, n=ALL_MESSAGES, results=ALL_MESSAGES, **kwargs):
+        """Collect messages whose key or value matches a regex pattern.
+
+        Args:
+            topic: topic name
+            re_pattern_str: regular expression to match key/value against
+            n: max messages to consume; ALL_MESSAGES for no limit
+            results: stop after this many matches; ALL_MESSAGES for no limit
+            **kwargs: passed to grep_fun()"""
         def match_fun(m):
             pattern = re.compile(re_pattern_str)
             key_str = str(m["key"])
@@ -101,4 +151,9 @@ class Shell(Functional):
         return self.grep_fun(topic, match_fun, n=n, results=results, **kwargs)
 
     def stat(self, topic, **kwargs):
+        """Number of messages returned by cat() for a topic.
+
+        Args:
+            topic: topic name
+            **kwargs: passed to cat()"""
         return self.cat(topic, **kwargs)[1]

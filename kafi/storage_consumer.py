@@ -14,6 +14,12 @@ OFFSET_INVALID = -1001
 
 class StorageConsumer(Dechunker):
     def __init__(self, storage_obj, *topics, **kwargs):
+        """Resolve topics, start/end offsets, partitions, key/value types and group for a new consumer.
+
+        Args:
+            storage_obj: owning storage instance
+            *topics: one or more topic names to subscribe to
+            **kwargs: "offsets"/"ts", "end_offsets"/"end_ts", "partitions", "group", "config", "enable_auto_commit", "isolation.level", key/value type overrides"""
         self.storage_obj = storage_obj
         #
         # Get topics to subscribe to.
@@ -70,6 +76,14 @@ class StorageConsumer(Dechunker):
     #
 
     def foldl(self, foldl_fun, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
+        """Consume and fold over messages (with dechunking, deserialization, offset tracking, batching, commits).
+
+        Args:
+            foldl_fun: (acc, m) -> new acc
+            initial_acc: starting accumulator value
+            n: max messages to consume; ALL_MESSAGES for no limit
+            commit_after_processing: override the storage default for when offsets are committed
+            **kwargs: last_n, consume_batch_size, break_fun (acc, m) -> bool to stop early, dechunk"""
         n_int = n
         #
         if n_int == 0:
@@ -166,6 +180,11 @@ class StorageConsumer(Dechunker):
     #
 
     def consume(self, n=ALL_MESSAGES, **kwargs):
+        """Consume up to n messages as a plain list.
+
+        Args:
+            n: max messages to consume; ALL_MESSAGES uses the storage's consume_batch_size()
+            **kwargs: passed to foldl()"""
         def foldl_fun(m_list, m):
             m_list.append(m)
             #
@@ -180,6 +199,13 @@ class StorageConsumer(Dechunker):
     #
 
     def get_offsets_from_kwargs(self, topic_str_list, offsets_key_str, ts_key_str, **kwargs):
+        """Resolve per-topic/partition start (or end) offsets from "offsets"/"ts"-style kwargs, replacing negative offsets relative to the watermark.
+
+        Args:
+            topic_str_list: topics to resolve offsets for
+            offsets_key_str: kwargs key holding explicit offsets, e.g. "offsets"
+            ts_key_str: kwargs key holding a timestamp to resolve offsets for, e.g. "ts"
+            **kwargs: must contain at most one of offsets_key_str / ts_key_str"""
         if offsets_key_str in kwargs and kwargs[offsets_key_str] is not None:
             offsets_dict = kwargs[offsets_key_str]
             first_key_str_or_int = list(offsets_dict.keys())[0]
@@ -212,6 +238,11 @@ class StorageConsumer(Dechunker):
         return topic_str_offsets_dict_dict
 
     def get_last_n_start_offsets(self, topic_str_list, last_n_int):
+        """Compute start offsets that yield exactly the last last_n_int messages across all partitions of each topic.
+
+        Args:
+            topic_str_list: topics to compute start offsets for
+            last_n_int: total number of trailing messages wanted"""
         topic_str_partition_int_offset_int_tuple_dict_dict = self.storage_obj.watermarks(topic_str_list)
         topic_str_start_offsets_dict_dict = {}
         #
@@ -233,6 +264,11 @@ class StorageConsumer(Dechunker):
         return topic_str_start_offsets_dict_dict
 
     def get_key_value_types_from_kwargs(self, topic_str_list, **kwargs):
+        """Resolve per-topic key/value (de)serialization types from kwargs.
+
+        Args:
+            topic_str_list: topics to resolve types for
+            **kwargs: passed to storage.get_key_value_type_tuple()"""
         (key_type_str, value_type_str) = self.storage_obj.get_key_value_type_tuple(**kwargs)
         #
         topic_str_key_type_str_dict = {topic_str: key_type_str for topic_str in topic_str_list}
@@ -241,6 +277,11 @@ class StorageConsumer(Dechunker):
         return (topic_str_key_type_str_dict, topic_str_value_type_str_dict)
 
     def get_partitions_from_kwargs(self, partitions_key_str, **kwargs):
+        """Resolve an explicit per-topic partition assignment from kwargs, if given.
+
+        Args:
+            partitions_key_str: kwargs key holding the partition assignment, e.g. "partitions"
+            **kwargs: optionally containing partitions_key_str"""
         if partitions_key_str in kwargs and kwargs[partitions_key_str] is not None:
             topic_str_partition_int_list_dict = kwargs[partitions_key_str]
         else:
@@ -251,6 +292,10 @@ class StorageConsumer(Dechunker):
     #
 
     def get_group_str_from_kwargs(self, **kwargs):
+        """Resolve the consumer group name: explicit "group" kwarg, else an auto-generated, prefixed one.
+
+        Args:
+            **kwargs: optionally containing group"""
         if "group" in kwargs:
             return kwargs["group"]
         else:

@@ -1,14 +1,21 @@
-from kafi.helpers import pattern_match
-
-#
-
 class StorageAdmin():
     def __init__(self, storage_obj, **kwargs):
+        """Store a reference to the owning storage instance.
+
+        Args:
+            storage_obj: owning storage instance
+            **kwargs: unused, accepted for subclass compatibility"""
         self.storage_obj = storage_obj
 
     #
 
     def topics(self, pattern=None, size=False, **kwargs):
+        """List topics, optionally with size and/or per-partition breakdown.
+
+        Args:
+            pattern: glob pattern(s) matching topic names
+            size: if True, include total message count per topic
+            **kwargs: partitions (bool) to include a per-partition breakdown, timeout"""
         pattern_str_or_str_list = pattern
         size_bool = size
         partitions_bool = "partitions" in kwargs and kwargs["partitions"]
@@ -60,6 +67,11 @@ class StorageAdmin():
     # * a dictionary mapping topics to a dictionary mapping partitions to timestamps (if the first key is a string for multiple individual topics)
     # => consolidate to the latter.
     def get_topic_str_partition_int_timestamp_int_dict_dict(self, topic_str_list, partitions_timestamps):
+        """Normalize partitions_timestamps into a per-topic, per-partition timestamp map.
+
+        Args:
+            topic_str_list: topics the timestamps apply to, if partitions_timestamps isn't already per-topic
+            partitions_timestamps: {partition: timestamp} shared across topics, or {topic: {partition: timestamp}}"""
         first_key_str_or_int = list(partitions_timestamps.keys())[0]
         if isinstance(first_key_str_or_int, int):
             partition_int_timestamp_int_dict = partitions_timestamps
@@ -70,6 +82,10 @@ class StorageAdmin():
         return topic_str_partition_int_timestamp_int_dict_dict 
 
     def replace_not_found(self, topic_str_offsets_dict_dict):
+        """Replace not-found (-1) offsets with the topic's high watermark minus one.
+
+        Args:
+            topic_str_offsets_dict_dict: {topic: {partition: offset}}, possibly containing -1 entries"""
         for topic_str, offsets_dict in topic_str_offsets_dict_dict.items():
             if any(offset_int == -1 for offset_int in offsets_dict.values()):
                 partition_int_offsets_tuple_dict = self.storage_obj.watermarks(topic_str)[topic_str]

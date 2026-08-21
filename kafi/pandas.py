@@ -11,6 +11,12 @@ ALL_MESSAGES = -1
 
 class Pandas(Functional):
     def topic_to_df(self, topic, n=ALL_MESSAGES, **kwargs):
+        """Consume up to n messages of a topic into a pandas DataFrame (one row per message value).
+
+        Args:
+            topic: topic name
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to foldl(); "explode" flattens list/nested-dict columns"""
         #
         def foldl_fun(acc, m):
             # df = pd.DataFrame.from_records([m["value"]])
@@ -28,6 +34,13 @@ class Pandas(Functional):
         return df
 
     def df_to_topic(self, df, topic, n=ALL_MESSAGES, **kwargs):
+        """Produce each row of a DataFrame as a message to a topic.
+
+        Args:
+            df: DataFrame to produce
+            topic: target topic name
+            n: max rows to produce; ALL_MESSAGES for no limit
+            **kwargs: passed to producer()"""
         n_int = n
         #
 

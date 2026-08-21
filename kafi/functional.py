@@ -10,6 +10,14 @@ ALL_MESSAGES = -1
 
 class Functional:
     def foldl(self, topic, foldl_fun, initial_acc, n=ALL_MESSAGES, **kwargs):
+        """Fold over up to n messages of a topic with a progress bar, then close the consumer.
+
+        Args:
+            topic: topic name
+            foldl_fun: (acc, m) -> new acc
+            initial_acc: starting accumulator value
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to consumer()/consumer.foldl()"""
         verbose_int = self.verbose()
         #
         consumer = self.consumer(topic, **kwargs)
@@ -41,6 +49,13 @@ class Functional:
     #
 
     def flatmap(self, topic, flatmap_fun, n=ALL_MESSAGES, **kwargs):
+        """Consume a topic and expand each message into zero or more results, collected into a list.
+
+        Args:
+            topic: topic name
+            flatmap_fun: m -> list of results
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to foldl()"""
         def foldl_fun(list, m):
             list += flatmap_fun(m)
             #
@@ -49,18 +64,39 @@ class Functional:
         return self.foldl(topic, foldl_fun, [], n, **kwargs)
 
     def map(self, topic, map_fun, n=ALL_MESSAGES, **kwargs):
+        """Consume a topic and transform each message into one result, collected into a list.
+
+        Args:
+            topic: topic name
+            map_fun: m -> result
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to flatmap()"""
         def flatmap_fun(m):
             return [map_fun(m)]
         #
         return self.flatmap(topic, flatmap_fun, n, **kwargs)
 
     def filter(self, topic, filter_fun, n=ALL_MESSAGES, **kwargs):
+        """Consume a topic and keep only messages matching a predicate, collected into a list.
+
+        Args:
+            topic: topic name
+            filter_fun: m -> bool
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to flatmap()"""
         def flatmap_fun(m):
             return [m] if filter_fun(m) else []
         #
         return self.flatmap(topic, flatmap_fun, n, **kwargs)
 
     def foreach(self, topic, foreach_fun, n=ALL_MESSAGES, **kwargs):
+        """Consume a topic, calling a side-effect function per message.
+
+        Args:
+            topic: topic name
+            foreach_fun: m -> None
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to foldl()"""
         def foldl_fun(_, m):
             foreach_fun(m)
         #
@@ -69,6 +105,16 @@ class Functional:
     #
 
     def foldl_to(self, topic, target_storage, target_topic, foldl_to_fun, initial_acc, n=ALL_MESSAGES, **kwargs):
+        """Fold over a source topic while producing derived messages to a target topic, batched.
+
+        Args:
+            topic: source topic name
+            target_storage: storage to produce results to
+            target_topic: target topic name
+            foldl_to_fun: (acc, m) -> (new acc, list of messages to produce)
+            initial_acc: starting accumulator value
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: source_*/target_*-prefixed kwargs, split via copy_kwargs()"""
         verbose_int = self.verbose()
         #
         progress_num_messages_int = self.progress_num_messages()
@@ -126,6 +172,15 @@ class Functional:
         return (acc, consume_message_counter_int, produce_message_counter_int)
 
     def flatmap_to(self, topic, target_storage, target_topic, flatmap_fun, n=ALL_MESSAGES, **kwargs):
+        """Consume a source topic, expanding each message into results produced to a target topic.
+
+        Args:
+            topic: source topic name
+            target_storage: storage to produce results to
+            target_topic: target topic name
+            flatmap_fun: m -> list of results
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to foldl_to()"""
         def foldl_to_fun(_, m):
             return (None, flatmap_fun(m))
         #
@@ -133,12 +188,30 @@ class Functional:
         return (consume_message_counter_int, produce_message_counter_int)
 
     def map_to(self, topic, target_storage, target_topic, map_fun, n=ALL_MESSAGES, **kwargs):
+        """Consume a source topic, transforming each message into one result produced to a target topic.
+
+        Args:
+            topic: source topic name
+            target_storage: storage to produce results to
+            target_topic: target topic name
+            map_fun: m -> result
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to flatmap_to()"""
         def flatmap_fun(m):
             return [map_fun(m)]
         #
         return self.flatmap_to(topic, target_storage, target_topic, flatmap_fun, n, **kwargs)
 
     def filter_to(self, topic, target_storage, target_topic, filter_fun, n=ALL_MESSAGES, **kwargs):
+        """Consume a source topic, producing only messages matching a predicate to a target topic.
+
+        Args:
+            topic: source topic name
+            target_storage: storage to produce results to
+            target_topic: target topic name
+            filter_fun: m -> bool
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to flatmap_to()"""
         def flatmap_fun(m):
             return [m] if filter_fun(m) else []
         #

@@ -23,6 +23,7 @@ streams_prefix_str = "streams_thread_"
 checkpoint_suffix_str = "_checkpoint"
 
 def create_name():
+    """Generate a unique thread name for this Streams instance."""
     return f"{streams_prefix_str}{str(uuid.uuid4())}"
 
 #
@@ -35,6 +36,13 @@ class Streams(TopologyNode):
 
     @staticmethod
     def source(storage, source_str, topic_str=None, **kwargs):
+        """Create a source node backed by a storage topic.
+
+        Args:
+            storage: storage backend implementing producer()/consumer() (e.g. Kafka)
+            source_str: name of the input source
+            topic_str: topic name on storage; defaults to source_str
+            **kwargs: passed to storage.consumer() at runtime"""
         tn = TopologyNode.source(source_str)
         tn.__class__ = Streams
         #
@@ -45,6 +53,13 @@ class Streams(TopologyNode):
         return tn
     
     def sink(self, storage, sink_str, topic_str=None, **kwargs):
+        """Create a sink node backed by a storage topic.
+
+        Args:
+            storage: storage backend implementing producer()/consumer() (e.g. Kafka)
+            sink_str: name of the output sink
+            topic_str: topic name on storage; defaults to sink_str
+            **kwargs: passed to storage.producer() at runtime"""
         tn = super().sink(sink_str)
         #
         tn._topic_dict = {"storage": storage,
@@ -59,6 +74,14 @@ class Streams(TopologyNode):
 
     @staticmethod
     def start_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
+        """Run streams() in a background thread; returns a function to stop it.
+
+        Args:
+            built_tn: built tn to run
+            checkpoint_storage: storage backend for checkpoints, or None to disable checkpointing
+            checkpoint_topic: topic name used to store checkpoints
+            checkpoint_interval: seconds between checkpoints
+            **kwargs: passed through to streams()"""
         def _run_fun(stop_event):
             logger.info("Starting Streams...")
             #
@@ -81,6 +104,15 @@ class Streams(TopologyNode):
 
     @staticmethod 
     def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
+        """Build producers/consumers from the topology's sources/sinks and run streams_fun().
+
+        Args:
+            built_tn: built tn to run
+            checkpoint_storage: storage backend for checkpoints, or None to disable checkpointing
+            checkpoint_topic: topic name used to store checkpoints
+            checkpoint_interval: seconds between checkpoints
+            stop_event: threading.Event that stops the loop once set
+            **kwargs: passed through to storage.producer()/consumer()"""
         if threading.current_thread() is not None:
             threading.current_thread().name = create_name()
         #
@@ -124,6 +156,16 @@ class Streams(TopologyNode):
 
     @staticmethod
     def streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
+        """Main streams loop: consume, push through the topology, produce, checkpoint, repeat.
+
+        Args:
+            built_tn: built tn to run
+            sink_str_foreach_fun_finally_fun_tuple_dict: dict, sink_str -> (produce_fun, close_fun)
+            checkpoint_storage: storage backend for checkpoints, or None to disable checkpointing
+            checkpoint_topic: topic name used to store checkpoints
+            checkpoint_interval: seconds between checkpoints
+            stop_event: threading.Event that stops the loop once set
+            **kwargs: extra options, e.g. group, step_fun, progress, chunk_size_bytes"""
         checkpoint_topic_str = checkpoint_topic
         checkpoint_interval_float = checkpoint_interval
         #
@@ -300,9 +342,11 @@ class Streams(TopologyNode):
     ###
 
     def get_source_str_topic_dict_dict(self):
+        """Topic config per source, keyed by source name."""
         return {source_str: source_streams._topic_dict for source_str, source_streams in self.get_source_nodes().items()}
     
     def get_sink_str_topic_dict_dict(self):
+        """Topic config per sink, keyed by sink name."""
         return {sink_str: sink_streams._topic_dict for sink_str, sink_streams in self.get_sink_nodes().items()}
 
     ###
@@ -311,6 +355,7 @@ class Streams(TopologyNode):
 
     @staticmethod
     def threads():
+        """All currently running Streams background threads."""
         thread_list = threading.enumerate()
         #
         streams_thread_list = [thread for thread in thread_list if thread.name.startswith(streams_prefix_str)]
@@ -322,6 +367,7 @@ class Streams(TopologyNode):
     ###
 
     def __getstate__(self):
+        """Cloudpickle hook: drop unpicklable state (storage, step_fun) before serializing."""
         state = self.__dict__.copy()
         #
         state.pop("step_fun", None)

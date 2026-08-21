@@ -16,6 +16,11 @@ from kafi.helpers import to_bytes
 
 class Serializer(SchemaRegistry):
     def __init__(self, schema_registry_config_dict, **kwargs):
+        """Build key/value serializers for a topic from schema registry config and kwargs.
+
+        Args:
+            schema_registry_config_dict: schema.registry.url etc.
+            **kwargs: key_type/value_type-driving config, e.g. key_schema, value_schema, ser_conf, ..."""
         super().__init__(schema_registry_config_dict)
         #
         self.get_configs_from_kwargs(**kwargs)
@@ -25,6 +30,11 @@ class Serializer(SchemaRegistry):
 
 
     def serialize(self, payload, key_bool):
+        """Serialize a key or value payload according to its configured type (bytes/str/json/avro/jsonschema/protobuf).
+
+        Args:
+            payload: value to serialize (bytes, str, dict, or arbitrary)
+            key_bool: True to serialize as the key, False as the value"""
         type_str = self.key_type_str if key_bool else self.value_type_str
         messageField = MessageField.KEY if key_bool else MessageField.VALUE
         serializer = self.key_serializer if key_bool else self.value_serializer
@@ -67,6 +77,13 @@ class Serializer(SchemaRegistry):
     # Helpers
 
     def schema_str_to_generalizedProtocolMessageType(self, schema_str, topic_str, key_bool, normalize_schemas=False):
+        """Get (registering if needed) the generated Python protobuf message class for a schema.
+
+        Args:
+            schema_str: .proto schema source
+            topic_str: topic the schema is registered under
+            key_bool: True for the key schema, False for the value schema
+            normalize_schemas: whether to normalize the schema before registering"""
         schema_hash_int = hash(schema_str)
         if schema_hash_int in self.schema_hash_int_generalizedProtocolMessageType_dict:
             generalizedProtocolMessageType = self.schema_hash_int_generalizedProtocolMessageType_dict[schema_hash_int]
@@ -82,6 +99,11 @@ class Serializer(SchemaRegistry):
         return generalizedProtocolMessageType
 
     def schema_id_int_and_schema_str_to_generalizedProtocolMessageType(self, schema_id_int, schema_str):
+        """Compile a .proto schema to a Python protobuf message class via grpc_tools.protoc.
+
+        Args:
+            schema_id_int: schema registry id, used to name the generated module
+            schema_str: .proto schema source"""
         path_str = f"/{tempfile.gettempdir()}/kafi/protobuf/{self.storage_obj.config_str}"
         os.makedirs(path_str, exist_ok=True)
         file_str = f"schema_{schema_id_int}.proto"
@@ -101,6 +123,10 @@ class Serializer(SchemaRegistry):
     #
 
     def get_serializer(self, key_bool):
+        """Build the confluent_kafka serializer instance for the configured type (or None for bytes/str/json).
+
+        Args:
+            key_bool: True to build the key serializer, False for the value serializer"""
         type_str = self.key_type_str if key_bool else self.value_type_str
         schema_str_or_dict = self.key_schema_str_or_dict if key_bool else self.value_schema_str_or_dict
         schema_id_int = self.key_schema_id_int if key_bool else self.value_schema_id_int
@@ -155,6 +181,10 @@ class Serializer(SchemaRegistry):
     #
 
     def get_configs_from_kwargs(self, **kwargs):
+        """Populate key/value ser_* settings from kwargs, applying key_/value_-prefixed overrides.
+
+        Args:
+            **kwargs: ser_to_dict, ser_conf, ser_rule_conf, ser_rule_registry, ser_json_encode, normalize_schemas (each optionally key_/value_-prefixed)"""
         self.key_ser_to_dict = None
         self.value_ser_to_dict = None
         if "ser_to_dict" in kwargs:

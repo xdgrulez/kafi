@@ -13,6 +13,14 @@ ALL_MESSAGES = -1
 
 class Files(Pandas):
     def topic_to_file(self, topic, fs_obj, file, n=ALL_MESSAGES, **kwargs):
+        """Consume a topic and write it to a file on a filesystem storage (csv/json/parquet/xlsx/xml/bytes).
+
+        Args:
+            topic: topic name
+            fs_obj: filesystem storage to write the file to
+            file: destination file path (extension selects the format)
+            n: max messages to consume; ALL_MESSAGES for no limit
+            **kwargs: passed to cat()/topic_to_df(); "index" controls index columns for tabular formats"""
         if not fs_obj.__class__.__bases__[0].__name__== "FS":
             raise Exception("The target must be a file system.")
         #
@@ -56,6 +64,14 @@ class Files(Pandas):
         return len(data_bytes)
 
     def file_to_topic(self, file, storage_obj, topic, n=ALL_MESSAGES, **kwargs):
+        """Read a file from this filesystem storage and produce its rows to a topic.
+
+        Args:
+            file: source file path (extension selects the format: csv/json/parquet/xlsx/xml)
+            storage_obj: storage to produce the topic to
+            topic: target topic name
+            n: max rows to produce; ALL_MESSAGES for no limit
+            **kwargs: passed to df_to_topic()"""
         if not self.__class__.__bases__[0].__name__== "FS":
             raise Exception("The source must be a file system.")
         #
