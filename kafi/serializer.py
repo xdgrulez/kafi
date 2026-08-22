@@ -34,7 +34,10 @@ class Serializer(SchemaRegistry):
 
         Args:
             payload: value to serialize (bytes, str, dict, or arbitrary)
-            key_bool: True to serialize as the key, False as the value"""
+            key_bool: True to serialize as the key, False as the value
+
+        Returns:
+            bytes: serialized payload (None if payload was None)"""
         type_str = self.key_type_str if key_bool else self.value_type_str
         messageField = MessageField.KEY if key_bool else MessageField.VALUE
         serializer = self.key_serializer if key_bool else self.value_serializer
@@ -83,7 +86,10 @@ class Serializer(SchemaRegistry):
             schema_str: .proto schema source
             topic_str: topic the schema is registered under
             key_bool: True for the key schema, False for the value schema
-            normalize_schemas: whether to normalize the schema before registering"""
+            normalize_schemas: whether to normalize the schema before registering
+
+        Returns:
+            type: generated Python protobuf message class"""
         schema_hash_int = hash(schema_str)
         if schema_hash_int in self.schema_hash_int_generalizedProtocolMessageType_dict:
             generalizedProtocolMessageType = self.schema_hash_int_generalizedProtocolMessageType_dict[schema_hash_int]
@@ -103,7 +109,10 @@ class Serializer(SchemaRegistry):
 
         Args:
             schema_id_int: schema registry id, used to name the generated module
-            schema_str: .proto schema source"""
+            schema_str: .proto schema source
+
+        Returns:
+            type: generated Python protobuf message class"""
         path_str = f"/{tempfile.gettempdir()}/kafi/protobuf/{self.storage_obj.config_str}"
         os.makedirs(path_str, exist_ok=True)
         file_str = f"schema_{schema_id_int}.proto"
@@ -126,7 +135,10 @@ class Serializer(SchemaRegistry):
         """Build the confluent_kafka serializer instance for the configured type (or None for bytes/str/json).
 
         Args:
-            key_bool: True to build the key serializer, False for the value serializer"""
+            key_bool: True to build the key serializer, False for the value serializer
+
+        Returns:
+            serializer or None: confluent_kafka serializer instance (None for bytes/str/json)"""
         type_str = self.key_type_str if key_bool else self.value_type_str
         schema_str_or_dict = self.key_schema_str_or_dict if key_bool else self.value_schema_str_or_dict
         schema_id_int = self.key_schema_id_int if key_bool else self.value_schema_id_int

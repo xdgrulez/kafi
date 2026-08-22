@@ -28,27 +28,42 @@ RD_KAFKA_PARTITION_UA = -1
 #
 
 def get_millis():
-    """Current time in milliseconds since epoch."""
+    """Current time in milliseconds since epoch.
+
+    Returns:
+        int: current time in milliseconds since epoch"""
     return int(time.time()*1000)
 
 
 def to_millis(timestamp_str):
-    """Parse an ISO-8601 timestamp string into milliseconds since epoch."""
+    """Parse an ISO-8601 timestamp string into milliseconds since epoch.
+
+    Returns:
+        int: milliseconds since epoch"""
     return int(dateutil.parser.isoparse(timestamp_str).timestamp()*1000)
 
 
 def from_millis(millis_int):
-    """Format milliseconds since epoch as an ISO-ish timestamp string."""
+    """Format milliseconds since epoch as an ISO-ish timestamp string.
+
+    Returns:
+        str: formatted timestamp"""
     return datetime.datetime.fromtimestamp(millis_int/1000.0).isoformat(sep=" ")
 
 
 def is_interactive():
-    """True if running in an interactive Python shell."""
+    """True if running in an interactive Python shell.
+
+    Returns:
+        bool: True if running in an interactive Python shell"""
     return hasattr(sys, 'ps1')
 
 
 def pretty(dict):
-    """Pretty-print a dict as indented JSON (str)."""
+    """Pretty-print a dict as indented JSON (str).
+
+    Returns:
+        str: indented JSON representation of dict"""
     return json.dumps(dict, indent=2, default=str)
 
 
@@ -62,7 +77,10 @@ def create_session(retries_int):
     """Build a requests.Session with retry/backoff for transient HTTP errors.
 
     Args:
-        retries_int: max retry attempts on 500/502/503/504"""
+        retries_int: max retry attempts on 500/502/503/504
+
+    Returns:
+        requests.Session: session configured with the retry/backoff adapter"""
     # logging.basicConfig(level=logging.DEBUG)
     session = requests.Session()
     retry = Retry(total=retries_int, backoff_factor=2, status_forcelist=[500, 502, 503, 504], allowed_methods=None)
@@ -82,7 +100,10 @@ def get(url_str, headers_dict=None, payload_dict=None, auth_str_tuple=None, retr
         payload_dict: optional JSON body (sent as query via json=)
         auth_str_tuple: optional (user, password) basic auth
         retries_int: max retry attempts
-        debug_bool: if True, print request/response"""
+        debug_bool: if True, print request/response
+
+    Returns:
+        dict: parsed JSON response body (wrapped as {"response": ...} if not JSON)"""
     session = create_session(retries_int)
     #
     if payload_dict is None:
@@ -122,7 +143,10 @@ def delete(url_str, headers_dict, auth_str_tuple=None, retries_int=10, debug_boo
         headers_dict: HTTP headers
         auth_str_tuple: optional (user, password) basic auth
         retries_int: max retry attempts
-        debug_bool: if True, print request/response"""
+        debug_bool: if True, print request/response
+
+    Returns:
+        dict: parsed JSON response body (wrapped as {"response": ...} if not JSON)"""
     session = create_session(retries_int)
     #
     if debug_bool:
@@ -157,7 +181,10 @@ def post(url_str, headers_dict, payload_dict_or_generator, auth_str_tuple=None, 
         payload_dict_or_generator: dict (sent as JSON) or a generator/bytes body
         auth_str_tuple: optional (user, password) basic auth
         retries_int: max retry attempts
-        debug_bool: if True, print request/response"""
+        debug_bool: if True, print request/response
+
+    Returns:
+        dict or list: parsed JSON response body, as a single dict, or a list of dicts for newline-delimited responses"""
     session = create_session(retries_int)
     #
     if isinstance(payload_dict_or_generator, dict):
@@ -204,7 +231,10 @@ def get_auth_str_tuple(basic_auth_user_info):
     """Split a "user:password" string into an (user, password) tuple.
 
     Args:
-        basic_auth_user_info: "user:password" string, or None"""
+        basic_auth_user_info: "user:password" string, or None
+
+    Returns:
+        tuple: (user, password) str tuple, or None if basic_auth_user_info was None"""
     if basic_auth_user_info is None:
         auth_str_tuple = None
     else:
@@ -214,7 +244,10 @@ def get_auth_str_tuple(basic_auth_user_info):
 
 
 def is_json(str):
-    """True if str parses as JSON."""
+    """True if str parses as JSON.
+
+    Returns:
+        bool: True if str parses as JSON"""
     try:
         json.loads(str)
     except ValueError as e:
@@ -223,12 +256,18 @@ def is_json(str):
 
 
 def is_pattern(str):
-    """True if str looks like a glob pattern (contains *, ?, or [...])."""
+    """True if str looks like a glob pattern (contains *, ?, or [...]).
+
+    Returns:
+        bool: True if str looks like a glob pattern"""
     return "*" in str or "?" in str or ("[" in str and "]" in str) or ("[!" in str and "]" in str)
 
 
 def is_base64_encoded(str_or_bytes_or_dict):
-    """True if str_or_bytes_or_dict round-trips through base64 decode/encode unchanged."""
+    """True if str_or_bytes_or_dict round-trips through base64 decode/encode unchanged.
+
+    Returns:
+        bool: True if str_or_bytes_or_dict round-trips through base64 decode/encode unchanged"""
     try:
         if isinstance(str_or_bytes_or_dict, bytes):
             decoded_bytes = base64.b64decode(str_or_bytes_or_dict)
@@ -245,7 +284,10 @@ def is_base64_encoded(str_or_bytes_or_dict):
 
 
 def base64_encode(str_or_bytes_or_dict):
-    """Base64-encode bytes, str, or dict (JSON-serialized first)."""
+    """Base64-encode bytes, str, or dict (JSON-serialized first).
+
+    Returns:
+        bytes: base64-encoded bytes"""
     if isinstance(str_or_bytes_or_dict, bytes):
         encoded_bytes = base64.b64encode(str_or_bytes_or_dict)
     elif isinstance(str_or_bytes_or_dict, str):
@@ -256,12 +298,18 @@ def base64_encode(str_or_bytes_or_dict):
 
 
 def base64_decode(base64_str):
-    """Base64-decode a base64-encoded str into bytes."""
+    """Base64-decode a base64-encoded str into bytes.
+
+    Returns:
+        bytes: decoded bytes"""
     return base64.b64decode(bytes(base64_str, encoding="utf-8"))
 
 
 def to_bytes(data):
-    """Convert bytes, str, dict (JSON), or any other value into UTF-8 bytes."""
+    """Convert bytes, str, dict (JSON), or any other value into UTF-8 bytes.
+
+    Returns:
+        bytes: UTF-8-encoded bytes (None if data is None)"""
     if isinstance(data, bytes):
         data_bytes = data
     elif isinstance(data, str):
@@ -278,7 +326,10 @@ def to_bytes(data):
 
 
 def bytes_or_str_to_bytes(bytes_or_str):
-    """Return bytes as-is, or UTF-8-encode a str."""
+    """Return bytes as-is, or UTF-8-encode a str.
+
+    Returns:
+        bytes: bytes as-is, or the UTF-8-encoded str"""
     if isinstance(bytes_or_str, bytes):
         return_bytes = bytes_or_str
     elif isinstance(bytes_or_str, str):
@@ -288,7 +339,10 @@ def bytes_or_str_to_bytes(bytes_or_str):
 
 
 def bytes_to_str(bytes):
-    """UTF-8-decode bytes into str (None stays None)."""
+    """UTF-8-decode bytes into str (None stays None).
+
+    Returns:
+        str: UTF-8-decoded str (None if bytes is None)"""
     if bytes is None:
         str = None
     else:
@@ -298,7 +352,10 @@ def bytes_to_str(bytes):
 
 
 def bytes_to_dict(bytes):
-    """UTF-8-decode and JSON-parse bytes into a dict (None stays None)."""
+    """UTF-8-decode and JSON-parse bytes into a dict (None stays None).
+
+    Returns:
+        dict: parsed dict (None if bytes is None)"""
     if bytes is None:
         dict = None
     else:
@@ -308,7 +365,10 @@ def bytes_to_dict(bytes):
 
 
 def str_to_bytes(str):
-    """UTF-8-encode a str into bytes (None stays None)."""
+    """UTF-8-encode a str into bytes (None stays None).
+
+    Returns:
+        bytes: UTF-8-encoded bytes (None if str is None)"""
     if str is None:
         bytes = None
     else:
@@ -322,7 +382,10 @@ def pattern_match(input_str_list, pattern_str_or_str_list):
 
     Args:
         input_str_list: candidate strings
-        pattern_str_or_str_list: glob pattern, list of patterns, or None (matches all)"""
+        pattern_str_or_str_list: glob pattern, list of patterns, or None (matches all)
+
+    Returns:
+        list of str: matching strings, sorted"""
     if pattern_str_or_str_list is not None:
         if isinstance(pattern_str_or_str_list, str):
             pattern_str_or_str_list = [pattern_str_or_str_list]
@@ -336,7 +399,10 @@ def pattern_match(input_str_list, pattern_str_or_str_list):
 
 
 def explode_normalize(df):
-    """Recursively explode list-valued columns and flatten nested dict columns of a pandas DataFrame."""
+    """Recursively explode list-valued columns and flatten nested dict columns of a pandas DataFrame.
+
+    Returns:
+        pandas DataFrame: DataFrame with list columns exploded and nested dict columns flattened"""
     def explode(df, col_str):
         df = df.explode(col_str)
         #
@@ -360,7 +426,10 @@ def explode_normalize(df):
 
 
 def s_id(payload_bytes):
-    """Extract the 4-byte Schema Registry schema id from a Confluent-framed payload (-1 if absent)."""
+    """Extract the 4-byte Schema Registry schema id from a Confluent-framed payload (-1 if absent).
+
+    Returns:
+        int: schema id (-1 if absent)"""
     if payload_bytes is not None and len(payload_bytes) >= 5:
         id_int = int.from_bytes(payload_bytes[1:5], "big")
     else:
@@ -370,7 +439,10 @@ def s_id(payload_bytes):
 
 
 def hash_dict(d):
-    """Stable hash of a dict, based on its sorted-key JSON representation."""
+    """Stable hash of a dict, based on its sorted-key JSON representation.
+
+    Returns:
+        int: hash value"""
     return hash(json.dumps(d, sort_keys=True))
 
 
@@ -379,7 +451,10 @@ def split_bytes(bytes, chunk_size_bytes_int):
 
     Args:
         bytes: data to split
-        chunk_size_bytes_int: max size of each chunk"""
+        chunk_size_bytes_int: max size of each chunk
+
+    Returns:
+        list of bytes: fixed-size chunks (the last one possibly smaller)"""
     bytes_list = [bytes[i:i + chunk_size_bytes_int] for i in range(0, len(bytes), chunk_size_bytes_int)]
     #
     return bytes_list
@@ -390,7 +465,10 @@ def get_value(any, key_str_list):
 
     Args:
         any: dict (or nested dicts) to look up into
-        key_str_list: path of keys to follow"""
+        key_str_list: path of keys to follow
+
+    Returns:
+        any: value found at the end of the key path, or {}/None if a key along the path is missing"""
     return reduce(lambda d, key_str: d.get(key_str, {}) if isinstance(d, dict) else None, key_str_list, any)
 
 
@@ -416,7 +494,10 @@ def default_partitioner(m, counter_int, partitions_int, projection_fun=lambda x:
         m: message dict; its "partition" is used if not RD_KAFKA_PARTITION_UA
         counter_int: current round-robin counter, used when projection_fun returns None
         partitions_int: number of partitions to choose among
-        projection_fun: m -> bytes used for hash partitioning"""
+        projection_fun: m -> bytes used for hash partitioning
+
+    Returns:
+        int: resolved partition index"""
     partition_int = m["partition"]
     if partition_int == RD_KAFKA_PARTITION_UA:
         bytes = projection_fun(m)
@@ -435,13 +516,19 @@ def default_partitioner(m, counter_int, partitions_int, projection_fun=lambda x:
 # Chunking
 
 def m_chunk_key_to_key(m):
-    """Recover the original message key from a chunked message's key."""
+    """Recover the original message key from a chunked message's key.
+
+    Returns:
+        bytes: original key bytes (None if the chunk key was None)"""
     chunk_key_bytes = m["key"]
     key_bytes = chunk_key_to_key(chunk_key_bytes)
     return key_bytes
 
 def chunk_key_to_key(chunk_key_bytes):
-    """Strip the trailing chunk suffix from a chunk key, recovering the original key bytes."""
+    """Strip the trailing chunk suffix from a chunk key, recovering the original key bytes.
+
+    Returns:
+        bytes: original key bytes (None if chunk_key_bytes was None)"""
     if chunk_key_bytes == None:
         key_bytes = chunk_key_bytes
     else:
@@ -455,7 +542,10 @@ def key_to_chunk_key(key_bytes, chunk_int):
 
     Args:
         key_bytes: original key bytes
-        chunk_int: chunk index to encode into the suffix"""
+        chunk_int: chunk index to encode into the suffix
+
+    Returns:
+        bytes: key bytes with the chunk-index suffix appended (None if key_bytes was None)"""
     if key_bytes == None:
         chunk_key_bytes = key_bytes
     else:
@@ -465,7 +555,10 @@ def key_to_chunk_key(key_bytes, chunk_int):
 
 
 def is_internal(resource_str):
-    """True if resource_str is an internal (underscore-prefixed) resource name."""
+    """True if resource_str is an internal (underscore-prefixed) resource name.
+
+    Returns:
+        bool: True if resource_str is an internal (underscore-prefixed) resource name"""
     return resource_str.startswith("_")
 
 
@@ -474,7 +567,10 @@ def copy_kwargs(name_str, **kwargs):
 
     Args:
         name_str: prefix identifying which prefixed keys to rename, e.g. "source"
-        **kwargs: original kwargs, e.g. containing "source_group", "source_type", etc."""
+        **kwargs: original kwargs, e.g. containing "source_group", "source_type", etc.
+
+    Returns:
+        dict: copy of kwargs with any "{name_str}_xxx" keys additionally available under their plain "xxx" form"""
     copied_kwargs = kwargs.copy()
     #
     if f"{name_str}_group" in kwargs:
@@ -500,10 +596,16 @@ def copy_kwargs(name_str, **kwargs):
 
 
 def compress(uncompressed_bytes):
-    """Zstandard-compress bytes."""
+    """Zstandard-compress bytes.
+
+    Returns:
+        bytes: compressed bytes"""
     return zstdCompressor.compress(uncompressed_bytes)
 
 
 def decompress(compressed_bytes):
-    """Zstandard-decompress bytes."""
+    """Zstandard-decompress bytes.
+
+    Returns:
+        bytes: decompressed bytes"""
     return zstdDecompressor.decompress(compressed_bytes)

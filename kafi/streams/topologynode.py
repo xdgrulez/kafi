@@ -1705,17 +1705,11 @@ class TopologyNode:
 
     # Input
 
-    def push(self, source_str_input_any_list_dict_or_source_str, input_any_list=None):
+    def push(self, source_str_input_any_list_dict):
         """Feed new input r into one or more named sources.
         
         Args:
-            source_str_input_any_list_dict_or_source_str: either a source name, or a dict mapping source names to input lists
-            input_any_list: list of input messages/records to push"""
-        if input_any_list is None:
-            source_str_input_any_list_dict = source_str_input_any_list_dict_or_source_str
-        else:
-            source_str_input_any_list_dict = {source_str_input_any_list_dict_or_source_str: input_any_list}
-        #
+            source_str_input_any_list_dict: a dictionary mapping source names to input lists to push"""
         source_str_source_tn_dict = self.get_source_nodes()
         #
         for source_str, source_tn in source_str_source_tn_dict.items():
@@ -1788,15 +1782,13 @@ class TopologyNode:
     
     # Output
 
-    def latest(self, gc=True):
-        """Read the current output, optionally garbage-collecting old state.
+    def latest(self, gc_bool=True):
+        """Process the input up to now and return the resulting latest output, optionally garbage-collecting the state.
         
         Args:
-            gc: if True, garbage-collect old state after reading
+            gc_bool: if True, garbage-collect the state after processing (default = True)
         Return:
             output_any: the latest output"""
-        gc_bool = gc
-        #
         zSet = self._evaluator.latest(self._output_nodeId)
         #
         if gc_bool:
@@ -1881,18 +1873,17 @@ class TopologyNode:
 
     #
 
-    def process(self, source_str_input_any_list_dict_or_source_str, input_any_list=None, gc=True):
+    def process(self, source_str_input_any_list_dict, gc_bool=True):
         """Push input and return the latest output in one call.
         
         Args:
-            source_str_input_any_list_dict_or_source_str: either a source name, or a dict mapping source names to input lists
-            input_any_list: list of input messages/records to push
-            gc: if True, garbage-collect old state after reading
-        Returns.
+            source_str_input_any_list_dict: a dictionary mapping source names to input lists to push
+            gc_bool: if True, garbage-collect the state after processing (default = True)
+        Return:
             output_any: the latest output"""
-        self.push(source_str_input_any_list_dict_or_source_str, input_any_list)
+        self.push(source_str_input_any_list_dict)
         #
-        output_any = self.latest(gc)
+        output_any = self.latest(gc_bool)
         #
         return output_any
 

@@ -16,7 +16,10 @@ class Pandas(Functional):
         Args:
             topic: topic name
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to foldl(); "explode" flattens list/nested-dict columns"""
+            **kwargs: passed to foldl(); "explode" flattens list/nested-dict columns
+
+        Returns:
+            pandas DataFrame: one row per consumed message value"""
         #
         def foldl_fun(acc, m):
             # df = pd.DataFrame.from_records([m["value"]])
@@ -40,7 +43,10 @@ class Pandas(Functional):
             df: DataFrame to produce
             topic: target topic name
             n: max rows to produce; ALL_MESSAGES for no limit
-            **kwargs: passed to producer()"""
+            **kwargs: passed to producer()
+
+        Returns:
+            int: number of rows produced"""
         n_int = n
         #
 

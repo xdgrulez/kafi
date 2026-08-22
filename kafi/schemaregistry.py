@@ -16,7 +16,10 @@ class SchemaRegistry:
             self.schemaRegistryClient = self.get_schemaRegistryClient()
 
     def get_schemaRegistryClient(self):
-        """Build a confluent_kafka SchemaRegistryClient from the stored config."""
+        """Build a confluent_kafka SchemaRegistryClient from the stored config.
+
+        Returns:
+            SchemaRegistryClient: configured schema registry client"""
         dict = {}
         #
         dict["url"] = self.schema_registry_config_dict["schema.registry.url"]
@@ -30,7 +33,10 @@ class SchemaRegistry:
         """Fetch a schema by id.
 
         Args:
-            schema_id: schema registry id"""
+            schema_id: schema registry id
+
+        Returns:
+            dict: schema dict with schema_str and schema_type"""
         # No additional caching necessary here:
         # get_schema(schema_id)[source]
         # Fetches the schema associated with schema_id from the Schema Registry. The result is cached so subsequent attempts will not require an additional round-trip to the Schema Registry.
@@ -46,7 +52,10 @@ class SchemaRegistry:
 
         Args:
             schema_str: schema source (Avro/JSON Schema/Protobuf)
-            schema_type_str: AVRO, JSON, or PROTOBUF"""
+            schema_type_str: AVRO, JSON, or PROTOBUF
+
+        Returns:
+            dict: schema dict with schema_str and schema_type"""
         schema = Schema(schema_str, schema_type_str) # TODO: support references
         schema_dict = schema_to_schema_dict(schema)
         #
@@ -57,7 +66,10 @@ class SchemaRegistry:
 
         Args:
             topic_str: topic name
-            key_bool: True for the key subject, False for the value subject"""
+            key_bool: True for the key subject, False for the value subject
+
+        Returns:
+            str: subject name"""
         key_or_value_str = "key" if key_bool else "value"
         #
         subject_name_str = f"{topic_str}-{key_or_value_str}"
@@ -70,7 +82,10 @@ class SchemaRegistry:
         Args:
             subject_name: subject to register under
             schema: schema dict, as returned by create_schema_dict()
-            normalize: whether to normalize before registering"""
+            normalize: whether to normalize before registering
+
+        Returns:
+            int: registered schema id"""
         subject_name_str = subject_name
         schema_dict = schema
         normalize_bool = normalize
@@ -86,7 +101,10 @@ class SchemaRegistry:
         Args:
             subject_name: subject to look under
             schema: schema dict, as returned by create_schema_dict()
-            normalize: whether to normalize before looking up"""
+            normalize: whether to normalize before looking up
+
+        Returns:
+            dict: registered schema dict (schema_id, schema, subject, version, guid)"""
         subject_name_str = subject_name
         schema_dict = schema
         normalize_bool = normalize
@@ -104,7 +122,10 @@ class SchemaRegistry:
         Args:
             pattern: glob pattern(s) matching subject names
             deleted: if True, include soft-deleted subjects
-            only_deleted: if True, return only soft-deleted subjects"""
+            only_deleted: if True, return only soft-deleted subjects
+
+        Returns:
+            list of str: matching subject names"""
         deleted_bool = deleted
         only_deleted_bool = only_deleted
         #
@@ -137,14 +158,20 @@ class SchemaRegistry:
         return filtered_subject_name_str_list
 
     def sls(self, pattern=None, deleted=False, only_deleted=False):
-        """Alias for get_subjects()."""
+        """Alias for get_subjects().
+
+        Returns:
+            list of str: matching subject names"""
         return self.get_subjects(pattern, deleted, only_deleted)
 
     def get_schema_versions(self, schema_id):
         """List the (subject, version) pairs a schema id is registered under.
 
         Args:
-            schema_id: schema registry id"""
+            schema_id: schema registry id
+
+        Returns:
+            list of dict: {subject, version} pairs the schema id is registered under"""
         schema_id_int = schema_id
         #
         url_str = f"{self.schema_registry_config_dict['schema.registry.url']}/schemas/ids/{schema_id_int}/versions"
@@ -164,7 +191,10 @@ class SchemaRegistry:
 
         Args:
             pattern: glob pattern(s) matching subject names
-            permanent: if True, hard-delete (subject must already be soft-deleted)"""
+            permanent: if True, hard-delete (subject must already be soft-deleted)
+
+        Returns:
+            dict: {subject: [deleted schema ids]}"""
         permanent_bool = permanent
         #
         subject_name_str_list = self.get_subjects(deleted=permanent_bool)
@@ -178,26 +208,38 @@ class SchemaRegistry:
         return subject_name_str_schema_id_int_list_dict
 
     def srm(self, pattern, permanent=False):
-        """Alias for delete_subject()."""
+        """Alias for delete_subject().
+
+        Returns:
+            dict: {subject: [deleted schema ids]}"""
         return self.delete_subject(pattern, permanent)
 
     def delete_subject_force(self, pattern):
         """Soft-delete then hard-delete subjects matching a pattern, in one call.
 
         Args:
-            pattern: glob pattern(s) matching subject names"""
+            pattern: glob pattern(s) matching subject names
+
+        Returns:
+            dict: {subject: [deleted schema ids]} from the hard-delete pass"""
         self.delete_subject(pattern)
         return self.delete_subject(pattern, permanent=True)
 
     def srmf(self, pattern):
-        """Alias for delete_subject_force()."""
+        """Alias for delete_subject_force().
+
+        Returns:
+            dict: {subject: [deleted schema ids]} from the hard-delete pass"""
         return self.delete_subject_force(pattern)
 
     def get_latest_version(self, subject_name):
         """Fetch the latest registered schema version for a subject.
 
         Args:
-            subject_name: subject to look up"""
+            subject_name: subject to look up
+
+        Returns:
+            dict: registered schema dict (schema_id, schema, subject, version, guid)"""
         subject_name_str = subject_name
         #
         registeredSchema = self.schemaRegistryClient.get_latest_version(subject_name_str)
@@ -211,7 +253,10 @@ class SchemaRegistry:
         Args:
             subject_name: subject to look up
             version: version number to fetch
-            deleted: if True, include soft-deleted versions"""
+            deleted: if True, include soft-deleted versions
+
+        Returns:
+            dict: registered schema dict (schema_id, schema, subject, version, guid)"""
         subject_name_str = subject_name
         version_int = version
         deleted_bool = deleted
@@ -225,7 +270,10 @@ class SchemaRegistry:
         """List all version numbers registered for a subject.
 
         Args:
-            subject_name: subject to look up"""
+            subject_name: subject to look up
+
+        Returns:
+            list of int: registered version numbers"""
         subject_name_str = subject_name
         #
         version_int_list = self.schemaRegistryClient.get_versions(subject_name_str)
@@ -239,7 +287,10 @@ class SchemaRegistry:
         Args:
             subject_name: subject to delete from
             version: version number to delete
-            permanent: if True, hard-delete"""
+            permanent: if True, hard-delete
+
+        Returns:
+            int: deleted schema id"""
         subject_name_str = subject_name
         version_int = version
         permanent_bool = permanent
@@ -264,7 +315,10 @@ class SchemaRegistry:
 
         Args:
             subject_name: subject to configure
-            level: compatibility level, e.g. BACKWARD, FULL, NONE"""
+            level: compatibility level, e.g. BACKWARD, FULL, NONE
+
+        Returns:
+            str: applied compatibility level"""
         subject_name_str = subject_name
         level_str = level
         #
@@ -274,7 +328,10 @@ class SchemaRegistry:
         return set_level_str
 
     def set_comp(self, subject_name, level):
-        """Alias for set_compatibility()."""
+        """Alias for set_compatibility().
+
+        Returns:
+            str: applied compatibility level"""
         return self.set_compatibility(subject_name, level)
 
     #
@@ -283,7 +340,10 @@ class SchemaRegistry:
         """Get the compatibility level for a subject.
 
         Args:
-            subject_name: subject to query"""
+            subject_name: subject to query
+
+        Returns:
+            str: compatibility level"""
         subject_name_str = subject_name
         #
         level_str = self.schemaRegistryClient.get_compatibility(subject_name_str)
@@ -291,7 +351,10 @@ class SchemaRegistry:
         return level_str
 
     def get_comp(self, subject_name):
-        """Alias for get_compatibility()."""
+        """Alias for get_compatibility().
+
+        Returns:
+            str: compatibility level"""
         return self.get_compatibility(subject_name)
 
     #
@@ -301,7 +364,10 @@ class SchemaRegistry:
 
         Args:
             guid: schema registry GUID
-            fmt: optional response format"""
+            fmt: optional response format
+
+        Returns:
+            dict: schema dict with schema_str and schema_type"""
         schema = self.schemaRegistryClient.get_schema_by_guid(guid, fmt)
         #
         schema_dict = schema_to_schema_dict(schema)
@@ -316,7 +382,10 @@ class SchemaRegistry:
         Args:
             subject_name: subject to check against
             schema: schema dict to test, as returned by create_schema_dict()
-            version: version to test against, or latest"""
+            version: version to test against, or latest
+
+        Returns:
+            bool: True if compatible"""
         subject_name_str = subject_name
         schema_dict = schema
         version_str = version
@@ -328,7 +397,10 @@ class SchemaRegistry:
         return compatible_bool
 
     def test_comp(self, subject_name, schema, version="latest"):
-        """Alias for test_compatibility()."""
+        """Alias for test_compatibility().
+
+        Returns:
+            bool: True if compatible"""
         return self.test_compatibility(subject_name, schema, version)
 
 #
@@ -337,7 +409,10 @@ def registeredSchema_to_registeredSchema_dict(registeredSchema):
     """Convert a confluent_kafka RegisteredSchema object into a plain dict.
 
     Args:
-        registeredSchema: confluent_kafka RegisteredSchema instance"""
+        registeredSchema: confluent_kafka RegisteredSchema instance
+
+    Returns:
+        dict: {schema_id, schema, subject, version, guid}"""
     registeredSchema_dict = {"schema_id": registeredSchema.schema_id,
                              "schema": schema_to_schema_dict(registeredSchema.schema),
                              "subject": registeredSchema.subject,
@@ -350,7 +425,10 @@ def schema_to_schema_dict(schema):
     """Convert a confluent_kafka Schema object into a plain dict.
 
     Args:
-        schema: confluent_kafka Schema instance"""
+        schema: confluent_kafka Schema instance
+
+    Returns:
+        dict: {schema_str, schema_type}"""
     schema_dict = {"schema_str": schema.schema_str,
                    "schema_type": schema.schema_type} # TODO: support references
     #

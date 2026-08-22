@@ -18,7 +18,10 @@ class Shell(Functional):
             topic: topic name
             n: max messages to consume; ALL_MESSAGES for no limit
             map_fun: m -> result, applied to each message
-            **kwargs: passed to map()"""
+            **kwargs: passed to map()
+
+        Returns:
+            list: results of map_fun applied to each consumed message"""
         (m_list, _) = self.map(topic, map_fun, n, **kwargs)
         return m_list
 
@@ -28,7 +31,10 @@ class Shell(Functional):
         Args:
             topic: topic name
             n: number of messages
-            **kwargs: passed to cat()"""
+            **kwargs: passed to cat()
+
+        Returns:
+            list: first n messages (or transformed results, per map_fun in kwargs)"""
         return self.cat(topic, n, **kwargs)
 
     def tail(self, topic, n=10, **kwargs):
@@ -37,7 +43,10 @@ class Shell(Functional):
         Args:
             topic: topic name
             n: number of trailing messages per partition
-            **kwargs: passed to map()"""
+            **kwargs: passed to map()
+
+        Returns:
+            list of m: last n messages per partition"""
         topic_str = topic
         n_int = n
         #
@@ -64,7 +73,10 @@ class Shell(Functional):
             map_fun: m -> result, used if flatmap_fun is not given
             n: max messages to consume; ALL_MESSAGES for no limit
             flatmap_fun: m -> list of results; if given, takes precedence over map_fun
-            **kwargs: passed to map_to()/flatmap_to()"""
+            **kwargs: passed to map_to()/flatmap_to()
+
+        Returns:
+            tuple: (number of messages consumed as int, number of messages produced as int)"""
         if flatmap_fun is not None:
             return self.flatmap_to(source_topic, target_storage, target_topic, flatmap_fun, n, **kwargs)
         else:
@@ -77,7 +89,10 @@ class Shell(Functional):
 
         Args:
             topic: topic name
-            **kwargs: passed to foldl()"""
+            **kwargs: passed to foldl()
+
+        Returns:
+            tuple: (number of messages as int, total word count as int, total byte count as int)"""
         def foldl_fun(acc, m):
             if m["key"] is None:
                 key_str = ""
@@ -110,7 +125,10 @@ class Shell(Functional):
             match_fun: m -> bool
             n: max messages to consume; ALL_MESSAGES for no limit
             matches: stop after this many matches; ALL_MESSAGES for no limit
-            **kwargs: passed to foldl()"""
+            **kwargs: passed to foldl()
+
+        Returns:
+            tuple: (list of matching m, number of matches as int, number of messages consumed as int)"""
         def foldl_fun(acc, m):
             (matching_m_acc_list, matches_acc_int) = acc
             if match_fun(m):
@@ -141,7 +159,10 @@ class Shell(Functional):
             re_pattern_str: regular expression to match key/value against
             n: max messages to consume; ALL_MESSAGES for no limit
             results: stop after this many matches; ALL_MESSAGES for no limit
-            **kwargs: passed to grep_fun()"""
+            **kwargs: passed to grep_fun()
+
+        Returns:
+            tuple: (list of matching m, number of matches as int, number of messages consumed as int)"""
         def match_fun(m):
             pattern = re.compile(re_pattern_str)
             key_str = str(m["key"])
@@ -155,5 +176,8 @@ class Shell(Functional):
 
         Args:
             topic: topic name
-            **kwargs: passed to cat()"""
+            **kwargs: passed to cat()
+
+        Returns:
+            int: number of messages returned by cat()"""
         return self.cat(topic, **kwargs)[1]

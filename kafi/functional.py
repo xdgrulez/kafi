@@ -17,7 +17,10 @@ class Functional:
             foldl_fun: (acc, m) -> new acc
             initial_acc: starting accumulator value
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to consumer()/consumer.foldl()"""
+            **kwargs: passed to consumer()/consumer.foldl()
+
+        Returns:
+            tuple: (final acc, number of messages consumed as int)"""
         verbose_int = self.verbose()
         #
         consumer = self.consumer(topic, **kwargs)
@@ -55,7 +58,10 @@ class Functional:
             topic: topic name
             flatmap_fun: m -> list of results
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to foldl()"""
+            **kwargs: passed to foldl()
+
+        Returns:
+            tuple: (list of results, number of messages consumed as int)"""
         def foldl_fun(list, m):
             list += flatmap_fun(m)
             #
@@ -70,7 +76,10 @@ class Functional:
             topic: topic name
             map_fun: m -> result
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to flatmap()"""
+            **kwargs: passed to flatmap()
+
+        Returns:
+            tuple: (list of results, number of messages consumed as int)"""
         def flatmap_fun(m):
             return [map_fun(m)]
         #
@@ -83,7 +92,10 @@ class Functional:
             topic: topic name
             filter_fun: m -> bool
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to flatmap()"""
+            **kwargs: passed to flatmap()
+
+        Returns:
+            tuple: (list of matching m, number of messages consumed as int)"""
         def flatmap_fun(m):
             return [m] if filter_fun(m) else []
         #
@@ -114,7 +126,10 @@ class Functional:
             foldl_to_fun: (acc, m) -> (new acc, list of messages to produce)
             initial_acc: starting accumulator value
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: source_*/target_*-prefixed kwargs, split via copy_kwargs()"""
+            **kwargs: source_*/target_*-prefixed kwargs, split via copy_kwargs()
+
+        Returns:
+            tuple: (final acc, number of messages consumed as int, number of messages produced as int)"""
         verbose_int = self.verbose()
         #
         progress_num_messages_int = self.progress_num_messages()
@@ -180,7 +195,10 @@ class Functional:
             target_topic: target topic name
             flatmap_fun: m -> list of results
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to foldl_to()"""
+            **kwargs: passed to foldl_to()
+
+        Returns:
+            tuple: (number of messages consumed as int, number of messages produced as int)"""
         def foldl_to_fun(_, m):
             return (None, flatmap_fun(m))
         #
@@ -196,7 +214,10 @@ class Functional:
             target_topic: target topic name
             map_fun: m -> result
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to flatmap_to()"""
+            **kwargs: passed to flatmap_to()
+
+        Returns:
+            tuple: (number of messages consumed as int, number of messages produced as int)"""
         def flatmap_fun(m):
             return [map_fun(m)]
         #
@@ -211,7 +232,10 @@ class Functional:
             target_topic: target topic name
             filter_fun: m -> bool
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to flatmap_to()"""
+            **kwargs: passed to flatmap_to()
+
+        Returns:
+            tuple: (number of messages consumed as int, number of messages produced as int)"""
         def flatmap_fun(m):
             return [m] if filter_fun(m) else []
         #

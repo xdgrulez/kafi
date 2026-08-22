@@ -31,7 +31,10 @@ class Chunker(Serializer):
         """Split any oversized message value into multiple chunk messages, tagged with chunking headers.
 
         Args:
-            m_list: messages to chunk (already serialized to bytes)"""
+            m_list: messages to chunk (already serialized to bytes)
+
+        Returns:
+            list of m: the original messages, or, for oversized values, their chunk messages"""
         m_list1 = []
         if self.chunk_size_bytes_int > 0:
             for m in m_list:

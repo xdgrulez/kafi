@@ -21,7 +21,10 @@ class Dechunker(Deserializer):
         """Reassemble chunked messages, buffering partial chunks until complete; passes non-chunked messages through.
 
         Args:
-            m_list: messages to dechunk (some may carry chunking headers, most won't)"""
+            m_list: messages to dechunk (some may carry chunking headers, most won't)
+
+        Returns:
+            list of m: non-chunked messages plus any messages that were fully reassembled"""
         m_list1 = []
         for m in m_list:
             topic_str = m["topic"]

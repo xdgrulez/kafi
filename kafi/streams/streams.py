@@ -42,7 +42,7 @@ class Streams(TopologyNode):
         """Create a source node backed by a storage topic.
 
         Args:
-            storage: storage backend implementing producer()/consumer() (e.g. Kafka)
+            storage: storage backend implementing consumer() (e.g. Kafka)
             source_str: name of the input source
             topic_str: topic name on storage; defaults to source_str
             **kwargs: passed to storage.consumer() at runtime
@@ -61,7 +61,7 @@ class Streams(TopologyNode):
         """Mark a topology node as a sink backed by a topic.
 
         Args:
-            storage: storage backend implementing producer()/consumer() (e.g. Kafka)
+            storage: storage backend implementing producer() (e.g. Kafka)
             sink_str: name of the output sink
             topic_str: topic name on storage; defaults to sink_str
             **kwargs: passed to storage.producer() at runtime

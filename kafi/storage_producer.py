@@ -50,7 +50,10 @@ class StorageProducer(Chunker):
 
         Args:
             m_list: messages to produce; each a dict with value and optionally key/partition/timestamp/headers
-            **kwargs: passed to produce_impl()"""
+            **kwargs: passed to produce_impl()
+
+        Returns:
+            the result of produce_impl() (implementation-specific: e.g. per-message delivery info)"""
         #
         def serialize(payload, key_bool):
             # Do not serialize if this is a RestProxyProducer object (serialization takes place later on the REST Proxy). 
@@ -75,7 +78,10 @@ class StorageProducer(Chunker):
 
         Args:
             value: a single value, or a list of values to produce
-            **kwargs: "key", "partition", "timestamp", "headers" (each a single value or a list matching value's length)"""
+            **kwargs: "key", "partition", "timestamp", "headers" (each a single value or a list matching value's length)
+
+        Returns:
+            the result of produce_list() (implementation-specific: e.g. per-message delivery info)"""
         key = kwargs["key"] if "key" in kwargs else None
         partition = kwargs["partition"] if "partition" in kwargs else RD_KAFKA_PARTITION_UA
         timestamp = kwargs["timestamp"] if "timestamp" in kwargs else CURRENT_TIME
@@ -111,7 +117,10 @@ class StorageProducer(Chunker):
         """Resolve (key_schema, value_schema, key_schema_id, value_schema_id) from kwargs.
 
         Args:
-            **kwargs: optionally containing key_schema, value_schema, key_schema_id, value_schema_id"""
+            **kwargs: optionally containing key_schema, value_schema, key_schema_id, value_schema_id
+
+        Returns:
+            tuple: (key_schema, value_schema, key_schema_id, value_schema_id)"""
         key_schema_str_or_dict = kwargs["key_schema"] if "key_schema" in kwargs else None
         value_schema_str_or_dict = kwargs["value_schema"] if "value_schema" in kwargs else None
         #

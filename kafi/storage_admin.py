@@ -15,7 +15,10 @@ class StorageAdmin():
         Args:
             pattern: glob pattern(s) matching topic names
             size: if True, include total message count per topic
-            **kwargs: partitions (bool) to include a per-partition breakdown, timeout"""
+            **kwargs: partitions (bool) to include a per-partition breakdown, timeout
+
+        Returns:
+            list of str, or dict: topic names, or a dict keyed by topic name with size and/or per-partition counts, depending on size/partitions"""
         pattern_str_or_str_list = pattern
         size_bool = size
         partitions_bool = "partitions" in kwargs and kwargs["partitions"]
@@ -71,7 +74,10 @@ class StorageAdmin():
 
         Args:
             topic_str_list: topics the timestamps apply to, if partitions_timestamps isn't already per-topic
-            partitions_timestamps: {partition: timestamp} shared across topics, or {topic: {partition: timestamp}}"""
+            partitions_timestamps: {partition: timestamp} shared across topics, or {topic: {partition: timestamp}}
+
+        Returns:
+            dict: {topic: {partition: timestamp}}"""
         first_key_str_or_int = list(partitions_timestamps.keys())[0]
         if isinstance(first_key_str_or_int, int):
             partition_int_timestamp_int_dict = partitions_timestamps
@@ -85,7 +91,10 @@ class StorageAdmin():
         """Replace not-found (-1) offsets with the topic's high watermark minus one.
 
         Args:
-            topic_str_offsets_dict_dict: {topic: {partition: offset}}, possibly containing -1 entries"""
+            topic_str_offsets_dict_dict: {topic: {partition: offset}}, possibly containing -1 entries
+
+        Returns:
+            dict: {topic: {partition: offset}} with -1 entries replaced"""
         for topic_str, offsets_dict in topic_str_offsets_dict_dict.items():
             if any(offset_int == -1 for offset_int in offsets_dict.values()):
                 partition_int_offsets_tuple_dict = self.storage_obj.watermarks(topic_str)[topic_str]

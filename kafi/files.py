@@ -20,7 +20,10 @@ class Files(Pandas):
             fs_obj: filesystem storage to write the file to
             file: destination file path (extension selects the format)
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to cat()/topic_to_df(); "index" controls index columns for tabular formats"""
+            **kwargs: passed to cat()/topic_to_df(); "index" controls index columns for tabular formats
+
+        Returns:
+            int: number of bytes written to the file"""
         if not fs_obj.__class__.__bases__[0].__name__== "FS":
             raise Exception("The target must be a file system.")
         #
@@ -71,7 +74,10 @@ class Files(Pandas):
             storage_obj: storage to produce the topic to
             topic: target topic name
             n: max rows to produce; ALL_MESSAGES for no limit
-            **kwargs: passed to df_to_topic()"""
+            **kwargs: passed to df_to_topic()
+
+        Returns:
+            int: number of rows produced"""
         if not self.__class__.__bases__[0].__name__== "FS":
             raise Exception("The source must be a file system.")
         #

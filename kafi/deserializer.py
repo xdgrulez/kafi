@@ -33,7 +33,10 @@ class Deserializer(SchemaRegistry):
             payload_bytes: raw bytes read from the topic
             type_str: target type, e.g. "avro", "json", "bytes"
             topic_str: topic the message came from
-            key_bool: True if deserializing the key, False for the value"""
+            key_bool: True if deserializing the key, False for the value
+
+        Returns:
+            any: deserialized payload (bytes, str, or dict depending on type_str)"""
         if type_str.lower() == "bytes":
             deserialized_payload = self.bytes_to_bytes(payload_bytes)
         elif type_str.lower() in ["str", "string"]:
@@ -52,18 +55,27 @@ class Deserializer(SchemaRegistry):
         return deserialized_payload
 
     def bytes_to_str(self, bytes):
-        """UTF-8-decode bytes into str (None stays None)."""
+        """UTF-8-decode bytes into str (None stays None).
+
+        Returns:
+            str: UTF-8-decoded str (None if bytes is None/falsy)"""
         if bytes:
             return bytes.decode("utf-8")
         else:
             return bytes
 
     def bytes_to_bytes(self, bytes):
-        """Identity: return bytes unchanged."""
+        """Identity: return bytes unchanged.
+
+        Returns:
+            bytes: bytes, unchanged"""
         return bytes
 
     def bytes_to_dict(self, bytes):
-        """JSON-parse bytes into a dict (None stays None)."""
+        """JSON-parse bytes into a dict (None stays None).
+
+        Returns:
+            dict: parsed dict (None if bytes is None)"""
         if bytes is None:
             return None
         #
@@ -75,7 +87,10 @@ class Deserializer(SchemaRegistry):
         Args:
             bytes: raw Avro-encoded payload
             topic_str: topic the message came from
-            key_bool: True if decoding the key, False for the value"""
+            key_bool: True if decoding the key, False for the value
+
+        Returns:
+            dict: decoded record (None if bytes is None)"""
         if bytes is None:
             return None
         #
@@ -93,7 +108,10 @@ class Deserializer(SchemaRegistry):
             bytes: raw JSON-Schema-encoded payload
             topic_str: topic the message came from
             type_str: target type, e.g. "avro", "json", "bytes"
-            key_bool: True if decoding the key, False for the value"""
+            key_bool: True if decoding the key, False for the value
+
+        Returns:
+            dict: decoded record (None if bytes is None)"""
         if bytes is None:
             return None
         #
@@ -111,7 +129,10 @@ class Deserializer(SchemaRegistry):
             bytes: raw Protobuf-encoded payload
             topic_str: topic the message came from
             type_str: target type, e.g. "avro", "json", "bytes"
-            key_bool: True if decoding the key, False for the value"""
+            key_bool: True if decoding the key, False for the value
+
+        Returns:
+            dict: decoded message (None if bytes is None)"""
         if bytes is None:
             return None
         #
@@ -129,7 +150,10 @@ class Deserializer(SchemaRegistry):
         Args:
             bytes: raw payload
             type_str: target type, e.g. "avro", "json", "bytes"
-            key_bool: True if decoding the key, False for the value"""
+            key_bool: True if decoding the key, False for the value
+
+        Returns:
+            deserializer or None: confluent_kafka deserializer instance (None for bytes/str/json)"""
         deser_from_dict = self.key_deser_from_dict if key_bool else self.value_deser_from_dict
         deser_conf = self.key_deser_conf if key_bool else self.value_deser_conf
         deser_rule_conf = self.key_deser_rule_conf if key_bool else self.value_deser_rule_conf
@@ -205,6 +229,9 @@ class Deserializer(SchemaRegistry):
 
         Args:
             bytes: raw payload (used to read the embedded schema id if no header guid)
+
+        Returns:
+            str: schema source
         """
         schema_id_int = int.from_bytes(bytes[1:5], "big")
         schema_dict = self.get_schema(schema_id_int)
@@ -220,7 +247,10 @@ class Deserializer(SchemaRegistry):
 
         Args:
             schema_id_int: schema registry id, used to name the generated module
-            schema_str: .proto schema source"""
+            schema_str: .proto schema source
+
+        Returns:
+            type: generated Python protobuf message class"""
         path_str = f"/{tempfile.gettempdir()}/kafi/protobuf/{self.storage_obj.config_str}"
         os.makedirs(path_str, exist_ok=True)
         file_str = f"schema_{schema_id_int}.proto"

@@ -14,7 +14,10 @@ class AddOns(Functional):
         Args:
             topic: topic name
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: passed to foldl()"""
+            **kwargs: passed to foldl()
+
+        Returns:
+            list of m: latest message per key"""
         def foldl_fun(acc, m):
             key_hash_int_m_dict = acc
             #
@@ -46,8 +49,12 @@ class AddOns(Functional):
             target_storage: storage to produce results to
             target_topic: target topic name
             n: max messages to consume; ALL_MESSAGES for no limit
-            **kwargs: source_*/target_*-prefixed kwargs, split via copy_kwargs()"""
+            **kwargs: source_*/target_*-prefixed kwargs, split via copy_kwargs()
+
+        Returns:
+            tuple: (list of produced key bytes, list of produced value bytes), as returned by produce_list()"""
         source_kwargs = copy_kwargs("source", **kwargs)
+        #
         target_kwargs = copy_kwargs("target", **kwargs)
         #
         m_list = self.compact(topic, n, **source_kwargs)
@@ -66,7 +73,10 @@ class AddOns(Functional):
         Args:
             topic_str: topic name
             n: number of trailing messages to re-produce
-            **kwargs: passed to tail()/producer()"""
+            **kwargs: passed to tail()/producer()
+
+        Returns:
+            list of m: the messages that were re-produced"""
         n_int = n
         #
         m_list = self.tail(topic_str, type="bytes", n=n_int, **kwargs)
@@ -85,7 +95,10 @@ class AddOns(Functional):
             pattern: glob pattern(s) or explicit topic name(s)
             partitions: new partition count; None to keep the existing count (or 1 for new topics)
             config: topic config overrides to apply on top of the existing config
-            **kwargs: passed to create()"""
+            **kwargs: passed to create()
+
+        Returns:
+            list of str: names of the (re-)created topics"""
         pattern_str_or_str_list = pattern
         #
         topic_str_list = self.admin.list_topics(pattern_str_or_str_list)
@@ -135,7 +148,10 @@ class AddOns(Functional):
             pattern: glob pattern(s) matching topic names
             source_group: consumer group to copy offsets from
             target_storage: storage the target group lives on
-            target_group: consumer group to copy offsets to"""
+            target_group: consumer group to copy offsets to
+
+        Returns:
+            dict: committed offsets for the target group, as returned by group_offsets()"""
         source_group_str = source_group
         target_group_str = target_group
         #
@@ -163,7 +179,10 @@ class AddOns(Functional):
             pattern: glob pattern(s) matching topic names
             ts: start timestamp (ms)
             end_ts: end timestamp (ms), must be >= ts
-            **kwargs: passed to partitions()/offsets_for_times()"""
+            **kwargs: passed to partitions()/offsets_for_times()
+
+        Returns:
+            dict: {topic: number of messages between ts and end_ts}"""
         ts_int = ts
         end_ts_int = end_ts
         #
@@ -193,7 +212,10 @@ class AddOns(Functional):
 
         Args:
             topic_str: topic name
-            **kwargs: passed to foldl()"""
+            **kwargs: passed to foldl()
+
+        Returns:
+            tuple: ({partition: {offset: (key_size, value_size)}}, number of messages as int)"""
         def agg(partition_int_offset_int_size_int_tuple_dict_dict, m):
             partition_int = m["partition"]
             offset_int = m["offset"]
@@ -216,7 +238,10 @@ class AddOns(Functional):
 
         Args:
             topic_str: topic name
-            **kwargs: passed to message_size()"""
+            **kwargs: passed to message_size()
+
+        Returns:
+            dict: {messages, total_size, average_size, max_size, min_size}"""
         partition_int_offset_int_size_int_tuple_dict_dict, n_int = self.message_size(topic_str, **kwargs)
         #
         total_size_int = 0

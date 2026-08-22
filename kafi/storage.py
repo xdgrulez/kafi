@@ -107,59 +107,101 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
     #
 
     def progress_num_messages(self, new_value=None): # int
-        """Get/set how many messages trigger a progress print (int)."""
+        """Get/set how many messages trigger a progress print (int).
+
+        Returns:
+            int: current value"""
         return self.get_set_config("progress.num.messages", new_value)
 
     def consume_batch_size(self, new_value=None): # int
-        """Get/set the batch size used when consuming (int)."""
+        """Get/set the batch size used when consuming (int).
+
+        Returns:
+            int: current value"""
         return self.get_set_config("consume.batch.size", new_value)
     
     def produce_batch_size(self, new_value=None): # int
-        """Get/set the batch size used when producing (int)."""
+        """Get/set the batch size used when producing (int).
+
+        Returns:
+            int: current value"""
         return self.get_set_config("produce.batch.size", new_value)
 
     def verbose(self, new_value=None): # int
-        """Get/set the verbosity level (int)."""
+        """Get/set the verbosity level (int).
+
+        Returns:
+            int: current value"""
         return self.get_set_config("verbose", new_value)
 
     def auto_offset_reset(self, new_value=None): # str
-        """Get/set the default consumer offset reset policy, e.g. "earliest" (str)."""
+        """Get/set the default consumer offset reset policy, e.g. "earliest" (str).
+
+        Returns:
+            str: current value"""
         return self.get_set_config("auto.offset.reset", new_value)
 
     def consumer_group_prefix(self, new_value=None): # str
-        """Get/set the prefix prepended to auto-generated consumer group names (str)."""
+        """Get/set the prefix prepended to auto-generated consumer group names (str).
+
+        Returns:
+            str: current value"""
         return self.get_set_config("consumer.group.prefix", new_value)
 
     def enable_auto_commit(self, new_value=None): # bool
-        """Get/set whether consumers auto-commit offsets (bool)."""
+        """Get/set whether consumers auto-commit offsets (bool).
+
+        Returns:
+            bool: current value"""
         return self.get_set_config("enable.auto.commit", new_value)
 
     def commit_after_processing(self, new_value=None): # bool
-        """Get/set whether offsets are committed after (True) or before (False) processing (bool)."""
+        """Get/set whether offsets are committed after (True) or before (False) processing (bool).
+
+        Returns:
+            bool: current value"""
         return self.get_set_config("commit.after.processing", new_value)
 
     def isolation_level(self, new_value=None): # str
-        """Get/set the consumer transaction isolation level, e.g. "read_uncommitted" (str)."""
+        """Get/set the consumer transaction isolation level, e.g. "read_uncommitted" (str).
+
+        Returns:
+            str: current value"""
         return self.get_set_config("isolation.level", new_value)
 
     def transactional_id_prefix(self, new_value=None): # str
-        """Get/set the prefix prepended to auto-generated transactional ids (str)."""
+        """Get/set the prefix prepended to auto-generated transactional ids (str).
+
+        Returns:
+            str: current value"""
         return self.get_set_config("transactional.id.prefix", new_value)
 
     def key_type(self, new_value=None): # str
-        """Get/set the default (de)serialization type for keys, e.g. "str" (str)."""
+        """Get/set the default (de)serialization type for keys, e.g. "str" (str).
+
+        Returns:
+            str: current value"""
         return self.get_set_config("key.type", new_value)
 
     def value_type(self, new_value=None): # str
-        """Get/set the default (de)serialization type for values, e.g. "json" (str)."""
+        """Get/set the default (de)serialization type for values, e.g. "json" (str).
+
+        Returns:
+            str: current value"""
         return self.get_set_config("value.type", new_value)
 
     def cluster_kind(self, new_value=None): # str
-        """Get/set the underlying cluster kind, e.g. "kafka" (str)."""
+        """Get/set the underlying cluster kind, e.g. "kafka" (str).
+
+        Returns:
+            str: current value"""
         return self.get_set_config("cluster.kind", new_value)
 
     def topic_ignore_patterns(self, new_value=None): # bool
-        """Get/set glob patterns for topics hidden from topic listings (list of str)."""
+        """Get/set glob patterns for topics hidden from topic listings (list of str).
+
+        Returns:
+            list of str: current value"""
         return self.get_set_config("topic.ignore.patterns", new_value)
 
     #
@@ -170,7 +212,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         Args:
             config_key_str: dotted config key, e.g. "verbose"
             new_value: if not None, stored under config_key_str before returning
-            dict: config dict to read/write; defaults to self.kafi_config_dict"""
+            dict: config dict to read/write; defaults to self.kafi_config_dict
+
+        Returns:
+            any: the (possibly newly set) config value"""
         dict = self.kafi_config_dict if dict is None else dict
         #
         if new_value is not None:
@@ -184,7 +229,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         """Load a YAML config file by name from the KAFI_HOME config path, and validate its sections.
 
         Args:
-            config_str: config file name (without .yaml/.yml extension)"""
+            config_str: config file name (without .yaml/.yml extension)
+
+        Returns:
+            dict: loaded and validated config"""
         home_str = os.environ.get("KAFI_HOME")
         if not home_str:
             home_str = "."
@@ -214,7 +262,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
         Args:
             pattern: glob pattern over config names
-            verbose: if True, return {config_str: config_dict} instead of just names"""
+            verbose: if True, return {config_str: config_dict} instead of just names
+
+        Returns:
+            list of str, or dict: sorted config names, or {config name: config dict} if verbose"""
         pattern_str = pattern
         verbose_bool = verbose
         #
@@ -239,26 +290,41 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
             return config_str_list
 
     def is_headers_tuple_list(self, headers):
-        """True if headers is a non-empty list of (str, value) tuples."""
+        """True if headers is a non-empty list of (str, value) tuples.
+
+        Returns:
+            bool: True if headers is a non-empty list of (str, value) tuples"""
         return isinstance(headers, list) and len(headers) > 0 and all(isinstance(header_tuple, tuple) and len(header_tuple) == 2 and isinstance(header_tuple[0], str) for header_tuple in headers)
 
     def is_headers_dict(self, headers):
-        """True if headers is a non-empty dict with str keys."""
+        """True if headers is a non-empty dict with str keys.
+
+        Returns:
+            bool: True if headers is a non-empty dict with str keys"""
         return isinstance(headers, dict) and len(headers) > 0 and all(isinstance(header_key, str) for header_key in headers.keys())
 
     def is_headers_list_list(self, headers):
-        """True if headers is a non-empty list of [str, value] 2-element lists."""
+        """True if headers is a non-empty list of [str, value] 2-element lists.
+
+        Returns:
+            bool: True if headers is a non-empty list of [str, value] 2-element lists"""
         return isinstance(headers, list) and len(headers) > 0 and all(isinstance(header_list, list) and len(header_list) == 2 and isinstance(header_list[0], str) for header_list in headers)
 
     def is_headers(self, headers):
-        """True if headers is None or any of the accepted header shapes."""
+        """True if headers is None or any of the accepted header shapes.
+
+        Returns:
+            bool: True if headers is None or any of the accepted header shapes"""
         return headers == None or self.is_headers_tuple_list(headers) or self.is_headers_dict(headers) or self.is_headers_list_list(headers)
 
     def headers_to_headers_str_bytes_tuple_list(self, headers):
         """Normalize headers (dict, tuple-list, or list-list) into a list of (str, bytes).
 
         Args:
-            headers: message headers in any of the accepted shapes, or None"""
+            headers: message headers in any of the accepted shapes, or None
+
+        Returns:
+            list of tuple, or None: [(str, bytes), ...] (None if headers was None)"""
         if headers is None:
             headers_str_bytes_tuple_list = None
         elif self.is_headers_tuple_list(headers):
@@ -275,7 +341,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
     #
 
     def get_id(self):
-        """Unique id for this storage: (dir_str, config_str)."""
+        """Unique id for this storage: (dir_str, config_str).
+
+        Returns:
+            tuple: (dir_str, config_str)"""
         return (self.dir_str, self.config_str)
 
     # Topics
@@ -286,13 +355,19 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         Args:
             pattern: glob pattern(s) matching topic names; None matches all
             size: if True, include per-topic size
-            **kwargs: passed through to the admin client"""
+            **kwargs: passed through to the admin client
+
+        Returns:
+            as returned by admin.topics(): list of str, or dict, depending on size/partitions kwargs"""
         return self.admin.topics(pattern, size, **kwargs)
     
     ls = topics
 
     def l(self, pattern=None, size=True, **kwargs):
-        """Alias for topics() with size=True by default."""
+        """Alias for topics() with size=True by default.
+
+        Returns:
+            as returned by admin.topics(): dict of topic sizes (and partitions, if requested)"""
         return self.admin.topics(pattern=pattern, size=size, **kwargs)
 
     ll = l
@@ -301,7 +376,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         """Whether a topic exists.
 
         Args:
-            topic: topic name"""
+            topic: topic name
+
+        Returns:
+            bool: True if the topic exists"""
         topic_str = topic
         #
         return self.admin.topics(topic_str) != []
@@ -313,7 +391,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
         Args:
             pattern: glob pattern(s) matching topic names
-            **kwargs: passed through to the admin client"""
+            **kwargs: passed through to the admin client
+
+        Returns:
+            as returned by admin.watermarks(): dict of {topic: {partition: (low, high)}}"""
         return self.admin.watermarks(pattern, **kwargs)
 
     def delete_records(self, pattern_or_offsets, **kwargs):
@@ -321,7 +402,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
         Args:
             pattern_or_offsets: topic pattern, or explicit {topic: {partition: offset}} map
-            **kwargs: passed through to the admin client"""
+            **kwargs: passed through to the admin client
+
+        Returns:
+            as returned by admin.delete_records()"""
         return self.admin.delete_records(pattern_or_offsets, **kwargs)
 
     def lags(self, group_pattern, topic_pattern, **kwargs):
@@ -330,7 +414,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
       Args:
           group_pattern: glob pattern(s) matching consumer group names
           topic_pattern: glob pattern(s) matching topic names
-          **kwargs: passed through to the admin client's watermarks()"""
+          **kwargs: passed through to the admin client's watermarks()
+
+      Returns:
+          dict: {group: {topic: {partition: lag}}}"""
       group_offsets = self.admin.group_offsets(group_pattern)
       topic_str_partition_int_offsets_tuple_dict_dict = self.admin.watermarks(topic_pattern, **kwargs)
       #
@@ -348,7 +435,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         Args:
             pattern: glob pattern(s) matching topic names
             config: dict of config overrides to apply; None to just read
-            **kwargs: passed through to the admin client"""
+            **kwargs: passed through to the admin client
+
+        Returns:
+            as returned by admin.config()"""
         return self.admin.config(pattern, config, **kwargs)
 
     def create(self, topic, partitions=1, **kwargs):
@@ -357,7 +447,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         Args:
             topic: topic name
             partitions: number of partitions
-            **kwargs: passed through to the admin client"""
+            **kwargs: passed through to the admin client
+
+        Returns:
+            as returned by admin.create()"""
         return self.admin.create(topic, partitions, **kwargs)
     
     touch = create
@@ -367,7 +460,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
         Args:
             pattern: glob pattern(s) matching topic names
-            **kwargs: passed through to the admin client"""
+            **kwargs: passed through to the admin client
+
+        Returns:
+            as returned by admin.delete()"""
         return self.admin.delete(pattern, **kwargs)
 
     rm = delete
@@ -378,7 +474,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         Args:
             pattern: glob pattern(s) matching topic names
             partitions_timestamps: {partition: timestamp_ms} to resolve
-            **kwargs: passed through to the admin client"""
+            **kwargs: passed through to the admin client
+
+        Returns:
+            as returned by admin.offsets_for_times()"""
         return self.admin.offsets_for_times(pattern, partitions_timestamps, **kwargs)
 
     def partitions(self, pattern, partitions=None, verbose=False, **kwargs):
@@ -388,7 +487,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
             pattern: glob pattern(s) matching topic names
             partitions: new partition count; None to just read
             verbose: if True, return more detail
-            **kwargs: passed through to the admin client"""
+            **kwargs: passed through to the admin client
+
+        Returns:
+            as returned by admin.partitions()"""
         return self.admin.partitions(pattern, partitions, verbose, **kwargs)
 
     # Groups
@@ -399,7 +501,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         Args:
             pattern: glob pattern(s) matching group names
             state_pattern: glob pattern(s) matching group state
-            state: if True, include group state"""
+            state: if True, include group state
+
+        Returns:
+            as returned by admin.groups()"""
         return self.admin.groups(pattern, state_pattern, state)
     
     gls = groups
@@ -409,7 +514,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
         Args:
             pattern: glob pattern(s) matching group names
-            state_pattern: glob pattern(s) matching group state"""
+            state_pattern: glob pattern(s) matching group state
+
+        Returns:
+            as returned by admin.describe_groups()"""
         return self.admin.describe_groups(pattern, state_pattern)
     
     def delete_groups(self, pattern, state_pattern="*"):
@@ -417,7 +525,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
         Args:
             pattern: glob pattern(s) matching group names
-            state_pattern: glob pattern(s) matching group state"""
+            state_pattern: glob pattern(s) matching group state
+
+        Returns:
+            as returned by admin.delete_groups()"""
         return self.admin.delete_groups(pattern, state_pattern)
     
     grm = delete_groups
@@ -428,7 +539,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         Args:
             pattern: glob pattern(s) matching group names
             group_offsets: offsets to commit; None to just read
-            state_pattern: glob pattern(s) matching group state"""
+            state_pattern: glob pattern(s) matching group state
+
+        Returns:
+            as returned by admin.group_offsets()"""
         return self.admin.group_offsets(pattern, group_offsets, state_pattern)
 
     #
@@ -438,7 +552,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
         Args:
             topic: topic name
-            **kwargs: passed to get_consumer()"""
+            **kwargs: passed to get_consumer()
+
+        Returns:
+            consumer: storage-specific consumer instance"""
         consumer = self.get_consumer(topic, **kwargs)
         #
         return consumer
@@ -448,7 +565,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
         Args:
             topic: topic name
-            **kwargs: passed to get_producer()"""
+            **kwargs: passed to get_producer()
+
+        Returns:
+            producer: storage-specific producer instance"""
         producer = self.get_producer(topic, **kwargs)
         #
         return producer
@@ -459,7 +579,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         """Resolve the (key_type, value_type) to use, applying kwargs overrides over the defaults.
 
         Args:
-            **kwargs: optional type (sets both key_type and value_type), key_type, value_type"""
+            **kwargs: optional type (sets both key_type and value_type), key_type, value_type
+
+        Returns:
+            tuple: (key_type, value_type)"""
         # Default key and value types.
         key_type = self.key_type()
         value_type = self.value_type()
@@ -481,7 +604,10 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
 
         Args:
             topic_str_list: candidate topic names
-            pattern_str_or_str_list: glob pattern(s) to match against"""
+            pattern_str_or_str_list: glob pattern(s) to match against
+
+        Returns:
+            list of str: matching topic names, with internally-ignored ones excluded"""
         matched_topic_str_list = pattern_match(topic_str_list, pattern_str_or_str_list)
         #
         to_be_ignored_topic_str_list = pattern_match(topic_str_list, self.topic_ignore_patterns())
