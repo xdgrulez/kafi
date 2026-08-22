@@ -197,7 +197,7 @@ class Streams(TopologyNode):
             producer = checkpoint_storage.producer(checkpoint_topic_str, type="bytes", chunk_size_bytes=chunk_size_bytes_int, **kwargs)
             producer.produce(compressed_checkpoint_dict_bytes, key=built_tn.get_id())
             producer.close()
-            logger.info("...saving checkpoint done (%d KB compressed, %d uncompressed).", len(compressed_checkpoint_dict_bytes) / 1024, len(checkpoint_dict_bytes) / 1024)
+            logger.info("...saving checkpoint done (%d KB compressed, %d KB uncompressed).", len(compressed_checkpoint_dict_bytes) / 1024, len(checkpoint_dict_bytes) / 1024)
         #
         def load_checkpoint(built_tn):
             checkpoint_group_str = group_str + checkpoint_suffix_str
@@ -219,10 +219,12 @@ class Streams(TopologyNode):
                 built_tn.set_state(checkpoint_dict["state"])
                 source_str_offsets_dict_dict = checkpoint_dict["offsets"]
                 #
-                checkpoint_offsets = {checkpoint_topic_str: {"partition": checkpoint_m["partition"], "offset": checkpoint_m["offset"] + 1}}
-                checkpoint_storage.commit(checkpoint_offsets)
+                checkpoint_offsets = {checkpoint_topic_str: {checkpoint_m["partition"]: checkpoint_m["offset"] + 1}}
+                checkpoint_consumer = checkpoint_storage.consumer(checkpoint_topic_str, **checkpoint_kwargs)
+                checkpoint_consumer.commit(checkpoint_offsets)
+                checkpoint_consumer.close()
                 #
-                logger.info("...loading checkpoint done (%d KB compressed, %d uncompressed).", len(compressed_checkpoint_dict_bytes) / 1024, len(checkpoint_dict_bytes) / 1024)
+                logger.info("...loading checkpoint done (%d KB compressed, %d KB uncompressed).", len(compressed_checkpoint_dict_bytes) / 1024, len(checkpoint_dict_bytes) / 1024)
             #
             return source_str_offsets_dict_dict
         #

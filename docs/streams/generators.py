@@ -59,7 +59,7 @@ class CustomerGenerator:
             m = {
                 "key": str(customer_id_int),
                 "value": {"id": customer_id_int,
-                        "name": self.customer_id_int_name_str_dict[customer_id_int]}
+                          "name": self.customer_id_int_name_str_dict[customer_id_int]}
             }
             #
             if self.debezium_bool:
@@ -93,9 +93,9 @@ class OrderGenerator:
             m = {
                 "key": order_id_str,
                 "value": {"order_id": order_id_str,
-                        "customer_id": random.randint(0, self.customers_int - 1),
-                        "price": random.randint(1, 10000) / 100,
-                        "ts": self.ts_int},
+                          "customer_id": random.randint(0, self.customers_int - 1),
+                          "price": random.randint(1, 10000) / 100,
+                          "ts": self.ts_int},
             }
             #
             self.ts_int += self.ts_step_int
