@@ -14,7 +14,7 @@ class TestTopologyNodeBase(unittest.TestCase):
                 r_list = self.generate(source_str, batch_size_int)
                 self.source_str_input_r_list_dict[source_str] += r_list
                 #
-                built_tn.push(source_str, r_list)
+                built_tn.push({source_str: r_list})
             #
             sink_str_output_any_dict = built_tn.latest()
             for sink_str in built_tn._sink_str_list:

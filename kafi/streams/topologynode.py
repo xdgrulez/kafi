@@ -1293,9 +1293,9 @@ class TopologyNode:
         Args:
             time_tn: node whose ts drive the watermark used for triggering
             ts_fun: r -> ts function
-            trigger_fun: ((r, window_end ts), latest ts) -> bool, decides when to emit a window
-            project_fun: function building the output r
-            positive_only_bool: if True, suppress retractions (w <= 0) from the output
+            trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
+            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1315,18 +1315,18 @@ class TopologyNode:
     ###
 
     def group_by_agg_tumbling(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
-        """Tumbling window aggregation, emitted once each window closes.
+        """Tumbling window aggregation, emitted once each window closes or using a custom trigger function.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
-            trigger_fun: ((r, window_end ts), latest ts) -> bool, decides when to emit a window
-            trigger_project_fun: function attaching window_end to the output r
-            trigger_positive_only_bool: if True, suppress retractions (w <= 0) from the output
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg_r, r) -> agg_r - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: key_any, agg_r -> r - projection function
+            trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
+            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1353,19 +1353,19 @@ class TopologyNode:
     #
 
     def group_by_agg_hopping(self, ts_fun, size_int, hop_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
-        """Hopping window aggregation, emitted once each window closes.
+        """Hopping window aggregation, emitted once each window closes or using a custom trigger function.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            hop_int: hop/advance between windows, hop_int <= size_int
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
-            trigger_fun: ((r, window_end ts), latest ts) -> bool, decides when to emit a window
-            trigger_project_fun: function attaching window_end to the output r
-            trigger_positive_only_bool: if True, suppress retractions (w <= 0) from the output
+            hop_int: hop size
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg_r, r) -> agg_r - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: key_any, agg_r -> r - projection function
+            trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
+            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1393,19 +1393,19 @@ class TopologyNode:
     #
 
     def group_by_agg_cumulative(self, ts_fun, size_int, step_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
-        """Cumulate window aggregation, emitted once each window closes.
+        """Cumulative window aggregation, emitted once each window closes or using a custom trigger function.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            step_int: step between growing cumulate windows
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
-            trigger_fun: ((r, window_end ts), latest ts) -> bool, decides when to emit a window
-            trigger_project_fun: function attaching window_end to the output r
-            trigger_positive_only_bool: if True, suppress retractions (w <= 0) from the output
+            step_int: step size
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg_r, r) -> agg_r - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: key_any, agg_r -> r - projection function
+            trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
+            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1433,17 +1433,18 @@ class TopologyNode:
     #
 
     def group_by_agg_sliding(self, ts_fun, size_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
-        """Sliding window aggregation; one row per currently open window.
+        """Sliding window aggregation; emitted once each window closes or using a custom trigger function.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
-            trigger_project_fun: function attaching window_end to the output r
-            trigger_positive_only_bool: if True, suppress retractions (w <= 0) from the output
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg_r, r) -> agg_r - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: key_any, agg_r -> r - projection function
+            trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
+            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1463,18 +1464,19 @@ class TopologyNode:
     #
 
     def group_by_agg_session(self, ts_fun, gap_int, key_fun, agg_fun, agg_initial_any, project_fun, trigger_fun=lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1], trigger_project_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]}, trigger_positive_only_bool=True, **kwargs):
-        """Session window aggregation, emitted once each session closes.
+        """Session window aggregation, emitted once each session closes or using a custom trigger function.
         
         Args:
-            ts_fun: r -> ts function
-            gap_int: inactivity gap that closes a session
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
-            trigger_fun: ((r, window_end ts), latest ts) -> bool, decides when to emit a window
-            trigger_project_fun: function attaching window_end to the output r
-            trigger_positive_only_bool: if True, suppress retractions (w <= 0) from the output
+            ts_fun: r -> ts - get timestamp function
+            size_int: window size
+            gap_int: gap size
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg_r, r) -> agg_r - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: key_any, agg_r -> r - projection function
+            trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
+            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1509,7 +1511,7 @@ class TopologyNode:
         Args:
             g: ZSetAddition group used to combine Z-sets
             evaluator: pydbsp Evaluator running the circuit
-            i_in: node ID to lift into the circuit
+            nodeId: node ID to lift into the circuit
         Returns:
             nodeId: the same pydbsp node (if already lifted) or the lifted pydbsp node"""
         return nodeId if evaluator.frontiers()[nodeId].lattice.nestedness == 2 else LiftStreamIntroduction(group=g).connect(evaluator.circuit, (nodeId,))
@@ -1819,7 +1821,7 @@ class TopologyNode:
     ###
 
     def __foreach(self, foreach_fun):
-        """Visit every node bottom-up and apply a procedure.
+        """Visit every node from this topology node upstream and apply a side-effect.
         
         Args:
             foreach_fun: tn -> None function applied to every node"""
@@ -1837,7 +1839,7 @@ class TopologyNode:
         ___foreach(self)
 
     def __filter(self, filter_fun):
-        """Collect nodes matching a predicate.
+        """Collect nodes matching a predicate from this topology node upstream.
         
         Args:
             filter_fun: tn -> bool - filter predicate
@@ -1866,21 +1868,21 @@ class TopologyNode:
     ###
 
     def get_id(self):
-        """This node's unique ID.
+        """Get this node's unique ID.
 
         Returns:
             id_str: the ID of this topology node"""
         return self._id_str
     
     def get_name(self):
-        """This node's name.
+        """Get this node's name.
         
         Returns:
             name_str: the name of this topology node"""
         return self._name_str
 
     def get_mothers(self):
-        """This node's direct upstream nodes.
+        """Get this node's direct upstream nodes.
         
         Returns:
             mother_tn_set: the mothers of this topology node"""
@@ -1889,7 +1891,7 @@ class TopologyNode:
     #
 
     def get_node_by_id(self, id_str):
-        """Find a node in the graph by id.
+        """Find a node in the graph from this topology node upstream by id.
         
         Args:
             id_str: node id to search for
@@ -1903,7 +1905,7 @@ class TopologyNode:
             return list(tn_set)[0]
     
     def get_node_by_name(self, name_str):
-        """Find a node in the graph by name.
+        """Find a node in the graph from this topology node upstream by name.
         
         Args:
             name_str: name to search for
@@ -1917,7 +1919,7 @@ class TopologyNode:
             return list(tn_set)[0]
 
     def get_source_nodes(self):
-        """All source nodes, keyed by source name.
+        """Get all source nodes from this topology node upstream, keyed by source name.
         
         Returns:
             name_str_tn_dict: a dictionary mapping the names of the sources to the corresponding topology nodes"""
@@ -1928,7 +1930,7 @@ class TopologyNode:
         return name_str_tn_dict
 
     def get_sink_nodes(self):
-        """All sink nodes, keyed by sink name.
+        """Get all sink nodes from this topology node upstream, keyed by sink name.
         
         Returns:
             name_str_tn_dict: a dictionary mapping the names of the sinks to the corresponding topology nodes"""
@@ -1990,12 +1992,12 @@ class TopologyNode:
     #
 
     def topology(self, include_ids=False):
-        """Render the graph as a nested expression string.
+        """Render the graph from this topology node upstream as a nested expression string.
         
         Args:
             include_ids: if True, include node ids in the rendered graph
         Returns:
-            str: the graph from this topology node as a nested expression string"""
+            str: the graph from this topology node upstream as a nested expression string"""
         def _topology(tn, visited_tn_set):
             if tn in visited_tn_set:
                 if include_ids:
@@ -2033,12 +2035,12 @@ class TopologyNode:
         return _topology(self, set())
 
     def mermaid(self, include_ids=False):
-        """Render the graph as a Mermaid diagram.
+        """Render the graph from this topology node upstream as a Mermaid diagram.
         
         Args:
             include_ids: if True, include node ids in the rendered graph
         Returns:
-            str: the graph from this topology node as a Mermaid diagram"""
+            str: the graph upstream from this topology node as a Mermaid diagram"""
         include_ids_bool = include_ids
         mermaid_edge_str_set = set()
         visited_tn_set = set()
