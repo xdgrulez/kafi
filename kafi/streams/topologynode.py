@@ -752,7 +752,7 @@ class TopologyNode:
             tn._output_nodeId = deltaLiftedDeltaLiftedDistinct_nodeId
         #
         current_class = type(self)
-        tn = current_class("diff_op", {self, right_tn}, _build_fun, **kwargs)
+        tn = current_class("minus_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
 
@@ -1555,13 +1555,13 @@ class TopologyNode:
     #
 
     @staticmethod
-    def _build(*sink_tn_tuple):
-        """Wire sink nodes into one shared circuit and evaluator.
+    def _merge_sinks(*sink_tn_tuple):
+        """Merge sinks.
         
         Args:
-            *sink_tn_tuple: one or more sink tn to build
+            *sink_tn_tuple: one or more sink tn to merge
         Returns:
-            built_tn: the built topology node"""
+            built_tn: the built topology node after the sink merge step"""
         sink_str_sink_tn_tuple_list = [(sink_tn._sink_str, sink_tn) for sink_tn in sink_tn_tuple if sink_tn._sink_str is not None]
         if sink_str_sink_tn_tuple_list == []:
             if len(sink_tn_tuple) == 1:
@@ -1572,23 +1572,23 @@ class TopologyNode:
         head_sink_str_sink_tn_tuple, *tail_sink_str_sink_tn_tuple_list = sink_str_sink_tn_tuple_list
         #
         head_sink_str, head_sink_tn = head_sink_str_sink_tn_tuple
-        built_tn = head_sink_tn.map(lambda r: (head_sink_str, r))
-        built_tn._name_str = f"sink_{head_sink_str}"
+        merged_tn = head_sink_tn.map(lambda r: (head_sink_str, r))
+        merged_tn._name_str = f"sink_{head_sink_str}"
         #
         # We need this little factory to avoid unwanted variable shadowing for sink_str in the loop below.
         def get_map_fun(sink_str):
             return lambda r: (sink_str, r)
         #
         for sink_str, sink_built_tn in tail_sink_str_sink_tn_tuple_list:
-            built_tn = built_tn.merge(sink_built_tn.map(get_map_fun(sink_str)))
-            built_tn._name_str = f"sink_{sink_str}"
+            merged_tn = merged_tn.merge(sink_built_tn.map(get_map_fun(sink_str)))
+            merged_tn._name_str = f"sink_{sink_str}"
         #
         sink_str_list = [sink_str for sink_str, _ in sink_str_sink_tn_tuple_list]
-        built_tn._sink_str_list = sink_str_list
+        merged_tn._sink_str_list = sink_str_list
         #
-        return built_tn
+        return merged_tn
 
-    def _get_evaluator(self):
+    def _create_evaluator(self):
         """Create a pydbsp evaluator for the topology node.
         
         Returns:
@@ -1603,7 +1603,7 @@ class TopologyNode:
 
     @staticmethod
     def build(*sink_tn_tuple):
-        """Build the circuit for one or more sink nodes.
+        """Build: Merge the sinks and build the pydbsp circuit for the topology.
         
         Args:
             *sink_tn_tuple: one or more sink tn to build
@@ -1612,16 +1612,18 @@ class TopologyNode:
         if sink_tn_tuple is None:
             raise Exception("At least one sink node required.")
         #
-        built_tn = TopologyNode._build(*sink_tn_tuple)
+        merged_tn = TopologyNode._merge_sinks(*sink_tn_tuple)
         #
         def _reset_fun():
-            evaluator = built_tn._get_evaluator()
+            evaluator = merged_tn._create_evaluator()
             #
-            built_tn.__foreach(lambda tn: tn._build_fun(evaluator))
+            merged_tn.__foreach(lambda tn: tn._build_fun(evaluator))
         #
         _reset_fun()
         #
-        built_tn._reset_fun = _reset_fun
+        merged_tn._reset_fun = _reset_fun
+        #
+        built_tn = merged_tn
         #
         return built_tn
 

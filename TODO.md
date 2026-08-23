@@ -1,6 +1,5 @@
 * mehr mermaid
 * abgleich docstrings/notebooks (docstrings = single source of truth)
-* guarantees als separates chapter
 * texte durchgehen
 
 # Kafi
