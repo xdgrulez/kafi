@@ -981,7 +981,7 @@ class TopologyNode:
         return tn
 
     def expire_cumulative(self, ts_fun, size_int, step_int, allowed_lateness_int=0, **kwargs):
-        """Expire records once past their cumulate window.
+        """Expire records once past their cumulative window.
         
         Args:
             ts_fun: r -> ts - get timestamp function

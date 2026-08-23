@@ -31,7 +31,8 @@ class Test(TestSingleStorageBase):
     def test_compaction(self):
         pass
 
-    #
+    def test_chunking_incomplete(self):
+        pass
 
     def test_transaction_commit(self):
         pass

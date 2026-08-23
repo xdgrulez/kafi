@@ -321,11 +321,12 @@ def _get_built_tn_datagen_window(get_order_source_tn_fun,
         case "cumulative":
             retention = lambda tn: tn.expire_cumulative(ts_fun,
                                                         window_dict["size"],
-                                                        window_dict["advance"],
+                                                        window_dict["step"],
                                                         window_dict["allowed_lateness"])
         case "sliding":
             retention = lambda tn: tn.expire_sliding(ts_fun,
-                                                     window_dict["size"])
+                                                     window_dict["size"],
+                                                     window_dict["allowed_lateness"])
         case "session":
             retention = lambda tn: tn.expire_session(ts_fun,
                                                      window_dict["max_session"],
@@ -386,41 +387,45 @@ def _get_built_tn_datagen_window(get_order_source_tn_fun,
                 agg_fun,
                 agg_initial_any,
                 project_fun,
-                trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
+                trigger_projection_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
         case "hopping":
-            window_tn = join_2_tn.window_hopping(ts_fun,
-                                                 window_dict["size"],
-                                                 window_dict["hop"],
-                                                 key_fun,
-                                                 agg_fun,
-                                                 agg_initial_any,
-                                                 project_fun,
-                                                 trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
+            window_tn = join_2_tn.group_by_agg_hopping(
+                ts_fun,
+                window_dict["size"],
+                window_dict["hop"],
+                key_fun,
+                agg_fun,
+                agg_initial_any,
+                project_fun,
+                trigger_projection_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
         case "cumulative":
-            window_tn = join_2_tn.window_cumulative(ts_fun,
-                                                    window_dict["size"],
-                                                    window_dict["advance"],
-                                                    key_fun,
-                                                    agg_fun,
-                                                    agg_initial_any,
-                                                    project_fun,
-                                                    trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
+            window_tn = join_2_tn.group_by_agg_cumulative(
+                ts_fun,
+                window_dict["size"],
+                window_dict["step"],
+                key_fun,
+                agg_fun,
+                agg_initial_any,
+                project_fun,
+                trigger_projection_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
         case "sliding":
-            window_tn = join_2_tn.window_sliding(ts_fun,
-                                                 window_dict["size"],
-                                                 key_fun,
-                                                 agg_fun,
-                                                 agg_initial_any,
-                                                 project_fun,
-                                                 trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
+            window_tn = join_2_tn.group_by_agg_sliding(
+                ts_fun,
+                window_dict["size"],
+                key_fun,
+                agg_fun,
+                agg_initial_any,
+                project_fun,
+                trigger_projection_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
         case "session":
-            window_tn = join_2_tn.window_session(ts_fun,
-                                                 window_dict["gap"],
-                                                 key_fun,
-                                                 agg_fun,
-                                                 agg_initial_any,
-                                                 project_fun,
-                                                 trigger_projection_fun=lambda l: {**l[0], "window_end": l[1]})
+            window_tn = join_2_tn.group_by_agg_session(
+                ts_fun,
+                window_dict["gap"],
+                key_fun,
+                agg_fun,
+                agg_initial_any,
+                project_fun,
+                trigger_projection_fun=lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
     #
     window_tn = window_tn.map(lambda r: {"value": r})
     #
@@ -471,7 +476,7 @@ def get_built_tn_datagen_cumulative_window(get_order_source_tn_fun,
                                             get_sink_tn_fun,
                                             {"type": "cumulative",
                                              "size": (size_int := ts_step_int * default_batch_size_int),
-                                             "advance": size_int // 5,
+                                             "step": size_int // 5,
                                              "allowed_lateness": size_int * 5}
                                             )
     #
@@ -486,7 +491,8 @@ def get_built_tn_datagen_sliding_window(get_order_source_tn_fun,
                                             get_product_source_tn_fun,
                                             get_sink_tn_fun,
                                             {"type": "sliding",
-                                             "size": ts_step_int * default_batch_size_int}
+                                             "size": (size_int := ts_step_int * default_batch_size_int),
+                                             "allowed_lateness": size_int * 5}
                                             )
     #
     return built_tn

@@ -40,20 +40,16 @@ class RestProxyProducer(KafkaProducer):
             value = m["value"]
             if self.value_type_str.lower() == "json":
                 type_str = "JSON"
-                if value is not None and not isinstance(value, dict):
-                    value = json.loads(value)
+                value = loads(value)
             elif self.value_type_str.lower() == "avro":
                 type_str = "AVRO"
-                if value is not None and not isinstance(value, dict):
-                    value = json.loads(value)
+                value = loads(value)
             elif self.value_type_str.lower() in ["pb", "protobuf"]:
                 type_str = "PROTOBUF"
-                if value is not None and not isinstance(value, dict):
-                    value = json.loads(value)
+                value = loads(value)
             elif self.value_type_str.lower() in ["jsonschema", "json_sr"]:
                 type_str = "JSONSCHEMA"
-                if value is not None and not isinstance(value, dict):
-                    value = json.loads(value)
+                value = loads(value)
             else:
                 type_str = "BINARY"
                 if not is_base64_encoded(value):
@@ -71,20 +67,16 @@ class RestProxyProducer(KafkaProducer):
             if key is not None:
                 if self.key_type_str.lower() == "json":
                     type_str = "JSON"
-                    if not isinstance(key, dict):
-                        key = json.loads(key)
+                    key = loads(key)
                 elif self.key_type_str.lower() == "avro":
                     type_str = "AVRO"
-                    if not isinstance(key, dict):
-                        key = json.loads(key)
+                    key = loads(key)
                 elif self.key_type_str.lower() in ["pb", "protobuf"]:
                     type_str = "PROTOBUF"
-                    if not isinstance(key, dict):
-                        key = json.loads(key)
+                    key = loads(key)
                 elif self.key_type_str.lower() in ["jsonschema", "json_sr"]:
                     type_str = "JSONSCHEMA"
-                    if not isinstance(key, dict):
-                        key = json.loads(key)
+                    key = loads(key)
                 else:
                     type_str = "BINARY"
                     if not is_base64_encoded(key):
@@ -132,3 +124,14 @@ class RestProxyProducer(KafkaProducer):
         self.written_counter_int += len(payload_dict_list)
         #
         return self.written_counter_int
+
+#
+
+def loads(key_or_value):
+    if not key_or_value is None and not isinstance(key_or_value, dict):
+        try:
+            return json.loads(key_or_value)
+        except json.JSONDecodeError:
+            return key_or_value
+    else:
+        return key_or_value
