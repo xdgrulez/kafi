@@ -1579,9 +1579,10 @@ class TopologyNode:
         def get_map_fun(sink_str):
             return lambda r: (sink_str, r)
         #
-        for sink_str, sink_built_tn in tail_sink_str_sink_tn_tuple_list:
-            merged_tn = merged_tn.merge(sink_built_tn.map(get_map_fun(sink_str)))
-            merged_tn._name_str = f"sink_{sink_str}"
+        for sink_str, sink_tn in tail_sink_str_sink_tn_tuple_list:
+            map_tn = sink_tn.map(get_map_fun(sink_str))
+            map_tn._name_str = f"sink_{sink_str}"
+            merged_tn = merged_tn.merge(map_tn)
         #
         sink_str_list = [sink_str for sink_str, _ in sink_str_sink_tn_tuple_list]
         merged_tn._sink_str_list = sink_str_list
