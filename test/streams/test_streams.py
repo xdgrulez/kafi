@@ -218,13 +218,8 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         built_tn = get_built_tn_wc(lambda: Streams.source(source_storage, source_str, source_topic_str, value_type="str"),
                                    lambda x: x.sink(sink_storage, sink_str, sink_topic_str))
         #
-        checkpoint_storage = source_storage
-        checkpoint_topic_str = "wc_checkpoint"
-        #
         source_str_batch_size_int_dict = {source_str: default_batch_size_int}
         #
-        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int, checkpoint_storage, checkpoint_topic_str, recreate_boolean=True)
+        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int)
         #
         self.assert_wc(source_str, sink_topic_str)
-
-
