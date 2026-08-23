@@ -80,21 +80,21 @@ class Streams(TopologyNode):
     #
 
     @staticmethod
-    def start_streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, **kwargs):
+    def start_streams(built_tn, checkpoint_storage=None, checkpoint_topic_str=None, checkpoint_interval_float=default_checkpoint_interval_float, **kwargs):
         """Run streams() in a background thread; returns a function to stop it.
 
         Args:
             built_tn: built tn to run
             checkpoint_storage: storage backend for checkpoints, or None to disable checkpointing
-            checkpoint_topic: topic name used to store checkpoints
-            checkpoint_interval: seconds between checkpoints
+            checkpoint_topic_str: topic name used to store checkpoints
+            checkpoint_interval_float: seconds between checkpoints
             **kwargs: passed through to streams()
         Returns:
             stop_fun: None -> None function to stop the Streams processing thread"""
         def _run_fun(stop_event):
             logger.info("Starting Streams...")
             #
-            Streams.streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs)
+            Streams.streams(built_tn, checkpoint_storage=checkpoint_storage, checkpoint_topic_str=checkpoint_topic_str, checkpoint_interval_float=checkpoint_interval_float, stop_event=stop_event, **kwargs)
         #
         def _stop_fun():
             stop_event.set()
@@ -113,14 +113,14 @@ class Streams(TopologyNode):
     #
 
     @staticmethod 
-    def streams(built_tn, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
+    def streams(built_tn, checkpoint_storage=None, checkpoint_topic_str=None, checkpoint_interval_float=default_checkpoint_interval_float, stop_event=None, **kwargs):
         """Build producers/consumers from the topology's sources/sinks and run streams_fun().
 
         Args:
             built_tn: built tn to run
             checkpoint_storage: storage backend for checkpoints, or None to disable checkpointing
-            checkpoint_topic: topic name used to store checkpoints
-            checkpoint_interval: seconds between checkpoints
+            checkpoint_topic_str: topic name used to store checkpoints
+            checkpoint_interval_float: seconds between checkpoints
             stop_event: threading.Event that stops the loop once set
             **kwargs: passed through to storage.producer()/consumer()"""
         source_str_topic_dict_dict = built_tn.get_source_str_topic_dict_dict()
@@ -157,24 +157,24 @@ class Streams(TopologyNode):
         #
         sink_str_foreach_fun_finally_fun_tuple_dict = {sink_str: (get_foreach_fun(sink_str), get_finally_fun(sink_str)) for sink_str, _ in sink_str_topic_dict_dict.items()}
         #
-        Streams.streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic=checkpoint_topic, checkpoint_interval=checkpoint_interval, stop_event=stop_event, **kwargs)
+        Streams.streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic_str=checkpoint_topic_str, checkpoint_interval_float=checkpoint_interval_float, stop_event=stop_event, **kwargs)
 
     #
 
     @staticmethod
-    def streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=None, checkpoint_topic=None, checkpoint_interval=default_checkpoint_interval_float, stop_event=None, **kwargs):
+    def streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=None, checkpoint_topic_str=None, checkpoint_interval_float=default_checkpoint_interval_float, stop_event=None, **kwargs):
         """Main streams loop: consume, push through the topology, produce, checkpoint, repeat.
 
         Args:
             built_tn: built tn to run
             sink_str_foreach_fun_finally_fun_tuple_dict: dict, sink_str -> (produce_fun, close_fun)
             checkpoint_storage: storage backend for checkpoints, or None to disable checkpointing
-            checkpoint_topic: topic name used to store checkpoints
-            checkpoint_interval: seconds between checkpoints
+            checkpoint_topic_str: topic name used to store checkpoints
+            checkpoint_interval_float: seconds between checkpoints
             stop_event: threading.Event that stops the loop once set
             **kwargs: extra options, e.g. group, step_fun, progress, chunk_size_bytes"""
-        checkpoint_topic_str = checkpoint_topic
-        checkpoint_interval_float = checkpoint_interval
+        checkpoint_topic_str = checkpoint_topic_str
+        checkpoint_interval_float = checkpoint_interval_float
         #
         outputs_int = 0
         #
@@ -233,7 +233,7 @@ class Streams(TopologyNode):
         source_str_topic_dict_dict = built_tn.get_source_str_topic_dict_dict()
         #
         source_str_offsets_dict_dict = None
-        if checkpoint_storage is not None:
+        if checkpoint_storage is not None and checkpoint_topic_str:
             initial_time_int = get_millis()
             #
             checkpoint_storage.enable_auto_commit(False)
@@ -298,9 +298,7 @@ class Streams(TopologyNode):
                         if offset_int is not None:
                             source_str_offsets_dict_dict.setdefault(source_str, {})[partition_int] = offset_int + 1
                 #
-                built_tn.push(source_str_m_list_dict)
-                #
-                sink_str_sink_m_list_dict = built_tn.latest()
+                sink_str_sink_m_list_dict = built_tn.process(source_str_m_list_dict)
                 #
                 step_fun(built_tn, source_str_offsets_dict_dict)
                 #
