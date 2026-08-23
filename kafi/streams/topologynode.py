@@ -37,17 +37,17 @@ default_unpack_fun = lambda x: msgpack.unpackb(x, strict_map_key=False)
 #
 
 class TopologyNode:
-    def __init__(self, name_str, daughter_tn_set, build_fun, **kwargs):
-        """Wrap a build function and its upstream nodes into one topology node.
+    def __init__(self, name_str, mother_tn_set, build_fun, **kwargs):
+        """Create a topology node based on its set of mother nodes upstream.
         
         Args:
             name_str: name for this node
-            daughter_tn_set: upstream nodes this one depends on
-            build_fun: function wiring this node's logic into the pydbsp circuit
+            mother_tn_set: set of mother nodes upstream
+            build_fun: function to wire this node's logic into the pydbsp circuit
             **kwargs: passed through to the underlying node(s)"""
         self._name_str = name_str
         self._id_str = str(uuid.uuid4())
-        self._daughter_tn_set = daughter_tn_set
+        self._mother_tn_set = mother_tn_set
         self._build_fun = build_fun
         #
         self._evaluator = None
@@ -72,10 +72,10 @@ class TopologyNode:
     # Map
 
     def _map(self, _map_fun, **kwargs):
-        """Low-level map: transform (r, w) pairs.
+        """Transform each record/weight pair into another record/weight pair..
         
         Args:
-            _map_fun: internal (r, w) -> (r, w) function
+            _map_fun: (r, w) -> (r, w) - map function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -105,10 +105,10 @@ class TopologyNode:
         return tn
 
     def map(self, map_fun, **kwargs):
-        """Transform each r; w untouched.
+        """Transform each record into another record.
         
         Args:
-            map_fun: r -> r function
+            map_fun: r -> r - map function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -123,11 +123,11 @@ class TopologyNode:
         return tn
 
     def peek(self, prefix_str=None, peek_fun=None, **kwargs):
-        """Print each r as it passes through, unchanged.
+        """Cause a side-effect on a record. The records pass through unchanged.
         
         Args:
-            prefix_str: optional label printed before each record
-            peek_fun: optional r -> None side-effect function (default: print)
+            prefix_str: label printed before each record (if peek_fun is None; default: no prefix)
+            peek_fun: r -> None - cause a side-effect on record r (default if peek_fun is None: print)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -145,11 +145,11 @@ class TopologyNode:
         return tn
 
     def _peek(self, prefix_str=None, _peek_fun=None, **kwargs):
-        """Print each (r, w) pair, unchanged.
+        """Cause a side effect on a record/weight pair. The records pass through unchanged.
         
         Args:
-            prefix_str: optional label printed before each record
-            _peek_fun: optional (r, w) -> None side-effect function
+            prefix_str: label printed before each record/weight pair (if _peek_fun is None; default: no prefix)
+            peek_fun: (r, w) -> None - cause a side-effect on record/weight pair (r, w) (default if _peek_fun is None: print)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -167,7 +167,7 @@ class TopologyNode:
         return tn
 
     def _neg(self, **kwargs):
-        """Flip the sign of every w (retraction helper).
+        """Flip the weight of a record.
         
         Args:
             **kwargs: passed through to the underlying node(s)
@@ -184,10 +184,10 @@ class TopologyNode:
     # Flatmap
 
     def _flatmap(self, _flatmap_fun, **kwargs):
-        """Low-level flatmap: expand (r, w) pairs.
+        """Explode each (r, w) pair into an iterable of (r, w) pairs.
         
         Args:
-            _flatmap_fun: internal (r, w) -> list[(r, w)] function
+            _flatmap_fun: (r, w) -> iterable((r, w))
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -214,10 +214,10 @@ class TopologyNode:
         return tn
 
     def flatmap(self, flatmap_fun, **kwargs):
-        """Expand each r into zero or more r.
+        """Explode each record into an iterable of records.
         
         Args:
-            flatmap_fun: r -> iterable of r function
+            flatmap_fun: r -> iterable of r
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -234,10 +234,10 @@ class TopologyNode:
     # Filter
 
     def _filter(self, _filter_fun, **kwargs):
-        """Low-level filter: keep/drop (r, w) pairs.
+        """Filter record/weight pairs according to a predicate.
         
         Args:
-            _filter_fun: internal (r, w) -> bool function
+            _filter_fun: internal (r, w) -> bool - filter predicate
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -264,10 +264,10 @@ class TopologyNode:
         return tn
 
     def filter(self, filter_fun, **kwargs):
-        """Keep only r matching a predicate.
+        """Filter records according to a predicate.
         
         Args:
-            filter_fun: r -> bool predicate
+            filter_fun: r -> bool - filter predicate
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -280,10 +280,10 @@ class TopologyNode:
         return tn
 
     def merge(self, other_tn, **kwargs):
-        """Union two streams, w included.
+        """Merge two topology nodes.
         
         Args:
-            other_tn: the other stream to combine with
+            other_tn: the other topology node
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -313,13 +313,13 @@ class TopologyNode:
     # Join
 
     def join_equi(self, right_tn, left_key_fun, right_key_fun, project_fun, **kwargs):
-        """Equi-join two streams on matching keys.
+        """Equi-join two topology nodes based on keys from both sides.
         
         Args:
-            right_tn: the stream to join/subtract against
-            left_key_fun: r -> key function for the left (self) stream
-            right_key_fun: r -> key function for the right stream
-            project_fun: function building the output r
+            right_tn: the other topology node to join with
+            left_key_fun: l_r -> key - get the key of the left record l_r
+            right_key_fun: r_r -> key - get the key of the right record r_r
+            project_fun: (l_r, r_r) -> r - projection function for left record l_r and right record r_r
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -365,12 +365,12 @@ class TopologyNode:
         return tn
     
     def join(self, right_tn, predicate_fun, project_fun, **kwargs):
-        """Join two streams on an arbitrary predicate.
+        """Join two topology nodes based on an arbitrary predicate.
         
         Args:
-            right_tn: the stream to join/subtract against
-            predicate_fun: (left r, right r) -> bool join condition
-            project_fun: function building the output r
+            right_tn: the other topology node to join with
+            predicate_fun: (l_r, r_r) -> bool - the join predicate for left record l_r and right record r_r
+            project_fun: (l_r, r_r) -> r - projection function for left record l_r and right record r_r
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -412,14 +412,14 @@ class TopologyNode:
     # Group By + Aggregation
 
     def group_by_agg(self, key_fun, value_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
-        """Incrementally fold r per key into a running aggregate.
+        """Group values by key and aggregate them.
         
         Args:
-            key_fun: r -> grouping key function
-            value_fun: r -> value function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
+            key_fun: r -> key_any - function to get the key
+            value_fun: r -> value_any - function to get the value to aggregate
+            agg_fun: (agg any, value_any) -> aggregate function; agg_any: running aggregate, value_any: current value
+            agg_initial_any: initial aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -481,10 +481,10 @@ class TopologyNode:
         """Sum a value per key.
         
         Args:
-            key_fun: r -> grouping key function
-            value_fun: r -> value function
-            project_fun: function building the output r
-            sum_initial_any: initial value of the running sum
+            key_fun: r -> key_any - function to get the key
+            value_fun: r -> value_any - function to get the value to aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
+            sum_initial_any: initial sum (default: 0)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -494,13 +494,13 @@ class TopologyNode:
         return tn
 
     def group_by_max(self, key_fun, value_fun, project_fun, max_initial_any=0, **kwargs):
-        """Max of a value per key.
+        """Maximum of a value per key.
         
         Args:
-            key_fun: r -> grouping key function
-            value_fun: r -> value function
-            project_fun: function building the output r
-            max_initial_any: initial value of the running max
+            key_fun: r -> key_any - function to get the key
+            value_fun: r -> value_any - function to get the value to aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
+            max_initial_any: initial maximum (default: 0)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -510,13 +510,13 @@ class TopologyNode:
         return tn
 
     def group_by_min(self, key_fun, value_fun, project_fun, min_initial_any=sys.maxsize, **kwargs):
-        """Min of a value per key.
+        """Minimum of a value per key.
         
         Args:
-            key_fun: r -> grouping key function
-            value_fun: r -> value function
-            project_fun: function building the output r
-            min_initial_any: initial value of the running min
+            key_fun: r -> key_any - function to get the key
+            value_fun: r -> value_any - function to get the value to aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
+            min_initial_any: initial minimum (default: sys.maxsize)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -529,9 +529,9 @@ class TopologyNode:
         """Average of a value per key.
         
         Args:
-            key_fun: r -> grouping key function
-            value_fun: r -> value function
-            project_fun: function building the output r
+            key_fun: r -> key_any - function to get the key
+            value_fun: r -> value_any - function to get the value to aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -550,11 +550,11 @@ class TopologyNode:
         return tn
 
     def group_by_count(self, key_fun, project_fun, **kwargs):
-        """Count r per key.
+        """Count records per key.
         
         Args:
-            key_fun: r -> grouping key function
-            project_fun: function building the output r
+            key_fun: r -> key_any - function to get the key
+            project_fun: (key_any, agg_any) -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -566,13 +566,13 @@ class TopologyNode:
     # Aggregation
 
     def agg(self, value_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
-        """Fold all r into one aggregate, no grouping.
+        """Aggregate a value.
         
         Args:
-            value_fun: r -> value function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
+            value_fun: r -> value_any - function to get the value to aggregate
+            agg_fun: (agg any, value_any) -> aggregate function; agg_any: running aggregate, value_any: current value
+            agg_initial_any: initial aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -582,12 +582,12 @@ class TopologyNode:
         return tn
 
     def sum(self, value_fun, project_fun=lambda agg_any: agg_any, sum_initial_any=0, **kwargs):
-        """Sum a value across all r.
+        """Sum a value.
         
         Args:
-            value_fun: r -> value function
-            project_fun: function building the output r
-            sum_initial_any: initial value of the running sum
+            value_fun: r -> value_any - function to get the value to aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
+            sum_initial_any: initial sum (default: 0)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -597,12 +597,12 @@ class TopologyNode:
         return tn
 
     def max(self, value_fun, project_fun=lambda agg_any: agg_any, max_initial_any=0, **kwargs):
-        """Max of a value across all r.
+        """Maximum of a value.
         
         Args:
-            value_fun: r -> value function
-            project_fun: function building the output r
-            max_initial_any: initial value of the running max
+            value_fun: r -> value_any - function to get the value to aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
+            max_initial_any: initial maximum (default: 0)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -612,12 +612,12 @@ class TopologyNode:
         return tn
 
     def min(self, value_fun, project_fun=lambda agg_any: agg_any, min_initial_any=sys.maxsize, **kwargs):
-        """Min of a value across all r.
+        """Minimum of a value.
         
         Args:
-            value_fun: r -> value function
-            project_fun: function building the output r
-            min_initial_any: initial value of the running min
+            value_fun: r -> value_any - function to get the value to aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
+            min_initial_any: initial minimum (default: sys.maxsize)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -627,11 +627,11 @@ class TopologyNode:
         return tn
     
     def avg(self, value_fun, project_fun=lambda agg_any: agg_any, **kwargs):
-        """Average of a value across all r.
+        """Average of a value.
         
         Args:
-            value_fun: r -> value function
-            project_fun: function building the output r
+            value_fun: r -> value_any - function to get the value to aggregate
+            project_fun: (key_any, agg_any) -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -641,10 +641,10 @@ class TopologyNode:
         return tn
 
     def count(self, project_fun=lambda agg_any: agg_any, **kwargs):
-        """Count all r.
+        """Count records.
         
         Args:
-            project_fun: function building the output r
+            project_fun: (key_any, agg_any) -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -656,7 +656,7 @@ class TopologyNode:
     # Distinct
 
     def distinct(self, **kwargs):
-        """Deduplicate r, collapsing w to 0 or 1.
+        """Deduplicate.
         
         Args:
             **kwargs: passed through to the underlying node(s)
@@ -682,10 +682,10 @@ class TopologyNode:
     # Union
 
     def union(self, other_tn, **kwargs):
-        """Set union of two streams (deduplicated).
-        
+        """Set union of two topology nodes.
+         
         Args:
-            other_tn: the other stream to combine with
+            other_tn: the other topology node to combine with
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -713,10 +713,10 @@ class TopologyNode:
     # Intersect
 
     def intersect(self, other_tn, **kwargs):
-        """Set intersection of two streams.
+        """Set intersection of two topology nodes.
         
         Args:
-            other_tn: the other stream to combine with
+            other_tn: the other topology node to combine with
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -731,7 +731,7 @@ class TopologyNode:
         """Set difference: self minus right_tn.
         
         Args:
-            right_tn: the stream to join/subtract against
+            right_tn: the other topology node to subtract
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -757,89 +757,16 @@ class TopologyNode:
         return tn
 
     ###
-    # DBSP base operators
-    ###
-
-    def _integrate(self, **kwargs):
-        """Running sum of the stream over time.
-        
-        Args:
-            **kwargs: passed through to the underlying node(s)
-        Returns:
-            tn: the newly created topology node of the operator"""
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            integrate_nodeId = Integrate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = integrate_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("_integrate_op", {self}, _build_fun, **kwargs)
-        #
-        return tn
-
-    def _differentiate(self, **kwargs):
-        """Delta between consecutive stream values over time.
-        
-        Args:
-            **kwargs: passed through to the underlying node(s)
-        Returns:
-            tn: the newly created topology node of the operator"""
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            differentiate_nodeId = Differentiate(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = differentiate_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("_differentiate_op", {self}, _build_fun, **kwargs)
-        #
-        return tn
-
-    def _delay(self, **kwargs):
-        """Shift the stream by one time step.
-        
-        Args:
-            **kwargs: passed through to the underlying node(s)
-        Returns:
-            tn: the newly created topology node of the operator"""
-        def _build_fun(evaluator):
-            tn._evaluator = evaluator
-            #
-            g = ZSetAddition()
-            #
-            input_nodeId = self._output_nodeId
-            #
-            integrate_nodeId = Delay(group=g).connect(evaluator.circuit, (input_nodeId,))
-            #
-            tn._output_nodeId = integrate_nodeId
-        #
-        current_class = type(self)
-        tn = current_class("_delay_op", {self}, _build_fun, **kwargs)
-        #
-        return tn
-
-    ###
     # Expiry
     ###
 
-    def expire(self, ts_fun, expiry_fun, project_fun=lambda r_ts_tuple: r_ts_tuple[0], **kwargs):
-        """Drop r once a global watermark passes their expiry point.
+    def expire(self, ts_fun, expiry_fun, project_fun=lambda r_end_ts_tuple: r_end_ts_tuple[0], **kwargs):
+        """Expire records once the global watermark passes their expiry timestamp.
         
         Args:
-            ts_fun: r -> ts function
-            expiry_fun: ts -> expiry ts function
-            project_fun: function building the output r
+            ts_fun: r -> ts - get timestamp function
+            expiry_fun: ts -> expiry ts - get expiry function
+            project_fun: (r, end_ts) -> r - projection function (default: lambda r_end_ts_tuple: r_end_ts_tuple[0] i.e., drop the window end timestamp)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -925,12 +852,12 @@ class TopologyNode:
 
     @staticmethod
     def _assign_tumbling(size_int):
-        """Window end for tumbling windows of a given size.
+        """Get window end assignment function for tumbling windows of a given size.
         
         Args:
             size_int: window size
         Returns:
-            end_ts_list: list of window end timestamps"""
+            ts -> list(end_ts) - function mapping timestamps to lists of window end timestamps"""
         def _assign_fun(ts):
             end_ts_list = [(ts // size_int) * size_int + size_int]
             #
@@ -940,13 +867,13 @@ class TopologyNode:
 
     @staticmethod
     def _assign_hopping(size_int, hop_int):
-        """Window ends a r belongs to, for hopping windows.
+        """Get window end assignment function for hopping windows of a given size and hop size.
         
         Args:
             size_int: window size
-            hop_int: hop/advance between windows, hop_int <= size_int
+            hop_int: hop size between windows; hop_int <= size_int
         Returns:
-            end_ts_list: list of window end timestamps"""
+            ts -> list(end_ts) - function mapping timestamps to lists of window end timestamps"""
         def _assign_fun(ts):
             first_end_ts = (ts // hop_int) * hop_int + hop_int
             #
@@ -958,13 +885,13 @@ class TopologyNode:
 
     @staticmethod
     def _assign_cumulative(size_int, step_int):
-        """Window ends a r belongs to, for cumulate windows.
+        """Get window end assignment function for cumulative windows of a given size and step size.
         
         Args:
             size_int: window size
-            step_int: step between growing cumulate windows
+            step_int: step size between windows
         Returns:
-            end_ts_list: list of window end timestamps"""
+            ts -> list(end_ts) - function mapping timestamps to lists of window end timestamps"""
         def _assign_fun(ts):
             cumulative_start_ts = (ts // size_int) * size_int
             cumulative_end_ts = cumulative_start_ts + size_int
@@ -980,12 +907,12 @@ class TopologyNode:
 
     @staticmethod
     def _assign_sliding(size_int):
-        """End of a r's own sliding window.
-        
+        """Get window end assignment function for sliding windows of a given size.
+         
         Args:
             size_int: window size
         Returns:
-            end_ts_list: list of window end timestamps"""
+            ts -> list(end_ts) - function mapping timestamps to lists of window end timestamps"""
         def _assign_fun(ts):
             end_ts_list = [ts + size_int]
             #
@@ -995,12 +922,12 @@ class TopologyNode:
 
     @staticmethod
     def _assign_session(max_session_int):
-        """Grid fallback bucket used while building session windows.
+        """Get window end assignment function for session windows of a given maximum session size.
         
         Args:
-            max_session_int: grid size used internally while bucketing session windows
+            max_session_int: maximum session size
         Returns:
-            end_ts_list: list of window end timestamps"""
+            ts -> list(end_ts) - function mapping timestamps to lists of window end timestamps"""
         def _assign_fun(ts):
             end_ts_list = [(ts // max_session_int) * max_session_int + max_session_int]
             #
@@ -1013,12 +940,12 @@ class TopologyNode:
     ###
 
     def expire_tumbling(self, ts_fun, size_int, allowed_lateness_int=0, **kwargs):
-        """Expire r once past their tumbling window, plus grace period.
+        """Expire records once past their tumbling window.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            allowed_lateness_int: extra grace period after a window closes, before its records expire
+            allowed_lateness_int: allowed lateness
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1033,13 +960,13 @@ class TopologyNode:
         return tn
 
     def expire_hopping(self, ts_fun, size_int, hop_int, allowed_lateness_int=0, **kwargs):
-        """Expire r once past their widest hopping window, plus grace period.
+        """Expire records once past their latest hopping window.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            hop_int: hop/advance between windows, hop_int <= size_int
-            allowed_lateness_int: extra grace period after a window closes, before its records expire
+            hop_int: hop between windows, hop_int <= size_int
+            allowed_lateness_int: allowed lateness
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1054,13 +981,13 @@ class TopologyNode:
         return tn
 
     def expire_cumulative(self, ts_fun, size_int, step_int, allowed_lateness_int=0, **kwargs):
-        """Expire r once past their cumulate window, plus grace period.
+        """Expire records once past their cumulate window.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            step_int: step between growing cumulate windows
-            allowed_lateness_int: extra grace period after a window closes, before its records expire
+            step_int: step size between windows
+            allowed_lateness_int: allowed lateness
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1076,12 +1003,12 @@ class TopologyNode:
 
     
     def expire_sliding(self, ts_fun, size_int, allowed_lateness_int, **kwargs):
-        """Expire r once past their own sliding window, plus grace period.
+        """Expire records once past their own sliding window.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            allowed_lateness_int: extra grace period after a window closes, before its records expire
+            allowed_lateness_int: allowed lateness
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1094,12 +1021,12 @@ class TopologyNode:
         return tn
 
     def expire_session(self, ts_fun, max_session_int, allowed_lateness_int=0, **kwargs):
-        """Expire r once past their session boundary, plus grace period.
-        
+        """Expire records once past their session boundary.
+         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             max_session_int: grid size used internally while bucketing session windows
-            allowed_lateness_int: extra grace period after a window closes, before its records expire
+            allowed_lateness_int: allowed lateness
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1119,12 +1046,12 @@ class TopologyNode:
         """Shared grid-window aggregation: assign to window(s), group, fold.
 
         Args:
-            ts_fun: r -> ts function
-            assign_fun: ts -> list of window-end ts function
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
+            ts_fun: r -> ts - get timestamp function
+            assign_fun: ts -> list(end_ts) - assign window end timestamps
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg any, r_any) -> agg_any - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: agg_r -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1148,12 +1075,12 @@ class TopologyNode:
         """Aggregate per key over tumbling windows.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg any, r_any) -> agg_any - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: agg_r -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1174,13 +1101,13 @@ class TopologyNode:
         """Aggregate per key over hopping windows.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            hop_int: hop/advance between windows, hop_int <= size_int
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
+            hop_int: hop size between windows, hop_int <= size_int
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg any, r_any) -> agg_any - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: agg_r -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1198,16 +1125,16 @@ class TopologyNode:
         return tn
 
     def _group_by_agg_cumulative(self, ts_fun, size_int, step_int, key_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
-        """Aggregate per key over cumulate windows.
+        """Aggregate per key over cumulative windows.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            step_int: step between growing cumulate windows
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
+            step_int: step size between windows
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg any, r_any) -> agg_any - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: agg_r -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1230,12 +1157,12 @@ class TopologyNode:
         """Aggregate per key over overlapping, per-r sliding windows.
         
         Args:
-            ts_fun: r -> ts function
+            ts_fun: r -> ts - get timestamp function
             size_int: window size
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg any, r_any) -> agg_any - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: agg_r -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1284,12 +1211,12 @@ class TopologyNode:
         """Aggregate per key over merging session windows.
         
         Args:
-            ts_fun: r -> ts function
-            gap_int: inactivity gap that closes a session
-            key_fun: r -> grouping key function
-            agg_fun: (aggregate any, value) -> new aggregate any function
-            agg_initial_any: initial aggregate value
-            project_fun: function building the output r
+            ts_fun: r -> ts - get timestamp function
+            gap_int: gap size
+            key_fun: r -> key_any - grouping key function
+            agg_fun: (agg any, r_any) -> agg_any - aggregate function
+            agg_initial_any: initial aggregate
+            project_fun: agg_r -> r - projection function
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1688,7 +1615,7 @@ class TopologyNode:
         def _reset_fun():
             evaluator = built_tn._get_evaluator()
             #
-            built_tn._foreach_bu(lambda tn: tn._build_fun(evaluator))
+            built_tn.__foreach(lambda tn: tn._build_fun(evaluator))
         #
         _reset_fun()
         #
@@ -1891,35 +1818,35 @@ class TopologyNode:
     # Helpers
     ###
 
-    def _foreach_bu(self, foreach_fun):
-        """Visit every node bottom-up, exactly once each.
+    def __foreach(self, foreach_fun):
+        """Visit every node bottom-up and apply a procedure.
         
         Args:
             foreach_fun: tn -> None function applied to every node"""
         visited_tn_set = set()
         #
-        def __foreach_bu(tn):
+        def ___foreach(tn):
             if tn not in visited_tn_set:
                 visited_tn_set.add(tn)
                 #
-                for daughter_tn in tn._daughter_tn_set:
-                    __foreach_bu(daughter_tn)
+                for mother_tn in tn._mother_tn_set:
+                    ___foreach(mother_tn)
                 #
                 foreach_fun(tn)
         #
-        __foreach_bu(self)
+        ___foreach(self)
 
-    def _filter_td(self, filter_fun):
-        """Collect nodes matching a predicate, top-down.
+    def __filter(self, filter_fun):
+        """Collect nodes matching a predicate.
         
         Args:
-            filter_fun: tn -> bool predicate
+            filter_fun: tn -> bool - filter predicate
         Returns:
             tn_set: the set of filtered topology nodes"""
         tn_set = set()
         visited_tn_set = set()
         #
-        def __filter_td(tn):
+        def __filter(tn):
             if tn in visited_tn_set:
                 return
             visited_tn_set.add(tn)
@@ -1927,14 +1854,16 @@ class TopologyNode:
             if filter_fun(tn):
                 tn_set.add(tn)
             #
-            for daughter_tn in tn._daughter_tn_set:
-                __filter_td(daughter_tn)
+            for mother_tn in tn._mother_tn_set:
+                __filter(mother_tn)
         #
-        __filter_td(self)
+        __filter(self)
         #
         return tn_set
 
-    #
+    ###
+    # Getters
+    ###
 
     def get_id(self):
         """This node's unique ID.
@@ -1950,12 +1879,12 @@ class TopologyNode:
             name_str: the name of this topology node"""
         return self._name_str
 
-    def get_daughters(self):
+    def get_mothers(self):
         """This node's direct upstream nodes.
         
         Returns:
-            daughter_tn_set: the direct upstream nodes of this topology node"""
-        return self._daughter_tn_set
+            mother_tn_set: the mothers of this topology node"""
+        return self._mother_tn_set
 
     #
 
@@ -1966,7 +1895,7 @@ class TopologyNode:
             id_str: node id to search for
         Returns:
             tn: the found topology node or None"""
-        tn_set = self._filter_td(lambda tn: tn._id_str == id_str)
+        tn_set = self.__filter(lambda tn: tn._id_str == id_str)
         #
         if len(tn_set) == 0:
             return None
@@ -1980,7 +1909,7 @@ class TopologyNode:
             name_str: name to search for
         Returns:
             tn: the found topology node or None"""
-        tn_set = self._filter_td(lambda tn: tn._name_str == name_str)
+        tn_set = self.__filter(lambda tn: tn._name_str == name_str)
         #
         if len(tn_set) == 0:
             return None
@@ -1992,7 +1921,7 @@ class TopologyNode:
         
         Returns:
             name_str_tn_dict: a dictionary mapping the names of the sources to the corresponding topology nodes"""
-        tn_set = self._filter_td(lambda tn: tn._source_str is not None)
+        tn_set = self.__filter(lambda tn: tn._source_str is not None)
         #
         name_str_tn_dict = {tn._source_str: tn for tn in tn_set}
         #
@@ -2003,7 +1932,7 @@ class TopologyNode:
         
         Returns:
             name_str_tn_dict: a dictionary mapping the names of the sinks to the corresponding topology nodes"""
-        tn_set = self._filter_td(lambda tn: tn._sink_str is not None)
+        tn_set = self.__filter(lambda tn: tn._sink_str is not None)
         #
         name_str_tn_dict = {tn._sink_str: tn for tn in tn_set}
         #
@@ -2077,29 +2006,29 @@ class TopologyNode:
             visited_tn_set.add(tn)
             #        
             include_ids_bool = include_ids
-            daughters_int = len(tn._daughter_tn_set)
+            mothers_int = len(tn._mother_tn_set)
             #
-            daughters_list = list(tn._daughter_tn_set)
+            mothers_list = list(tn._mother_tn_set)
             #
-            match daughters_int:
+            match mothers_int:
                 case 0:
                     if include_ids_bool:
                         return f"{tn._name_str}_{tn._id_str}"
                     else:
                         return tn._name_str
                 case 1:
-                    daughter_str = _topology(daughters_list[0], visited_tn_set)
+                    mother_str = _topology(mothers_list[0], visited_tn_set)
                     if include_ids_bool:
-                        return f"{tn._name_str}_{tn._id_str}({daughter_str})"
+                        return f"{tn._name_str}_{tn._id_str}({mother_str})"
                     else:
-                        return f"{tn._name_str}({daughter_str})"
+                        return f"{tn._name_str}({mother_str})"
                 case 2:
-                    daughter1_str = _topology(daughters_list[0], visited_tn_set)
-                    daughter2_str = _topology(daughters_list[1], visited_tn_set)
+                    mother1_str = _topology(mothers_list[0], visited_tn_set)
+                    mother2_str = _topology(mothers_list[1], visited_tn_set)
                     if include_ids_bool:
-                        return f"{tn._name_str}_{tn._id_str}({daughter1_str}, {daughter2_str})"
+                        return f"{tn._name_str}_{tn._id_str}({mother1_str}, {mother2_str})"
                     else:
-                        return f"{tn._name_str}({daughter1_str}, {daughter2_str})"
+                        return f"{tn._name_str}({mother1_str}, {mother2_str})"
         #
         return _topology(self, set())
 
@@ -2119,15 +2048,15 @@ class TopologyNode:
                 return
             visited_tn_set.add(tn)
             #
-            for daughter_tn in tn._daughter_tn_set:
+            for mother_tn in tn._mother_tn_set:
                 if include_ids_bool:
-                    mermaid_edge_str = f"{daughter_tn._id_str}[{daughter_tn._name_str}_{tn._id_str}] --> {tn._id_str}[{tn._name_str}_{tn._id_str}]\n"
+                    mermaid_edge_str = f"{mother_tn._id_str}[{mother_tn._name_str}_{tn._id_str}] --> {tn._id_str}[{tn._name_str}_{tn._id_str}]\n"
                 else:
-                    mermaid_edge_str = f"{daughter_tn._id_str}[{daughter_tn._name_str}] --> {tn._id_str}[{tn._name_str}]\n"
+                    mermaid_edge_str = f"{mother_tn._id_str}[{mother_tn._name_str}] --> {tn._id_str}[{tn._name_str}]\n"
                 #
                 mermaid_edge_str_set.add(mermaid_edge_str)
                 #
-                collect_edges(daughter_tn)
+                collect_edges(mother_tn)
         #
         collect_edges(self)
         #
