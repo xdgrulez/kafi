@@ -312,7 +312,7 @@ class TopologyNode:
 
     # Join
 
-    def join_equi(self, right_tn, left_key_fun, right_key_fun, project_fun, **kwargs):
+    def join(self, right_tn, left_key_fun, right_key_fun, project_fun, **kwargs):
         """Equi-join two topology nodes based on keys from both sides.
         
         Args:
@@ -360,11 +360,11 @@ class TopologyNode:
             tn._output_nodeId = indexedDeltaLiftedDeltaLiftedJoin_nodeId
         #
         current_class = type(self)
-        tn = current_class("join_equi_op", {self, right_tn}, _build_fun, **kwargs)
+        tn = current_class("join_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
     
-    def join(self, right_tn, predicate_fun, project_fun, **kwargs):
+    def join_pred(self, right_tn, predicate_fun, project_fun, **kwargs):
         """Join two topology nodes based on an arbitrary predicate.
         
         Args:
@@ -405,14 +405,14 @@ class TopologyNode:
             tn._output_nodeId = deltaLiftedDeltaLiftedJoin_nodeId
         #
         current_class = type(self)
-        tn = current_class("join_op", {self, right_tn}, _build_fun, **kwargs)
+        tn = current_class("join_pred_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
 
     # Group By + Aggregation
 
     def group_by_agg(self, key_fun, value_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
-        """Group values by key and aggregate them.
+        """Group values by key and aggregate the values.
         
         Args:
             key_fun: r -> key_any - function to get the key
@@ -478,7 +478,7 @@ class TopologyNode:
         return tn
 
     def group_by_sum(self, key_fun, value_fun, project_fun, sum_initial_any=0, **kwargs):
-        """Sum a value per key.
+        """Sum values per key.
         
         Args:
             key_fun: r -> key_any - function to get the key
@@ -494,7 +494,7 @@ class TopologyNode:
         return tn
 
     def group_by_max(self, key_fun, value_fun, project_fun, max_initial_any=0, **kwargs):
-        """Maximum of a value per key.
+        """Maximum of values per key.
         
         Args:
             key_fun: r -> key_any - function to get the key
@@ -510,7 +510,7 @@ class TopologyNode:
         return tn
 
     def group_by_min(self, key_fun, value_fun, project_fun, min_initial_any=sys.maxsize, **kwargs):
-        """Minimum of a value per key.
+        """Minimum of values per key.
         
         Args:
             key_fun: r -> key_any - function to get the key
@@ -526,7 +526,7 @@ class TopologyNode:
         return tn
 
     def group_by_avg(self, key_fun, value_fun, project_fun, **kwargs):
-        """Average of a value per key.
+        """Average of values per key.
         
         Args:
             key_fun: r -> key_any - function to get the key
@@ -566,7 +566,7 @@ class TopologyNode:
     # Aggregation
 
     def agg(self, value_fun, agg_fun, agg_initial_any, project_fun, **kwargs):
-        """Aggregate a value.
+        """Aggregate values.
         
         Args:
             value_fun: r -> value_any - function to get the value to aggregate
@@ -582,7 +582,7 @@ class TopologyNode:
         return tn
 
     def sum(self, value_fun, project_fun=lambda agg_any: agg_any, sum_initial_any=0, **kwargs):
-        """Sum a value.
+        """Sum values.
         
         Args:
             value_fun: r -> value_any - function to get the value to aggregate
@@ -597,7 +597,7 @@ class TopologyNode:
         return tn
 
     def max(self, value_fun, project_fun=lambda agg_any: agg_any, max_initial_any=0, **kwargs):
-        """Maximum of a value.
+        """Maximum of values.
         
         Args:
             value_fun: r -> value_any - function to get the value to aggregate
@@ -612,7 +612,7 @@ class TopologyNode:
         return tn
 
     def min(self, value_fun, project_fun=lambda agg_any: agg_any, min_initial_any=sys.maxsize, **kwargs):
-        """Minimum of a value.
+        """Minimum of values.
         
         Args:
             value_fun: r -> value_any - function to get the value to aggregate
@@ -627,7 +627,7 @@ class TopologyNode:
         return tn
     
     def avg(self, value_fun, project_fun=lambda agg_any: agg_any, **kwargs):
-        """Average of a value.
+        """Average of values.
         
         Args:
             value_fun: r -> value_any - function to get the value to aggregate
@@ -682,7 +682,7 @@ class TopologyNode:
     # Union
 
     def union(self, other_tn, **kwargs):
-        """Set union of two topology nodes.
+        """Set union of two input streams.
          
         Args:
             other_tn: the other topology node to combine with
@@ -713,14 +713,14 @@ class TopologyNode:
     # Intersect
 
     def intersect(self, other_tn, **kwargs):
-        """Set intersection of two topology nodes.
+        """Set intersection of two input streams.
         
         Args:
             other_tn: the other topology node to combine with
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
-        tn = self.join(other_tn, lambda l, r: l == r, lambda l, _: l, **kwargs)
+        tn = self.join_pred(other_tn, lambda l, r: l == r, lambda l, _: l, **kwargs)
         tn._name_str = "intersect_op"
         #
         return tn
@@ -1301,7 +1301,7 @@ class TopologyNode:
             tn: the newly created topology node of the operator"""
         trigger_tn = (
             self
-            .join(time_tn.max(ts_fun),
+            .join_pred(time_tn.max(ts_fun),
                   lambda r_end_ts_tuple, latest_ts: trigger_fun(r_end_ts_tuple, latest_ts),
                   lambda r_end_ts_tuple, _: project_fun(r_end_ts_tuple),
                   **kwargs)
