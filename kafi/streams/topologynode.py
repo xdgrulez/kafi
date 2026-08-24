@@ -214,7 +214,7 @@ class TopologyNode:
         return tn
 
     def flatmap(self, flatmap_fun, **kwargs):
-        """Explode each record into an iterable of records.
+        """Explode each record into an iterable of records interpreted as an unordered set.
         
         Args:
             flatmap_fun: r -> iterable of r
