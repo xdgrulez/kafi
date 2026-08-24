@@ -1638,7 +1638,7 @@ class TopologyNode:
     # Input
 
     def push(self, source_str_input_any_list_dict):
-        """Feed new input r into one or more named sources.
+        """Feed new input records(/weights) into one or more named sources.
         
         Args:
             source_str_input_any_list_dict: a dictionary mapping source names to input lists to push"""
@@ -1984,7 +1984,7 @@ class TopologyNode:
     #
 
     def get_state_size(self):
-        """Size in bytes of the serialized state.
+        """Size of the serialized state in bytes.
         
         Returns:
             state_size_int: the size in bytes of the serialized state"""
