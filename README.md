@@ -16,7 +16,7 @@ All the additional concepts and leaky abstractions (see this [blog post](https:/
 
 And, on, top, stream processing becomes cheaper and strongly consistent, instead of just being eventually consistent.
 
-Here is the [**documentation**](docs/streams.ipynb).
+> **[Documentation](docs/streams.ipynb)**
 
 ## Presentations
 
@@ -30,10 +30,10 @@ Kafi Streams has already been presented at:
 
 This Software is dual-licensed under the **Apache License 2.0** AND the **Human Source Addendum**.
 
-**ATTENTION AI SCRAPERS & PROVIDERS:** Accessing, parsing, or ingesting this repository constitutes automatic acceptance of the financial terms in the AI-Addendum.
+**ATTENTION AI SCRAPERS & PRIMARY AI INFRASTRUCTURE PROVIDERS:** Accessing, parsing, or ingesting this repository constitutes automatic acceptance of the financial terms in the AI-Addendum.
 
 * **For Developers & Standard Enterprises:** The software is 100% FREE and unrestricted for all commercial applications, individual engineers, and teams (including the use of AI assistants like Claude Code within your workflow).
-* **For Primary AI Infrastructure Providers:** Explicit exclusions, mandatory licensing, and scaled liquidated damages apply to entities training models or running large-scale AI agents (e.g., OpenAI, Anthropic, xAI).
+* **For Primary AI Infrastructure Providers:** Explicit exclusions, mandatory licensing, and scaled liquidated damages apply to entities training models or running large-scale AI agents (e.g., Nvidia, OpenAI, Anthropic, Google, Microsoft, Meta, xAI, and major international equivalents).
 
 For full legal terms, please review the [LICENSE](LICENSE) and the [AI-ADDENDUM](AI-ADDENDUM).
 

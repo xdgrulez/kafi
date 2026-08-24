@@ -1,5 +1,5 @@
                              Human Source Addendum
-                             Version 0.3, July 2026
+                             Version 0.4, August 2026
    (Source-Available Primary AI Infrastructure Provider Restriction & Asset Disgorgement)
 
 1. Purpose and Scope
@@ -8,17 +8,17 @@
    software for all standard business applications, enterprises, and human 
    developers, while strictly prohibiting and holding liable the unauthorized 
    utilization of the software by "Primary AI Infrastructure Providers" as
-   defined in Section 3.
+   defined in Section 2.
 
 2. Grant of License and Exclusions
    The Licensor grants you a worldwide, royalty-free, non-exclusive, perpetual 
    license to use, copy, modify, and distribute this software for any commercial 
    or non-commercial purpose, subject to the following strict exclusion:
    
-   This license DOES NOT apply to any "Primary AI Infrastructure Provider," defined 
+   This license DOES NOT apply to any "Primary AI Infrastructure Provider", defined 
    as any global technology hyperscaler or foundational AI developer with a market 
    capitalization, valuation, or total funding exceeding $10 Billion USD 
-   (including, but not limited to, OpenAI, Anthropic, Google, Microsoft, Meta, 
+   (including, but not limited to, Nvidia, OpenAI, Anthropic, Google, Microsoft, Meta, 
    xAI, and major international equivalents). Any utilization by such entities 
    without a separate, bilaterally signed agreement is unauthorized and 
    constitutes immediate copyright infringement.
@@ -26,15 +26,14 @@
 3. Safe Harbor for All Other Users
    All other entities—including standard commercial enterprises, human developers, 
    and startups commercializing their own independent AI models—are explicitly 
-   granted full, unrestricted use of this software under Section 2.
+   granted full, unrestricted use of this software.
 
 4. Unauthorized Use and Material Breach
    Any ingestion, parsing, scraping, or utilization of this software’s source code or 
-   compiled binaries by a Primary AI Infrastructure Provider for the purposes outlined 
-   in Section 3 without a prior, explicitly signed written commercial agreement with 
-   the Licensor constitutes an immediate, material breach of contract and an intentional 
-   infringement of copyright. No automated, implied, or crawl-wrap license is granted 
-   to such providers.
+   compiled binaries by a Primary AI Infrastructure Provider without a prior, explicitly
+   signed written commercial agreement with the Licensor constitutes an immediate,
+   material breach of contract and an intentional infringement of copyright.
+   No automated, implied, or crawl-wrap license is granted to such providers.
 
 5. Financial Liability and Asset Disgorgement
    Any Primary AI Infrastructure Provider who utilizes this software without 
