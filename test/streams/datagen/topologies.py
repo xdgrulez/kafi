@@ -26,7 +26,7 @@ def get_built_tn_datagen_1_join(get_click_source_tn_fun,
     #
     join_1_tn = (
         click_tn
-        .join_equi(
+        .join(
             customer_tn,
             lambda l_r: l_r["user_id"],
             lambda r_r: r_r["id"],
@@ -69,7 +69,7 @@ def get_built_tn_datagen_2_joins(get_click_source_tn_fun,
     #
     joins_2_tn = (
         click_tn
-        .join_equi(
+        .join(
             customer_tn,
             lambda l_r: l_r["user_id"],
             lambda r_r: r_r["id"],
@@ -77,7 +77,7 @@ def get_built_tn_datagen_2_joins(get_click_source_tn_fun,
                               "ip": l_r["ip"],
                               "product_id": l_r["product_id"],
                               "first_name": r_r["first_name"]})
-        .join_equi(
+        .join(
             product_tn,
             lambda l_r: l_r["product_id"],
             lambda r_r: r_r["id"],
@@ -130,7 +130,7 @@ def get_built_tn_datagen_3_joins(get_click_source_tn_fun,
     #
     joins_3_tn = (
         click_tn
-        .join_equi(
+        .join(
             order_tn,
             lambda l_r: (l_r["product_id"], l_r["user_id"]),
             lambda r_r: (r_r["product_id"], r_r["customer_id"]),
@@ -138,7 +138,7 @@ def get_built_tn_datagen_3_joins(get_click_source_tn_fun,
                               "ip": l_r["ip"],
                               "product_id": l_r["product_id"],
                               "order_id": r_r["order_id"]})
-        .join_equi(
+        .join(
             customer_tn,
             lambda l_r: l_r["user_id"],
             lambda r_r: r_r["id"],
@@ -147,7 +147,7 @@ def get_built_tn_datagen_3_joins(get_click_source_tn_fun,
                               "product_id": l_r["product_id"],
                               "order_id": l_r["order_id"],
                               "first_name": r_r["first_name"]})
-        .join_equi(
+        .join(
             product_tn,
             lambda l_r: l_r["product_id"],
             lambda r_r: r_r["id"],
@@ -177,7 +177,7 @@ def get_built_tn_datagen_self_join_group_by(get_source_tn_fun, get_sink_tn_fun):
     #
     self_join_group_by_tn = (
         order_tn
-        .join_equi(
+        .join(
             order_tn,
             lambda l_r: l_r["customer_id"],
             lambda r_r: r_r["customer_id"],
@@ -213,7 +213,7 @@ def get_built_tn_datagen_self_join_group_by_debezium(get_source_tn_fun, get_sink
     #
     self_join_group_by_debezium_tn = (
         order_tn
-        .join_equi(
+        .join(
             order_tn,
             lambda l_r: l_r["customer_id"],
             lambda r_r: r_r["customer_id"],
@@ -350,7 +350,7 @@ def _get_built_tn_datagen_window(get_order_source_tn_fun,
     #
     join_1_tn = (
         order_tn
-        .join_equi(
+        .join(
             customer_tn,
             lambda l_r: l_r["customer_id"],
             lambda r_r: r_r["id"],
@@ -364,7 +364,7 @@ def _get_built_tn_datagen_window(get_order_source_tn_fun,
     #
     join_2_tn = (
         join_1_tn
-        .join_equi(
+        .join(
             product_tn,
             lambda l_r: l_r["product_id"],
             lambda r_r: r_r["id"],

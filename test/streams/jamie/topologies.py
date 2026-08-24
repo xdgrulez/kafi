@@ -28,7 +28,7 @@ def get_built_tn_jamie(get_source_tn_fun, get_sink_tn_fun):
                                               "debits": sum_int}
     )
     #
-    balance_tn = credits_tn.join_equi(
+    balance_tn = credits_tn.join(
         debits_tn,
         left_key_fun=lambda l_r: l_r["account"],
         right_key_fun=lambda r_r: r_r["account"],
