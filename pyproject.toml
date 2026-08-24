@@ -1,7 +1,7 @@
 [project]
 name = "kafi"
 version = "0.7.0"
-description = "Kafka and Files"
+description = "Kafi Streams - Stream Processing, Strongly Consistent and 10x easier"
 readme = "README.md"
 authors = [
     { name = "Ralph M. Debusmann", email = "matthias.debusmann@gmail.com" }
