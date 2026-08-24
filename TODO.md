@@ -1,6 +1,7 @@
 * mehr mermaid
 * abgleich docstrings/notebooks (docstrings = single source of truth)
 * texte durchgehen
+* <-----> ersetzen mit ##### + erklärungen
 
 # Kafi
 
