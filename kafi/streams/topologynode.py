@@ -167,7 +167,7 @@ class TopologyNode:
         return tn
 
     def _neg(self, **kwargs):
-        """Flip the weight of a record.
+        """Negate/flip the weight of a record.
         
         Args:
             **kwargs: passed through to the underlying node(s)
