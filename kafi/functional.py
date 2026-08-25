@@ -102,7 +102,7 @@ class Functional:
         return self.flatmap(topic, flatmap_fun, n, **kwargs)
 
     def foreach(self, topic, foreach_fun, n=ALL_MESSAGES, **kwargs):
-        """Consume a topic, calling a side-effect function per message.
+        """Consume a topic, calling a side effect function per message.
 
         Args:
             topic: topic name

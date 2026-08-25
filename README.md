@@ -8,13 +8,13 @@
 
 Kafi Streams is technically based on Bruno Rucy's ingenious [*pydbsp*](https://github.com/brurucy/pydbsp), a pure Python implementation of the revolutionary [*DataBase Stream Processing* (*DBSP*)](https://arxiv.org/abs/2203.16684) theory by Mihai Budiu, Leonid Rhyzhyk et al. of Feldera (https://www.feldera.com/).
 
-## Now Streaming Is Going to Become Mainstream
+## [Now Streaming Is Going to Become Mainstream](https://ralphmdebusmann.substack.com/p/now-streaming-is-going-to-become)
 
 Kafi Streams makes complex stateful stream processing 10x easier than before.
 
 All the additional concepts and leaky abstractions (see this [blog post](https://ralphmdebusmann.substack.com/p/why-streaming-still-isnt-mainstream)) that have kept complex stateful stream processing in a niche for a handful of streaming/distributed systems experts are, all of a sudden, gone.
 
-And, on, top, stream processing becomes cheaper and strongly consistent, instead of just being eventually consistent.
+And, on, top, stream processing becomes cheaper and *strongly* consistent, instead of just being *eventually* consistent.
 
 > **[Documentation](docs/streams.ipynb)**
 

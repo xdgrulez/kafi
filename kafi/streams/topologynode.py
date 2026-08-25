@@ -123,11 +123,11 @@ class TopologyNode:
         return tn
 
     def peek(self, prefix_str=None, peek_fun=None, **kwargs):
-        """Cause a side-effect on a record. The records pass through unchanged.
+        """Cause a side effect on a record. The records pass through unchanged.
         
         Args:
             prefix_str: label printed before each record (if peek_fun is None; default: no prefix)
-            peek_fun: r -> None - cause a side-effect on record r (default if peek_fun is None: print)
+            peek_fun: r -> None - cause a side effect on record r (default if peek_fun is None: print)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -149,7 +149,7 @@ class TopologyNode:
         
         Args:
             prefix_str: label printed before each record/weight pair (if _peek_fun is None; default: no prefix)
-            peek_fun: (r, w) -> None - cause a side-effect on record/weight pair (r, w) (default if _peek_fun is None: print)
+            peek_fun: (r, w) -> None - cause a side effect on record/weight pair (r, w) (default if _peek_fun is None: print)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1824,7 +1824,7 @@ class TopologyNode:
     ###
 
     def __foreach(self, foreach_fun):
-        """Visit every node from this topology node upstream and apply a side-effect.
+        """Visit every node from this topology node upstream and apply a side effect.
         
         Args:
             foreach_fun: tn -> None function applied to every node"""
