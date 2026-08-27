@@ -20,7 +20,7 @@ def get_root_tn():
         employees_source_tn
         .project(lambda x: {"id": x["value"]["id"], "name": x["value"]["name"]})
         .select(lambda x: x["name"] != "mark")
-        .join_equi(
+        .join(
             salaries_source_tn
             .project(lambda x: {"id": x["value"]["id"], "salary": x["value"]["salary"]}),
             lambda x: x["id"],
