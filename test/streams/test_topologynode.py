@@ -1,5 +1,3 @@
-import sys
-
 from streams.test_topologynode_base import TestTopologyNodeBase
 from streams.test_generate import TestGenerate
 from streams.test_base import TestBase, default_batch_size_int, default_steps_int

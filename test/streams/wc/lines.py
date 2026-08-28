@@ -4,9 +4,11 @@ line_str_list = ["hello kafi streams", "all streams lead to kafi", "join berlin 
 
 class LineGenerator:
     def generate_record(self):
+        k_r = None
+        #
         line_str = random.choice(line_str_list)
         #
-        return line_str
+        return (k_r, line_str)
 
 if __name__ == "__main__":
     generator = LineGenerator()

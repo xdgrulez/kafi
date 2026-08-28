@@ -4,18 +4,13 @@ from streams.datagen.constants.customers import customer_dict_list
 
 #
 
-# import sys
-# sys.path.insert(1, ".")
-
-#
-
-#
-
 class ShoeCustomerGenerator:
     def generate_record(self):
-        record_dict = random.choice(customer_dict_list)
+        k_r = None
         #
-        return record_dict
+        v_r = random.choice(customer_dict_list)
+        #
+        return (k_r, v_r)
 
 if __name__ == "__main__":
     generator = ShoeCustomerGenerator()

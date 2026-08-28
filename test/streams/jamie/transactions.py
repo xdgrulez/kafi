@@ -2,11 +2,13 @@ import random
 
 class TransactionGenerator:
     def generate_record(self):
-        record_dict = {"from_account": random.randint(0, 9),
-                       "to_account": random.randint(0, 9),
-                       "amount": 1}
+        k_r = None
         #
-        return record_dict
+        v_r = {"from_account": random.randint(0, 9),
+               "to_account": random.randint(0, 9),
+               "amount": 1}
+        #
+        return (k_r, v_r)
 
 if __name__ == "__main__":
     generator = TransactionGenerator()

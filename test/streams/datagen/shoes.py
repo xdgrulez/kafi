@@ -4,18 +4,13 @@ from streams.datagen.constants.products import product_dict_list
 
 #
 
-# import sys
-# sys.path.insert(1, ".")
-
-#
-
-#
-
 class ShoeProductGenerator:
     def generate_record(self):
-        record_dict = random.choice(product_dict_list)
+        k_r = None
         #
-        return record_dict
+        v_r = random.choice(product_dict_list)
+        #
+        return (k_r, v_r)
 
 if __name__ == "__main__":
     generator = ShoeProductGenerator()

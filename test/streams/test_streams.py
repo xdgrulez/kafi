@@ -25,8 +25,8 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         sink_storage = source_storage
         #
         built_tn = get_built_tn_datagen_1_join(lambda: Streams.source(source_storage, click_source_str),
-                                              lambda: Streams.source(source_storage, customer_source_str),
-                                              lambda x: x.sink(sink_storage, sink_str))
+                                               lambda: Streams.source(source_storage, customer_source_str),
+                                               lambda x: x.sink(sink_storage, sink_str))
         #
         self.go(built_tn,
                 {click_source_str: default_batch_size_int, customer_source_str: default_batch_size_int},
@@ -44,9 +44,9 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         sink_storage = source_storage
         #
         built_tn = get_built_tn_datagen_2_joins(lambda: Streams.source(source_storage, click_source_str),
-                                               lambda: Streams.source(source_storage, customer_source_str),
-                                               lambda: Streams.source(source_storage, product_source_str),
-                                               lambda x: x.sink(sink_storage, sink_str))
+                                                lambda: Streams.source(source_storage, customer_source_str),
+                                                lambda: Streams.source(source_storage, product_source_str),
+                                                lambda x: x.sink(sink_storage, sink_str))
         #
         self.go(built_tn,
                 {click_source_str: default_batch_size_int, customer_source_str: default_batch_size_int, product_source_str: default_batch_size_int},
