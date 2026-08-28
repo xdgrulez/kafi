@@ -1501,6 +1501,80 @@ class TopologyNode:
         return trigger_tn
 
     ###
+    # Upsert
+    ###
+
+    def upsert(self, key_fun=lambda r: r["key"], is_deletion_fun=lambda r: r["value"] is None, **kwargs):
+        """Resolve a changelog stream (inserts/updates/deletes per key) down to the latest value per key, retracting the previous value whenever a new value (or a deletion) arrives for that key.
+
+        Args:
+            key_fun: r -> key - the key to upsert on (default: lambda r: r["key"])
+            is_deletion_fun: r -> bool - True if r represents a delete (default: r["value"] is None)
+            **kwargs: passed through to the underlying node(s)
+        Returns:
+            tn: the newly created topology node of the operator"""
+        def _build_fun(evaluator):
+            tn._evaluator = evaluator
+            #
+            input_nodeId = self._output_nodeId
+            #
+            def _key_fun(packed_r):
+                r = tn._unpack_fun(packed_r)
+                return tn._pack_fun(key_fun(r))
+            #
+            def _compute(t, reads, ctx):
+                read_input, read_self = reads
+                #
+                chain = ctx.lattice.factors[0]
+                predecessor = chain.predecessor(t[0])
+                #
+                if predecessor is None:
+                    prev_state_dict = {}
+                else:
+                    pred_t = (predecessor,) + t[1:]
+                    prev_state_dict, _ = read_self(pred_t)
+                #
+                input_zSet = read_input(t)
+                #
+                new_state_dict = dict(prev_state_dict)
+                delta_dict = {}
+                #
+                for packed_r, w in input_zSet.items():
+                    if w <= 0:
+                        continue
+                    #
+                    key_packed = _key_fun(packed_r)
+                    r = tn._unpack_fun(packed_r)
+                    #
+                    old_packed_r = new_state_dict.get(key_packed)
+                    if old_packed_r is not None:
+                        delta_dict[old_packed_r] = delta_dict.get(old_packed_r, 0) - 1
+                        del new_state_dict[key_packed]
+                    #
+                    if not is_deletion_fun(r):
+                        new_state_dict[key_packed] = packed_r
+                        delta_dict[packed_r] = delta_dict.get(packed_r, 0) + 1
+                #
+                delta_zSet = ZSet({k: w for k, w in delta_dict.items() if w != 0})
+                #
+                return new_state_dict, delta_zSet
+            #
+            next_nodeId = evaluator.circuit.next_id()
+            upsert_nodeId = evaluator.circuit.add(
+                ProgressFeedback(input=input_nodeId, self_id=next_nodeId, axis=0),
+                SimpleNamespace(compute=_compute),
+            )
+            #
+            project_nodeId = Lift1(f=lambda tup: tup[1]).connect(evaluator.circuit, (upsert_nodeId,))
+            #
+            tn._output_nodeId = project_nodeId
+        #
+        current_class = type(self)
+        tn = current_class("upsert_op", {self}, _build_fun, **kwargs)
+        #
+        return tn
+
+    ###
     # Operator utils
     ###
 
