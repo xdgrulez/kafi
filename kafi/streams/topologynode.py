@@ -1501,15 +1501,15 @@ class TopologyNode:
         return trigger_tn
 
     ###
-    # Upsert
+    # Collapse
     ###
 
-    def upsert(self, key_fun=lambda r: r["key"], is_deletion_fun=lambda r: r["value"] is None, **kwargs):
-        """Resolve a changelog stream (inserts/updates/deletes per key) down to the latest value per key, retracting the previous value whenever a new value (or a deletion) arrives for that key.
+    def collapse(self, key_fun=lambda r: r["key"], is_deletion_fun=lambda r: r["value"] is None, **kwargs):
+        """Collapse/resolve a changelog stream (inserts/updates/deletes per key) down to the latest value per key, retracting the previous value whenever a new value (or a deletion) arrives for that key.
 
         Args:
-            key_fun: r -> key - the key to upsert on (default: lambda r: r["key"])
-            is_deletion_fun: r -> bool - True if r represents a delete (default: r["value"] is None)
+            key_fun: r -> key - the key to resolve on (default: lambda r: r["key"])
+            is_deletion_fun: r -> bool - True if r represents a delete (default: r["value"] is None, aka Kafka tombstone messages)
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
@@ -1570,7 +1570,7 @@ class TopologyNode:
             tn._output_nodeId = project_nodeId
         #
         current_class = type(self)
-        tn = current_class("upsert_op", {self}, _build_fun, **kwargs)
+        tn = current_class("collapse_op", {self}, _build_fun, **kwargs)
         #
         return tn
 
@@ -1764,14 +1764,25 @@ class TopologyNode:
             zSet: the Z-set"""
         inner_dict = {}
         for m in m_list:
-            if m["value"]["op"] in ["c", "u"]:
-                m1 = copy.deepcopy(m)
-                m1["value"] = m["value"]["after"]
-                inner_dict[pack_fun(m1)] = 1
+            if m["value"]["op"] == "c":
+                insert_m = copy.deepcopy(m)
+                insert_m["value"] = m["value"]["after"]
+                #
+                inner_dict[pack_fun(insert_m)] = 1
+            elif m["value"]["op"] == "u":
+                delete_m = copy.deepcopy(m)
+                insert_m = copy.deepcopy(m)
+                #
+                delete_m["value"] = m["value"]["before"]
+                insert_m["value"] = m["value"]["after"]
+                #
+                inner_dict[pack_fun(delete_m)] = -1
+                inner_dict[pack_fun(insert_m)] = 1
             elif m["value"]["op"] == "d":
-                m1 = copy.deepcopy(m)
-                m1["value"] = m["value"]["before"]
-                inner_dict[pack_fun(m1)] = -1
+                delete_m = copy.deepcopy(m)
+                delete_m["value"] = m["value"]["before"]
+                #
+                inner_dict[pack_fun(delete_m)] = -1
         #
         return ZSet(inner_dict)
     
@@ -1852,7 +1863,7 @@ class TopologyNode:
 
     @staticmethod
     def to_debezium(unpacked_r_w_tuple_list):
-        """Turn weighted r into Debezium create/delete messages.
+        """Turn weighted r into Debezium insert/delete messages.
         
         Args:
             unpacked_r_w_tuple_list: list of (r, w) tuples
