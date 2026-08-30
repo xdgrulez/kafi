@@ -761,8 +761,8 @@ class TopologyNode:
     ###
 
     def expire(self, ts_fun, expiry_fun, project_fun=lambda r_end_ts_tuple: r_end_ts_tuple[0], **kwargs):
-        """Expire records once the global watermark passes their expiry timestamp.
-        
+        """Expire records once the maximum timestamp of the messages passes their expiry timestamp.
+
         Args:
             ts_fun: r -> ts - get timestamp function
             expiry_fun: ts -> expiry ts - get expiry function
@@ -770,29 +770,28 @@ class TopologyNode:
             **kwargs: passed through to the underlying node(s)
         Returns:
             tn: the newly created topology node of the operator"""
-        input_plus_expiry_tn = (
-            self
-            .map(lambda r: (r, expiry_fun(ts_fun(r))), **kwargs)
-        )
-        #
         def _build_fun(evaluator):
             tn._evaluator = evaluator
-            #   
+            #
             NEG_INF = float("-inf")
             g = ZSetAddition()
-            input_nodeId = input_plus_expiry_tn._output_nodeId
+            input_nodeId = self._output_nodeId
             #
-            def _ts_fun(packed_r):
-                r, _ = tn._unpack_fun(packed_r)
+            def _tag(packed_r):
+                r = tn._unpack_fun(packed_r)
+                return tn._pack_fun((r, expiry_fun(ts_fun(r))))
+            #
+            def _ts_fun(packed_r_end_ts):
+                r, _ = tn._unpack_fun(packed_r_end_ts)
                 return ts_fun(r)
             #
-            def _expiry_fun(packed_r):
-                _, expiry_int = tn._unpack_fun(packed_r)
-                return expiry_int
+            def _expiry_fun(packed_r_end_ts):
+                _, end_ts = tn._unpack_fun(packed_r_end_ts)
+                return end_ts
             #
             def _compute(t, reads, ctx):
                 read_input, read_self = reads
-                #                
+                #
                 chain = ctx.lattice.factors[0]
                 predecessor = chain.predecessor(t[0])
                 #
@@ -802,7 +801,13 @@ class TopologyNode:
                     pred_t = (predecessor,) + t[1:]
                     prev_zSet, prev_max_ts, _ = read_self(pred_t)
                 #
-                input_zSet = read_input(t)
+                raw_input_zSet = read_input(t)
+                #
+                tagged_dict = {}
+                for packed_r, w in raw_input_zSet.items():
+                    tagged_packed_r = _tag(packed_r)
+                    tagged_dict[tagged_packed_r] = tagged_dict.get(tagged_packed_r, 0) + w
+                input_zSet = ZSet(tagged_dict)
                 #
                 input_max_ts = max(
                     (_ts_fun(k) for k, w in input_zSet.items() if w > 0),
@@ -811,7 +816,7 @@ class TopologyNode:
                 max_ts = prev_max_ts if input_max_ts is None else max(prev_max_ts, input_max_ts)
                 #
                 merged_zSet = g.add(prev_zSet, input_zSet)
-                #                
+                #
                 new_state_dict = {}
                 expired_dict = {}
                 #
@@ -822,11 +827,17 @@ class TopologyNode:
                         new_state_dict[k] = w
                     else:
                         expired_dict[k] = -w
-                #                
+                #
                 new_state_zSet = ZSet(new_state_dict)
                 expired_zSet = ZSet(expired_dict)
                 #
-                delta_zSet = g.add(input_zSet, expired_zSet)
+                raw_delta_zSet = g.add(input_zSet, expired_zSet)
+                #
+                projected_dict = {}
+                for packed_r_end_ts, w in raw_delta_zSet.items():
+                    packed_projected_r = tn._pack_fun(project_fun(tn._unpack_fun(packed_r_end_ts)))
+                    projected_dict[packed_projected_r] = projected_dict.get(packed_projected_r, 0) + w
+                delta_zSet = ZSet(projected_dict)
                 #
                 return new_state_zSet, max_ts, delta_zSet
             #
@@ -838,13 +849,13 @@ class TopologyNode:
             #
             project_nodeId = Lift1(f=lambda tup: tup[2]).connect(
                 evaluator.circuit, (expire_nodeId,))
-            #            
+            #
             tn._output_nodeId = project_nodeId
         #
         current_class = type(self)
-        tn = current_class("expire_op", {input_plus_expiry_tn}, _build_fun, **kwargs)
+        tn = current_class("expire_op", {self}, _build_fun, **kwargs)
         #
-        return tn.map(project_fun, **kwargs)
+        return tn
 
     ###
     # Time Windows - Assign end of window(s) for a timestamp
@@ -1501,14 +1512,14 @@ class TopologyNode:
         return trigger_tn
 
     ###
-    # Collapse
+    # Compact
     ###
 
-    def collapse(self, key_fun=lambda r: r["key"], is_deletion_fun=lambda r: r["value"] is None, **kwargs):
-        """Collapse/resolve a changelog stream (inserts/updates/deletes per key) down to the latest value per key, retracting the previous value whenever a new value (or a deletion) arrives for that key.
+    def compact(self, key_fun=lambda r: r["key"], is_deletion_fun=lambda r: r["value"] is None, **kwargs):
+        """Compact a changelog stream (inserts/updates/deletes per key) down to the latest value per key, retracting the previous value whenever a new value (or a deletion) arrives for that key.
 
         Args:
-            key_fun: r -> key - the key to resolve on (default: lambda r: r["key"])
+            key_fun: r -> key - the key to compact on (default: lambda r: r["key"])
             is_deletion_fun: r -> bool - True if r represents a delete (default: r["value"] is None, aka Kafka tombstone messages)
             **kwargs: passed through to the underlying node(s)
         Returns:
@@ -1570,7 +1581,7 @@ class TopologyNode:
             tn._output_nodeId = project_nodeId
         #
         current_class = type(self)
-        tn = current_class("collapse_op", {self}, _build_fun, **kwargs)
+        tn = current_class("compact_op", {self}, _build_fun, **kwargs)
         #
         return tn
 
