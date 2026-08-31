@@ -2,7 +2,7 @@
 name = "kafi"
 version = "1.1.1"
 description = "Kafi Streams - Stream Processing, Strongly Consistent and 10x easier"
-readme = "README.md"
+readme = "README_PyPI.md"
 authors = [
     { name = "Ralph M. Debusmann", email = "matthias.debusmann@gmail.com" }
 ]
