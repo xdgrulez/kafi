@@ -126,6 +126,32 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         #
         self.assert_datagen_multiple_sinks(sink_customer_a_h_str, sink_customer_i_q_str, sink_customer_r_z_str)
 
+    def test_datagen_multiple_sinks_fun(self):
+        source_str = "shoe_customers"
+        #
+        sink_customer_a_h_str = "customer_a_h"
+        sink_customer_i_q_str = "customer_i_q"
+        sink_customer_r_z_str = "customer_r_z"
+        #
+        source_storage = Cluster("local")
+        source_storage.consume_batch_size(default_batch_size_int)
+        sink_storage = source_storage
+        #
+        def sink_fun(r):
+            print("Sink function called...")
+            self.sink_str_updated_r_list_dict[sink_customer_r_z_str].append(r)
+        #
+        built_tn = get_built_tn_datagen_multiple_sinks(lambda: Streams.source(source_storage, source_str),
+                                                       lambda x: x.sink(sink_storage, sink_customer_a_h_str),
+                                                       lambda x: x.sink(sink_storage, sink_customer_i_q_str),
+                                                       lambda x: x.sink_fun(sink_fun, sink_customer_r_z_str))
+        #
+        source_str_batch_size_int_dict = {source_str: default_batch_size_int}
+        #
+        self.go(built_tn, source_str_batch_size_int_dict, default_steps_int)
+        #
+        self.assert_datagen_multiple_sinks(sink_customer_a_h_str, sink_customer_i_q_str, sink_customer_r_z_str)
+
     #
 
     def _test_datagen_window(self, sink_str, get_built_tn_fun):

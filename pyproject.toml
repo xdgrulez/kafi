@@ -1,6 +1,6 @@
 [project]
 name = "kafi"
-version = "1.1.0"
+version = "1.1.1"
 description = "Kafi Streams - Stream Processing, Strongly Consistent and 10x easier"
 readme = "README.md"
 authors = [

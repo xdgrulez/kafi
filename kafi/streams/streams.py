@@ -72,6 +72,24 @@ class Streams(TopologyNode):
         tn._topic_dict = {"storage": storage,
                           "topic": sink_str if topic_str is None else topic_str,
                           "kwargs": kwargs}
+        tn._fun_dict = None
+        #
+        return tn
+
+    def sink_fun(self, foreach_fun, sink_str, finally_fun=lambda: None):
+        """Mark a topology node as a sink backed by a function (plus a clean-up function).
+
+        Args:
+            foreach_fun: function to call on each record landing in the sink
+            sink_str: name of the output sink
+            finally_fun: function to clean up resources used in the foreach_fun (default: lambda: None)
+        Returns:
+            tn: the marked topology node"""
+        tn = super().sink(sink_str)
+        #
+        tn._fun_dict = {"foreach": foreach_fun,
+                        "finally": finally_fun}
+        tn._topic_dict = None
         #
         return tn
 
@@ -114,7 +132,7 @@ class Streams(TopologyNode):
 
     @staticmethod 
     def streams(built_tn, checkpoint_storage=None, checkpoint_topic_str=None, checkpoint_interval_float=default_checkpoint_interval_float, stop_event=None, **kwargs):
-        """Build producers/consumers from the topology's sources/sinks and run streams_fun().
+        """Build consumers/producers or functions from the topology's sources/sinks and run streams_fun().
 
         Args:
             built_tn: built tn to run
@@ -128,13 +146,12 @@ class Streams(TopologyNode):
             raise Exception("No source.")
         #
         sink_str_topic_dict_dict = built_tn.get_sink_str_topic_dict_dict()
-        if len(sink_str_topic_dict_dict) == 0:
+        sink_str_fun_dict_dict = built_tn.get_sink_str_fun_dict_dict()
+        if len(sink_str_topic_dict_dict) + len(sink_str_fun_dict_dict) == 0:
             raise Exception("No sink.")
         #
         if not built_tn._sink_str_list:
             raise Exception("Sink is not terminal.")
-        #
-
         #
         sink_str_producer_dict = {}
         for sink_str, topic_dict in sink_str_topic_dict_dict.items():
@@ -146,16 +163,21 @@ class Streams(TopologyNode):
             #
             sink_str_producer_dict[sink_str] = producer
         #
-        def get_foreach_fun(sink_str):
+        def get_producer_foreach_fun(sink_str):
             producer = sink_str_producer_dict[sink_str]
             #
             return producer.produce_list
         #
-        def get_finally_fun(sink_str):
+        def get_producer_finally_fun(sink_str):
             producer = sink_str_producer_dict[sink_str]
             return producer.close
         #
-        sink_str_foreach_fun_finally_fun_tuple_dict = {sink_str: (get_foreach_fun(sink_str), get_finally_fun(sink_str)) for sink_str, _ in sink_str_topic_dict_dict.items()}
+        sink_str_foreach_fun_finally_fun_tuple_dict = {}
+        for sink_str, _ in sink_str_topic_dict_dict.items():
+            sink_str_foreach_fun_finally_fun_tuple_dict[sink_str] = (get_producer_foreach_fun(sink_str), get_producer_finally_fun(sink_str))
+        #
+        for sink_str, fun_dict in sink_str_fun_dict_dict.items():
+            sink_str_foreach_fun_finally_fun_tuple_dict[sink_str] = (fun_dict["foreach"], fun_dict["finally"])
         #
         Streams.streams_fun(built_tn, sink_str_foreach_fun_finally_fun_tuple_dict, checkpoint_storage=checkpoint_storage, checkpoint_topic_str=checkpoint_topic_str, checkpoint_interval_float=checkpoint_interval_float, stop_event=stop_event, **kwargs)
 
@@ -353,14 +375,21 @@ class Streams(TopologyNode):
         
         Returns:
             source_str_topic_dict_dict: a dictionary mapping source names to their corresponding topic dictionaries"""
-        return {source_str: source_streams._topic_dict for source_str, source_streams in self.get_source_nodes().items()}
+        return {source_str: source_tn._topic_dict for source_str, source_tn in self.get_source_nodes().items()}
     
     def get_sink_str_topic_dict_dict(self):
         """Topic config per sink, keyed by sink name.
         
         Returns:
             sink_str_topic_dict_dict: a dictionary mapping sink names to their corresponding topic dictionaries"""
-        return {sink_str: sink_streams._topic_dict for sink_str, sink_streams in self.get_sink_nodes().items()}
+        return {sink_str: sink_tn._topic_dict for sink_str, sink_tn in self.get_sink_nodes().items() if sink_tn._topic_dict is not None}
+
+    def get_sink_str_fun_dict_dict(self):
+        """Function config per sink, keyed by sink name.
+        
+        Returns:
+            sink_str_fun_dict_dict: a dictionary mapping sink names to their corresponding function dictionaries"""
+        return {sink_str: sink_tn._fun_dict for sink_str, sink_tn in self.get_sink_nodes().items() if sink_tn._fun_dict is not None}
 
     ###
     # Thread helpers
