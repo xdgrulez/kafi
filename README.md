@@ -26,16 +26,16 @@ Kafi Streams has already been presented at:
 * [Current 2025 Bangalore](https://current.confluent.io/post-conference-videos-2025/kafka-superpowers-for-your-jupyter-notebook-and-python-bng25) ([Jupyter notebook](https://github.com/xdgrulez/cur25blr)).
 * [Berlin Buzzwords 2026](https://2026.berlinbuzzwords.de/session/kafi-streams-complex-stream-processing-made-simple/) ([Jupyter notebook](presentations/2026-06-09-Berlin_Buzzwords/bbuzz2026.ipynb))
 
-## Licensing & AI Restrictions
+## Licensing & Source-Available Terms
 
-This Software is dual-licensed under the **Apache License 2.0** AND the **Human Source Addendum**.
+This software is licensed under the **Apache License 2.0 with the Human Source Addendum** (Version 0.4).
 
-**ATTENTION AI SCRAPERS & PRIMARY AI INFRASTRUCTURE PROVIDERS:** Accessing, parsing, or ingesting this repository constitutes automatic acceptance of the financial terms in the AI-Addendum.
+By accessing, cloning, or utilizing this repository, you agree to the terms set forth in the Addendum.
 
-* **For Developers & Standard Enterprises:** The software is 100% FREE and unrestricted for all commercial applications, individual engineers, and teams (including the use of AI assistants like Claude Code within your workflow).
-* **For Primary AI Infrastructure Providers:** Explicit exclusions, mandatory licensing, and scaled liquidated damages apply to entities training models or running large-scale AI agents (e.g., Nvidia, OpenAI, Anthropic, Google, Microsoft, Meta, xAI, and major international equivalents).
+* **Safe Harbor (Developers & Standard Enterprises):** 100% FREE and unrestricted for all commercial applications, startups, individual engineers, and human developers (including internal usage of AI coding tools like Claude Code or Cursor).
+* **Primary AI Infrastructure Providers (Exclusion Clause):** Unauthorized ingestion, model training, or utilization by hyperscalers or foundational AI developers with valuation/funding >$10B USD (e.g., OpenAI, Anthropic, Microsoft, Google, Meta, Nvidia, xAI) is strictly prohibited without a separate, bilaterally signed commercial agreement. Financial liability, asset disgorgement, and immediate injunctive relief apply.
 
-For full legal terms, please review the [LICENSE](LICENSE) and the [AI-ADDENDUM](AI-ADDENDUM).
+For full legal terms, see [LICENSE](LICENSE) and [HUMAN-SOURCE-ADDENDUM](HUMAN-SOURCE-ADDENDUM).
 
 ---
 
