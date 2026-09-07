@@ -420,6 +420,12 @@ class Streams(TopologyNode):
         #
         state.pop("step_fun", None)
         #
+        if "_fun_dict" in state and state["_fun_dict"]:
+            topic_dict = state["_fun_dict"].copy()
+            topic_dict.pop("foreach", None)
+            topic_dict.pop("finally", None)
+            state["_fun_dict"] = topic_dict
+        #
         if "_topic_dict" in state and state["_topic_dict"]:
             topic_dict = state["_topic_dict"].copy()
             topic_dict.pop("storage", None)
