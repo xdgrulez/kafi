@@ -34,17 +34,17 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         SchemaRegistry.__init__(self, self.schema_registry_config_dict)
         #
         if "progress.num.messages" not in self.kafi_config_dict:
-            self.progress_num_messages(1000)
+            self.progress_num_messages(100)
         else:
             self.progress_num_messages(int(self.kafi_config_dict["progress.num.messages"]))
         #
         if "consume.batch.size" not in self.kafi_config_dict:
-            self.consume_batch_size(1000)
+            self.consume_batch_size(100)
         else:
             self.consume_batch_size(int(self.kafi_config_dict["consume.batch.size"]))
         #
         if "produce.batch.size" not in self.kafi_config_dict:
-            self.produce_batch_size(1000)
+            self.produce_batch_size(100)
         else:
             self.produce_batch_size(int(self.kafi_config_dict["produce.batch.size"]))
         #
