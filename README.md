@@ -18,6 +18,8 @@ And, on, top, stream processing becomes cheaper and *strongly* consistent, inste
 
 > **[Documentation](docs/streams.ipynb)**
 
+[Lookup joins: enrich incoming events from current table state](docs/lookup_join.md).
+
 ## Presentations
 
 Kafi Streams has already been presented at:

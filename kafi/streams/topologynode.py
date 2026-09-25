@@ -14,7 +14,7 @@ from pydbsp.indexed_relational_operators import (
     LiftLiftIndex,
 )
 from pydbsp.indexed_zset import IndexedZSetAddition
-from pydbsp.operator import Delay, Differentiate, Input, Integrate, Lift1, Lift2, LiftStreamIntroduction
+from pydbsp.operator import Delay, Differentiate, Input, Integrate, Lift1, Lift2, LiftIntegrate, LiftStreamIntroduction
 from pydbsp.relational_operators import (
     DeltaLiftedDeltaLiftedDistinct,
     DeltaLiftedDeltaLiftedJoin,
@@ -361,6 +361,100 @@ class TopologyNode:
         #
         current_class = type(self)
         tn = current_class("join_op", {self, right_tn}, _build_fun, **kwargs)
+        #
+        return tn
+
+    def lookup_join(self, right_tn, left_key_fun, right_key_fun, project_fun, **kwargs):
+        """Join each new left record with the current state of the right side.
+
+        Unlike join(), lookup_join() only retains the right side. Right-side
+        changes update the lookup state without producing output for left
+        records seen in earlier processing steps. The left side must be
+        append-only; negative left weights are rejected. A left-side miss is
+        discarded and is not replayed when the right side changes later.
+
+        The right input is interpreted as changes to a weighted Z-set relation,
+        not as a repeated full snapshot. All matching right records participate
+        and output weights are multiplied. For table semantics, the caller must
+        maintain at most one live right record with weight +1 per key. compact()
+        establishes this invariant for Kafka changelog topics while also
+        handling updates and tombstones.
+
+        Right-side changes from the current processing step are applied before
+        the left-side lookup.
+
+        Current state follows processing steps, not event timestamps. Preserve
+        order-sensitive same-key changelog updates in separate steps, or choose
+        the final update per key before compacting a right-only batch. Input
+        normalization does not preserve arbitrary ordered transitions in a Z-set.
+
+        Args:
+            right_tn: the topology node providing the lookup state
+            left_key_fun: l_r -> key - get the key of the left record l_r
+            right_key_fun: r_r -> key - get the key of the right record r_r
+            project_fun: (l_r, r_r) -> r - projection function for a match
+            **kwargs: passed through to the underlying node(s)
+        Returns:
+            tn: the newly created topology node of the operator
+        Raises:
+            ValueError: if the current left input contains a negative weight;
+                reset or restore the topology before processing another step
+        """
+        def _left_key_fun(left_packed_r):
+            left_r = tn._unpack_fun(left_packed_r)
+            return tn._pack_fun(left_key_fun(left_r))
+        #
+        def _right_key_fun(right_packed_r):
+            right_r = tn._unpack_fun(right_packed_r)
+            return tn._pack_fun(right_key_fun(right_r))
+        #
+        def _project_fun(left_packed_r, right_packed_r):
+            left_r = tn._unpack_fun(left_packed_r)
+            right_r = tn._unpack_fun(right_packed_r)
+            return tn._pack_fun(project_fun(left_r, right_r))
+        #
+        def _lookup_fun(left_indexed_zSet, right_indexed_zSet):
+            for _, left_w in left_indexed_zSet.inner.items():
+                if left_w < 0:
+                    raise ValueError("lookup_join() requires an append-only left input (weight >= 0)")
+            #
+            out_inner_dict = {}
+            for packed_key_any, left_packed_r_set in left_indexed_zSet.index_to_value.items():
+                right_packed_r_set = right_indexed_zSet.index_to_value.get(packed_key_any)
+                if not right_packed_r_set:
+                    continue
+                #
+                for left_packed_r in left_packed_r_set:
+                    left_w = left_indexed_zSet.inner[left_packed_r]
+                    for right_packed_r in right_packed_r_set:
+                        right_w = right_indexed_zSet.inner[right_packed_r]
+                        out_packed_r = _project_fun(left_packed_r, right_packed_r)
+                        out_inner_dict[out_packed_r] = out_inner_dict.get(out_packed_r, 0) + left_w * right_w
+            #
+            return ZSet({out_packed_r: out_w for out_packed_r, out_w in out_inner_dict.items() if out_w != 0})
+        #
+        def _build_fun(evaluator):
+            tn._evaluator = evaluator
+            #
+            g = ZSetAddition()
+            r_g_idx = IndexedZSetAddition(g, _right_key_fun)
+            #
+            l_input_nodeId = self._output_nodeId
+            r_input_nodeId = right_tn._output_nodeId
+            #
+            l_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, l_input_nodeId)
+            r_liftStreamIntroduction_nodeId = tn.liftStreamIntroduction(g, evaluator, r_input_nodeId)
+            l_liftIndex_nodeId = LiftIndex(indexer=_left_key_fun).connect(evaluator.circuit, (l_liftStreamIntroduction_nodeId,))
+            r_liftIndex_nodeId = LiftIndex(indexer=_right_key_fun).connect(evaluator.circuit, (r_liftStreamIntroduction_nodeId,))
+            #
+            r_liftIntegrate_nodeId = LiftIntegrate(group=r_g_idx).connect(evaluator.circuit, (r_liftIndex_nodeId,))
+            r_integrateLiftIntegrate_nodeId = Integrate(group=r_g_idx).connect(evaluator.circuit, (r_liftIntegrate_nodeId,))
+            lookupJoin_nodeId = Lift2(op=_lookup_fun).connect(evaluator.circuit, (l_liftIndex_nodeId, r_integrateLiftIntegrate_nodeId))
+            #
+            tn._output_nodeId = lookupJoin_nodeId
+        #
+        current_class = type(self)
+        tn = current_class("lookup_join_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
     
