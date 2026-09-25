@@ -1,6 +1,6 @@
 [project]
 name = "kafi"
-version = "1.1.1"
+version = "1.1.2"
 description = "Kafi Streams - Stream Processing, Strongly Consistent and 10x easier"
 readme = "README_PyPI.md"
 authors = [

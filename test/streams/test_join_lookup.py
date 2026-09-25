@@ -3,7 +3,7 @@ import unittest
 from kafi.streams.topologynode import TopologyNode as Tn
 
 
-class TestLookupJoin(unittest.TestCase):
+class TestJoinLookup(unittest.TestCase):
     fact_source_str = "facts"
     product_source_str = "products"
     sink_str = "joined"
@@ -41,7 +41,7 @@ class TestLookupJoin(unittest.TestCase):
         #
         sink_tn = (
             left_tn
-            .lookup_join(
+            .join_lookup(
                 right_tn,
                 left_key_fun=lambda fact: fact["product_id"],
                 right_key_fun=lambda product: product["key"],

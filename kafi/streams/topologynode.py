@@ -364,11 +364,12 @@ class TopologyNode:
         #
         return tn
 
-    def lookup_join(self, right_tn, left_key_fun, right_key_fun, project_fun, **kwargs):
-        """Join each new left record with the current state of the right side.
+    def join_lookup(self, right_tn, left_key_fun, right_key_fun, project_fun, **kwargs):
+        """Join each new left record with the current state of the right side. Similar
+        to a Stream/Table join in classical stream processing.
 
-        Unlike join(), lookup_join() only retains the right side. Right-side
-        changes update the lookup state without producing output for left
+        Unlike join() and join_pred(), join_lookup() only retains the right side.
+        Right-side changes update the lookup state without producing output for left
         records seen in earlier processing steps. The left side must be
         append-only; negative left weights are rejected. A left-side miss is
         discarded and is not replayed when the right side changes later.
@@ -416,7 +417,7 @@ class TopologyNode:
         def _lookup_fun(left_indexed_zSet, right_indexed_zSet):
             for _, left_w in left_indexed_zSet.inner.items():
                 if left_w < 0:
-                    raise ValueError("lookup_join() requires an append-only left input (weight >= 0)")
+                    raise ValueError("join_lookup() requires an append-only left input (weight >= 0)")
             #
             out_inner_dict = {}
             for packed_key_any, left_packed_r_set in left_indexed_zSet.index_to_value.items():
@@ -449,12 +450,12 @@ class TopologyNode:
             #
             r_liftIntegrate_nodeId = LiftIntegrate(group=r_g_idx).connect(evaluator.circuit, (r_liftIndex_nodeId,))
             r_integrateLiftIntegrate_nodeId = Integrate(group=r_g_idx).connect(evaluator.circuit, (r_liftIntegrate_nodeId,))
-            lookupJoin_nodeId = Lift2(op=_lookup_fun).connect(evaluator.circuit, (l_liftIndex_nodeId, r_integrateLiftIntegrate_nodeId))
+            joinLookup_nodeId = Lift2(op=_lookup_fun).connect(evaluator.circuit, (l_liftIndex_nodeId, r_integrateLiftIntegrate_nodeId))
             #
-            tn._output_nodeId = lookupJoin_nodeId
+            tn._output_nodeId = joinLookup_nodeId
         #
         current_class = type(self)
-        tn = current_class("lookup_join_op", {self, right_tn}, _build_fun, **kwargs)
+        tn = current_class("join_lookup_op", {self, right_tn}, _build_fun, **kwargs)
         #
         return tn
     
