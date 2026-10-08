@@ -263,7 +263,7 @@ class StorageConsumer(Dechunker):
             state = {partition_int: [low_watermark_int, high_watermark_int, high_watermark_int] for partition_int, (low_watermark_int, high_watermark_int) in partition_int_offset_int_tuple_dict.items()}
             for _ in range(last_n_int):
                 # Find the partition with the most remaining messages.
-                best_partition_int = max(state.keys(), key=lambda partition_int: state[partition_int][2] - state[partition_int][0])
+                best_partition_int = max(state.keys(), key=lambda partition_int: (state[partition_int][2] - state[partition_int][0], -partition_int))
                 if state[best_partition_int][2] == state[best_partition_int][0]:
                     # If not even that partition doesn't carry enough remaining messages, stop.
                     break

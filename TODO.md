@@ -20,7 +20,7 @@
 
 # Streams
 
-* use pydbsp pluggable state
+* use pydbsp pluggable state/LMDB for swapping
 
 * bring back multicore support to pydbsp and use it
 
