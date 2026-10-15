@@ -109,7 +109,7 @@ class OrderGenerator:
             else:
                 m_or_m_w_tuple_list.append(m)
         #
-        return m
+        return m_or_m_w_tuple_list
 
 #
 
