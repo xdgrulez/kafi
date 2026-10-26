@@ -86,7 +86,7 @@ class TopologyNode:
                 #
                 if out_w != 0:
                     out_packed_r = tn._pack_fun(out_r)
-                    out_inner_dict[out_packed_r] = out_w
+                    out_inner_dict[out_packed_r] = out_inner_dict.get(out_packed_r, 0) + out_w
             #
             return ZSet(out_inner_dict)
         #
