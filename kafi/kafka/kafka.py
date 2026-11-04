@@ -1,9 +1,5 @@
 from kafi.storage import Storage
 
-# Constants
-
-ALL_MESSAGES = -1
-
 #
 
 class Kafka(Storage):
@@ -37,10 +33,10 @@ class Kafka(Storage):
         else:
             self.retention_ms(int(self.kafi_config_dict["retention.ms"]))
         #
-        if "consume.timeout" not in self.kafi_config_dict:
-            self.consume_timeout(5.0)
+        if "cluster.consume.timeout" not in self.kafi_config_dict:
+            self.cluster_consume_timeout(0.1)
         else:
-            self.consume_timeout(float(self.kafi_config_dict["consume.timeout"]))
+            self.cluster_consume_timeout(float(self.kafi_config_dict["cluster.consume.timeout"]))
         #
         if "session.timeout.ms" not in self.kafi_config_dict:
             self.session_timeout_ms(45000)
@@ -77,8 +73,8 @@ class Kafka(Storage):
     def retention_ms(self, new_value=None): # int
         return self.get_set_config("retention.ms", new_value)
 
-    def consume_timeout(self, new_value=None): # float
-        return self.get_set_config("consume.timeout", new_value)
+    def cluster_consume_timeout(self, new_value=None): # float
+        return self.get_set_config("cluster.consume.timeout", new_value)
 
     def enable_auto_commit(self, new_value=None): # bool
         return self.get_set_config("enable.auto.commit", new_value)

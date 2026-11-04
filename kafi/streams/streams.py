@@ -9,6 +9,8 @@ import cloudpickle
 from kafi.helpers import get_millis, compress, decompress
 from kafi.streams.topologynode import TopologyNode
 
+ALL_MESSAGES = -1
+
 #
 
 logger = logging.getLogger(__name__)
@@ -201,12 +203,13 @@ class Streams(TopologyNode):
         outputs_int = 0
         #
         def progress_fun(built_tn, source_str_offsets_dict_dict, time_int):
-            sys.stdout.write(f"\rUptime: {(time_int - initial_time_int) / 1000:.3f}s, State size: {built_tn.get_state_size() / 1024:.2f} KB, Source offsets: {source_str_offsets_dict_dict}, Sink outputs: {outputs_int}")
+            sys.stdout.write(f"\rUptime: {(time_int - progress_initial_time_int) / 1000:.3f}s, State size: {built_tn.get_state_size() / 1024:.2f} KB, Source offsets: {source_str_offsets_dict_dict}, Sink outputs: {outputs_int}")
             sys.stdout.flush()
         #
         step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda _1, _2: None
         #
         initial_time_int = get_millis()
+        progress_initial_time_int = initial_time_int
         #
         def save_checkpoint(source_str_offsets_dict_dict):
             checkpoint_dict = {"state": built_tn.get_state(),

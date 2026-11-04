@@ -13,7 +13,7 @@ class AddOns(Functional):
 
         Args:
             topic: topic name
-            n: max messages to consume; ALL_MESSAGES for no limit
+            n: max messages to consume
             **kwargs: passed to foldl()
 
         Returns:
@@ -48,7 +48,7 @@ class AddOns(Functional):
             topic: source topic name
             target_storage: storage to produce results to
             target_topic: target topic name
-            n: max messages to consume; ALL_MESSAGES for no limit
+            n: max messages to consume
             **kwargs: source_*/target_*-prefixed kwargs, split via copy_kwargs()
 
         Returns:

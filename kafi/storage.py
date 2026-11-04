@@ -48,6 +48,11 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         else:
             self.produce_batch_size(int(self.kafi_config_dict["produce.batch.size"]))
         #
+        if "consume.timeout" not in self.kafi_config_dict:
+            self.consume_timeout(1.0)
+        else:
+            self.consume_timeout(float(self.kafi_config_dict["consume.timeout"]))
+        #
         if "verbose" not in self.kafi_config_dict:
             verbose_int = 1 if is_interactive() else 0
             self.verbose(verbose_int)
@@ -126,6 +131,13 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         Returns:
             int: current value"""
         return self.get_set_config("produce.batch.size", new_value)
+
+    def consume_timeout(self, new_value=None): # float
+        """Get/set the consume timeout (float).
+
+        Returns:
+            float: current value"""
+        return self.get_set_config("consume.timeout", new_value)
 
     def verbose(self, new_value=None): # int
         """Get/set the verbosity level (int).

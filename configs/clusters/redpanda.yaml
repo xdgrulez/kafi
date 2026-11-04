@@ -4,19 +4,3 @@ kafka:
   sasl.mechanisms: SCRAM-SHA-256
   sasl.username: ${KAFI_KAFKA_USERNAME}
   sasl.password: ${KAFI_KAFKA_PASSWORD}
-
-kafi:
-  flush.timeout: -1.0
-  produce.batch.size: 1000
-  retention.ms: 604800000
-  consume.timeout: 5.0
-  consume.batch.size: 1000
-  consumer.group.prefix: ""
-  enable.auto.commit: false
-  isolation.level: read_uncommitted
-  session.timeout.ms: 45000
-  auto.offset.reset: earliest
-  progress.num.messages: 1000
-  key.type: str
-  value.type: json
-  cluster.kind: redpanda

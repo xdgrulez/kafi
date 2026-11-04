@@ -724,6 +724,58 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(value_dict_list, self.value_snack_dict_list)
         consumer.close()
 
+    def test_produce_consume_multiple_topics(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str1 = self.create_test_topic_name()
+        s.create(topic_str1)
+        #
+        producer = s.producer(topic_str1, key_type="json", value_type="json")
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_str_list)
+        producer.close()
+        self.assertEqual(s.topics(topic_str1, size=True, partitions=True)[topic_str1]["size"], 3)
+        #
+        topic_str2 = self.create_test_topic_name()
+        s.create(topic_str2)
+        #
+        producer = s.producer(topic_str2, key_type="json", value_type="json")
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_str_list)
+        producer.close()
+        self.assertEqual(s.topics(topic_str2, size=True, partitions=True)[topic_str2]["size"], 3)
+        #
+        group_str = self.create_test_group_name()
+        consumer = s.consumer([topic_str1, topic_str2], group=group_str, key_type="json", value_type="json")
+        m_list = consumer.consume(n=6)
+        self.assertEqual(len(m_list), 6)
+        consumer.close()
+
+    def test_produce_consume_avro(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str)
+        # Upon produce, the type "avro" triggers the conversion of bytes, strings and dictionaries into Avro-encoded bytes on Kafka.
+        producer = s.producer(topic_str, key_type="avro", value_type="avro", key_schema=self.avro_key_schema_str, value_schema=self.avro_value_schema_str)
+        producer.produce(self.value_snack_dict_list, key=self.key_snack_bytes_list)
+        producer.close()
+        self.assertEqual(s.topics(topic_str, size=True, partitions=True)[topic_str]["size"], 3)
+        #
+        group_str = self.create_test_group_name()
+        # Upon consume, the type "avro" triggers the conversion into a dictionary.
+        consumer = s.consumer(topic_str, group=group_str, key_type="avro", value_type="avro")
+        m_list = consumer.consume(n=3)
+        key_dict_list = [m["key"] for m in m_list]
+        value_dict_list = [m["value"] for m in m_list]
+        self.assertEqual(key_dict_list, self.key_snack_dict_list)
+        self.assertEqual(value_dict_list, self.value_snack_dict_list)
+        consumer.close()
+
     def test_produce_error_handling(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
             return
@@ -2021,6 +2073,7 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         s.isolation_level("read_committed")
+        print(s.cat(topic_str, value_type="str", n=3))
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, value_type="str")
         m_list = consumer.consume()

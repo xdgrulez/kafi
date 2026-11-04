@@ -7,6 +7,7 @@ from kafi.functional import Functional
 # Constants
 
 ALL_MESSAGES = -1
+ALL = -1
 
 #
 
@@ -16,7 +17,7 @@ class Shell(Functional):
 
         Args:
             topic: topic name
-            n: max messages to consume; ALL_MESSAGES for no limit
+            n: max messages to consume
             map_fun: m -> result, applied to each message
             **kwargs: passed to map()
 
@@ -71,7 +72,7 @@ class Shell(Functional):
             target_storage: storage to produce results to
             target_topic: target topic name
             map_fun: m -> result, used if flatmap_fun is not given
-            n: max messages to consume; ALL_MESSAGES for no limit
+            n: max messages to consume
             flatmap_fun: m -> list of results; if given, takes precedence over map_fun
             **kwargs: passed to map_to()/flatmap_to()
 
@@ -117,14 +118,14 @@ class Shell(Functional):
 
     #
 
-    def grep_fun(self, topic, match_fun, n=ALL_MESSAGES, matches=ALL_MESSAGES, **kwargs):
+    def grep_fun(self, topic, match_fun, n=ALL_MESSAGES, matches=ALL, **kwargs):
         """Collect messages matching an arbitrary predicate, stopping early after enough matches.
 
         Args:
             topic: topic name
             match_fun: m -> bool
-            n: max messages to consume; ALL_MESSAGES for no limit
-            matches: stop after this many matches; ALL_MESSAGES for no limit
+            n: max messages to consume
+            matches: stop after this many matches; ALL_MATCHES for no limit
             **kwargs: passed to foldl()
 
         Returns:
@@ -151,14 +152,14 @@ class Shell(Functional):
         #
         return matching_m_list, len(matching_m_list), message_counter_int
 
-    def grep(self, topic, re_pattern_str, n=ALL_MESSAGES, results=ALL_MESSAGES, **kwargs):
+    def grep(self, topic, re_pattern_str, n=ALL_MESSAGES, results=ALL, **kwargs):
         """Collect messages whose key or value matches a regex pattern.
 
         Args:
             topic: topic name
             re_pattern_str: regular expression to match key/value against
-            n: max messages to consume; ALL_MESSAGES for no limit
-            results: stop after this many matches; ALL_MESSAGES for no limit
+            n: max messages to consume
+            results: stop after this many matches
             **kwargs: passed to grep_fun()
 
         Returns:

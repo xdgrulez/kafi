@@ -3,21 +3,3 @@ kafka:
 
 schema_registry:
   schema.registry.url: http://localhost:8081
-
-kafi:
-  flush.timeout: -1.0
-  produce.batch.size: 1000
-  retention.ms: 604800000
-  consume.timeout: 1.0
-  consume.batch.size: 1000
-  consumer.group.prefix: ""
-  enable.auto.commit: false
-  isolation.level: read_uncommitted
-  session.timeout.ms: 45000
-  block.num.retries: 10
-  block.interval: 0.5
-  auto.offset.reset: earliest
-  progress.num.messages: 1000
-  key.type: str
-  value.type: json
-  topic.ignore.patterns: ["_*", "*connect-configs", "*connect-offsets", "*connect-status"]

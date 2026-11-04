@@ -11,8 +11,8 @@ ALL_MESSAGES = -1
 #
 
 class ClusterConsumer(KafkaConsumer):
-    def __init__(self, cluster_obj, *topics, **kwargs):
-        super().__init__(cluster_obj, *topics, **kwargs)
+    def __init__(self, cluster_obj, topic, **kwargs):
+        super().__init__(cluster_obj, topic, **kwargs)
         #
         # Consumer config
         #
@@ -41,15 +41,15 @@ class ClusterConsumer(KafkaConsumer):
     def subscribe(self, **kwargs):
         def on_assign(consumer, partitions):
             def set_offset(topicPartition):
-                offsets = self.topic_str_next_offsets_dict_dict.get(topicPartition.topic, {})
+                offsets = self.topic_str_assign_offsets_dict_dict.get(topicPartition.topic, {})
                 if topicPartition.partition in offsets:
                     topicPartition.offset = offsets[topicPartition.partition]
                 return topicPartition
             #
-            if self.topic_str_next_offsets_dict_dict:
+            if self.topic_str_assign_offsets_dict_dict:
                 partitions = [set_offset(topicPartition) for topicPartition in partitions]
                 # Only apply the offsets once (otherwise resets the offsets upon rebalancing...).
-                self.topic_str_next_offsets_dict_dict = None
+                self.topic_str_assign_offsets_dict_dict = None
             #
             if self.topic_str_partition_int_list_dict is not None:
                 partitions = [topicPartition for topicPartition in partitions if topicPartition.partition in self.topic_str_partition_int_list_dict[topicPartition.topic]]
@@ -87,20 +87,31 @@ class ClusterConsumer(KafkaConsumer):
     #
 
     def consume_impl(self, **kwargs):
+        """Consume the next batch of messages using the consume timeout for the corresponding cluster storage.
+
+        Args:
+            **kwargs: optional kwargs.
+              n (int): maximum number of messages to return
+              cluster_consume_timeout (float): consume timeout in seconds for this call 
+
+        Returns:
+            m_list: list of messages. The keys and values are not yet deserialized"""
         n_int = kwargs["n"] if "n" in kwargs and kwargs["n"] != ALL_MESSAGES else 1
         #
-        message_list = self.consumer.consume(n_int, self.storage_obj.consume_timeout())
+        cluster_consume_timeout_float = kwargs["cluster_consume_timeout"] if "cluster_consume_timeout" in kwargs else self.storage_obj.cluster_consume_timeout()
+        #
+        message_list = self.consumer.consume(n_int, cluster_consume_timeout_float)
         #
         m_list = []
         for message in message_list:
             if message.error() is None:
                 m = {"topic": message.topic(),
-                                "headers": message.headers(),
-                                "partition": message.partition(),
-                                "offset": message.offset(),
-                                "timestamp": message.timestamp(),
-                                "key": message.key(),
-                                "value": message.value()}
+                     "headers": message.headers(),
+                     "partition": message.partition(),
+                     "offset": message.offset(),
+                     "timestamp": message.timestamp(),
+                     "key": message.key(),
+                     "value": message.value()}
             else:
                 raise Exception(f"Error consuming topic(s) {self.topic_str_list}: {message.error().str()}, topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}")
             m_list.append(m)

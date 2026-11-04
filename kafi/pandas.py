@@ -15,7 +15,7 @@ class Pandas(Functional):
 
         Args:
             topic: topic name
-            n: max messages to consume; ALL_MESSAGES for no limit
+            n: max messages to consume
             **kwargs: passed to foldl(); "explode" flattens list/nested-dict columns
 
         Returns:
@@ -42,7 +42,7 @@ class Pandas(Functional):
         Args:
             df: DataFrame to produce
             topic: target topic name
-            n: max rows to produce; ALL_MESSAGES for no limit
+            n: max rows to produce
             **kwargs: passed to producer()
 
         Returns:

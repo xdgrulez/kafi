@@ -278,6 +278,7 @@ class ClusterAdmin(KafkaAdmin):
         #
         config_dict = self.storage_obj.kafka_config_dict.copy()
         config_dict["group.id"] = f"dummy_group_id"
+        config_dict["isolation.level"] = self.storage_obj.isolation_level()
         consumer = Consumer(config_dict)
         #
         topic_str_list = self.list_topics(pattern)

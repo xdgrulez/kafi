@@ -1,5 +1,5 @@
 s3:
-  endpoint: "localhost:9000"
+  endpoint: "localhost:9002"
   access.key: "admin"
   secret.key: "password"
   bucket.name: "test"

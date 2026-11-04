@@ -1,7 +1,7 @@
 from kafi.dechunker import Dechunker
 from kafi.helpers import get_millis
 
-import copy, sys
+import copy, sys, time
 
 from tqdm.auto import tqdm
 
@@ -13,17 +13,22 @@ OFFSET_INVALID = -1001
 #
 
 class StorageConsumer(Dechunker):
-    def __init__(self, storage_obj, *topics, **kwargs):
+    def __init__(self, storage_obj, topic, **kwargs):
         """Resolve topics, start/end offsets, partitions, key/value types and group for a new consumer.
 
         Args:
             storage_obj: owning storage instance
-            *topics: one or more topic names to subscribe to
+            topic: a topic or a list of topics to subscribe to (str or list(str))
             **kwargs: "offsets"/"ts", "end_offsets"/"end_ts", "partitions", "group", "config", "enable_auto_commit", "isolation.level", key/value type overrides"""
         self.storage_obj = storage_obj
         #
         # Get topics to subscribe to.
-        self.topic_str_list = list(topics)
+        if isinstance(topic, str):
+            self.topic_str_list = [topic]
+        elif isinstance(topic, list) and all(isinstance(topic_str, str) for topic_str in topic):
+            self.topic_str_list = topic
+        else:
+            raise Exception("Can only subscribe to an individual topic or a list of topics.")
         #
         # Get dictionary mapping the topics to their respective number of partitions.
         self.topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
@@ -31,20 +36,27 @@ class StorageConsumer(Dechunker):
             if topic_str not in self.topic_str_partitions_int_dict:
                 raise Exception(f"Topic \"{topic_str}\" does not exist.")
         #
-        # Get dict mapping the topics to their respective next (=start) offsets...
+        # Dictionary mapping the topics to their respective current watermarks.
+        self.topic_str_partition_int_offsets_tuple_dict_dict = self.storage_obj.watermarks(self.topic_str_list)
+        #
+        # Dictionary mapping the topics to their respective commit offsets (initialize to 0 for all partitions for all topics)
+        self.topic_str_commit_offsets_dict = {}
+        for topic_str, partitions_int in self.topic_str_partitions_int_dict.items():
+            self.topic_str_commit_offsets_dict[topic_str] = {partition_int: 0 for partition_int in range(partitions_int)}
+        # Dictionary mapping the topics to their respective assign (=start) offsets...
         # ...1) initialize with OFFSET_INVALID (=-1001)
-        self.topic_str_next_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
+        self.topic_str_assign_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(partitions_int)} for topic_str, partitions_int in self.topic_str_partitions_int_dict.items()}
         # ...2) apply the kwargs "offsets"/"ts" args if available.
-        kwargs_topic_str_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "offsets", "ts", **kwargs)
+        kwargs_topic_str_offsets_dict_dict = self.get_offsets_from_kwargs("offsets", "ts", **kwargs)
         for topic_str, offsets_dict in kwargs_topic_str_offsets_dict_dict.items():
             for partition_int, offset_int in offsets_dict.items():
-                self.topic_str_next_offsets_dict_dict[topic_str][partition_int] = offset_int
+                self.topic_str_assign_offsets_dict_dict[topic_str][partition_int] = offset_int
         #
         # Get dict mapping the topics to their respective end offsets...
         # ...1) initialize with sys.maxsize
         self.topic_str_end_offsets_dict_dict = {topic_str: {partition_int: sys.maxsize for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
         # ...2) apply the kwargs "end_offsets"/"end_ts" if available.
-        kwargs_topic_str_end_offsets_dict_dict = self.get_offsets_from_kwargs(self.topic_str_list, "end_offsets", "end_ts", **kwargs)
+        kwargs_topic_str_end_offsets_dict_dict = self.get_offsets_from_kwargs("end_offsets", "end_ts", **kwargs)
         for topic_str, offsets_dict in kwargs_topic_str_end_offsets_dict_dict.items():
             for partition_int, offset_int in offsets_dict.items():
                 self.topic_str_end_offsets_dict_dict[topic_str][partition_int] = offset_int
@@ -53,7 +65,7 @@ class StorageConsumer(Dechunker):
         self.topic_str_partition_int_list_dict = self.get_partitions_from_kwargs("partitions", **kwargs)
         #
         # Get key and value types.
-        (self.topic_str_key_type_str_dict, self.topic_str_value_type_str_dict) = self.get_key_value_types_from_kwargs(self.topic_str_list, **kwargs)
+        (self.topic_str_key_type_str_dict, self.topic_str_value_type_str_dict) = self.get_key_value_types_from_kwargs(**kwargs)
         #
         # Get group.
         self.group_str = self.get_group_str_from_kwargs(**kwargs)
@@ -76,14 +88,18 @@ class StorageConsumer(Dechunker):
     #
 
     def foldl(self, foldl_fun, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
-        """Consume and fold over messages (with dechunking, deserialization, offset tracking, batching, commits).
+        """Consume and fold over messages (with dechunking, deserialization, offset tracking, commits). Stops either after no more messages could be consumed *and* for all topics and their partitions, the high watermark has been reached, the maximum number of messages have been consumed over all topics, or break_fun is triggered. 
 
         Args:
-            foldl_fun: (acc, m) -> new acc
-            initial_acc: starting accumulator value
-            n: max messages to consume; ALL_MESSAGES for no limit
-            commit_after_processing: override the storage default for when offsets are committed
-            **kwargs: last_n, consume_batch_size, break_fun (acc, m) -> bool to stop early, dechunk
+            foldl_fun: (acc, m) -> new acc - fold left function - takes the current accumulator and the next message and returns the new accumulator.
+            initial_acc: initial accumulator value
+            n: maximum number of messages to consume over all topics
+            commit_after_processing: commit offsets after processing (independent of auto.offset.commit for the current storage)
+            **kwargs: optional kwargs:
+                last_n (int): consume only the last n messages
+                consume_batch_size (int): consume batch size.
+                break_fun (acc, m) -> bool: stop before processing message m given accumulator acc.
+                dechunk (bool): dechunk messages
 
         Returns:
             any: final accumulated value"""
@@ -95,21 +111,21 @@ class StorageConsumer(Dechunker):
         # Get last_n (to read n messages from the end of the topic).
         last_n_int = kwargs["last_n"] if "last_n" in kwargs else None
         if last_n_int is not None and last_n_int > 0:
-            self.topic_str_next_offsets_dict_dict = self.get_last_n_start_offsets(self.topic_str_list, last_n_int)
+            self.topic_str_assign_offsets_dict_dict = self.get_last_n_start_offsets(last_n_int)
             n_int = last_n_int
         #
         commit_after_processing_bool = self.storage_obj.commit_after_processing() if commit_after_processing is None else commit_after_processing
         #
+        # Set consume_batch_size to n_int if consume_batch_size_int > n_int.
         consume_batch_size_int = kwargs["consume_batch_size"] if "consume_batch_size" in kwargs else self.storage_obj.consume_batch_size()
         if n_int != ALL_MESSAGES and consume_batch_size_int > n_int:
             consume_batch_size_int = n_int
         #
+        consume_timeout_s_float = kwargs["consume_timeout"] if "consume_timeout" in kwargs else self.storage_obj.consume_timeout()
+        #
         break_fun = kwargs["break_fun"] if "break_fun" in kwargs else lambda _, _1: False
         #
         dechunk_bool = kwargs["dechunk"] if "dechunk" in kwargs else False
-        #
-        topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
-        topic_str_offsets_dict_dict = {topic_str: {partition_int: 0 for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}
         #
         message_counter_int = 0
         #
@@ -123,38 +139,57 @@ class StorageConsumer(Dechunker):
             else:
                 return self.deserialize(payload_bytes, type_str, topic_str, key_bool)
         #
+        idle_s_float = -1
+        #
         while True:
+            #
+            # Consume the next batch of messages.
             m_list1 = self.consume_impl(n=consume_batch_size_int, **kwargs)
-            if not m_list1:
-                break
             #
-            # Dechunk if necessary/enabled.
-            if dechunk_bool:
-                m_list2 = self.dechunk(m_list1)
-            else:
-                m_list2 = m_list1
-            #
-            for m in m_list2:
+            # Update self.topic_str_next_offsets_dict_dict.
+            m_list2 = []
+            for m in m_list1:
                 topic_str = m["topic"]
                 partition_int = m["partition"]
                 offset_int = m["offset"]
                 #
-                offsets_dict = topic_str_offsets_dict_dict[topic_str]
-                #
-                offsets_dict[partition_int] = offset_int + 1
-                #
-                end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
-                if offset_int > end_offsets_dict[partition_int]:
-                    continue
-                #
+                end_offset_int = self.topic_str_end_offsets_dict_dict[topic_str][partition_int]
+                # Only collect the messages before the end offset.
+                if end_offset_int != 0 and offset_int <= end_offset_int:
+                    self.topic_str_commit_offsets_dict[topic_str][partition_int] = offset_int + 1
+                    m_list2.append(m)
+            #
+            # If no more messages could be consumed...
+            if not m_list2:
+                # a) ...return if all messages up to the high watermark (at the time of construction of the StorageConsumer instance) are read,
+                if all(commit_offset_int >= self.topic_str_partition_int_offsets_tuple_dict_dict[topic_str][partition_int][1] for topic_str, commit_offsets_dict in self.topic_str_commit_offsets_dict.items() for partition_int, commit_offset_int in commit_offsets_dict.items()):
+                    break
+                # or b) ...return if the consume timeout is reached (counts the idle time between no more messages returned).
+                current_time_s_float = time.time()
+                if idle_s_float == -1:
+                    idle_s_float = current_time_s_float
+                else:
+                    if current_time_s_float - idle_s_float > consume_timeout_s_float:
+                        break
+            else:
+                # Reset idle_s_float if messages could be consumed again.
+                idle_s_float = -1
+            #
+            # Dechunk if necessary/enabled.
+            if dechunk_bool:
+                m_list3 = self.dechunk(m_list2)
+            else:
+                m_list3 = m_list2
+            # Deserialize.
+            for m in m_list3:
                 headers_str_bytes_tuple_list = m["headers"]
                 m1 = {"value": deserialize(m["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, key_bool=False),
-                                 "key": deserialize(m["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=True),
-                                 "headers": headers_str_bytes_tuple_list,
-                                 "timestamp": m["timestamp"],
-                                 "partition": m["partition"],
-                                 "offset": m["offset"],
-                                 "topic": m["topic"]}
+                      "key": deserialize(m["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=True),
+                      "headers": headers_str_bytes_tuple_list,
+                      "timestamp": m["timestamp"],
+                      "partition": m["partition"],
+                      "offset": m["offset"],
+                      "topic": m["topic"]}
                 #
                 if break_fun(acc, m1):
                     break_bool = True
@@ -163,19 +198,19 @@ class StorageConsumer(Dechunker):
                 acc = foldl_fun(acc, m1)
                 message_counter_int += 1
                 #
-                end_offsets_dict = self.topic_str_end_offsets_dict_dict[topic_str]
-                if all(offsets_dict[partition_int] > end_offset_int for partition_int, end_offset_int in end_offsets_dict.items()):
-                    break_bool = True
-                    break
-                #
                 if n_int != ALL_MESSAGES and message_counter_int >= n_int:
                     break_bool = True
                     break
             #
             if not self.enable_auto_commit_bool and commit_after_processing_bool:
-                self.commit(topic_str_offsets_dict_dict)
+                self.commit(self.topic_str_commit_offsets_dict)
             #
+            # Stop consuming for good if break_bool is set (break_fun or message_counter_int >= n_int).
             if break_bool:
+                break
+            #
+            # Stop consuming for good if the end offset is reached for all topics.
+            if all(self.topic_str_commit_offsets_dict[topic_str][partition_int] >= end_offset_int for topic_str, end_offsets_dict in self.topic_str_end_offsets_dict_dict.items() for partition_int, end_offset_int in end_offsets_dict.items()):
                 break
         #
         return acc
@@ -183,28 +218,29 @@ class StorageConsumer(Dechunker):
     #
 
     def consume(self, n=ALL_MESSAGES, **kwargs):
-        """Consume up to n messages as a plain list.
+        """Consume up to n messages as a plain list. If n is unset set to consume batch size (consume() is usually called in an event loop).
 
         Args:
-            n: max messages to consume; ALL_MESSAGES uses the storage's consume_batch_size()
+            n: max messages to consume
             **kwargs: passed to foldl()
 
         Returns:
             list of m: consumed messages"""
+        n_int = n
+        #
+        if n_int == ALL_MESSAGES:
+            n_int = self.storage_obj.consume_batch_size()
+        #
         def foldl_fun(m_list, m):
             m_list.append(m)
             #
             return m_list
         #
-        n_int = n
-        if n_int == ALL_MESSAGES:
-            n_int = self.storage_obj.consume_batch_size()
-        #
         return self.foldl(foldl_fun, [], n_int, **kwargs)
 
     #
 
-    def get_offsets_from_kwargs(self, topic_str_list, offsets_key_str, ts_key_str, **kwargs):
+    def get_offsets_from_kwargs(self, offsets_key_str, ts_key_str, **kwargs):
         """Resolve per-topic/partition start (or end) offsets from "offsets"/"ts"-style kwargs, replacing negative offsets relative to the watermark.
 
         Args:
@@ -219,26 +255,26 @@ class StorageConsumer(Dechunker):
             offsets_dict = kwargs[offsets_key_str]
             first_key_str_or_int = list(offsets_dict.keys())[0]
             if isinstance(first_key_str_or_int, int):
-                topic_str_offsets_dict_dict = {topic_str: offsets_dict for topic_str in topic_str_list}
+                topic_str_offsets_dict_dict = {topic_str: offsets_dict for topic_str in self.topic_str_list}
             else:
                 topic_str_offsets_dict_dict = offsets_dict
         else:
             if ts_key_str in kwargs and kwargs[ts_key_str] is not None:
                 timestamp_int = kwargs[ts_key_str]
-                topic_str_partitions_int_dict = self.storage_obj.partitions(topic_str_list)
+                topic_str_partitions_int_dict = self.storage_obj.partitions(self.topic_str_list)
                 topic_str_partition_int_timestamp_int_dict_dict = {topic_str: {partition_int: timestamp_int for partition_int in range(partitions_int)} for topic_str, partitions_int in topic_str_partitions_int_dict.items()}
-                topic_str_offsets_dict_dict = self.storage_obj.offsets_for_times(topic_str_list, topic_str_partition_int_timestamp_int_dict_dict, replace_not_found=True)
+                topic_str_offsets_dict_dict = self.storage_obj.offsets_for_times(self.topic_str_list, topic_str_partition_int_timestamp_int_dict_dict, replace_not_found=True)
                 if self.storage_obj.verbose() > 0:
                     tqdm.write(f"Offsets for {ts_key_str} ({timestamp_int}):")
                     tqdm.write(topic_str_offsets_dict_dict)
             else:
-                topic_str_offsets_dict_dict = {topic_str: {} for topic_str in topic_str_list}
+                topic_str_offsets_dict_dict = {topic_str: {} for topic_str in self.topic_str_list}
         # Check for any negative offsets...
         copied_topic_str_offsets_dict_dict = copy.deepcopy(topic_str_offsets_dict_dict)
         for topic_str, offsets_dict in copied_topic_str_offsets_dict_dict.items():
             if any(offset_int < 0 for offset_int in offsets_dict.values()):
                 # If found, replace the negative offset with the current high watermark + the negative offset.
-                partition_int_offset_int_tuple_dict = self.storage_obj.watermarks(topic_str)[topic_str]
+                partition_int_offset_int_tuple_dict = self.topic_str_partition_int_offsets_tuple_dict_dict[topic_str]
                 #
                 for partition_int, offset_int in offsets_dict.items():
                     if offset_int < 0:
@@ -246,7 +282,7 @@ class StorageConsumer(Dechunker):
         #
         return topic_str_offsets_dict_dict
 
-    def get_last_n_start_offsets(self, topic_str_list, last_n_int):
+    def get_last_n_start_offsets(self, last_n_int):
         """Compute start offsets that yield exactly the last last_n_int messages across all partitions of each topic.
 
         Args:
@@ -255,10 +291,9 @@ class StorageConsumer(Dechunker):
 
         Returns:
             dict: {topic: {partition: start offset}}"""
-        topic_str_partition_int_offset_int_tuple_dict_dict = self.storage_obj.watermarks(topic_str_list)
         topic_str_start_offsets_dict_dict = {}
         #
-        for topic_str, partition_int_offset_int_tuple_dict in topic_str_partition_int_offset_int_tuple_dict_dict.items():
+        for topic_str, partition_int_offset_int_tuple_dict in self.topic_str_partition_int_offsets_tuple_dict_dict.items():
             # state = partition_int_low_watermark_int_high_watermark_int_start_offset_int_tuple_dict - start_offset_int starts with high_watermark_int.
             state = {partition_int: [low_watermark_int, high_watermark_int, high_watermark_int] for partition_int, (low_watermark_int, high_watermark_int) in partition_int_offset_int_tuple_dict.items()}
             for _ in range(last_n_int):
@@ -275,7 +310,7 @@ class StorageConsumer(Dechunker):
         #
         return topic_str_start_offsets_dict_dict
 
-    def get_key_value_types_from_kwargs(self, topic_str_list, **kwargs):
+    def get_key_value_types_from_kwargs(self, **kwargs):
         """Resolve per-topic key/value (de)serialization types from kwargs.
 
         Args:
@@ -286,8 +321,8 @@ class StorageConsumer(Dechunker):
             tuple: ({topic: key_type}, {topic: value_type})"""
         (key_type_str, value_type_str) = self.storage_obj.get_key_value_type_tuple(**kwargs)
         #
-        topic_str_key_type_str_dict = {topic_str: key_type_str for topic_str in topic_str_list}
-        topic_str_value_type_str_dict = {topic_str: value_type_str for topic_str in topic_str_list}
+        topic_str_key_type_str_dict = {topic_str: key_type_str for topic_str in self.topic_str_list}
+        topic_str_value_type_str_dict = {topic_str: value_type_str for topic_str in self.topic_str_list}
         #
         return (topic_str_key_type_str_dict, topic_str_value_type_str_dict)
 

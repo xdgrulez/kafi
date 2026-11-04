@@ -19,7 +19,7 @@ class Files(Pandas):
             topic: topic name
             fs_obj: filesystem storage to write the file to
             file: destination file path (extension selects the format)
-            n: max messages to consume; ALL_MESSAGES for no limit
+            n: max messages to consume
             **kwargs: passed to cat()/topic_to_df(); "index" controls index columns for tabular formats
 
         Returns:
@@ -73,7 +73,7 @@ class Files(Pandas):
             file: source file path (extension selects the format: csv/json/parquet/xlsx/xml)
             storage_obj: storage to produce the topic to
             topic: target topic name
-            n: max rows to produce; ALL_MESSAGES for no limit
+            n: max rows to produce
             **kwargs: passed to df_to_topic()
 
         Returns:
