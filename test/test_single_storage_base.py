@@ -1986,8 +1986,8 @@ class TestSingleStorageBase(unittest.TestCase):
         for _, key_str_set in partition_int_key_str_set_dict.items():
             for key_str in key_str_set:
                 key_str_list.append(key_str)
-        print(partition_int_key_str_set_dict)
-        print(key_str_list)
+        # print(partition_int_key_str_set_dict)
+        # print(key_str_list)
         self.assertEqual(len(key_str_list), len(self.key_snack_bytes_list))
         #
         m_list2 = s.cat(topic_str, value_type="json", dechunk=True)
@@ -2073,7 +2073,6 @@ class TestSingleStorageBase(unittest.TestCase):
         producer.close()
         #
         s.isolation_level("read_committed")
-        print(s.cat(topic_str, value_type="str", n=3))
         group_str = self.create_test_group_name()
         consumer = s.consumer(topic_str, group=group_str, value_type="str")
         m_list = consumer.consume()

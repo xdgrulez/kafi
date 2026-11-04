@@ -39,14 +39,16 @@ class StorageConsumer(Dechunker):
         # Dictionary mapping the topics to their respective current watermarks.
         self.topic_str_partition_int_offsets_tuple_dict_dict = self.storage_obj.watermarks(self.topic_str_list)
         #
-        # Dictionary mapping the topics to their respective commit offsets (initialize to 0 for all partitions for all topics)
+        # Dictionary mapping the topics to their respective commit offsets (initialize to 0 for all partitions for all topics).
+        #   These are the offsets used in the "outer" foldl() loop.
         self.topic_str_commit_offsets_dict = {}
         for topic_str, partitions_int in self.topic_str_partitions_int_dict.items():
             self.topic_str_commit_offsets_dict[topic_str] = {partition_int: 0 for partition_int in range(partitions_int)}
-        # Dictionary mapping the topics to their respective assign (=start) offsets...
-        # ...1) initialize with OFFSET_INVALID (=-1001)
+        # Dictionary mapping the topics to their respective assign (=start) offsets.
+        #   These are the offsets used in the "inner" implementations (consume_impl(), but also subscribe() for Cluster and RestProxy)...
+        #   ...1) initialize with OFFSET_INVALID (=-1001)
         self.topic_str_assign_offsets_dict_dict = {topic_str: {partition_int: OFFSET_INVALID for partition_int in range(partitions_int)} for topic_str, partitions_int in self.topic_str_partitions_int_dict.items()}
-        # ...2) apply the kwargs "offsets"/"ts" args if available.
+        #   ...2) apply the kwargs "offsets"/"ts" args if available.
         kwargs_topic_str_offsets_dict_dict = self.get_offsets_from_kwargs("offsets", "ts", **kwargs)
         for topic_str, offsets_dict in kwargs_topic_str_offsets_dict_dict.items():
             for partition_int, offset_int in offsets_dict.items():
