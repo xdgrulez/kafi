@@ -39,11 +39,6 @@ class StorageConsumer(Dechunker):
         # Dictionary mapping the topics to their respective current watermarks.
         self.topic_str_partition_int_offsets_tuple_dict_dict = self.storage_obj.watermarks(self.topic_str_list)
         #
-        # Dictionary mapping the topics to their respective commit offsets (initialize to 0 for all partitions for all topics).
-        #   These are the offsets used in the "outer" foldl() loop.
-        self.topic_str_commit_offsets_dict = {}
-        for topic_str, partitions_int in self.topic_str_partitions_int_dict.items():
-            self.topic_str_commit_offsets_dict[topic_str] = {partition_int: 0 for partition_int in range(partitions_int)}
         # Dictionary mapping the topics to their respective assign (=start) offsets.
         #   These are the offsets used in the "inner" implementations (consume_impl(), but also subscribe() for Cluster and RestProxy)...
         #   ...1) initialize with OFFSET_INVALID (=-1001)
@@ -53,6 +48,10 @@ class StorageConsumer(Dechunker):
         for topic_str, offsets_dict in kwargs_topic_str_offsets_dict_dict.items():
             for partition_int, offset_int in offsets_dict.items():
                 self.topic_str_assign_offsets_dict_dict[topic_str][partition_int] = offset_int
+        #
+        # Dictionary mapping the topics to their respective commit offsets.
+        #   These are the offsets used in the "outer" foldl() loop.
+        self.topic_str_commit_offsets_dict_dict = copy.deepcopy(self.topic_str_assign_offsets_dict_dict)
         #
         # Get dict mapping the topics to their respective end offsets...
         # ...1) initialize with sys.maxsize
@@ -158,13 +157,12 @@ class StorageConsumer(Dechunker):
                 end_offset_int = self.topic_str_end_offsets_dict_dict[topic_str][partition_int]
                 # Only collect the messages before the end offset.
                 if end_offset_int != 0 and offset_int <= end_offset_int:
-                    self.topic_str_commit_offsets_dict[topic_str][partition_int] = offset_int + 1
                     m_list2.append(m)
             #
             # If no more messages could be consumed...
             if not m_list2:
                 # a) ...return if all messages up to the high watermark (at the time of construction of the StorageConsumer instance) are read,
-                if all(commit_offset_int >= self.topic_str_partition_int_offsets_tuple_dict_dict[topic_str][partition_int][1] for topic_str, commit_offsets_dict in self.topic_str_commit_offsets_dict.items() for partition_int, commit_offset_int in commit_offsets_dict.items()):
+                if all(commit_offset_int >= self.topic_str_partition_int_offsets_tuple_dict_dict[topic_str][partition_int][1] for topic_str, commit_offsets_dict in self.topic_str_commit_offsets_dict_dict.items() for partition_int, commit_offset_int in commit_offsets_dict.items()):
                     break
                 # or b) ...return if the consume timeout is reached (counts the idle time between no more messages returned).
                 current_time_s_float = time.time()
@@ -185,34 +183,50 @@ class StorageConsumer(Dechunker):
             # Deserialize.
             for m in m_list3:
                 headers_str_bytes_tuple_list = m["headers"]
+                partition_int = m["partition"]
+                offset_int = m["offset"]
+                topic_str = m["topic"]
                 m1 = {"value": deserialize(m["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, key_bool=False),
                       "key": deserialize(m["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=True),
                       "headers": headers_str_bytes_tuple_list,
                       "timestamp": m["timestamp"],
                       "partition": m["partition"],
                       "offset": m["offset"],
-                      "topic": m["topic"]}
+                      "topic": topic_str}
                 #
                 if break_fun(acc, m1):
                     break_bool = True
                     break
                 #
                 acc = foldl_fun(acc, m1)
+                self.topic_str_commit_offsets_dict_dict[topic_str][partition_int] = offset_int + 1
                 message_counter_int += 1
                 #
                 if n_int != ALL_MESSAGES and message_counter_int >= n_int:
                     break_bool = True
                     break
             #
-            if not self.enable_auto_commit_bool and commit_after_processing_bool:
-                self.commit(self.topic_str_commit_offsets_dict)
+            topic_str_valid_offsets_dict_dict = {}
+            for topic_str, commit_offsets_dict in self.topic_str_commit_offsets_dict_dict.items():
+                valid_offsets_dict = {
+                    partition_int: offset_int
+                    for partition_int, offset_int in commit_offsets_dict.items()
+                    if offset_int != OFFSET_INVALID
+                }
+                if valid_offsets_dict:
+                    topic_str_valid_offsets_dict_dict[topic_str] = valid_offsets_dict
+
+            if (not self.enable_auto_commit_bool
+                    and commit_after_processing_bool
+                    and topic_str_valid_offsets_dict_dict):
+                self.commit(topic_str_valid_offsets_dict_dict)
             #
             # Stop consuming for good if break_bool is set (break_fun or message_counter_int >= n_int).
             if break_bool:
                 break
             #
             # Stop consuming for good if the end offset is reached for all topics.
-            if all(self.topic_str_commit_offsets_dict[topic_str][partition_int] >= end_offset_int for topic_str, end_offsets_dict in self.topic_str_end_offsets_dict_dict.items() for partition_int, end_offset_int in end_offsets_dict.items()):
+            if all(self.topic_str_commit_offsets_dict_dict[topic_str][partition_int] >= end_offset_int for topic_str, end_offsets_dict in self.topic_str_end_offsets_dict_dict.items() for partition_int, end_offset_int in end_offsets_dict.items()):
                 break
         #
         return acc
