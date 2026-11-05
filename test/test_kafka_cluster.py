@@ -17,6 +17,7 @@ class Test(TestSingleStorageBase):
 
     def get_storage(self):
         c = Cluster("local")
+        c.cluster_consume_timeout(1.0)
         # c = Cluster("local_redpanda")
         # c = Cluster("ccloud") # also set self.principal_str above if testing against Confluent Cloud
         #
