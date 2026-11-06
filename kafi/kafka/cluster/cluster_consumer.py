@@ -20,12 +20,14 @@ class ClusterConsumer(KafkaConsumer):
         #
         if "group.id" not in self.consumer_config_dict:
             self.consumer_config_dict["group.id"] = self.group_str
-        if "session.timeout.ms" not in self.consumer_config_dict:
-            self.consumer_config_dict["session.timeout.ms"] = cluster_obj.session_timeout_ms()
         if "enable.auto.commit" not in self.consumer_config_dict:
             self.consumer_config_dict["enable.auto.commit"] = self.enable_auto_commit_bool
+        #
+        # Cluster-specific configs.
+        if "session.timeout.ms" not in self.consumer_config_dict:
+            self.consumer_config_dict["session.timeout.ms"] = kwargs["session_timeout_ms"] if "session_timeout_ms" in kwargs else cluster_obj.session_timeout_ms()
         if "isolation.level" not in self.consumer_config_dict:
-            self.consumer_config_dict["isolation.level"] = self.isolation_level_str
+            self.consumer_config_dict["isolation.level"] = kwargs["isolation_level"] if "isolation_level" in kwargs else cluster_obj.isolation_level()
         #
         self.consumer = Consumer(self.consumer_config_dict)
         #

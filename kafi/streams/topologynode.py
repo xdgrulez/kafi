@@ -1429,9 +1429,9 @@ class TopologyNode:
             key_fun: r -> key_any - grouping key function
             agg_fun: (agg_r, r) -> agg_r - aggregate function
             agg_initial_any: initial aggregate
-            project_fun: key_any, agg_r -> r - projection function
+            project_fun: key_any, agg_r -> r - group_by_agg projection function
             trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
-            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            trigger_project_fun: (r, end_ts) -> trigger projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
             positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
@@ -1468,9 +1468,9 @@ class TopologyNode:
             key_fun: r -> key_any - grouping key function
             agg_fun: (agg_r, r) -> agg_r - aggregate function
             agg_initial_any: initial aggregate
-            project_fun: key_any, agg_r -> r - projection function
+            project_fun: key_any, agg_r -> r - group_by_agg projection function
             trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
-            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            trigger_project_fun: (r, end_ts) -> trigger projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
             positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
@@ -1508,9 +1508,9 @@ class TopologyNode:
             key_fun: r -> key_any - grouping key function
             agg_fun: (agg_r, r) -> agg_r - aggregate function
             agg_initial_any: initial aggregate
-            project_fun: key_any, agg_r -> r - projection function
+            project_fun: key_any, agg_r -> r - group_by_agg projection function
             trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
-            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            trigger_project_fun: (r, end_ts) -> trigger projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
             positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
@@ -1547,9 +1547,9 @@ class TopologyNode:
             key_fun: r -> key_any - grouping key function
             agg_fun: (agg_r, r) -> agg_r - aggregate function
             agg_initial_any: initial aggregate
-            project_fun: key_any, agg_r -> r - projection function
+            project_fun: key_any, agg_r -> r - group_by_agg projection function
             trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
-            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            trigger_project_fun: (r, end_ts) -> trigger projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
             positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:
@@ -1579,9 +1579,9 @@ class TopologyNode:
             key_fun: r -> key_any - grouping key function
             agg_fun: (agg_r, r) -> agg_r - aggregate function
             agg_initial_any: initial aggregate
-            project_fun: key_any, agg_r -> r - projection function
+            project_fun: key_any, agg_r -> r - group_by_agg projection function
             trigger_fun: ((r, end ts), latest ts) -> bool, predicate to trigger the emission of a window (default: lambda r_end_ts_tuple, latest_ts: latest_ts >= r_end_ts_tuple[1])
-            project_fun: (r, end_ts) -> projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
+            trigger_project_fun: (r, end_ts) -> trigger projection function (default: lambda r_end_ts_tuple: {**r_end_ts_tuple[0], "window_end": r_end_ts_tuple[1]})
             positive_only_bool: if True, suppress retractions (w <= 0) from the output (default: True)
             **kwargs: passed through to the underlying node(s)
         Returns:

@@ -10,9 +10,43 @@ class RestProxy(Kafka):
     def __init__(self, config_str_or_dict):
         super().__init__("restproxies", config_str_or_dict, ["rest_proxy"], ["schema_registry"])
         #
+        if "consume.num.attempts" not in self.kafi_config_dict:
+            self.consume_num_attempts(3)
+        else:
+            self.consume_num_attempts(int(self.kafi_config_dict["consume.num.attempts"]))
+        #
+        if "consumer.request.timeout.ms" not in self.kafi_config_dict:
+            self.consumer_request_timeout_ms(1000)
+        else:
+            self.consumer_request_timeout_ms(int(self.kafi_config_dict["consumer.request.timeout.ms"]))
+        #
+        if "fetch.min.bytes" not in self.kafi_config_dict:
+            self.fetch_min_bytes(-1)
+        else:
+            self.fetch_min_bytes(int(self.kafi_config_dict["fetch.min.bytes"]))
+        #
+        if "requests.num.retries" not in self.kafi_config_dict:
+            self.requests_num_retries(10)
+        else:
+            self.requests_num_retries(int(self.kafi_config_dict["requests.num.retries"]))
+        #
         self.cluster_id_str = self.get_cluster_id()
         #
         self.admin = self.get_admin()
+
+    #
+
+    def consume_num_attempts(self, new_value=None): # int
+        return self.get_set_config("consume.num.attempts", new_value)
+
+    def consumer_request_timeout_ms(self, new_value=None): # int
+        return self.get_set_config("consumer.request.timeout.ms", new_value)
+
+    def fetch_min_bytes(self, new_value=None): # int
+        return self.get_set_config("fetch.min.bytes", new_value)
+
+    def requests_num_retries(self, new_value=None): # int
+        return self.get_set_config("requests.num.retries", new_value)
 
     #
 

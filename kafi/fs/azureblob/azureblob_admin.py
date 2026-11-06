@@ -1,17 +1,16 @@
 import os
 
+from azure.storage.blob import BlobClient, BlobServiceClient
+
 from kafi.fs.fs_admin import FSAdmin
 
 #
 
 class AzureBlobAdmin(FSAdmin):
     def __init__(self, azureblob_obj):
-        from azure.storage.blob import BlobServiceClient
-        #
-
         super().__init__(azureblob_obj)
         #
-        blobServiceClient = BlobServiceClient.from_connection_string(azureblob_obj.azure_blob_config_dict["connection.string"])
+        blobServiceClient = BlobServiceClient.from_connection_string(azureblob_obj.connection_string())
         self.containerClient = blobServiceClient.get_container_client(azureblob_obj.container_name())
 
     # Topics/Files
@@ -42,20 +41,14 @@ class AzureBlobAdmin(FSAdmin):
         pass
 
     def exists_file(self, abs_path_file_str):
-        from azure.storage.blob import BlobClient
-        #
-
-        blobClient = BlobClient.from_connection_string(self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
+        blobClient = BlobClient.from_connection_string(self.storage_obj.connection_string(), container_name=self.storage_obj.container_name(), blob_name=abs_path_file_str)
         #
         return blobClient.exists()
 
     # Metadata
     
     def read_str(self, abs_path_file_str):
-        from azure.storage.blob import BlobClient
-        #
-
-        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
+        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.connection_string(), container_name=self.storage_obj.container_name(), blob_name=abs_path_file_str)
         #
         storageStreamDownloader = blobClient.download_blob()
         blob_bytes = storageStreamDownloader.read()
@@ -65,10 +58,7 @@ class AzureBlobAdmin(FSAdmin):
         return blob_str
 
     def write_str(self, abs_path_file_str, data_str):
-        from azure.storage.blob import BlobClient
-        #
-
-        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
+        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.connection_string(), container_name=self.storage_obj.container_name(), blob_name=abs_path_file_str)
         #
         data_bytes = data_str.encode("utf-8")
         #
@@ -77,10 +67,7 @@ class AzureBlobAdmin(FSAdmin):
     #
 
     def read_bytes(self, abs_path_file_str):
-        from azure.storage.blob import BlobClient
-        #
-
-        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
+        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.connection_string(), container_name=self.storage_obj.container_name(), blob_name=abs_path_file_str)
         #
         storageStreamDownloader = blobClient.download_blob()
         blob_bytes = storageStreamDownloader.read()
@@ -88,9 +75,6 @@ class AzureBlobAdmin(FSAdmin):
         return blob_bytes
 
     def write_bytes(self, abs_path_file_str, data_bytes):
-        from azure.storage.blob import BlobClient
-        #
-
-        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.azure_blob_config_dict["connection.string"], container_name=self.storage_obj.azure_blob_config_dict["container.name"], blob_name=abs_path_file_str)
+        blobClient = BlobClient.from_connection_string(conn_str=self.storage_obj.connection_string(), container_name=self.storage_obj.container_name(), blob_name=abs_path_file_str)
         #
         blobClient.upload_blob(data_bytes)

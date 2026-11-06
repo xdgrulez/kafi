@@ -12,12 +12,14 @@ class RestProxyConsumer(KafkaConsumer):
         #
         # Consumer Config
         #
-        if "fetch.min.bytes" not in self.consumer_config_dict:
-            self.consumer_config_dict["fetch.min.bytes"] = restproxy_obj.fetch_min_bytes()
-        if "consumer.request.timeout.ms" not in self.consumer_config_dict:
-            self.consumer_config_dict["consumer.request.timeout.ms"] = restproxy_obj.consumer_request_timeout_ms()
         if "auto.commit.enable" not in self.consumer_config_dict:
             self.consumer_config_dict["auto.commit.enable"] = self.enable_auto_commit_bool
+        #
+        # RestProxy-specific configs.
+        if "fetch.min.bytes" not in self.consumer_config_dict:
+            self.consumer_config_dict["fetch.min.bytes"] = kwargs["fetch_min_bytes"] if "fetch_min_bytes" in kwargs else restproxy_obj.fetch_min_bytes()
+        if "consumer.request.timeout.ms" not in self.consumer_config_dict:
+            self.consumer_config_dict["consumer.request.timeout.ms"] = kwargs["consumer_request_timeout_ms"] if "consumer_request_timeout_ms" in kwargs else restproxy_obj.consumer_request_timeout_ms()
         #
         # Instance ID
         #

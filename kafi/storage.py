@@ -33,36 +33,25 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         # if "schema.registry.url" in self.schema_registry_config_dict:
         SchemaRegistry.__init__(self, self.schema_registry_config_dict)
         #
-        if "progress.num.messages" not in self.kafi_config_dict:
-            self.progress_num_messages(100)
+        if "auto.offset.reset" not in self.kafi_config_dict:
+            self.auto_offset_reset("earliest")
         else:
-            self.progress_num_messages(int(self.kafi_config_dict["progress.num.messages"]))
+            self.auto_offset_reset(str(self.kafi_config_dict["auto.offset.reset"]))
+        #
+        if "commit.after.processing" not in self.kafi_config_dict:
+            self.commit_after_processing(True)
+        else:
+            self.commit_after_processing(bool(self.kafi_config_dict["commit.after.processing"]))
         #
         if "consume.batch.size" not in self.kafi_config_dict:
             self.consume_batch_size(100)
         else:
             self.consume_batch_size(int(self.kafi_config_dict["consume.batch.size"]))
         #
-        if "produce.batch.size" not in self.kafi_config_dict:
-            self.produce_batch_size(100)
-        else:
-            self.produce_batch_size(int(self.kafi_config_dict["produce.batch.size"]))
-        #
         if "consume.timeout" not in self.kafi_config_dict:
             self.consume_timeout(1.0)
         else:
             self.consume_timeout(float(self.kafi_config_dict["consume.timeout"]))
-        #
-        if "verbose" not in self.kafi_config_dict:
-            verbose_int = 1 if is_interactive() else 0
-            self.verbose(verbose_int)
-        else:
-            self.verbose(int(self.kafi_config_dict["verbose"]))
-        #
-        if "auto.offset.reset" not in self.kafi_config_dict:
-            self.auto_offset_reset("earliest")
-        else:
-            self.auto_offset_reset(str(self.kafi_config_dict["auto.offset.reset"]))
         #
         if "consumer.group.prefix" not in self.kafi_config_dict:
             self.consumer_group_prefix("")
@@ -74,147 +63,74 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         else:
             self.enable_auto_commit(bool(self.kafi_config_dict["enable.auto.commit"]))
         #
-        if "commit.after.processing" not in self.kafi_config_dict:
-            self.commit_after_processing(True)
-        else:
-            self.commit_after_processing(bool(self.kafi_config_dict["commit.after.processing"]))
-        #
-        if "isolation.level" not in self.kafi_config_dict:
-            self.isolation_level("read_uncommitted")
-        else:
-            self.isolation_level(str(self.kafi_config_dict["isolation.level"]))
-        #
-        if "transactional.id.prefix" not in self.kafi_config_dict:
-            self.transactional_id_prefix("")
-        else:
-            self.transactional_id_prefix(str(self.kafi_config_dict["transactional.id.prefix"]))
-        #
         if "key.type" not in self.kafi_config_dict:
             self.key_type("str")
         else:
             self.key_type(str(self.kafi_config_dict["key.type"]))
+        #
+        if "produce.batch.size" not in self.kafi_config_dict:
+            self.produce_batch_size(100)
+        else:
+            self.produce_batch_size(int(self.kafi_config_dict["produce.batch.size"]))
+        #
+        if "progress.num.messages" not in self.kafi_config_dict:
+            self.progress_num_messages(100)
+        else:
+            self.progress_num_messages(int(self.kafi_config_dict["progress.num.messages"]))
+        #
+        if "topic.ignore.patterns" not in self.kafi_config_dict:
+            self.topic_ignore_patterns(["_*"])
+        else:
+            self.topic_ignore_patterns(list(self.kafi_config_dict["topic.ignore.patterns"]))
         #
         if "value.type" not in self.kafi_config_dict:
             self.value_type("json")
         else:
             self.value_type(str(self.kafi_config_dict["value.type"]))
         #
-        if "cluster.kind" not in self.kafi_config_dict:
-            self.cluster_kind("kafka")
+        if "verbose" not in self.kafi_config_dict:
+            verbose_int = 1 if is_interactive() else 0
+            self.verbose(verbose_int)
         else:
-            self.cluster_kind(str(self.kafi_config_dict["cluster.kind"]))
-        #
-        if "topic.ignore.patterns" not in self.kafi_config_dict:
-            self.topic_ignore_patterns(["_*"])
-        else:
-            self.topic_ignore_patterns(list(self.kafi_config_dict["topic.ignore.patterns"]))
+            self.verbose(int(self.kafi_config_dict["verbose"]))
 
     #
 
-    def progress_num_messages(self, new_value=None): # int
-        """Get/set how many messages trigger a progress print (int).
-
-        Returns:
-            int: current value"""
-        return self.get_set_config("progress.num.messages", new_value)
-
-    def consume_batch_size(self, new_value=None): # int
-        """Get/set the batch size used when consuming (int).
-
-        Returns:
-            int: current value"""
-        return self.get_set_config("consume.batch.size", new_value)
-    
-    def produce_batch_size(self, new_value=None): # int
-        """Get/set the batch size used when producing (int).
-
-        Returns:
-            int: current value"""
-        return self.get_set_config("produce.batch.size", new_value)
-
-    def consume_timeout(self, new_value=None): # float
-        """Get/set the consume timeout (float).
-
-        Returns:
-            float: current value"""
-        return self.get_set_config("consume.timeout", new_value)
-
-    def verbose(self, new_value=None): # int
-        """Get/set the verbosity level (int).
-
-        Returns:
-            int: current value"""
-        return self.get_set_config("verbose", new_value)
-
     def auto_offset_reset(self, new_value=None): # str
-        """Get/set the default consumer offset reset policy, e.g. "earliest" (str).
-
-        Returns:
-            str: current value"""
         return self.get_set_config("auto.offset.reset", new_value)
 
-    def consumer_group_prefix(self, new_value=None): # str
-        """Get/set the prefix prepended to auto-generated consumer group names (str).
+    def commit_after_processing(self, new_value=None): # bool
+        return self.get_set_config("commit.after.processing", new_value)
 
-        Returns:
-            str: current value"""
+    def consume_batch_size(self, new_value=None): # int
+        return self.get_set_config("consume.batch.size", new_value)
+
+    def consume_timeout(self, new_value=None): # float
+        return self.get_set_config("consume.timeout", new_value)
+
+    def consumer_group_prefix(self, new_value=None): # str
         return self.get_set_config("consumer.group.prefix", new_value)
 
     def enable_auto_commit(self, new_value=None): # bool
-        """Get/set whether consumers auto-commit offsets (bool).
-
-        Returns:
-            bool: current value"""
         return self.get_set_config("enable.auto.commit", new_value)
 
-    def commit_after_processing(self, new_value=None): # bool
-        """Get/set whether offsets are committed after (True) or before (False) processing (bool).
-
-        Returns:
-            bool: current value"""
-        return self.get_set_config("commit.after.processing", new_value)
-
-    def isolation_level(self, new_value=None): # str
-        """Get/set the consumer transaction isolation level, e.g. "read_uncommitted" (str).
-
-        Returns:
-            str: current value"""
-        return self.get_set_config("isolation.level", new_value)
-
-    def transactional_id_prefix(self, new_value=None): # str
-        """Get/set the prefix prepended to auto-generated transactional ids (str).
-
-        Returns:
-            str: current value"""
-        return self.get_set_config("transactional.id.prefix", new_value)
-
     def key_type(self, new_value=None): # str
-        """Get/set the default (de)serialization type for keys, e.g. "str" (str).
-
-        Returns:
-            str: current value"""
         return self.get_set_config("key.type", new_value)
 
-    def value_type(self, new_value=None): # str
-        """Get/set the default (de)serialization type for values, e.g. "json" (str).
+    def produce_batch_size(self, new_value=None): # int
+        return self.get_set_config("produce.batch.size", new_value)
 
-        Returns:
-            str: current value"""
+    def progress_num_messages(self, new_value=None): # int
+        return self.get_set_config("progress.num.messages", new_value)
+    
+    def topic_ignore_patterns(self, new_value=None): # bool
+        return self.get_set_config("topic.ignore.patterns", new_value)
+
+    def value_type(self, new_value=None): # str
         return self.get_set_config("value.type", new_value)
 
-    def cluster_kind(self, new_value=None): # str
-        """Get/set the underlying cluster kind, e.g. "kafka" (str).
-
-        Returns:
-            str: current value"""
-        return self.get_set_config("cluster.kind", new_value)
-
-    def topic_ignore_patterns(self, new_value=None): # bool
-        """Get/set glob patterns for topics hidden from topic listings (list of str).
-
-        Returns:
-            list of str: current value"""
-        return self.get_set_config("topic.ignore.patterns", new_value)
+    def verbose(self, new_value=None): # int
+        return self.get_set_config("verbose", new_value)
 
     #
 

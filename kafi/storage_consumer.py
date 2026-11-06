@@ -73,14 +73,12 @@ class StorageConsumer(Dechunker):
         #
         # Configure.
         self.consumer_config_dict = {}
-        self.consumer_config_dict["auto.offset.reset"] = storage_obj.auto_offset_reset()
+        self.consumer_config_dict["auto.offset.reset"] = kwargs["auto_offset_reset"] if "auto_offset_reset" in kwargs else storage_obj.auto_offset_reset()
         if "config" in kwargs:
             for key_str, value in kwargs["config"].items():
                 self.consumer_config_dict[key_str] = value
         #
         self.enable_auto_commit_bool = kwargs["enable_auto_commit"] if "enable_auto_commit" in kwargs else storage_obj.enable_auto_commit()
-        #
-        self.isolation_level_str = kwargs["isolation.level"] if "isolation.level" in kwargs else storage_obj.isolation_level()
         #
         self.schema_id_int_generalizedProtocolMessageType_protobuf_schema_str_tuple_dict = {}
         #
@@ -89,7 +87,7 @@ class StorageConsumer(Dechunker):
     #
 
     def foldl(self, foldl_fun, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
-        """Consume and fold over messages (with dechunking, deserialization, offset tracking, commits). Stops either after no more messages could be consumed *and* for all topics and their partitions, the high watermark has been reached, the maximum number of messages have been consumed over all topics, or break_fun is triggered. 
+        """Consume and fold over messages (with dechunking, deserialization, offset tracking, commits).
 
         Args:
             foldl_fun: (acc, m) -> new acc - fold left function - takes the current accumulator and the next message and returns the new accumulator.
@@ -282,24 +280,25 @@ class StorageConsumer(Dechunker):
     #
 
     def consume(self, n=ALL_MESSAGES, **kwargs):
-        """Consume one batch of up to n messages as a plain list.
+        """Consume one batch of up to n messages.
 
-        If n is unset, use the configured consume batch size. Unlike foldl(),
-        this method makes only one consume_impl() call.
+        If n == ALL_MESSAGES or unset, use the configured consume batch size.
+        Unlike foldl(), this method makes only one consume_impl() call.
+        It can thus be used in your own event loop.
 
         Args:
-            n: max messages to consume
+            n: maximum messages to consume
             **kwargs: passed to consume_impl() or used for batch processing
 
         Returns:
             list of m: consumed messages"""
         n_int = n
         #
-        if n_int == ALL_MESSAGES:
-            n_int = self.storage_obj.consume_batch_size()
-        #
         if n_int == 0:
             return []
+        #
+        if n_int == ALL_MESSAGES:
+            n_int = self.storage_obj.consume_batch_size()
         #
         (n_int, consume_batch_size_int, _, commit_after_processing_bool,
          break_fun, dechunk_bool) = self._get_consume_options(n_int, **kwargs)

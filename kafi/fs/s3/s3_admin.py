@@ -1,6 +1,8 @@
 import io
 import os
 
+from minio.error import MinioException
+
 from kafi.fs.fs_admin import FSAdmin
 
 #
@@ -9,10 +11,9 @@ class S3Admin(FSAdmin):
     def __init__(self, s3_obj):
         from minio import Minio
         #
-
         super().__init__(s3_obj)
         #
-        self.minio = Minio(s3_obj.s3_config_dict["endpoint"], access_key=s3_obj.s3_config_dict["access.key"], secret_key=s3_obj.s3_config_dict["secret.key"], secure=False)
+        self.minio = Minio(s3_obj.endpoint(), access_key=s3_obj.access_key(), secret_key=s3_obj.secret_key(), secure=False)
 
     # Topics/Files
 
@@ -41,9 +42,6 @@ class S3Admin(FSAdmin):
         pass
 
     def exists_file(self, abs_path_file_str):
-        from minio.error import MinioException
-        #
-
         try:
             self.minio.stat_object(self.storage_obj.bucket_name(), abs_path_file_str)
             return True
@@ -68,20 +66,10 @@ class S3Admin(FSAdmin):
     #
 
     def read_bytes(self, abs_path_file_str):
-        from minio import Minio
-        #
-
-        self.minio = Minio(self.storage_obj.s3_config_dict["endpoint"], access_key=self.storage_obj.s3_config_dict["access.key"], secret_key=self.storage_obj.s3_config_dict["secret.key"], secure=False)
-        #
         response = self.minio.get_object(self.storage_obj.bucket_name(), abs_path_file_str)
         object_bytes = response.data
         #
         return object_bytes
 
     def write_bytes(self, abs_path_file_str, data_bytes):
-        from minio import Minio
-        #
-
-        self.minio = Minio(self.storage_obj.s3_config_dict["endpoint"], access_key=self.storage_obj.s3_config_dict["access.key"], secret_key=self.storage_obj.s3_config_dict["secret.key"], secure=False)
-        #
         self.minio.put_object(self.storage_obj.bucket_name(), abs_path_file_str, io.BytesIO(data_bytes), length=len(data_bytes))

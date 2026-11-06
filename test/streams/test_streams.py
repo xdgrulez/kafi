@@ -138,7 +138,6 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
         sink_storage = source_storage
         #
         def sink_fun(r):
-            print("Sink function called...")
             self.sink_str_updated_r_list_dict[sink_customer_r_z_str].append(r)
         #
         built_tn = get_built_tn_datagen_multiple_sinks(lambda: Streams.source(source_storage, source_str),
