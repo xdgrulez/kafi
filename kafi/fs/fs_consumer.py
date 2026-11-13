@@ -25,7 +25,7 @@ class FSConsumer(StorageConsumer):
         group_dict["state"] = "stable"
         # Persist the new or updated consumer group.
         self.storage_obj.admin.set_group_dict(self.group_str, group_dict)
-            
+
     #
 
     def close(self):

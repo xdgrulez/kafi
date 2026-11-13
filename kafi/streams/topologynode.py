@@ -1,4 +1,4 @@
-import sys
+import logging, sys
 from types import SimpleNamespace
 
 from pydbsp.progress import Feedback as ProgressFeedback
@@ -14,7 +14,7 @@ from pydbsp.indexed_relational_operators import (
     LiftLiftIndex,
 )
 from pydbsp.indexed_zset import IndexedZSetAddition
-from pydbsp.operator import Delay, Differentiate, Input, Integrate, Lift1, Lift2, LiftIntegrate, LiftStreamIntroduction
+from pydbsp.operator import Differentiate, Input, Integrate, Lift1, Lift2, LiftIntegrate, LiftStreamIntroduction
 from pydbsp.relational_operators import (
     DeltaLiftedDeltaLiftedDistinct,
     DeltaLiftedDeltaLiftedJoin,
@@ -28,6 +28,10 @@ import copy, uuid
 import msgpack
 
 import cloudpickle
+
+#
+
+logger = logging.getLogger(__name__)
 
 #
 
@@ -876,12 +880,12 @@ class TopologyNode:
                 r = tn._unpack_fun(packed_r)
                 return tn._pack_fun((r, expiry_fun(ts_fun(r))))
             #
-            def _ts_fun(packed_r_end_ts):
-                r, _ = tn._unpack_fun(packed_r_end_ts)
+            def _ts_fun(packed_r_end_ts_tuple):
+                r, _ = tn._unpack_fun(packed_r_end_ts_tuple)
                 return ts_fun(r)
             #
-            def _expiry_fun(packed_r_end_ts):
-                _, end_ts = tn._unpack_fun(packed_r_end_ts)
+            def _expiry_fun(packed_r_end_ts_tuple):
+                _, end_ts = tn._unpack_fun(packed_r_end_ts_tuple)
                 return end_ts
             #
             def _compute(t, reads, ctx):
@@ -891,10 +895,10 @@ class TopologyNode:
                 predecessor = chain.predecessor(t[0])
                 #
                 if predecessor is None:
-                    prev_zSet, prev_max_ts = g.identity(), NEG_INF
+                    prev_zSet, prev_max_ts_int = g.identity(), NEG_INF
                 else:
                     pred_t = (predecessor,) + t[1:]
-                    prev_zSet, prev_max_ts, _ = read_self(pred_t)
+                    prev_zSet, prev_max_ts_int, _ = read_self(pred_t)
                 #
                 raw_input_zSet = read_input(t)
                 #
@@ -904,24 +908,26 @@ class TopologyNode:
                     tagged_dict[tagged_packed_r] = tagged_dict.get(tagged_packed_r, 0) + w
                 input_zSet = ZSet(tagged_dict)
                 #
-                input_max_ts = max(
-                    (_ts_fun(k) for k, w in input_zSet.items() if w > 0),
+                input_max_ts_int = max(
+                    (_ts_fun(packed_r_end_ts_tuple) for packed_r_end_ts_tuple, w in input_zSet.items() if w > 0),
                     default=None,
                 )
-                max_ts = prev_max_ts if input_max_ts is None else max(prev_max_ts, input_max_ts)
+                max_ts_int = prev_max_ts_int if input_max_ts_int is None else max(prev_max_ts_int, input_max_ts_int)
                 #
                 merged_zSet = g.add(prev_zSet, input_zSet)
                 #
                 new_state_dict = {}
                 expired_dict = {}
                 #
-                for k, w in merged_zSet.items():
+                for packed_r_end_ts_tuple, w in merged_zSet.items():
                     if w == 0:
                         continue
-                    if _expiry_fun(k) >= max_ts:
-                        new_state_dict[k] = w
+                    expiry_ts_int = _expiry_fun(packed_r_end_ts_tuple)
+                    if expiry_ts_int >= max_ts_int:
+                        new_state_dict[packed_r_end_ts_tuple] = w
                     else:
-                        expired_dict[k] = -w
+                        logger.debug(f"Expired (max_ts: {max_ts_int} > expiry_ts: {expiry_ts_int}): {self._unpack_fun(packed_r_end_ts_tuple)}")
+                        expired_dict[packed_r_end_ts_tuple] = -w
                 #
                 new_state_zSet = ZSet(new_state_dict)
                 expired_zSet = ZSet(expired_dict)
@@ -934,7 +940,7 @@ class TopologyNode:
                     projected_dict[packed_projected_r] = projected_dict.get(packed_projected_r, 0) + w
                 delta_zSet = ZSet(projected_dict)
                 #
-                return new_state_zSet, max_ts, delta_zSet
+                return new_state_zSet, max_ts_int, delta_zSet
             #
             next_nodeId = evaluator.circuit.next_id()
             expire_nodeId = evaluator.circuit.add(

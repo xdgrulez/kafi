@@ -1,7 +1,7 @@
 from collections import defaultdict
 import time
 
-from kafi.helpers import copy_kwargs, get_millis
+from kafi.helpers import get_millis
 
 #
 
@@ -38,9 +38,10 @@ class TestKafkaBase:
             #
             print(f"Reading {source_or_sink_str} topic {topic_str}...")
             kwargs["group"] = f"test_{get_millis()}"
+            kwargs["snapshot"] = True
             m_list = storage.cat(topic_str, **kwargs)
             source_str_input_r_list_dict[source_str] = m_list
-            print("...done.")
+            print(f"...done (read {len(m_list)} messages).")
         #
         return source_str_input_r_list_dict
 

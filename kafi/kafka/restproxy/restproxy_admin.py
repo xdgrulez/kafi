@@ -221,7 +221,7 @@ class RestProxyAdmin(KafkaAdmin):
                         offsets_dict = {}
                     #
                     offsets_dict[partition_int] = offset_int
-                    topic_str_offsets_dict_dict[topic_str] = offsets_dict
+                    topic_str_offsets_dict_dict[topic_str] = offsets_dict                    
                 #
                 group_offsets[group_str] = topic_str_offsets_dict_dict
         #

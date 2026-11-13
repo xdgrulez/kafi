@@ -203,13 +203,12 @@ class Streams(TopologyNode):
         outputs_int = 0
         #
         def progress_fun(built_tn, source_str_offsets_dict_dict, time_int):
-            sys.stdout.write(f"\rUptime: {(time_int - progress_initial_time_int) / 1000:.3f}s, State size: {built_tn.get_state_size() / 1024:.2f} KB, Source offsets: {source_str_offsets_dict_dict}, Sink outputs: {outputs_int}")
+            sys.stdout.write(f"\rUptime: {(time_int - initial_time_int) / 1000:.3f}s, State size: {built_tn.get_state_size() / 1024:.2f} KB, Source offsets: {source_str_offsets_dict_dict}, Sink outputs: {outputs_int}")
             sys.stdout.flush()
         #
         step_fun = kwargs["step_fun"] if "step_fun" in kwargs else lambda _1, _2: None
         #
         initial_time_int = get_millis()
-        progress_initial_time_int = initial_time_int
         #
         def save_checkpoint(source_str_offsets_dict_dict):
             checkpoint_dict = {"state": built_tn.get_state(),
@@ -259,7 +258,7 @@ class Streams(TopologyNode):
         #
         source_str_offsets_dict_dict = None
         if checkpoint_storage is not None and checkpoint_topic_str:
-            initial_time_int = get_millis()
+            checkpoint_time_int = get_millis()
             #
             checkpoint_storage.enable_auto_commit(False)
             checkpoint_storage.commit_after_processing(False)
@@ -276,7 +275,7 @@ class Streams(TopologyNode):
         for source_str, topic_dict in source_str_topic_dict_dict.items():
             storage = topic_dict["storage"]
             topic_str = topic_dict["topic"]
-            source_kwargs = topic_dict["kwargs"]
+            source_kwargs = copy.deepcopy(topic_dict["kwargs"])
             #
             source_kwargs["group"] = group_str
             #
@@ -339,21 +338,21 @@ class Streams(TopologyNode):
                 if kwargs.get("progress", False):
                     progress_fun(built_tn, source_str_offsets_dict_dict, time_int)
                 #
+                if checkpoint_storage is not None and (time_int - checkpoint_time_int) > checkpoint_interval_float * 1000:
+                    save_checkpoint(source_str_offsets_dict_dict)
+                    #
+                    checkpoint_time_int = get_millis()
+                #
                 if source_str_offsets_dict_dict and source_str_offsets_dict_dict != last_committed_source_str_offsets_dict_dict:
-                    if checkpoint_storage is not None and (time_int - initial_time_int) > checkpoint_interval_float * 1000:
-                        save_checkpoint(source_str_offsets_dict_dict)
-                        #
-                        for source_str, offsets_dict in source_str_offsets_dict_dict.items():
-                            if offsets_dict:
-                                consumer = source_str_consumer_dict[source_str]
-                                #
-                                consumer.commit(offsets_dict)
-                                #
-                                logger.info("Committed %s for source %s.", offsets_dict, source_str)
+                    for source_str, offsets_dict in source_str_offsets_dict_dict.items():
+                        if offsets_dict:
+                            consumer = source_str_consumer_dict[source_str]
+                            #
+                            consumer.commit(offsets_dict)
+                            #
+                            logger.info("Committed %s for source %s.", offsets_dict, source_str)
                 #
                 last_committed_source_str_offsets_dict_dict = copy.deepcopy(source_str_offsets_dict_dict)
-                #
-                initial_time_int = get_millis()
         except Exception:
             logger.exception("Exception in streams loop")
             raise

@@ -8,6 +8,11 @@ from streams.wc.topologies import get_built_tn_wc
 
 #
 
+import logging
+logging.basicConfig(level=logging.INFO)
+
+#
+
 from kafi.kafi import Cluster
 from kafi.streams.streams import Streams
 
@@ -86,6 +91,23 @@ class TestStreams(TestStreamsBase, TestGenerate, TestBase):
                                                            lambda x: x.sink(sink_storage, sink_str))
         #
         self.go(built_tn, {source_str: default_batch_size_int}, default_steps_int)
+        #
+        self.assert_datagen_self_join_group_by(source_str, sink_str)
+
+    def test_datagen_self_join_group_by_checkpointing(self):
+        source_str = "shoe_orders"
+        sink_str = "self_join_group_by"
+        checkpoint_str = "self_join_group_by_checkpoint"
+        #
+        source_storage = Cluster("local")
+        source_storage.consume_batch_size(default_batch_size_int)
+        sink_storage = source_storage
+        checkpoint_storage = source_storage
+        #
+        built_tn = get_built_tn_datagen_self_join_group_by(lambda: Streams.source(source_storage, source_str),
+                                                           lambda x: x.sink(sink_storage, sink_str))
+        #
+        self.go(built_tn, {source_str: default_batch_size_int}, default_steps_int, checkpoint_storage=checkpoint_storage, checkpoint_topic_str=checkpoint_str)
         #
         self.assert_datagen_self_join_group_by(source_str, sink_str)
 

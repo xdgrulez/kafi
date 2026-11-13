@@ -78,6 +78,11 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
         else:
             self.progress_num_messages(int(self.kafi_config_dict["progress.num.messages"]))
         #
+        if "snapshot" not in self.kafi_config_dict:
+            self.snapshot(False)
+        else:
+            self.snapshot(bool(self.kafi_config_dict["snapshot"]))
+        #
         if "topic.ignore.patterns" not in self.kafi_config_dict:
             self.topic_ignore_patterns(["_*"])
         else:
@@ -123,6 +128,9 @@ class Storage(Shell, Files, AddOns, SchemaRegistry):
     def progress_num_messages(self, new_value=None): # int
         return self.get_set_config("progress.num.messages", new_value)
     
+    def snapshot(self, new_value=None): # bool
+        return self.get_set_config("snapshot", new_value)
+
     def topic_ignore_patterns(self, new_value=None): # bool
         return self.get_set_config("topic.ignore.patterns", new_value)
 

@@ -54,8 +54,9 @@ class StorageConsumer(Dechunker):
         self.topic_str_commit_offsets_dict_dict = copy.deepcopy(self.topic_str_assign_offsets_dict_dict)
         #
         # Get dict mapping the topics to their respective end offsets...
-        # ...1) initialize with sys.maxsize
-        self.topic_str_end_offsets_dict_dict = {topic_str: {partition_int: sys.maxsize for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
+        # ...1) initialize with sys.maxsize or the high watermark (in case of snapshot_bool == True)
+        self.snapshot_bool = kwargs["snapshot"] if "snapshot" in kwargs else self.storage_obj.snapshot()
+        self.topic_str_end_offsets_dict_dict = {topic_str: {partition_int: self.topic_str_partition_int_offsets_tuple_dict_dict[topic_str][partition_int][1] if self.snapshot_bool else sys.maxsize for partition_int in range(self.topic_str_partitions_int_dict[topic_str])} for topic_str in self.topic_str_list}
         # ...2) apply the kwargs "end_offsets"/"end_ts" if available.
         kwargs_topic_str_end_offsets_dict_dict = self.get_offsets_from_kwargs("end_offsets", "end_ts", **kwargs)
         for topic_str, offsets_dict in kwargs_topic_str_end_offsets_dict_dict.items():
@@ -86,28 +87,30 @@ class StorageConsumer(Dechunker):
 
     #
 
-    def foldl(self, foldl_fun, initial_acc, n=ALL_MESSAGES, commit_after_processing=None, **kwargs):
+    def foldl(self, foldl_fun, initial_acc, n=ALL_MESSAGES, **kwargs):
         """Consume and fold over messages (with dechunking, deserialization, offset tracking, commits).
 
         Args:
             foldl_fun: (acc, m) -> new acc - fold left function - takes the current accumulator and the next message and returns the new accumulator.
             initial_acc: initial accumulator value
             n: maximum number of messages to consume over all topics
-            commit_after_processing: commit offsets after processing (independent of auto.offset.commit for the current storage)
             **kwargs: optional kwargs:
                 last_n (int): consume only the last n messages
                 consume_batch_size (int): consume batch size.
                 break_fun (acc, m) -> bool: stop before processing message m given accumulator acc.
                 dechunk (bool): dechunk messages
+                commit_after_processing: commit offsets after processing (independent of auto.offset.commit for the current storage)
+                consume_timeout (float): consume timeout in s
 
         Returns:
             any: final accumulated value"""
-        if n == 0:
+        n_int = n
+        #
+        if n_int == 0:
             return initial_acc
         #
-        (n_int, consume_batch_size_int, consume_timeout_s_float,
-         commit_after_processing_bool, break_fun, dechunk_bool) = self._get_consume_options(
-            n, commit_after_processing, **kwargs)
+        (n_int, consume_batch_size_int, dechunk_bool) = self._get_consume_options(n_int, **kwargs)
+        (commit_after_processing_bool, consume_timeout_s_float, break_fun) = self._get_foldl_options(**kwargs)
         #
         message_counter_int = 0
         #
@@ -119,14 +122,17 @@ class StorageConsumer(Dechunker):
         while True:
             #
             # Consume the next batch of messages.
-            (acc, message_counter_int, break_bool,
-             has_eligible_messages_bool) = self._consume_batch(
-                acc, foldl_fun, message_counter_int, n_int,
-                consume_batch_size_int, break_fun, dechunk_bool, **kwargs)
+            (eligible_m_list, prepared_m_list) = self._consume_and_prepare_batch(consume_batch_size_int,
+                                                                                 dechunk_bool,
+                                                                                 **kwargs)
+            #
+            # Process the next batch of messages.
+            (acc, message_counter_int, break_bool) = self._process_messages(
+            prepared_m_list, acc, foldl_fun, message_counter_int, n_int, break_fun)
             #
             # If no more messages could be consumed...
             consume_timeout_bool = False
-            if not has_eligible_messages_bool:
+            if not eligible_m_list:
                 # a) ...return if all messages up to the high watermark (at the time of construction of the StorageConsumer instance) are read,
                 if all(commit_offset_int >= self.topic_str_partition_int_offsets_tuple_dict_dict[topic_str][partition_int][1] for topic_str, commit_offsets_dict in self.topic_str_commit_offsets_dict_dict.items() for partition_int, commit_offset_int in commit_offsets_dict.items()):
                     break
@@ -144,7 +150,7 @@ class StorageConsumer(Dechunker):
             self._commit_offsets(commit_after_processing_bool)
             #
             # Stop consuming for good if break_bool is set (break_fun or message_counter_int >= n_int).
-            if break_bool or consume_timeout_bool:
+            if break_bool or (consume_timeout_bool and not self.snapshot_bool):
                 break
             #
             # Stop consuming for good if the end offset is reached for all topics.
@@ -155,49 +161,48 @@ class StorageConsumer(Dechunker):
 
     #
 
-    def _get_consume_options(self, n_int, commit_after_processing=None, **kwargs):
+    def _get_consume_options(self, n_int, **kwargs):
         """Resolve options shared by foldl() and consume()."""
-        # Get last_n (to read n messages from the end of the topic).
+        #
+        # Translate last_n into assign offsets and n_int.
         last_n_int = kwargs["last_n"] if "last_n" in kwargs else None
         if last_n_int is not None and last_n_int > 0:
             self.topic_str_assign_offsets_dict_dict = self.get_last_n_start_offsets(last_n_int)
             n_int = last_n_int
         #
-        if commit_after_processing is None:
-            commit_after_processing_bool = self.storage_obj.commit_after_processing()
-        else:
-            commit_after_processing_bool = commit_after_processing
-        #
+        # Translate n_int into consume_batch_size_int.
         consume_batch_size_int = kwargs["consume_batch_size"] if "consume_batch_size" in kwargs else self.storage_obj.consume_batch_size()
         if n_int != ALL_MESSAGES and consume_batch_size_int > n_int:
             consume_batch_size_int = n_int
         #
-        consume_timeout_s_float = kwargs["consume_timeout"] if "consume_timeout" in kwargs else self.storage_obj.consume_timeout()
-        break_fun = kwargs["break_fun"] if "break_fun" in kwargs else lambda _, _1: False
+        # Get dechunk_bool
         dechunk_bool = kwargs["dechunk"] if "dechunk" in kwargs else False
         #
-        return (n_int, consume_batch_size_int, consume_timeout_s_float,
-                commit_after_processing_bool, break_fun, dechunk_bool)
+        return (n_int, consume_batch_size_int, dechunk_bool)
 
-    #
-
-    def _consume_batch(self, acc, foldl_fun, message_counter_int, n_int,
-                       consume_batch_size_int, break_fun, dechunk_bool, **kwargs):
-        """Consume and process exactly one raw batch."""
-        m_list1 = self.consume_impl(n=consume_batch_size_int, **kwargs)
-        (eligible_m_list, prepared_m_list) = self._prepare_batch(m_list1, dechunk_bool)
-        (acc, message_counter_int, break_bool) = self._process_messages(
-            prepared_m_list, acc, foldl_fun, message_counter_int, n_int, break_fun)
+    def _get_foldl_options(self, **kwargs):
+        """Resolve options shared by foldl() and consume()."""
         #
-        return (acc, message_counter_int, break_bool, bool(eligible_m_list))
+        # Get commit_after_processing_bool
+        commit_after_processing_bool = kwargs["commit_after_processing"] if "commit_after_processing" in kwargs else self.storage_obj.commit_after_processing()
+        #
+        # Get commit_timeout_s_float
+        consume_timeout_s_float = kwargs["consume_timeout"] if "consume_timeout" in kwargs else self.storage_obj.consume_timeout()
+        #
+        # Get break_fun
+        break_fun = kwargs["break_fun"] if "break_fun" in kwargs else lambda _, _1: False
+        #
+        return (commit_after_processing_bool, consume_timeout_s_float, break_fun)
 
     #
 
-    def _prepare_batch(self, m_list, dechunk_bool):
-        """Filter, dechunk, and deserialize one raw batch of messages.
+    def _consume_and_prepare_batch(self, consume_batch_size_int, dechunk_bool, **kwargs):
+        """Consume, dechunk, and deserialize one raw batch of messages.
 
         Returns:
             tuple: (eligible raw messages, prepared messages)"""
+        m_list = self.consume_impl(n=consume_batch_size_int, **kwargs)
+        #
         eligible_m_list = []
         for m in m_list:
             topic_str = m["topic"]
@@ -205,7 +210,7 @@ class StorageConsumer(Dechunker):
             offset_int = m["offset"]
             #
             end_offset_int = self.topic_str_end_offsets_dict_dict[topic_str][partition_int]
-            # Only collect the messages before the end offset.
+            # Only collect those messages before the end offset.
             if end_offset_int != 0 and offset_int <= end_offset_int:
                 eligible_m_list.append(m)
         #
@@ -224,16 +229,16 @@ class StorageConsumer(Dechunker):
         prepared_m_list = []
         for m in dechunked_m_list:
             topic_str = m["topic"]
-            m1 = {"value": deserialize(m["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, key_bool=False),
+            prepared_m = {"value": deserialize(m["value"], self.topic_str_value_type_str_dict[topic_str], topic_str=topic_str, key_bool=False),
                   "key": deserialize(m["key"], self.topic_str_key_type_str_dict[topic_str], topic_str=topic_str, key_bool=True),
                   "headers": m["headers"],
                   "timestamp": m["timestamp"],
                   "partition": m["partition"],
                   "offset": m["offset"],
                   "topic": topic_str}
-            prepared_m_list.append(m1)
+            prepared_m_list.append(prepared_m)
         #
-        return (eligible_m_list, prepared_m_list)
+        return eligible_m_list, prepared_m_list
 
     #
 
@@ -300,23 +305,11 @@ class StorageConsumer(Dechunker):
         if n_int == ALL_MESSAGES:
             n_int = self.storage_obj.consume_batch_size()
         #
-        (n_int, consume_batch_size_int, _, commit_after_processing_bool,
-         break_fun, dechunk_bool) = self._get_consume_options(n_int, **kwargs)
+        (_, consume_batch_size_int, dechunk_bool) = self._get_consume_options(n_int, **kwargs)
         #
-        def foldl_fun(m_list, m):
-            m_list.append(m)
-            #
-            return m_list
+        (_, prepared_m_list) = self._consume_and_prepare_batch(consume_batch_size_int, dechunk_bool, **kwargs)
         #
-        consume_kwargs_dict = kwargs.copy()
-        consume_kwargs_dict.pop("commit_after_processing", None)
-        #
-        (m_list1, _, _, _) = self._consume_batch(
-            [], foldl_fun, 0, n_int, consume_batch_size_int,
-            break_fun, dechunk_bool, **consume_kwargs_dict)
-        self._commit_offsets(commit_after_processing_bool)
-        #
-        return m_list1
+        return prepared_m_list
 
     #
 

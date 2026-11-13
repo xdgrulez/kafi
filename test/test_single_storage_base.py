@@ -896,6 +896,41 @@ class TestSingleStorageBase(unittest.TestCase):
         self.assertEqual(offsets_dict1[topic_str][0], 3)
         #
         consumer.close()
+
+    def test_custom_consumer_loop(self):
+        if self.__class__.__name__ == "TestSingleStorageBase":
+            return
+        #
+        s = self.get_storage()
+        #
+        s.enable_auto_commit(False)
+        s.commit_after_processing(True)
+        #
+        topic_str = self.create_test_topic_name()
+        s.create(topic_str)
+        producer = s.producer(topic_str, type="str")
+        producer.produce("message 1")
+        producer.produce("message 2")
+        producer.produce("message 3")
+        producer.close()
+        #
+        group_str = self.create_test_group_name()
+        consumer = s.consumer(topic_str, group=group_str, type="str")
+        consumer.consume(n=3)
+        #
+        offsets_dict = consumer.offsets()
+        if s.__class__.__name__ == "RestProxy":
+            self.assertEqual(offsets_dict, {})
+        else:
+            self.assertEqual(offsets_dict[topic_str][0], OFFSET_INVALID)
+        #
+        consumer.commit()
+        #
+        offsets_dict1 = consumer.offsets()
+        offsets_dict2 = s.group_offsets(group_str)[group_str]
+        self.assertEqual(offsets_dict1, offsets_dict2)
+        self.assertEqual(offsets_dict1[topic_str][0], 3)
+        self.assertEqual(offsets_dict2[topic_str][0], 3)
     
     def test_error_handling(self):
         if self.__class__.__name__ == "TestSingleStorageBase":
@@ -2029,7 +2064,7 @@ class TestSingleStorageBase(unittest.TestCase):
             n_chunks_after_delete = s.l(topic_str)[topic_str]
             self.assertEqual(n_chunks_after_delete, n_chunks_int - 1)
         #
-        m_list = s.cat(topic_str, value_type="str", dechunk=True, consumer_timeout=2.0)
+        m_list = s.cat(topic_str, value_type="str", dechunk=True, consume_timeout=2.0)
         self.assertEqual(len(m_list), 0)
 
     def test_transaction_commit(self):
