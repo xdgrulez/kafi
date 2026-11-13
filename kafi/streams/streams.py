@@ -210,7 +210,11 @@ class Streams(TopologyNode):
         #
         initial_time_int = get_millis()
         #
-        def save_checkpoint(source_str_offsets_dict_dict):
+        def save_checkpoint(source_str_offsets_dict_dict, last_checkpointed_source_str_offsets_dict_dict):
+            if source_str_offsets_dict_dict == last_checkpointed_source_str_offsets_dict_dict:
+                logger.info("Skipping checkpoint save (state unchanged).")
+                return last_checkpointed_source_str_offsets_dict_dict
+            #
             checkpoint_dict = {"state": built_tn.get_state(),
                                "offsets": source_str_offsets_dict_dict}
             checkpoint_dict_bytes = cloudpickle.dumps(checkpoint_dict)
@@ -222,6 +226,8 @@ class Streams(TopologyNode):
             producer.produce(compressed_checkpoint_dict_bytes, key=built_tn.get_id())
             producer.close()
             logger.info("...saving checkpoint done (%d KB compressed, %d KB uncompressed).", len(compressed_checkpoint_dict_bytes) / 1024, len(checkpoint_dict_bytes) / 1024)
+            #
+            return copy.deepcopy(source_str_offsets_dict_dict)
         #
         def load_checkpoint(built_tn):
             checkpoint_group_str = group_str + checkpoint_suffix_str
@@ -307,6 +313,7 @@ class Streams(TopologyNode):
         #
         source_str_offsets_dict_dict = {}
         last_committed_source_str_offsets_dict_dict = {}
+        last_checkpointed_source_str_offsets_dict_dict = {}
         #
         try:
             while (stop_event is None or not stop_event.is_set()):
@@ -339,7 +346,7 @@ class Streams(TopologyNode):
                     progress_fun(built_tn, source_str_offsets_dict_dict, time_int)
                 #
                 if checkpoint_storage is not None and (time_int - checkpoint_time_int) > checkpoint_interval_float * 1000:
-                    save_checkpoint(source_str_offsets_dict_dict)
+                    last_checkpointed_source_str_offsets_dict_dict = save_checkpoint(source_str_offsets_dict_dict, last_checkpointed_source_str_offsets_dict_dict)
                     #
                     checkpoint_time_int = get_millis()
                 #
@@ -351,8 +358,9 @@ class Streams(TopologyNode):
                             consumer.commit(offsets_dict)
                             #
                             logger.info("Committed %s for source %s.", offsets_dict, source_str)
+                    #
+                    last_committed_source_str_offsets_dict_dict = copy.deepcopy(source_str_offsets_dict_dict)
                 #
-                last_committed_source_str_offsets_dict_dict = copy.deepcopy(source_str_offsets_dict_dict)
         except Exception:
             logger.exception("Exception in streams loop")
             raise

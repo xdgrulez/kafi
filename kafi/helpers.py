@@ -446,6 +446,17 @@ def hash_dict(d):
     return hash(json.dumps(d, sort_keys=True))
 
 
+def hash_get_builtin_hash(filepath):
+  # blake2b ist direkt in Python eingebaut und extrem schnell
+  h = hashlib.blake2b()
+
+  with open(filepath, "rb") as f:
+    # In 64-KB-Blöcken lesen, damit der RAM-Speicher geschont wird
+    while chunk := f.read(65536):
+      h.update(chunk)
+
+  return h.hexdigest()
+  
 def split_bytes(bytes, chunk_size_bytes_int):
     """Split bytes into fixed-size chunks.
 
