@@ -43,6 +43,9 @@ dependencies = [
     'tqdm~=4.70.1'
 ]
 
+[project.optional-dependencies]
+lmdb = ["lmdb>=1.4.1"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

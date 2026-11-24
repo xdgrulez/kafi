@@ -1782,26 +1782,32 @@ class TopologyNode:
             evaluator: the newly created pydbsp evaluator of the topology"""
         evaluator = Evaluator(
             circuit=Circuit(),
-            storage=DictStorage(),
+            storage=self._storage_factory(),
             ctx=ComputeCtx(lattice=dbsp_time(2)),
             group=ZSetAddition())
         #
         return evaluator
 
     @staticmethod
-    def build(*sink_tn_tuple):
+    def build(*sink_tn_tuple, storage_factory=DictStorage):
         """Build: Merge the sinks and build the pydbsp circuit for the topology.
         
         Args:
             *sink_tn_tuple: one or more sink tn to build
+            storage_factory: zero-argument factory for pydbsp storage (default: DictStorage)
         Returns:
             built_tn: the built topology node"""
         if sink_tn_tuple is None:
             raise Exception("At least one sink node required.")
         #
         merged_tn = TopologyNode._merge_sinks(*sink_tn_tuple)
+        merged_tn._storage_factory = storage_factory
         #
         def _reset_fun():
+            if merged_tn._evaluator is not None:
+                close_fun = getattr(merged_tn._evaluator.storage, "close", None)
+                if close_fun is not None:
+                    close_fun()
             evaluator = merged_tn._create_evaluator()
             #
             merged_tn.__foreach(lambda tn: tn._build_fun(evaluator))
@@ -1918,10 +1924,16 @@ class TopologyNode:
             gc_bool: if True, garbage-collect the state after processing (default = True)
         Return:
             output_any: the latest output"""
-        zSet = self._evaluator.latest(self._output_nodeId)
-        #
-        if gc_bool:
-            self._evaluator.compact()
+        storage_transaction = getattr(self._evaluator.storage, "transaction", None)
+        if storage_transaction is None:
+            zSet = self._evaluator.latest(self._output_nodeId)
+            if gc_bool:
+                self._evaluator.compact()
+        else:
+            with storage_transaction():
+                zSet = self._evaluator.latest(self._output_nodeId)
+                if gc_bool:
+                    self._evaluator.compact()
         #
         unpacked_zSet = [(self._unpack_fun(packed_r), w) for packed_r, w in zSet.items()]
         #
@@ -2010,9 +2022,14 @@ class TopologyNode:
             gc_bool: if True, garbage-collect the state after processing (default = True)
         Return:
             output_any: the latest output"""
-        self.push(source_str_input_any_list_dict)
-        #
-        output_any = self.latest(gc_bool)
+        storage_transaction = getattr(self._evaluator.storage, "transaction", None)
+        if storage_transaction is None:
+            self.push(source_str_input_any_list_dict)
+            output_any = self.latest(gc_bool)
+        else:
+            with storage_transaction():
+                self.push(source_str_input_any_list_dict)
+                output_any = self.latest(gc_bool)
         #
         return output_any
 
@@ -2185,7 +2202,11 @@ class TopologyNode:
         
         Returns:
             state_size_int: the size in bytes of the serialized state"""
-        state_size_int = len(cloudpickle.dumps(self.get_state()))
+        storage_size_fun = getattr(self._evaluator.storage, "state_size", None)
+        if storage_size_fun is None:
+            state_size_int = len(cloudpickle.dumps(self.get_state()))
+        else:
+            state_size_int = storage_size_fun()
         #
         return state_size_int
 
